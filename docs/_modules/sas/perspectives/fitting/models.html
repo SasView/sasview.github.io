@@ -1,0 +1,1431 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+  "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+    
+    <title>sas.perspectives.fitting.models &mdash; SasView 3.1.0 documentation</title>
+    
+    <link rel="stylesheet" href="../../../../_static/classic.css" type="text/css" />
+    <link rel="stylesheet" href="../../../../_static/pygments.css" type="text/css" />
+    
+    <script type="text/javascript">
+      var DOCUMENTATION_OPTIONS = {
+        URL_ROOT:    '../../../../',
+        VERSION:     '3.1.0',
+        COLLAPSE_INDEX: false,
+        FILE_SUFFIX: '.html',
+        HAS_SOURCE:  true
+      };
+    </script>
+    <script type="text/javascript" src="../../../../_static/jquery.js"></script>
+    <script type="text/javascript" src="../../../../_static/underscore.js"></script>
+    <script type="text/javascript" src="../../../../_static/doctools.js"></script>
+    <script type="text/javascript" src="https://cdn.mathjax.org/mathjax/latest/MathJax.js?config=TeX-AMS-MML_HTMLorMML"></script>
+    <link rel="top" title="SasView 3.1.0 documentation" href="../../../../index.html" />
+    <link rel="up" title="sas.perspectives.fitting" href="../fitting.html" /> 
+  </head>
+  <body role="document">
+    <div class="related" role="navigation" aria-label="related navigation">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="../../../../genindex.html" title="General Index"
+             accesskey="I">index</a></li>
+        <li class="right" >
+          <a href="../../../../py-modindex.html" title="Python Module Index"
+             >modules</a> |</li>
+        <li class="nav-item nav-item-0"><a href="../../../../index.html">SasView 3.1.0 documentation</a> &raquo;</li>
+          <li class="nav-item nav-item-1"><a href="../../../index.html" >Module code</a> &raquo;</li>
+          <li class="nav-item nav-item-2"><a href="../fitting.html" accesskey="U">sas.perspectives.fitting</a> &raquo;</li> 
+      </ul>
+    </div>  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          <div class="body" role="main">
+            
+  <h1>Source code for sas.perspectives.fitting.models</h1><div class="highlight"><pre>
+<span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Utilities to manage models</span>
+<span class="sd">&quot;&quot;&quot;</span>
+<span class="kn">import</span> <span class="nn">wx</span>
+<span class="kn">import</span> <span class="nn">imp</span>
+<span class="kn">import</span> <span class="nn">os</span>
+<span class="kn">import</span> <span class="nn">sys</span>
+<span class="kn">import</span> <span class="nn">os.path</span>
+<span class="c"># Time is needed by the log method</span>
+<span class="kn">import</span> <span class="nn">time</span>
+<span class="kn">import</span> <span class="nn">logging</span>
+<span class="kn">import</span> <span class="nn">py_compile</span>
+<span class="kn">import</span> <span class="nn">shutil</span>
+<span class="c"># Explicitly import from the pluginmodel module so that py2exe</span>
+<span class="c"># places it in the distribution. The Model1DPlugin class is used</span>
+<span class="c"># as the base class of plug-in models.</span>
+<span class="kn">from</span> <span class="nn">sas.models.pluginmodel</span> <span class="kn">import</span> <span class="n">Model1DPlugin</span>
+<span class="kn">from</span> <span class="nn">sas.guiframe.CategoryInstaller</span> <span class="kn">import</span> <span class="n">CategoryInstaller</span>
+
+<span class="n">PLUGIN_DIR</span> <span class="o">=</span> <span class="s">&#39;plugin_models&#39;</span>
+
+<div class="viewcode-block" id="get_model_python_path"><a class="viewcode-back" href="../../../../dev/api/sas.perspectives.fitting.html#sas.perspectives.fitting.models.get_model_python_path">[docs]</a><span class="k">def</span> <span class="nf">get_model_python_path</span><span class="p">():</span>
+    <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Returns the python path for a model</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="k">return</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">dirname</span><span class="p">(</span><span class="n">__file__</span><span class="p">)</span>
+
+</div>
+<div class="viewcode-block" id="log"><a class="viewcode-back" href="../../../../dev/api/sas.perspectives.fitting.html#sas.perspectives.fitting.models.log">[docs]</a><span class="k">def</span> <span class="nf">log</span><span class="p">(</span><span class="n">message</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Log a message in a file located in the user&#39;s home directory</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="nb">dir</span> <span class="o">=</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">expanduser</span><span class="p">(</span><span class="s">&quot;~&quot;</span><span class="p">),</span> <span class="s">&#39;.sasview&#39;</span><span class="p">,</span> <span class="n">PLUGIN_DIR</span><span class="p">)</span>
+    <span class="n">out</span> <span class="o">=</span> <span class="nb">open</span><span class="p">(</span><span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="nb">dir</span><span class="p">,</span> <span class="s">&quot;plugins.log&quot;</span><span class="p">),</span> <span class="s">&#39;a&#39;</span><span class="p">)</span>
+    <span class="n">out</span><span class="o">.</span><span class="n">write</span><span class="p">(</span><span class="s">&quot;</span><span class="si">%10g</span><span class="s">:  </span><span class="si">%s</span><span class="se">\n</span><span class="s">&quot;</span> <span class="o">%</span> <span class="p">(</span><span class="n">time</span><span class="o">.</span><span class="n">clock</span><span class="p">(),</span> <span class="n">message</span><span class="p">))</span>
+    <span class="n">out</span><span class="o">.</span><span class="n">close</span><span class="p">()</span>
+
+</div>
+<span class="k">def</span> <span class="nf">_check_plugin</span><span class="p">(</span><span class="n">model</span><span class="p">,</span> <span class="n">name</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Do some checking before model adding plugins in the list</span>
+
+<span class="sd">    :param model: class model to add into the plugin list</span>
+<span class="sd">    :param name:name of the module plugin</span>
+
+<span class="sd">    :return model: model if valid model or None if not valid</span>
+
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="c">#Check if the plugin is of type Model1DPlugin</span>
+    <span class="k">if</span> <span class="ow">not</span> <span class="nb">issubclass</span><span class="p">(</span><span class="n">model</span><span class="p">,</span> <span class="n">Model1DPlugin</span><span class="p">):</span>
+        <span class="n">msg</span> <span class="o">=</span> <span class="s">&quot;Plugin </span><span class="si">%s</span><span class="s"> must be of type Model1DPlugin </span><span class="se">\n</span><span class="s">&quot;</span> <span class="o">%</span> <span class="nb">str</span><span class="p">(</span><span class="n">name</span><span class="p">)</span>
+        <span class="n">log</span><span class="p">(</span><span class="n">msg</span><span class="p">)</span>
+        <span class="k">return</span> <span class="bp">None</span>
+    <span class="k">if</span> <span class="n">model</span><span class="o">.</span><span class="n">__name__</span> <span class="o">!=</span> <span class="s">&quot;Model&quot;</span><span class="p">:</span>
+        <span class="n">msg</span> <span class="o">=</span> <span class="s">&quot;Plugin </span><span class="si">%s</span><span class="s"> class name must be Model </span><span class="se">\n</span><span class="s">&quot;</span> <span class="o">%</span> <span class="nb">str</span><span class="p">(</span><span class="n">name</span><span class="p">)</span>
+        <span class="n">log</span><span class="p">(</span><span class="n">msg</span><span class="p">)</span>
+        <span class="k">return</span> <span class="bp">None</span>
+    <span class="k">try</span><span class="p">:</span>
+        <span class="n">new_instance</span> <span class="o">=</span> <span class="n">model</span><span class="p">()</span>
+    <span class="k">except</span><span class="p">:</span>
+        <span class="n">msg</span> <span class="o">=</span> <span class="s">&quot;Plugin </span><span class="si">%s</span><span class="s"> error in __init__ </span><span class="se">\n\t</span><span class="s">: </span><span class="si">%s</span><span class="s"> </span><span class="si">%s</span><span class="se">\n</span><span class="s">&quot;</span> <span class="o">%</span> <span class="p">(</span><span class="nb">str</span><span class="p">(</span><span class="n">name</span><span class="p">),</span>
+                                                             <span class="nb">str</span><span class="p">(</span><span class="n">sys</span><span class="o">.</span><span class="n">exc_type</span><span class="p">),</span>
+                                                             <span class="n">sys</span><span class="o">.</span><span class="n">exc_info</span><span class="p">()[</span><span class="mi">1</span><span class="p">])</span>
+        <span class="n">log</span><span class="p">(</span><span class="n">msg</span><span class="p">)</span>
+        <span class="k">return</span> <span class="bp">None</span>
+
+    <span class="k">if</span> <span class="nb">hasattr</span><span class="p">(</span><span class="n">new_instance</span><span class="p">,</span> <span class="s">&quot;function&quot;</span><span class="p">):</span>
+        <span class="k">try</span><span class="p">:</span>
+            <span class="n">value</span> <span class="o">=</span> <span class="n">new_instance</span><span class="o">.</span><span class="n">function</span><span class="p">()</span>
+        <span class="k">except</span><span class="p">:</span>
+            <span class="n">msg</span> <span class="o">=</span> <span class="s">&quot;Plugin </span><span class="si">%s</span><span class="s">: error writing function </span><span class="se">\n\t</span><span class="s"> :</span><span class="si">%s</span><span class="s"> </span><span class="si">%s</span><span class="se">\n</span><span class="s"> &quot;</span> <span class="o">%</span> \
+                    <span class="p">(</span><span class="nb">str</span><span class="p">(</span><span class="n">name</span><span class="p">),</span> <span class="nb">str</span><span class="p">(</span><span class="n">sys</span><span class="o">.</span><span class="n">exc_type</span><span class="p">),</span> <span class="n">sys</span><span class="o">.</span><span class="n">exc_info</span><span class="p">()[</span><span class="mi">1</span><span class="p">])</span>
+            <span class="n">log</span><span class="p">(</span><span class="n">msg</span><span class="p">)</span>
+            <span class="k">return</span> <span class="bp">None</span>
+    <span class="k">else</span><span class="p">:</span>
+        <span class="n">msg</span> <span class="o">=</span> <span class="s">&quot;Plugin  </span><span class="si">%s</span><span class="s"> needs a method called function </span><span class="se">\n</span><span class="s">&quot;</span> <span class="o">%</span> <span class="nb">str</span><span class="p">(</span><span class="n">name</span><span class="p">)</span>
+        <span class="n">log</span><span class="p">(</span><span class="n">msg</span><span class="p">)</span>
+        <span class="k">return</span> <span class="bp">None</span>
+    <span class="k">return</span> <span class="n">model</span>
+
+
+<div class="viewcode-block" id="find_plugins_dir"><a class="viewcode-back" href="../../../../dev/api/sas.perspectives.fitting.html#sas.perspectives.fitting.models.find_plugins_dir">[docs]</a><span class="k">def</span> <span class="nf">find_plugins_dir</span><span class="p">():</span>
+    <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Find path of the plugins directory.</span>
+<span class="sd">        The plugin directory is located in the user&#39;s home directory.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="nb">dir</span> <span class="o">=</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">expanduser</span><span class="p">(</span><span class="s">&quot;~&quot;</span><span class="p">),</span> <span class="s">&#39;.sasview&#39;</span><span class="p">,</span> <span class="n">PLUGIN_DIR</span><span class="p">)</span>
+
+    <span class="c"># If the plugin directory doesn&#39;t exist, create it</span>
+    <span class="k">if</span> <span class="ow">not</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">isdir</span><span class="p">(</span><span class="nb">dir</span><span class="p">):</span>
+        <span class="n">os</span><span class="o">.</span><span class="n">makedirs</span><span class="p">(</span><span class="nb">dir</span><span class="p">)</span>
+
+    <span class="c"># Find paths needed</span>
+    <span class="k">try</span><span class="p">:</span>
+        <span class="c"># For source</span>
+        <span class="k">if</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">isdir</span><span class="p">(</span><span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">dirname</span><span class="p">(</span><span class="n">__file__</span><span class="p">)):</span>
+            <span class="n">p_dir</span> <span class="o">=</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">dirname</span><span class="p">(</span><span class="n">__file__</span><span class="p">),</span> <span class="n">PLUGIN_DIR</span><span class="p">)</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="k">raise</span>
+    <span class="k">except</span><span class="p">:</span>
+        <span class="c"># Check for data path next to exe/zip file.</span>
+        <span class="c">#Look for maximum n_dir up of the current dir to find plugins dir</span>
+        <span class="n">n_dir</span> <span class="o">=</span> <span class="mi">12</span>
+        <span class="n">p_dir</span> <span class="o">=</span> <span class="bp">None</span>
+        <span class="n">f_dir</span> <span class="o">=</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">dirname</span><span class="p">(</span><span class="n">__file__</span><span class="p">))</span>
+        <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">n_dir</span><span class="p">):</span>
+            <span class="k">if</span> <span class="n">i</span> <span class="o">&gt;</span> <span class="mi">1</span><span class="p">:</span>
+                <span class="n">f_dir</span><span class="p">,</span> <span class="n">_</span> <span class="o">=</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">split</span><span class="p">(</span><span class="n">f_dir</span><span class="p">)</span>
+            <span class="n">plugin_path</span> <span class="o">=</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">f_dir</span><span class="p">,</span> <span class="n">PLUGIN_DIR</span><span class="p">)</span>
+            <span class="k">if</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">isdir</span><span class="p">(</span><span class="n">plugin_path</span><span class="p">):</span>
+                <span class="n">p_dir</span> <span class="o">=</span> <span class="n">plugin_path</span>
+                <span class="k">break</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="n">p_dir</span><span class="p">:</span>
+            <span class="k">raise</span>
+    <span class="c"># Place example user models as needed</span>
+    <span class="k">if</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">isdir</span><span class="p">(</span><span class="n">p_dir</span><span class="p">):</span>
+        <span class="k">for</span> <span class="nb">file</span> <span class="ow">in</span> <span class="n">os</span><span class="o">.</span><span class="n">listdir</span><span class="p">(</span><span class="n">p_dir</span><span class="p">):</span>
+            <span class="n">file_path</span> <span class="o">=</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">p_dir</span><span class="p">,</span> <span class="nb">file</span><span class="p">)</span>
+            <span class="k">if</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">isfile</span><span class="p">(</span><span class="n">file_path</span><span class="p">):</span>
+                <span class="k">if</span> <span class="nb">file</span><span class="o">.</span><span class="n">split</span><span class="p">(</span><span class="s">&quot;.&quot;</span><span class="p">)[</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span> <span class="o">==</span> <span class="s">&#39;py&#39;</span> <span class="ow">and</span>\
+                    <span class="nb">file</span><span class="o">.</span><span class="n">split</span><span class="p">(</span><span class="s">&quot;.&quot;</span><span class="p">)[</span><span class="mi">0</span><span class="p">]</span> <span class="o">!=</span> <span class="s">&#39;__init__&#39;</span><span class="p">:</span>
+                    <span class="k">if</span> <span class="ow">not</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">isfile</span><span class="p">(</span><span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="nb">dir</span><span class="p">,</span> <span class="nb">file</span><span class="p">)):</span>
+                        <span class="n">shutil</span><span class="o">.</span><span class="n">copy</span><span class="p">(</span><span class="n">file_path</span><span class="p">,</span> <span class="nb">dir</span><span class="p">)</span>
+
+    <span class="k">return</span> <span class="nb">dir</span>
+
+</div>
+<div class="viewcode-block" id="ReportProblem"><a class="viewcode-back" href="../../../../dev/api/sas.perspectives.fitting.html#sas.perspectives.fitting.models.ReportProblem">[docs]</a><span class="k">class</span> <span class="nc">ReportProblem</span><span class="p">:</span>
+    <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Class to check for problems with specific values</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="k">def</span> <span class="nf">__nonzero__</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="nb">type</span><span class="p">,</span> <span class="n">value</span><span class="p">,</span> <span class="n">traceback</span> <span class="o">=</span> <span class="n">sys</span><span class="o">.</span><span class="n">exc_info</span><span class="p">()</span>
+        <span class="k">if</span> <span class="nb">type</span> <span class="ow">is</span> <span class="ow">not</span> <span class="bp">None</span> <span class="ow">and</span> <span class="nb">issubclass</span><span class="p">(</span><span class="nb">type</span><span class="p">,</span> <span class="n">py_compile</span><span class="o">.</span><span class="n">PyCompileError</span><span class="p">):</span>
+            <span class="k">print</span> <span class="s">&quot;Problem with&quot;</span><span class="p">,</span> <span class="nb">repr</span><span class="p">(</span><span class="n">value</span><span class="p">)</span>
+            <span class="k">raise</span> <span class="nb">type</span><span class="p">,</span> <span class="n">value</span><span class="p">,</span> <span class="n">traceback</span>
+        <span class="k">return</span> <span class="mi">1</span>
+</div>
+<span class="n">report_problem</span> <span class="o">=</span> <span class="n">ReportProblem</span><span class="p">()</span>
+
+
+<div class="viewcode-block" id="compile_file"><a class="viewcode-back" href="../../../../dev/api/sas.perspectives.fitting.html#sas.perspectives.fitting.models.compile_file">[docs]</a><span class="k">def</span> <span class="nf">compile_file</span><span class="p">(</span><span class="nb">dir</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Compile a py file</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="k">try</span><span class="p">:</span>
+        <span class="kn">import</span> <span class="nn">compileall</span>
+        <span class="n">compileall</span><span class="o">.</span><span class="n">compile_dir</span><span class="p">(</span><span class="nb">dir</span><span class="o">=</span><span class="nb">dir</span><span class="p">,</span> <span class="n">ddir</span><span class="o">=</span><span class="nb">dir</span><span class="p">,</span> <span class="n">force</span><span class="o">=</span><span class="mi">1</span><span class="p">,</span>
+                               <span class="n">quiet</span><span class="o">=</span><span class="n">report_problem</span><span class="p">)</span>
+    <span class="k">except</span><span class="p">:</span>
+        <span class="k">return</span> <span class="n">sys</span><span class="o">.</span><span class="n">exc_info</span><span class="p">()[</span><span class="mi">1</span><span class="p">]</span>
+    <span class="k">return</span> <span class="bp">None</span>
+
+</div>
+<span class="k">def</span> <span class="nf">_findModels</span><span class="p">(</span><span class="nb">dir</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="c"># List of plugin objects</span>
+    <span class="n">plugins</span> <span class="o">=</span> <span class="p">{}</span>
+    <span class="nb">dir</span> <span class="o">=</span> <span class="n">find_plugins_dir</span><span class="p">()</span>
+    <span class="c"># Go through files in plug-in directory</span>
+    <span class="c">#always recompile the folder plugin</span>
+    <span class="k">if</span> <span class="ow">not</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">isdir</span><span class="p">(</span><span class="nb">dir</span><span class="p">):</span>
+        <span class="n">msg</span> <span class="o">=</span> <span class="s">&quot;SasView couldn&#39;t locate Model plugin folder.&quot;</span>
+        <span class="n">msg</span> <span class="o">+=</span> <span class="s">&quot;&quot;&quot; &quot;</span><span class="si">%s</span><span class="s">&quot; does not exist&quot;&quot;&quot;</span> <span class="o">%</span> <span class="nb">dir</span>
+        <span class="n">logging</span><span class="o">.</span><span class="n">warning</span><span class="p">(</span><span class="n">msg</span><span class="p">)</span>
+        <span class="k">return</span> <span class="n">plugins</span>
+    <span class="k">else</span><span class="p">:</span>
+        <span class="n">log</span><span class="p">(</span><span class="s">&quot;looking for models in: </span><span class="si">%s</span><span class="s">&quot;</span> <span class="o">%</span> <span class="nb">str</span><span class="p">(</span><span class="nb">dir</span><span class="p">))</span>
+        <span class="n">compile_file</span><span class="p">(</span><span class="nb">dir</span><span class="p">)</span>
+        <span class="n">logging</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="s">&quot;plugin model dir: </span><span class="si">%s</span><span class="s">&quot;</span> <span class="o">%</span> <span class="nb">str</span><span class="p">(</span><span class="nb">dir</span><span class="p">))</span>
+    <span class="k">try</span><span class="p">:</span>
+        <span class="nb">list</span> <span class="o">=</span> <span class="n">os</span><span class="o">.</span><span class="n">listdir</span><span class="p">(</span><span class="nb">dir</span><span class="p">)</span>
+        <span class="k">for</span> <span class="n">item</span> <span class="ow">in</span> <span class="nb">list</span><span class="p">:</span>
+            <span class="n">toks</span> <span class="o">=</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">splitext</span><span class="p">(</span><span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">basename</span><span class="p">(</span><span class="n">item</span><span class="p">))</span>
+            <span class="k">if</span> <span class="n">toks</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span> <span class="o">==</span> <span class="s">&#39;.py&#39;</span> <span class="ow">and</span> <span class="ow">not</span> <span class="n">toks</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="o">==</span> <span class="s">&#39;__init__&#39;</span><span class="p">:</span>
+                <span class="n">name</span> <span class="o">=</span> <span class="n">toks</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
+
+                <span class="n">path</span> <span class="o">=</span> <span class="p">[</span><span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">abspath</span><span class="p">(</span><span class="nb">dir</span><span class="p">)]</span>
+                <span class="nb">file</span> <span class="o">=</span> <span class="bp">None</span>
+                <span class="k">try</span><span class="p">:</span>
+                    <span class="p">(</span><span class="nb">file</span><span class="p">,</span> <span class="n">path</span><span class="p">,</span> <span class="n">info</span><span class="p">)</span> <span class="o">=</span> <span class="n">imp</span><span class="o">.</span><span class="n">find_module</span><span class="p">(</span><span class="n">name</span><span class="p">,</span> <span class="n">path</span><span class="p">)</span>
+                    <span class="n">module</span> <span class="o">=</span> <span class="n">imp</span><span class="o">.</span><span class="n">load_module</span><span class="p">(</span><span class="n">name</span><span class="p">,</span> <span class="nb">file</span><span class="p">,</span> <span class="n">item</span><span class="p">,</span> <span class="n">info</span><span class="p">)</span>
+                    <span class="k">if</span> <span class="nb">hasattr</span><span class="p">(</span><span class="n">module</span><span class="p">,</span> <span class="s">&quot;Model&quot;</span><span class="p">):</span>
+                        <span class="k">try</span><span class="p">:</span>
+                            <span class="k">if</span> <span class="n">_check_plugin</span><span class="p">(</span><span class="n">module</span><span class="o">.</span><span class="n">Model</span><span class="p">,</span> <span class="n">name</span><span class="p">)</span> <span class="o">!=</span> <span class="bp">None</span><span class="p">:</span>
+                                <span class="n">plugins</span><span class="p">[</span><span class="n">name</span><span class="p">]</span> <span class="o">=</span> <span class="n">module</span><span class="o">.</span><span class="n">Model</span>
+                        <span class="k">except</span><span class="p">:</span>
+                            <span class="n">msg</span> <span class="o">=</span> <span class="s">&quot;Error accessing Model&quot;</span>
+                            <span class="n">msg</span> <span class="o">+=</span> <span class="s">&quot;in </span><span class="si">%s</span><span class="se">\n</span><span class="s">  </span><span class="si">%s</span><span class="s"> </span><span class="si">%s</span><span class="se">\n</span><span class="s">&quot;</span> <span class="o">%</span> <span class="p">(</span><span class="n">name</span><span class="p">,</span>
+                                                         <span class="nb">str</span><span class="p">(</span><span class="n">sys</span><span class="o">.</span><span class="n">exc_type</span><span class="p">),</span>
+                                                         <span class="n">sys</span><span class="o">.</span><span class="n">exc_info</span><span class="p">()[</span><span class="mi">1</span><span class="p">])</span>
+                            <span class="n">log</span><span class="p">(</span><span class="n">msg</span><span class="p">)</span>
+                <span class="k">except</span><span class="p">:</span>
+                    <span class="n">msg</span> <span class="o">=</span> <span class="s">&quot;Error accessing Model&quot;</span>
+                    <span class="n">msg</span> <span class="o">+=</span> <span class="s">&quot; in </span><span class="si">%s</span><span class="se">\n</span><span class="s">  </span><span class="si">%s</span><span class="s"> </span><span class="si">%s</span><span class="s"> </span><span class="se">\n</span><span class="s">&quot;</span> <span class="o">%</span> <span class="p">(</span><span class="n">name</span><span class="p">,</span>
+                                                   <span class="nb">str</span><span class="p">(</span><span class="n">sys</span><span class="o">.</span><span class="n">exc_type</span><span class="p">),</span>
+                                                   <span class="n">sys</span><span class="o">.</span><span class="n">exc_info</span><span class="p">()[</span><span class="mi">1</span><span class="p">])</span>
+                    <span class="n">log</span><span class="p">(</span><span class="n">msg</span><span class="p">)</span>
+                <span class="k">finally</span><span class="p">:</span>
+
+                    <span class="k">if</span> <span class="ow">not</span> <span class="nb">file</span> <span class="o">==</span> <span class="bp">None</span><span class="p">:</span>
+                        <span class="nb">file</span><span class="o">.</span><span class="n">close</span><span class="p">()</span>
+    <span class="k">except</span><span class="p">:</span>
+        <span class="c"># Don&#39;t deal with bad plug-in imports. Just skip.</span>
+        <span class="n">msg</span> <span class="o">=</span> <span class="s">&quot;Could not import model plugin: </span><span class="si">%s</span><span class="s">&quot;</span> <span class="o">%</span> <span class="n">sys</span><span class="o">.</span><span class="n">exc_info</span><span class="p">()[</span><span class="mi">1</span><span class="p">]</span>
+        <span class="n">log</span><span class="p">(</span><span class="n">msg</span><span class="p">)</span>
+    <span class="k">return</span> <span class="n">plugins</span>
+
+
+<div class="viewcode-block" id="ModelList"><a class="viewcode-back" href="../../../../dev/api/sas.perspectives.fitting.html#sas.perspectives.fitting.models.ModelList">[docs]</a><span class="k">class</span> <span class="nc">ModelList</span><span class="p">(</span><span class="nb">object</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Contains dictionary of model and their type</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">mydict</span> <span class="o">=</span> <span class="p">{}</span>
+
+<div class="viewcode-block" id="ModelList.set_list"><a class="viewcode-back" href="../../../../dev/api/sas.perspectives.fitting.html#sas.perspectives.fitting.models.ModelList.set_list">[docs]</a>    <span class="k">def</span> <span class="nf">set_list</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">name</span><span class="p">,</span> <span class="n">mylist</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        :param name: the type of the list</span>
+<span class="sd">        :param mylist: the list to add</span>
+
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">if</span> <span class="n">name</span> <span class="ow">not</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">mydict</span><span class="o">.</span><span class="n">keys</span><span class="p">():</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">reset_list</span><span class="p">(</span><span class="n">name</span><span class="p">,</span> <span class="n">mylist</span><span class="p">)</span>
+</div>
+<div class="viewcode-block" id="ModelList.reset_list"><a class="viewcode-back" href="../../../../dev/api/sas.perspectives.fitting.html#sas.perspectives.fitting.models.ModelList.reset_list">[docs]</a>    <span class="k">def</span> <span class="nf">reset_list</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">name</span><span class="p">,</span> <span class="n">mylist</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        :param name: the type of the list</span>
+<span class="sd">        :param mylist: the list to add</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">mydict</span><span class="p">[</span><span class="n">name</span><span class="p">]</span> <span class="o">=</span> <span class="n">mylist</span>
+</div>
+<div class="viewcode-block" id="ModelList.get_list"><a class="viewcode-back" href="../../../../dev/api/sas.perspectives.fitting.html#sas.perspectives.fitting.models.ModelList.get_list">[docs]</a>    <span class="k">def</span> <span class="nf">get_list</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        return all the list stored in a dictionary object</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">mydict</span>
+
+</div></div>
+<div class="viewcode-block" id="ModelManagerBase"><a class="viewcode-back" href="../../../../dev/api/sas.perspectives.fitting.html#sas.perspectives.fitting.models.ModelManagerBase">[docs]</a><span class="k">class</span> <span class="nc">ModelManagerBase</span><span class="p">:</span>
+    <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Base class for the model manager</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="c">## external dict for models</span>
+    <span class="n">model_combobox</span> <span class="o">=</span> <span class="n">ModelList</span><span class="p">()</span>
+    <span class="c">## Dictionary of form factor models</span>
+    <span class="n">form_factor_dict</span> <span class="o">=</span> <span class="p">{}</span>
+    <span class="c">## dictionary of structure factor models</span>
+    <span class="n">struct_factor_dict</span> <span class="o">=</span> <span class="p">{}</span>
+    <span class="c">##list of shape models -- this is superseded by categories</span>
+<span class="c">#    shape_list = []</span>
+    <span class="c">## shape independent model list-- this is superseded by categories</span>
+<span class="c">#    shape_indep_list = []</span>
+    <span class="c">##list of structure factors</span>
+    <span class="n">struct_list</span> <span class="o">=</span> <span class="p">[]</span>
+    <span class="c">##list of model allowing multiplication by a structure factor</span>
+    <span class="n">multiplication_factor</span> <span class="o">=</span> <span class="p">[]</span>
+    <span class="c">##list of multifunctional shapes (i.e. that have user defined number of levels</span>
+    <span class="n">multi_func_list</span> <span class="o">=</span> <span class="p">[]</span>
+    <span class="c">## list of added models -- currently python models found in the plugin dir.</span>
+    <span class="n">plugins</span> <span class="o">=</span> <span class="p">[]</span>
+    <span class="c">## Event owner (guiframe)</span>
+    <span class="n">event_owner</span> <span class="o">=</span> <span class="bp">None</span>
+    <span class="n">last_time_dir_modified</span> <span class="o">=</span> <span class="mi">0</span>
+
+    <span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">model_dictionary</span> <span class="o">=</span> <span class="p">{}</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">stored_plugins</span> <span class="o">=</span> <span class="p">{}</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_getModelList</span><span class="p">()</span>
+
+<div class="viewcode-block" id="ModelManagerBase.findModels"><a class="viewcode-back" href="../../../../dev/api/sas.perspectives.fitting.html#sas.perspectives.fitting.models.ModelManagerBase.findModels">[docs]</a>    <span class="k">def</span> <span class="nf">findModels</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        find  plugin model in directory of plugin .recompile all file</span>
+<span class="sd">        in the directory if file were modified</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">temp</span> <span class="o">=</span> <span class="p">{}</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">is_changed</span><span class="p">():</span>
+            <span class="k">return</span>  <span class="n">_findModels</span><span class="p">(</span><span class="nb">dir</span><span class="p">)</span>
+        <span class="n">logging</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="s">&quot;plugin model : </span><span class="si">%s</span><span class="s">&quot;</span> <span class="o">%</span> <span class="nb">str</span><span class="p">(</span><span class="n">temp</span><span class="p">))</span>
+        <span class="k">return</span> <span class="n">temp</span>
+</div>
+    <span class="k">def</span> <span class="nf">_getModelList</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        List of models we want to make available by default</span>
+<span class="sd">        for this application</span>
+
+<span class="sd">        :return: the next free event ID following the new menu events</span>
+
+<span class="sd">        &quot;&quot;&quot;</span>
+
+        <span class="c">## NOTE: as of April 26, 2014, as part of first pass on fixing categories,</span>
+        <span class="c">## all the appends to shape_list or shape_independent_list are</span>
+        <span class="c">## commented out.  They should be possible to remove.  They are in</span>
+        <span class="c">## fact a &quot;category&quot; of model whereas the other list are actually</span>
+        <span class="c">## &quot;attributes&quot; of a model.  In other words is it a structure factor</span>
+        <span class="c">## that can be used against a form factor, is it a form factor that is</span>
+        <span class="c">## knows how to be multiplied by a structure factor, does it have user</span>
+        <span class="c">## defined number of parameters, etc.</span>
+        <span class="c">##</span>
+        <span class="c">## We hope this whole list will be superseded by the new C models</span>
+        <span class="c">## structure where each model will provide a method to interrogate it</span>
+        <span class="c">## about its &quot;attributes&quot; -- then this long list becomes a loop reading</span>
+        <span class="c">## each model in the category list to populate the &quot;attribute&quot;lists.</span>
+        <span class="c">## We should also refactor the whole category vs attribute list</span>
+        <span class="c">## structure when doing this as now the attribute lists think they are</span>
+        <span class="c">## also category lists.</span>
+        <span class="c">##</span>
+        <span class="c">##   -PDB  April 26, 2014</span>
+
+        <span class="c"># regular model names only</span>
+        <span class="n">base_message</span> <span class="o">=</span> <span class="s">&quot;Unable to load model {0}&quot;</span>
+        <span class="k">try</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">model_name_list</span> <span class="o">=</span> <span class="p">[]</span>
+            <span class="kn">from</span> <span class="nn">sas.models.SphereModel</span> <span class="kn">import</span> <span class="n">SphereModel</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">model_dictionary</span><span class="p">[</span><span class="n">SphereModel</span><span class="o">.</span><span class="n">__name__</span><span class="p">]</span> <span class="o">=</span> <span class="n">SphereModel</span>
+            <span class="c">#        self.shape_list.append(SphereModel)</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">multiplication_factor</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">SphereModel</span><span class="p">)</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">model_name_list</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">SphereModel</span><span class="o">.</span><span class="n">__name__</span><span class="p">)</span>
+        <span class="k">except</span><span class="p">:</span>
+            <span class="n">logging</span><span class="o">.</span><span class="n">error</span><span class="p">(</span><span class="n">base_message</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">SphereModel</span><span class="o">.</span><span class="n">__name__</span><span class="p">))</span>
+
+        <span class="k">try</span><span class="p">:</span>
+            <span class="kn">from</span> <span class="nn">sas.models.BinaryHSModel</span> <span class="kn">import</span> <span class="n">BinaryHSModel</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">model_dictionary</span><span class="p">[</span><span class="n">BinaryHSModel</span><span class="o">.</span><span class="n">__name__</span><span class="p">]</span> <span class="o">=</span> <span class="n">BinaryHSModel</span>
+            <span class="c">#        self.shape_list.append(BinaryHSModel)</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">model_name_list</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">BinaryHSModel</span><span class="o">.</span><span class="n">__name__</span><span class="p">)</span>
+        <span class="k">except</span><span class="p">:</span>
+            <span class="n">logging</span><span class="o">.</span><span class="n">error</span><span class="p">(</span><span class="n">base_message</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">BinaryHSModel</span><span class="o">.</span><span class="n">__name__</span><span class="p">))</span>
+
+        <span class="k">try</span><span class="p">:</span>
+            <span class="kn">from</span> <span class="nn">sas.models.FuzzySphereModel</span> <span class="kn">import</span> <span class="n">FuzzySphereModel</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">model_dictionary</span><span class="p">[</span><span class="n">FuzzySphereModel</span><span class="o">.</span><span class="n">__name__</span><span class="p">]</span> <span class="o">=</span> <span class="n">FuzzySphereModel</span>
+            <span class="c">#        self.shape_list.append(FuzzySphereModel)</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">multiplication_factor</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">FuzzySphereModel</span><span class="p">)</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">model_name_list</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">FuzzySphereModel</span><span class="o">.</span><span class="n">__name__</span><span class="p">)</span>
+        <span class="k">except</span><span class="p">:</span>
+            <span class="n">logging</span><span class="o">.</span><span class="n">error</span><span class="p">(</span><span class="n">base_message</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">FuzzySphereModel</span><span class="o">.</span><span class="n">__name__</span><span class="p">))</span>
+
+        <span class="k">try</span><span class="p">:</span>
+            <span class="kn">from</span> <span class="nn">sas.models.RaspBerryModel</span> <span class="kn">import</span> <span class="n">RaspBerryModel</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">model_dictionary</span><span class="p">[</span><span class="n">RaspBerryModel</span><span class="o">.</span><span class="n">__name__</span><span class="p">]</span> <span class="o">=</span> <span class="n">RaspBerryModel</span>
+            <span class="c">#        self.shape_list.append(RaspBerryModel)</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">model_name_list</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">RaspBerryModel</span><span class="o">.</span><span class="n">__name__</span><span class="p">)</span>
+        <span class="k">except</span><span class="p">:</span>
+            <span class="n">logging</span><span class="o">.</span><span class="n">error</span><span class="p">(</span><span class="n">base_message</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">RaspBerryModel</span><span class="o">.</span><span class="n">__name__</span><span class="p">))</span>
+
+        <span class="k">try</span><span class="p">:</span>
+            <span class="kn">from</span> <span class="nn">sas.models.CoreShellModel</span> <span class="kn">import</span> <span class="n">CoreShellModel</span>
+
+            <span class="bp">self</span><span class="o">.</span><span class="n">model_dictionary</span><span class="p">[</span><span class="n">CoreShellModel</span><span class="o">.</span><span class="n">__name__</span><span class="p">]</span> <span class="o">=</span> <span class="n">CoreShellModel</span>
+            <span class="c">#        self.shape_list.append(CoreShellModel)</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">multiplication_factor</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">CoreShellModel</span><span class="p">)</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">model_name_list</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">CoreShellModel</span><span class="o">.</span><span class="n">__name__</span><span class="p">)</span>
+        <span class="k">except</span><span class="p">:</span>
+            <span class="n">logging</span><span class="o">.</span><span class="n">error</span><span class="p">(</span><span class="n">base_message</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">CoreShellModel</span><span class="o">.</span><span class="n">__name__</span><span class="p">))</span>
+
+        <span class="k">try</span><span class="p">:</span>
+            <span class="kn">from</span> <span class="nn">sas.models.Core2ndMomentModel</span> <span class="kn">import</span> <span class="n">Core2ndMomentModel</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">model_dictionary</span><span class="p">[</span><span class="n">Core2ndMomentModel</span><span class="o">.</span><span class="n">__name__</span><span class="p">]</span> <span class="o">=</span> <span class="n">Core2ndMomentModel</span>
+            <span class="c">#        self.shape_list.append(Core2ndMomentModel)</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">model_name_list</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">Core2ndMomentModel</span><span class="o">.</span><span class="n">__name__</span><span class="p">)</span>
+        <span class="k">except</span><span class="p">:</span>
+            <span class="n">logging</span><span class="o">.</span><span class="n">error</span><span class="p">(</span><span class="n">base_message</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">Core2ndMomentModel</span><span class="o">.</span><span class="n">__name__</span><span class="p">))</span>
+            
+        <span class="k">try</span><span class="p">:</span>
+            <span class="kn">from</span> <span class="nn">sas.models.CoreMultiShellModel</span> <span class="kn">import</span> <span class="n">CoreMultiShellModel</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">model_dictionary</span><span class="p">[</span><span class="n">CoreMultiShellModel</span><span class="o">.</span><span class="n">__name__</span><span class="p">]</span> <span class="o">=</span> <span class="n">CoreMultiShellModel</span>
+            <span class="c">#        self.shape_list.append(CoreMultiShellModel)</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">multiplication_factor</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">CoreMultiShellModel</span><span class="p">)</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">multi_func_list</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">CoreMultiShellModel</span><span class="p">)</span>
+        <span class="k">except</span><span class="p">:</span>
+            <span class="n">logging</span><span class="o">.</span><span class="n">error</span><span class="p">(</span><span class="n">base_message</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">CoreMultiShellModel</span><span class="o">.</span><span class="n">__name__</span><span class="p">))</span>
+
+        <span class="k">try</span><span class="p">:</span>
+            <span class="kn">from</span> <span class="nn">sas.models.VesicleModel</span> <span class="kn">import</span> <span class="n">VesicleModel</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">model_dictionary</span><span class="p">[</span><span class="n">VesicleModel</span><span class="o">.</span><span class="n">__name__</span><span class="p">]</span> <span class="o">=</span> <span class="n">VesicleModel</span>
+            <span class="c">#        self.shape_list.append(VesicleModel)</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">multiplication_factor</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">VesicleModel</span><span class="p">)</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">model_name_list</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">VesicleModel</span><span class="o">.</span><span class="n">__name__</span><span class="p">)</span>
+        <span class="k">except</span><span class="p">:</span>
+            <span class="n">logging</span><span class="o">.</span><span class="n">error</span><span class="p">(</span><span class="n">base_message</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">VesicleModel</span><span class="o">.</span><span class="n">__name__</span><span class="p">))</span>
+
+        <span class="k">try</span><span class="p">:</span>
+            <span class="kn">from</span> <span class="nn">sas.models.MultiShellModel</span> <span class="kn">import</span> <span class="n">MultiShellModel</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">model_dictionary</span><span class="p">[</span><span class="n">MultiShellModel</span><span class="o">.</span><span class="n">__name__</span><span class="p">]</span> <span class="o">=</span> <span class="n">MultiShellModel</span>
+            <span class="c">#        self.shape_list.append(MultiShellModel)</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">multiplication_factor</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">MultiShellModel</span><span class="p">)</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">model_name_list</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">MultiShellModel</span><span class="o">.</span><span class="n">__name__</span><span class="p">)</span>
+        <span class="k">except</span><span class="p">:</span>
+            <span class="n">logging</span><span class="o">.</span><span class="n">error</span><span class="p">(</span><span class="n">base_message</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">MultiShellModel</span><span class="o">.</span><span class="n">__name__</span><span class="p">))</span>
+
+        <span class="k">try</span><span class="p">:</span>
+            <span class="kn">from</span> <span class="nn">sas.models.OnionExpShellModel</span> <span class="kn">import</span> <span class="n">OnionExpShellModel</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">model_dictionary</span><span class="p">[</span><span class="n">OnionExpShellModel</span><span class="o">.</span><span class="n">__name__</span><span class="p">]</span> <span class="o">=</span> <span class="n">OnionExpShellModel</span>
+            <span class="c">#        self.shape_list.append(OnionExpShellModel)</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">multiplication_factor</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">OnionExpShellModel</span><span class="p">)</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">multi_func_list</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">OnionExpShellModel</span><span class="p">)</span>
+        <span class="k">except</span><span class="p">:</span>
+            <span class="n">logging</span><span class="o">.</span><span class="n">error</span><span class="p">(</span><span class="n">base_message</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">OnionExpShellModel</span><span class="o">.</span><span class="n">__name__</span><span class="p">))</span>
+
+        <span class="k">try</span><span class="p">:</span>
+            <span class="kn">from</span> <span class="nn">sas.models.SphericalSLDModel</span> <span class="kn">import</span> <span class="n">SphericalSLDModel</span>
+
+            <span class="bp">self</span><span class="o">.</span><span class="n">model_dictionary</span><span class="p">[</span><span class="n">SphericalSLDModel</span><span class="o">.</span><span class="n">__name__</span><span class="p">]</span> <span class="o">=</span> <span class="n">SphericalSLDModel</span>
+            <span class="c">#        self.shape_list.append(SphericalSLDModel)</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">multiplication_factor</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">SphericalSLDModel</span><span class="p">)</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">multi_func_list</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">SphericalSLDModel</span><span class="p">)</span>
+        <span class="k">except</span><span class="p">:</span>
+            <span class="n">logging</span><span class="o">.</span><span class="n">error</span><span class="p">(</span><span class="n">base_message</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">SphericalSLDModel</span><span class="o">.</span><span class="n">__name__</span><span class="p">))</span>
+
+        <span class="k">try</span><span class="p">:</span>
+            <span class="kn">from</span> <span class="nn">sas.models.LinearPearlsModel</span> <span class="kn">import</span> <span class="n">LinearPearlsModel</span>
+
+            <span class="bp">self</span><span class="o">.</span><span class="n">model_dictionary</span><span class="p">[</span><span class="n">LinearPearlsModel</span><span class="o">.</span><span class="n">__name__</span><span class="p">]</span> <span class="o">=</span> <span class="n">LinearPearlsModel</span>
+            <span class="c">#        self.shape_list.append(LinearPearlsModel)</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">model_name_list</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">LinearPearlsModel</span><span class="o">.</span><span class="n">__name__</span><span class="p">)</span>
+        <span class="k">except</span><span class="p">:</span>
+            <span class="n">logging</span><span class="o">.</span><span class="n">error</span><span class="p">(</span><span class="n">base_message</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">LinearPearlsModel</span><span class="o">.</span><span class="n">__name__</span><span class="p">))</span>
+
+        <span class="k">try</span><span class="p">:</span>
+            <span class="kn">from</span> <span class="nn">sas.models.PearlNecklaceModel</span> <span class="kn">import</span> <span class="n">PearlNecklaceModel</span>
+
+            <span class="bp">self</span><span class="o">.</span><span class="n">model_dictionary</span><span class="p">[</span><span class="n">PearlNecklaceModel</span><span class="o">.</span><span class="n">__name__</span><span class="p">]</span> <span class="o">=</span> <span class="n">PearlNecklaceModel</span>
+            <span class="c">#        self.shape_list.append(PearlNecklaceModel)</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">model_name_list</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">PearlNecklaceModel</span><span class="o">.</span><span class="n">__name__</span><span class="p">)</span>
+        <span class="k">except</span><span class="p">:</span>
+            <span class="n">logging</span><span class="o">.</span><span class="n">error</span><span class="p">(</span><span class="n">base_message</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">PearlNecklaceModel</span><span class="o">.</span><span class="n">__name__</span><span class="p">))</span>
+
+        <span class="k">try</span><span class="p">:</span>
+            <span class="kn">from</span> <span class="nn">sas.models.CylinderModel</span> <span class="kn">import</span> <span class="n">CylinderModel</span>
+
+            <span class="bp">self</span><span class="o">.</span><span class="n">model_dictionary</span><span class="p">[</span><span class="n">CylinderModel</span><span class="o">.</span><span class="n">__name__</span><span class="p">]</span> <span class="o">=</span> <span class="n">CylinderModel</span>
+            <span class="c">#        self.shape_list.append(CylinderModel)</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">multiplication_factor</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">CylinderModel</span><span class="p">)</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">model_name_list</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">CylinderModel</span><span class="o">.</span><span class="n">__name__</span><span class="p">)</span>
+        <span class="k">except</span><span class="p">:</span>
+            <span class="n">logging</span><span class="o">.</span><span class="n">error</span><span class="p">(</span><span class="n">base_message</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">CylinderModel</span><span class="o">.</span><span class="n">__name__</span><span class="p">))</span>
+
+        <span class="k">try</span><span class="p">:</span>
+            <span class="kn">from</span> <span class="nn">sas.models.CoreShellCylinderModel</span> <span class="kn">import</span> <span class="n">CoreShellCylinderModel</span>
+
+            <span class="bp">self</span><span class="o">.</span><span class="n">model_dictionary</span><span class="p">[</span><span class="n">CoreShellCylinderModel</span><span class="o">.</span><span class="n">__name__</span><span class="p">]</span> <span class="o">=</span> <span class="n">CoreShellCylinderModel</span>
+            <span class="c">#        self.shape_list.append(CoreShellCylinderModel)</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">multiplication_factor</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">CoreShellCylinderModel</span><span class="p">)</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">model_name_list</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">CoreShellCylinderModel</span><span class="o">.</span><span class="n">__name__</span><span class="p">)</span>
+        <span class="k">except</span><span class="p">:</span>
+            <span class="n">logging</span><span class="o">.</span><span class="n">error</span><span class="p">(</span><span class="n">base_message</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">CoreShellCylinderModel</span><span class="o">.</span><span class="n">__name__</span><span class="p">))</span>
+
+        <span class="k">try</span><span class="p">:</span>
+            <span class="kn">from</span> <span class="nn">sas.models.CoreShellBicelleModel</span> <span class="kn">import</span> <span class="n">CoreShellBicelleModel</span>
+
+            <span class="bp">self</span><span class="o">.</span><span class="n">model_dictionary</span><span class="p">[</span><span class="n">CoreShellBicelleModel</span><span class="o">.</span><span class="n">__name__</span><span class="p">]</span> <span class="o">=</span> <span class="n">CoreShellBicelleModel</span>
+            <span class="c">#        self.shape_list.append(CoreShellBicelleModel)</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">multiplication_factor</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">CoreShellBicelleModel</span><span class="p">)</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">model_name_list</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">CoreShellBicelleModel</span><span class="o">.</span><span class="n">__name__</span><span class="p">)</span>
+        <span class="k">except</span><span class="p">:</span>
+            <span class="n">logging</span><span class="o">.</span><span class="n">error</span><span class="p">(</span><span class="n">base_message</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">CoreShellBicelleModel</span><span class="o">.</span><span class="n">__name__</span><span class="p">))</span>
+
+        <span class="k">try</span><span class="p">:</span>
+            <span class="kn">from</span> <span class="nn">sas.models.HollowCylinderModel</span> <span class="kn">import</span> <span class="n">HollowCylinderModel</span>
+
+            <span class="bp">self</span><span class="o">.</span><span class="n">model_dictionary</span><span class="p">[</span><span class="n">HollowCylinderModel</span><span class="o">.</span><span class="n">__name__</span><span class="p">]</span> <span class="o">=</span> <span class="n">HollowCylinderModel</span>
+            <span class="c">#        self.shape_list.append(HollowCylinderModel)</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">multiplication_factor</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">HollowCylinderModel</span><span class="p">)</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">model_name_list</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">HollowCylinderModel</span><span class="o">.</span><span class="n">__name__</span><span class="p">)</span>
+        <span class="k">except</span><span class="p">:</span>
+            <span class="n">logging</span><span class="o">.</span><span class="n">error</span><span class="p">(</span><span class="n">base_message</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">HollowCylinderModel</span><span class="o">.</span><span class="n">__name__</span><span class="p">))</span>
+
+        <span class="k">try</span><span class="p">:</span>
+            <span class="kn">from</span> <span class="nn">sas.models.FlexibleCylinderModel</span> <span class="kn">import</span> <span class="n">FlexibleCylinderModel</span>
+
+            <span class="bp">self</span><span class="o">.</span><span class="n">model_dictionary</span><span class="p">[</span><span class="n">FlexibleCylinderModel</span><span class="o">.</span><span class="n">__name__</span><span class="p">]</span> <span class="o">=</span> <span class="n">FlexibleCylinderModel</span>
+            <span class="c">#        self.shape_list.append(FlexibleCylinderModel)</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">model_name_list</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">FlexibleCylinderModel</span><span class="o">.</span><span class="n">__name__</span><span class="p">)</span>
+        <span class="k">except</span><span class="p">:</span>
+            <span class="n">logging</span><span class="o">.</span><span class="n">error</span><span class="p">(</span><span class="n">base_message</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">FlexibleCylinderModel</span><span class="o">.</span><span class="n">__name__</span><span class="p">))</span>
+
+        <span class="k">try</span><span class="p">:</span>
+            <span class="kn">from</span> <span class="nn">sas.models.FlexCylEllipXModel</span> <span class="kn">import</span> <span class="n">FlexCylEllipXModel</span>
+
+            <span class="bp">self</span><span class="o">.</span><span class="n">model_dictionary</span><span class="p">[</span><span class="n">FlexCylEllipXModel</span><span class="o">.</span><span class="n">__name__</span><span class="p">]</span> <span class="o">=</span> <span class="n">FlexCylEllipXModel</span>
+            <span class="c">#        self.shape_list.append(FlexCylEllipXModel)</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">model_name_list</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">FlexCylEllipXModel</span><span class="o">.</span><span class="n">__name__</span><span class="p">)</span>
+        <span class="k">except</span><span class="p">:</span>
+            <span class="n">logging</span><span class="o">.</span><span class="n">error</span><span class="p">(</span><span class="n">base_message</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">FlexCylEllipXModel</span><span class="o">.</span><span class="n">__name__</span><span class="p">))</span>
+
+        <span class="k">try</span><span class="p">:</span>
+            <span class="kn">from</span> <span class="nn">sas.models.StackedDisksModel</span> <span class="kn">import</span> <span class="n">StackedDisksModel</span>
+
+            <span class="bp">self</span><span class="o">.</span><span class="n">model_dictionary</span><span class="p">[</span><span class="n">StackedDisksModel</span><span class="o">.</span><span class="n">__name__</span><span class="p">]</span> <span class="o">=</span> <span class="n">StackedDisksModel</span>
+            <span class="c">#        self.shape_list.append(StackedDisksModel)</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">multiplication_factor</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">StackedDisksModel</span><span class="p">)</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">model_name_list</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">StackedDisksModel</span><span class="o">.</span><span class="n">__name__</span><span class="p">)</span>
+        <span class="k">except</span><span class="p">:</span>
+            <span class="n">logging</span><span class="o">.</span><span class="n">error</span><span class="p">(</span><span class="n">base_message</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">StackedDisksModel</span><span class="o">.</span><span class="n">__name__</span><span class="p">))</span>
+
+        <span class="k">try</span><span class="p">:</span>
+            <span class="kn">from</span> <span class="nn">sas.models.ParallelepipedModel</span> <span class="kn">import</span> <span class="n">ParallelepipedModel</span>
+
+            <span class="bp">self</span><span class="o">.</span><span class="n">model_dictionary</span><span class="p">[</span><span class="n">ParallelepipedModel</span><span class="o">.</span><span class="n">__name__</span><span class="p">]</span> <span class="o">=</span> <span class="n">ParallelepipedModel</span>
+            <span class="c">#        self.shape_list.append(ParallelepipedModel)</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">multiplication_factor</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">ParallelepipedModel</span><span class="p">)</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">model_name_list</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">ParallelepipedModel</span><span class="o">.</span><span class="n">__name__</span><span class="p">)</span>
+        <span class="k">except</span><span class="p">:</span>
+            <span class="n">logging</span><span class="o">.</span><span class="n">error</span><span class="p">(</span><span class="n">base_message</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">ParallelepipedModel</span><span class="o">.</span><span class="n">__name__</span><span class="p">))</span>
+
+        <span class="k">try</span><span class="p">:</span>
+            <span class="kn">from</span> <span class="nn">sas.models.CSParallelepipedModel</span> <span class="kn">import</span> <span class="n">CSParallelepipedModel</span>
+
+            <span class="bp">self</span><span class="o">.</span><span class="n">model_dictionary</span><span class="p">[</span><span class="n">CSParallelepipedModel</span><span class="o">.</span><span class="n">__name__</span><span class="p">]</span> <span class="o">=</span> <span class="n">CSParallelepipedModel</span>
+            <span class="c">#        self.shape_list.append(CSParallelepipedModel)</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">multiplication_factor</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">CSParallelepipedModel</span><span class="p">)</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">model_name_list</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">CSParallelepipedModel</span><span class="o">.</span><span class="n">__name__</span><span class="p">)</span>
+        <span class="k">except</span><span class="p">:</span>
+            <span class="n">logging</span><span class="o">.</span><span class="n">error</span><span class="p">(</span><span class="n">base_message</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">CSParallelepipedModel</span><span class="o">.</span><span class="n">__name__</span><span class="p">))</span>
+
+        <span class="k">try</span><span class="p">:</span>
+            <span class="kn">from</span> <span class="nn">sas.models.EllipticalCylinderModel</span> <span class="kn">import</span> <span class="n">EllipticalCylinderModel</span>
+
+            <span class="bp">self</span><span class="o">.</span><span class="n">model_dictionary</span><span class="p">[</span><span class="n">EllipticalCylinderModel</span><span class="o">.</span><span class="n">__name__</span><span class="p">]</span> <span class="o">=</span> <span class="n">EllipticalCylinderModel</span>
+            <span class="c">#        self.shape_list.append(EllipticalCylinderModel)</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">multiplication_factor</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">EllipticalCylinderModel</span><span class="p">)</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">model_name_list</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">EllipticalCylinderModel</span><span class="o">.</span><span class="n">__name__</span><span class="p">)</span>
+        <span class="k">except</span><span class="p">:</span>
+            <span class="n">logging</span><span class="o">.</span><span class="n">error</span><span class="p">(</span><span class="n">base_message</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">EllipticalCylinderModel</span><span class="o">.</span><span class="n">__name__</span><span class="p">))</span>
+
+        <span class="k">try</span><span class="p">:</span>
+            <span class="kn">from</span> <span class="nn">sas.models.CappedCylinderModel</span> <span class="kn">import</span> <span class="n">CappedCylinderModel</span>
+
+            <span class="bp">self</span><span class="o">.</span><span class="n">model_dictionary</span><span class="p">[</span><span class="n">CappedCylinderModel</span><span class="o">.</span><span class="n">__name__</span><span class="p">]</span> <span class="o">=</span> <span class="n">CappedCylinderModel</span>
+            <span class="c">#       self.shape_list.append(CappedCylinderModel)</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">model_name_list</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">CappedCylinderModel</span><span class="o">.</span><span class="n">__name__</span><span class="p">)</span>
+        <span class="k">except</span><span class="p">:</span>
+            <span class="n">logging</span><span class="o">.</span><span class="n">error</span><span class="p">(</span><span class="n">base_message</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">CappedCylinderModel</span><span class="o">.</span><span class="n">__name__</span><span class="p">))</span>
+
+        <span class="k">try</span><span class="p">:</span>
+            <span class="kn">from</span> <span class="nn">sas.models.EllipsoidModel</span> <span class="kn">import</span> <span class="n">EllipsoidModel</span>
+
+            <span class="bp">self</span><span class="o">.</span><span class="n">model_dictionary</span><span class="p">[</span><span class="n">EllipsoidModel</span><span class="o">.</span><span class="n">__name__</span><span class="p">]</span> <span class="o">=</span> <span class="n">EllipsoidModel</span>
+            <span class="c">#        self.shape_list.append(EllipsoidModel)</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">multiplication_factor</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">EllipsoidModel</span><span class="p">)</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">model_name_list</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">EllipsoidModel</span><span class="o">.</span><span class="n">__name__</span><span class="p">)</span>
+        <span class="k">except</span><span class="p">:</span>
+            <span class="n">logging</span><span class="o">.</span><span class="n">error</span><span class="p">(</span><span class="n">base_message</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">EllipsoidModel</span><span class="o">.</span><span class="n">__name__</span><span class="p">))</span>
+
+        <span class="k">try</span><span class="p">:</span>
+            <span class="kn">from</span> <span class="nn">sas.models.CoreShellEllipsoidModel</span> <span class="kn">import</span> <span class="n">CoreShellEllipsoidModel</span>
+
+            <span class="bp">self</span><span class="o">.</span><span class="n">model_dictionary</span><span class="p">[</span><span class="n">CoreShellEllipsoidModel</span><span class="o">.</span><span class="n">__name__</span><span class="p">]</span> <span class="o">=</span> <span class="n">CoreShellEllipsoidModel</span>
+            <span class="c">#        self.shape_list.append(CoreShellEllipsoidModel)</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">multiplication_factor</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">CoreShellEllipsoidModel</span><span class="p">)</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">model_name_list</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">CoreShellEllipsoidModel</span><span class="o">.</span><span class="n">__name__</span><span class="p">)</span>
+        <span class="k">except</span><span class="p">:</span>
+            <span class="n">logging</span><span class="o">.</span><span class="n">error</span><span class="p">(</span><span class="n">base_message</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">CoreShellEllipsoidModel</span><span class="o">.</span><span class="n">__name__</span><span class="p">))</span>
+
+        <span class="k">try</span><span class="p">:</span>
+            <span class="kn">from</span> <span class="nn">sas.models.CoreShellEllipsoidXTModel</span> <span class="kn">import</span> <span class="n">CoreShellEllipsoidXTModel</span>
+
+            <span class="bp">self</span><span class="o">.</span><span class="n">model_dictionary</span><span class="p">[</span><span class="n">CoreShellEllipsoidXTModel</span><span class="o">.</span><span class="n">__name__</span><span class="p">]</span> <span class="o">=</span> <span class="n">CoreShellEllipsoidXTModel</span>
+            <span class="c">#        self.shape_list.append(CoreShellEllipsoidXTModel)</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">multiplication_factor</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">CoreShellEllipsoidXTModel</span><span class="p">)</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">model_name_list</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">CoreShellEllipsoidXTModel</span><span class="o">.</span><span class="n">__name__</span><span class="p">)</span>
+        <span class="k">except</span><span class="p">:</span>
+            <span class="n">logging</span><span class="o">.</span><span class="n">error</span><span class="p">(</span><span class="n">base_message</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">CoreShellEllipsoidXTModel</span><span class="o">.</span><span class="n">__name__</span><span class="p">))</span>
+
+        <span class="k">try</span><span class="p">:</span>
+            <span class="kn">from</span> <span class="nn">sas.models.TriaxialEllipsoidModel</span> <span class="kn">import</span> <span class="n">TriaxialEllipsoidModel</span>
+
+            <span class="bp">self</span><span class="o">.</span><span class="n">model_dictionary</span><span class="p">[</span><span class="n">TriaxialEllipsoidModel</span><span class="o">.</span><span class="n">__name__</span><span class="p">]</span> <span class="o">=</span> <span class="n">TriaxialEllipsoidModel</span>
+            <span class="c">#        self.shape_list.append(TriaxialEllipsoidModel)</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">multiplication_factor</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">TriaxialEllipsoidModel</span><span class="p">)</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">model_name_list</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">TriaxialEllipsoidModel</span><span class="o">.</span><span class="n">__name__</span><span class="p">)</span>
+        <span class="k">except</span><span class="p">:</span>
+            <span class="n">logging</span><span class="o">.</span><span class="n">error</span><span class="p">(</span><span class="n">base_message</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">TriaxialEllipsoidModel</span><span class="o">.</span><span class="n">__name__</span><span class="p">))</span>
+
+        <span class="k">try</span><span class="p">:</span>
+            <span class="kn">from</span> <span class="nn">sas.models.LamellarModel</span> <span class="kn">import</span> <span class="n">LamellarModel</span>
+
+            <span class="bp">self</span><span class="o">.</span><span class="n">model_dictionary</span><span class="p">[</span><span class="n">LamellarModel</span><span class="o">.</span><span class="n">__name__</span><span class="p">]</span> <span class="o">=</span> <span class="n">LamellarModel</span>
+            <span class="c">#        self.shape_list.append(LamellarModel)</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">model_name_list</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">LamellarModel</span><span class="o">.</span><span class="n">__name__</span><span class="p">)</span>
+        <span class="k">except</span><span class="p">:</span>
+            <span class="n">logging</span><span class="o">.</span><span class="n">error</span><span class="p">(</span><span class="n">base_message</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">LamellarModel</span><span class="o">.</span><span class="n">__name__</span><span class="p">))</span>
+
+        <span class="k">try</span><span class="p">:</span>
+            <span class="kn">from</span> <span class="nn">sas.models.LamellarFFHGModel</span> <span class="kn">import</span> <span class="n">LamellarFFHGModel</span>
+
+            <span class="bp">self</span><span class="o">.</span><span class="n">model_dictionary</span><span class="p">[</span><span class="n">LamellarFFHGModel</span><span class="o">.</span><span class="n">__name__</span><span class="p">]</span> <span class="o">=</span> <span class="n">LamellarFFHGModel</span>
+            <span class="c">#        self.shape_list.append(LamellarFFHGModel)</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">model_name_list</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">LamellarFFHGModel</span><span class="o">.</span><span class="n">__name__</span><span class="p">)</span>
+        <span class="k">except</span><span class="p">:</span>
+            <span class="n">logging</span><span class="o">.</span><span class="n">error</span><span class="p">(</span><span class="n">base_message</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">LamellarFFHGModel</span><span class="o">.</span><span class="n">__name__</span><span class="p">))</span>
+
+        <span class="k">try</span><span class="p">:</span>
+            <span class="kn">from</span> <span class="nn">sas.models.LamellarPSModel</span> <span class="kn">import</span> <span class="n">LamellarPSModel</span>
+
+            <span class="bp">self</span><span class="o">.</span><span class="n">model_dictionary</span><span class="p">[</span><span class="n">LamellarPSModel</span><span class="o">.</span><span class="n">__name__</span><span class="p">]</span> <span class="o">=</span> <span class="n">LamellarPSModel</span>
+            <span class="c">#        self.shape_list.append(LamellarPSModel)</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">model_name_list</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">LamellarPSModel</span><span class="o">.</span><span class="n">__name__</span><span class="p">)</span>
+        <span class="k">except</span><span class="p">:</span>
+            <span class="n">logging</span><span class="o">.</span><span class="n">error</span><span class="p">(</span><span class="n">base_message</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">LamellarPSModel</span><span class="o">.</span><span class="n">__name__</span><span class="p">))</span>
+
+        <span class="k">try</span><span class="p">:</span>
+            <span class="kn">from</span> <span class="nn">sas.models.LamellarPSHGModel</span> <span class="kn">import</span> <span class="n">LamellarPSHGModel</span>
+
+            <span class="bp">self</span><span class="o">.</span><span class="n">model_dictionary</span><span class="p">[</span><span class="n">LamellarPSHGModel</span><span class="o">.</span><span class="n">__name__</span><span class="p">]</span> <span class="o">=</span> <span class="n">LamellarPSHGModel</span>
+            <span class="c">#        self.shape_list.append(LamellarPSHGModel)</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">model_name_list</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">LamellarPSHGModel</span><span class="o">.</span><span class="n">__name__</span><span class="p">)</span>
+        <span class="k">except</span><span class="p">:</span>
+            <span class="n">logging</span><span class="o">.</span><span class="n">error</span><span class="p">(</span><span class="n">base_message</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">LamellarPSHGModel</span><span class="o">.</span><span class="n">__name__</span><span class="p">))</span>
+
+        <span class="k">try</span><span class="p">:</span>
+            <span class="kn">from</span> <span class="nn">sas.models.LamellarPCrystalModel</span> <span class="kn">import</span> <span class="n">LamellarPCrystalModel</span>
+
+            <span class="bp">self</span><span class="o">.</span><span class="n">model_dictionary</span><span class="p">[</span><span class="n">LamellarPCrystalModel</span><span class="o">.</span><span class="n">__name__</span><span class="p">]</span> <span class="o">=</span> <span class="n">LamellarPCrystalModel</span>
+            <span class="c">#        self.shape_list.append(LamellarPCrystalModel)</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">model_name_list</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">LamellarPCrystalModel</span><span class="o">.</span><span class="n">__name__</span><span class="p">)</span>
+        <span class="k">except</span><span class="p">:</span>
+            <span class="n">logging</span><span class="o">.</span><span class="n">error</span><span class="p">(</span><span class="n">base_message</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">LamellarPCrystalModel</span><span class="o">.</span><span class="n">__name__</span><span class="p">))</span>
+
+        <span class="k">try</span><span class="p">:</span>
+            <span class="kn">from</span> <span class="nn">sas.models.SCCrystalModel</span> <span class="kn">import</span> <span class="n">SCCrystalModel</span>
+
+            <span class="bp">self</span><span class="o">.</span><span class="n">model_dictionary</span><span class="p">[</span><span class="n">SCCrystalModel</span><span class="o">.</span><span class="n">__name__</span><span class="p">]</span> <span class="o">=</span> <span class="n">SCCrystalModel</span>
+            <span class="c">#        self.shape_list.append(SCCrystalModel)</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">model_name_list</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">SCCrystalModel</span><span class="o">.</span><span class="n">__name__</span><span class="p">)</span>
+        <span class="k">except</span><span class="p">:</span>
+            <span class="n">logging</span><span class="o">.</span><span class="n">error</span><span class="p">(</span><span class="n">base_message</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">SCCrystalModel</span><span class="o">.</span><span class="n">__name__</span><span class="p">))</span>
+            
+        <span class="k">try</span><span class="p">:</span>
+            <span class="kn">from</span> <span class="nn">sas.models.FCCrystalModel</span> <span class="kn">import</span> <span class="n">FCCrystalModel</span>
+
+            <span class="bp">self</span><span class="o">.</span><span class="n">model_dictionary</span><span class="p">[</span><span class="n">FCCrystalModel</span><span class="o">.</span><span class="n">__name__</span><span class="p">]</span> <span class="o">=</span> <span class="n">FCCrystalModel</span>
+            <span class="c">#        self.shape_list.append(FCCrystalModel)</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">model_name_list</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">FCCrystalModel</span><span class="o">.</span><span class="n">__name__</span><span class="p">)</span>
+        <span class="k">except</span><span class="p">:</span>
+            <span class="n">logging</span><span class="o">.</span><span class="n">error</span><span class="p">(</span><span class="n">base_message</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">FCCrystalModel</span><span class="o">.</span><span class="n">__name__</span><span class="p">))</span>
+
+        <span class="k">try</span><span class="p">:</span>
+            <span class="kn">from</span> <span class="nn">sas.models.BCCrystalModel</span> <span class="kn">import</span> <span class="n">BCCrystalModel</span>
+
+            <span class="bp">self</span><span class="o">.</span><span class="n">model_dictionary</span><span class="p">[</span><span class="n">BCCrystalModel</span><span class="o">.</span><span class="n">__name__</span><span class="p">]</span> <span class="o">=</span> <span class="n">BCCrystalModel</span>
+            <span class="c">#        self.shape_list.append(BCCrystalModel)</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">model_name_list</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">BCCrystalModel</span><span class="o">.</span><span class="n">__name__</span><span class="p">)</span>
+        <span class="k">except</span><span class="p">:</span>
+            <span class="n">logging</span><span class="o">.</span><span class="n">error</span><span class="p">(</span><span class="n">base_message</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">BCCrystalModel</span><span class="o">.</span><span class="n">__name__</span><span class="p">))</span>
+
+
+        <span class="c">## Structure factor</span>
+        <span class="k">try</span><span class="p">:</span>
+            <span class="kn">from</span> <span class="nn">sas.models.SquareWellStructure</span> <span class="kn">import</span> <span class="n">SquareWellStructure</span>
+
+            <span class="bp">self</span><span class="o">.</span><span class="n">model_dictionary</span><span class="p">[</span><span class="n">SquareWellStructure</span><span class="o">.</span><span class="n">__name__</span><span class="p">]</span> <span class="o">=</span> <span class="n">SquareWellStructure</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">struct_list</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">SquareWellStructure</span><span class="p">)</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">model_name_list</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">SquareWellStructure</span><span class="o">.</span><span class="n">__name__</span><span class="p">)</span>
+        <span class="k">except</span><span class="p">:</span>
+            <span class="n">logging</span><span class="o">.</span><span class="n">error</span><span class="p">(</span><span class="n">base_message</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">SquareWellStructure</span><span class="o">.</span><span class="n">__name__</span><span class="p">))</span>
+
+        <span class="k">try</span><span class="p">:</span>
+            <span class="kn">from</span> <span class="nn">sas.models.HardsphereStructure</span> <span class="kn">import</span> <span class="n">HardsphereStructure</span>
+
+            <span class="bp">self</span><span class="o">.</span><span class="n">model_dictionary</span><span class="p">[</span><span class="n">HardsphereStructure</span><span class="o">.</span><span class="n">__name__</span><span class="p">]</span> <span class="o">=</span> <span class="n">HardsphereStructure</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">struct_list</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">HardsphereStructure</span><span class="p">)</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">model_name_list</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">HardsphereStructure</span><span class="o">.</span><span class="n">__name__</span><span class="p">)</span>
+        <span class="k">except</span><span class="p">:</span>
+            <span class="n">logging</span><span class="o">.</span><span class="n">error</span><span class="p">(</span><span class="n">base_message</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">HardsphereStructure</span><span class="o">.</span><span class="n">__name__</span><span class="p">))</span>
+
+        <span class="k">try</span><span class="p">:</span>
+            <span class="kn">from</span> <span class="nn">sas.models.StickyHSStructure</span> <span class="kn">import</span> <span class="n">StickyHSStructure</span>
+
+            <span class="bp">self</span><span class="o">.</span><span class="n">model_dictionary</span><span class="p">[</span><span class="n">StickyHSStructure</span><span class="o">.</span><span class="n">__name__</span><span class="p">]</span> <span class="o">=</span> <span class="n">StickyHSStructure</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">struct_list</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">StickyHSStructure</span><span class="p">)</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">model_name_list</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">StickyHSStructure</span><span class="o">.</span><span class="n">__name__</span><span class="p">)</span>
+        <span class="k">except</span><span class="p">:</span>
+            <span class="n">logging</span><span class="o">.</span><span class="n">error</span><span class="p">(</span><span class="n">base_message</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">StickyHSStructure</span><span class="o">.</span><span class="n">__name__</span><span class="p">))</span>
+
+        <span class="k">try</span><span class="p">:</span>
+            <span class="kn">from</span> <span class="nn">sas.models.HayterMSAStructure</span> <span class="kn">import</span> <span class="n">HayterMSAStructure</span>
+
+            <span class="bp">self</span><span class="o">.</span><span class="n">model_dictionary</span><span class="p">[</span><span class="n">HayterMSAStructure</span><span class="o">.</span><span class="n">__name__</span><span class="p">]</span> <span class="o">=</span> <span class="n">HayterMSAStructure</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">struct_list</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">HayterMSAStructure</span><span class="p">)</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">model_name_list</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">HayterMSAStructure</span><span class="o">.</span><span class="n">__name__</span><span class="p">)</span>
+        <span class="k">except</span><span class="p">:</span>
+            <span class="n">logging</span><span class="o">.</span><span class="n">error</span><span class="p">(</span><span class="n">base_message</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">HayterMSAStructure</span><span class="o">.</span><span class="n">__name__</span><span class="p">))</span>
+
+
+
+        <span class="c">##shape-independent models</span>
+        <span class="k">try</span><span class="p">:</span>
+            <span class="kn">from</span> <span class="nn">sas.models.PowerLawAbsModel</span> <span class="kn">import</span> <span class="n">PowerLawAbsModel</span>
+
+            <span class="bp">self</span><span class="o">.</span><span class="n">model_dictionary</span><span class="p">[</span><span class="n">PowerLawAbsModel</span><span class="o">.</span><span class="n">__name__</span><span class="p">]</span> <span class="o">=</span> <span class="n">PowerLawAbsModel</span>
+            <span class="c">#        self.shape_indep_list.append(PowerLawAbsModel)</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">model_name_list</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">PowerLawAbsModel</span><span class="o">.</span><span class="n">__name__</span><span class="p">)</span>
+        <span class="k">except</span><span class="p">:</span>
+            <span class="n">logging</span><span class="o">.</span><span class="n">error</span><span class="p">(</span><span class="n">base_message</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">PowerLawAbsModel</span><span class="o">.</span><span class="n">__name__</span><span class="p">))</span>
+
+        <span class="k">try</span><span class="p">:</span>
+            <span class="kn">from</span> <span class="nn">sas.models.BEPolyelectrolyte</span> <span class="kn">import</span> <span class="n">BEPolyelectrolyte</span>
+
+            <span class="bp">self</span><span class="o">.</span><span class="n">model_dictionary</span><span class="p">[</span><span class="n">BEPolyelectrolyte</span><span class="o">.</span><span class="n">__name__</span><span class="p">]</span> <span class="o">=</span> <span class="n">BEPolyelectrolyte</span>
+            <span class="c">#        self.shape_indep_list.append(BEPolyelectrolyte)</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">model_name_list</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">BEPolyelectrolyte</span><span class="o">.</span><span class="n">__name__</span><span class="p">)</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">form_factor_dict</span><span class="p">[</span><span class="nb">str</span><span class="p">(</span><span class="n">wx</span><span class="o">.</span><span class="n">NewId</span><span class="p">())]</span> <span class="o">=</span> <span class="p">[</span><span class="n">SphereModel</span><span class="p">]</span>
+        <span class="k">except</span><span class="p">:</span>
+            <span class="n">logging</span><span class="o">.</span><span class="n">error</span><span class="p">(</span><span class="n">base_message</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">BEPolyelectrolyte</span><span class="o">.</span><span class="n">__name__</span><span class="p">))</span>
+
+        <span class="k">try</span><span class="p">:</span>
+            <span class="kn">from</span> <span class="nn">sas.models.BroadPeakModel</span> <span class="kn">import</span> <span class="n">BroadPeakModel</span>
+
+            <span class="bp">self</span><span class="o">.</span><span class="n">model_dictionary</span><span class="p">[</span><span class="n">BroadPeakModel</span><span class="o">.</span><span class="n">__name__</span><span class="p">]</span> <span class="o">=</span> <span class="n">BroadPeakModel</span>
+            <span class="c">#        self.shape_indep_list.append(BroadPeakModel)</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">model_name_list</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">BroadPeakModel</span><span class="o">.</span><span class="n">__name__</span><span class="p">)</span>
+        <span class="k">except</span><span class="p">:</span>
+            <span class="n">logging</span><span class="o">.</span><span class="n">error</span><span class="p">(</span><span class="n">base_message</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">BroadPeakModel</span><span class="o">.</span><span class="n">__name__</span><span class="p">))</span>
+
+        <span class="k">try</span><span class="p">:</span>
+            <span class="kn">from</span> <span class="nn">sas.models.CorrLengthModel</span> <span class="kn">import</span> <span class="n">CorrLengthModel</span>
+
+            <span class="bp">self</span><span class="o">.</span><span class="n">model_dictionary</span><span class="p">[</span><span class="n">CorrLengthModel</span><span class="o">.</span><span class="n">__name__</span><span class="p">]</span> <span class="o">=</span> <span class="n">CorrLengthModel</span>
+            <span class="c">#        self.shape_indep_list.append(CorrLengthModel)</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">model_name_list</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">CorrLengthModel</span><span class="o">.</span><span class="n">__name__</span><span class="p">)</span>
+        <span class="k">except</span><span class="p">:</span>
+            <span class="n">logging</span><span class="o">.</span><span class="n">error</span><span class="p">(</span><span class="n">base_message</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">CorrLengthModel</span><span class="o">.</span><span class="n">__name__</span><span class="p">))</span>
+
+        <span class="k">try</span><span class="p">:</span>
+            <span class="kn">from</span> <span class="nn">sas.models.DABModel</span> <span class="kn">import</span> <span class="n">DABModel</span>
+
+            <span class="bp">self</span><span class="o">.</span><span class="n">model_dictionary</span><span class="p">[</span><span class="n">DABModel</span><span class="o">.</span><span class="n">__name__</span><span class="p">]</span> <span class="o">=</span> <span class="n">DABModel</span>
+            <span class="c">#        self.shape_indep_list.append(DABModel)</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">model_name_list</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">DABModel</span><span class="o">.</span><span class="n">__name__</span><span class="p">)</span>
+        <span class="k">except</span><span class="p">:</span>
+            <span class="n">logging</span><span class="o">.</span><span class="n">error</span><span class="p">(</span><span class="n">base_message</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">DABModel</span><span class="o">.</span><span class="n">__name__</span><span class="p">))</span>
+
+        <span class="k">try</span><span class="p">:</span>
+            <span class="kn">from</span> <span class="nn">sas.models.DebyeModel</span> <span class="kn">import</span> <span class="n">DebyeModel</span>
+
+            <span class="bp">self</span><span class="o">.</span><span class="n">model_dictionary</span><span class="p">[</span><span class="n">DebyeModel</span><span class="o">.</span><span class="n">__name__</span><span class="p">]</span> <span class="o">=</span> <span class="n">DebyeModel</span>
+            <span class="c">#        self.shape_indep_list.append(DebyeModel)</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">model_name_list</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">DebyeModel</span><span class="o">.</span><span class="n">__name__</span><span class="p">)</span>
+        <span class="k">except</span><span class="p">:</span>
+            <span class="n">logging</span><span class="o">.</span><span class="n">error</span><span class="p">(</span><span class="n">base_message</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">DebyeModel</span><span class="o">.</span><span class="n">__name__</span><span class="p">))</span>
+
+        <span class="k">try</span><span class="p">:</span>
+            <span class="kn">from</span> <span class="nn">sas.models.FractalModel</span> <span class="kn">import</span> <span class="n">FractalModel</span>
+
+            <span class="bp">self</span><span class="o">.</span><span class="n">model_dictionary</span><span class="p">[</span><span class="n">FractalModel</span><span class="o">.</span><span class="n">__name__</span><span class="p">]</span> <span class="o">=</span> <span class="n">FractalModel</span>
+            <span class="c">#        self.shape_indep_list.append(FractalModel)</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">model_name_list</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">FractalModel</span><span class="o">.</span><span class="n">__name__</span><span class="p">)</span>
+        <span class="k">except</span><span class="p">:</span>
+            <span class="n">logging</span><span class="o">.</span><span class="n">error</span><span class="p">(</span><span class="n">base_message</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">FractalModel</span><span class="o">.</span><span class="n">__name__</span><span class="p">))</span>
+
+        <span class="k">try</span><span class="p">:</span>
+            <span class="kn">from</span> <span class="nn">sas.models.FractalCoreShellModel</span> <span class="kn">import</span> <span class="n">FractalCoreShellModel</span>
+
+            <span class="bp">self</span><span class="o">.</span><span class="n">model_dictionary</span><span class="p">[</span><span class="n">FractalCoreShellModel</span><span class="o">.</span><span class="n">__name__</span><span class="p">]</span> <span class="o">=</span> <span class="n">FractalCoreShellModel</span>
+            <span class="c">#        self.shape_indep_list.append(FractalCoreShellModel)</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">model_name_list</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">FractalCoreShellModel</span><span class="o">.</span><span class="n">__name__</span><span class="p">)</span>
+        <span class="k">except</span><span class="p">:</span>
+            <span class="n">logging</span><span class="o">.</span><span class="n">error</span><span class="p">(</span><span class="n">base_message</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">FractalCoreShellModel</span><span class="o">.</span><span class="n">__name__</span><span class="p">))</span>
+
+        <span class="k">try</span><span class="p">:</span>
+            <span class="kn">from</span> <span class="nn">sas.models.GaussLorentzGelModel</span> <span class="kn">import</span> <span class="n">GaussLorentzGelModel</span>
+
+            <span class="bp">self</span><span class="o">.</span><span class="n">model_dictionary</span><span class="p">[</span><span class="n">GaussLorentzGelModel</span><span class="o">.</span><span class="n">__name__</span><span class="p">]</span> <span class="o">=</span> <span class="n">GaussLorentzGelModel</span>
+            <span class="c">#        self.shape_indep_list.append(GaussLorentzGelModel)</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">model_name_list</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">GaussLorentzGelModel</span><span class="o">.</span><span class="n">__name__</span><span class="p">)</span>
+        <span class="k">except</span><span class="p">:</span>
+            <span class="n">logging</span><span class="o">.</span><span class="n">error</span><span class="p">(</span><span class="n">base_message</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">GaussLorentzGelModel</span><span class="o">.</span><span class="n">__name__</span><span class="p">))</span>
+
+        <span class="k">try</span><span class="p">:</span>
+            <span class="kn">from</span> <span class="nn">sas.models.GuinierModel</span> <span class="kn">import</span> <span class="n">GuinierModel</span>
+
+            <span class="bp">self</span><span class="o">.</span><span class="n">model_dictionary</span><span class="p">[</span><span class="n">GuinierModel</span><span class="o">.</span><span class="n">__name__</span><span class="p">]</span> <span class="o">=</span> <span class="n">GuinierModel</span>
+            <span class="c">#        self.shape_indep_list.append(GuinierModel)</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">model_name_list</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">GuinierModel</span><span class="o">.</span><span class="n">__name__</span><span class="p">)</span>
+        <span class="k">except</span><span class="p">:</span>
+            <span class="n">logging</span><span class="o">.</span><span class="n">error</span><span class="p">(</span><span class="n">base_message</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">GuinierModel</span><span class="o">.</span><span class="n">__name__</span><span class="p">))</span>
+
+        <span class="k">try</span><span class="p">:</span>
+            <span class="kn">from</span> <span class="nn">sas.models.GuinierPorodModel</span> <span class="kn">import</span> <span class="n">GuinierPorodModel</span>
+
+            <span class="bp">self</span><span class="o">.</span><span class="n">model_dictionary</span><span class="p">[</span><span class="n">GuinierPorodModel</span><span class="o">.</span><span class="n">__name__</span><span class="p">]</span> <span class="o">=</span> <span class="n">GuinierPorodModel</span>
+            <span class="c">#        self.shape_indep_list.append(GuinierPorodModel)</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">model_name_list</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">GuinierPorodModel</span><span class="o">.</span><span class="n">__name__</span><span class="p">)</span>
+        <span class="k">except</span><span class="p">:</span>
+            <span class="n">logging</span><span class="o">.</span><span class="n">error</span><span class="p">(</span><span class="n">base_message</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">GuinierPorodModel</span><span class="o">.</span><span class="n">__name__</span><span class="p">))</span>
+
+        <span class="k">try</span><span class="p">:</span>
+            <span class="kn">from</span> <span class="nn">sas.models.LorentzModel</span> <span class="kn">import</span> <span class="n">LorentzModel</span>
+
+            <span class="bp">self</span><span class="o">.</span><span class="n">model_dictionary</span><span class="p">[</span><span class="n">LorentzModel</span><span class="o">.</span><span class="n">__name__</span><span class="p">]</span> <span class="o">=</span> <span class="n">LorentzModel</span>
+            <span class="c">#        self.shape_indep_list.append(LorentzModel)</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">model_name_list</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">LorentzModel</span><span class="o">.</span><span class="n">__name__</span><span class="p">)</span>
+        <span class="k">except</span><span class="p">:</span>
+            <span class="n">logging</span><span class="o">.</span><span class="n">error</span><span class="p">(</span><span class="n">base_message</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">LorentzModel</span><span class="o">.</span><span class="n">__name__</span><span class="p">))</span>
+
+        <span class="k">try</span><span class="p">:</span>
+            <span class="kn">from</span> <span class="nn">sas.models.MassFractalModel</span> <span class="kn">import</span> <span class="n">MassFractalModel</span>
+
+            <span class="bp">self</span><span class="o">.</span><span class="n">model_dictionary</span><span class="p">[</span><span class="n">MassFractalModel</span><span class="o">.</span><span class="n">__name__</span><span class="p">]</span> <span class="o">=</span> <span class="n">MassFractalModel</span>
+            <span class="c">#        self.shape_indep_list.append(MassFractalModel)</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">model_name_list</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">MassFractalModel</span><span class="o">.</span><span class="n">__name__</span><span class="p">)</span>
+        <span class="k">except</span><span class="p">:</span>
+            <span class="n">logging</span><span class="o">.</span><span class="n">error</span><span class="p">(</span><span class="n">base_message</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">MassFractalModel</span><span class="o">.</span><span class="n">__name__</span><span class="p">))</span>
+
+        <span class="k">try</span><span class="p">:</span>
+            <span class="kn">from</span> <span class="nn">sas.models.MassSurfaceFractal</span> <span class="kn">import</span> <span class="n">MassSurfaceFractal</span>
+
+            <span class="bp">self</span><span class="o">.</span><span class="n">model_dictionary</span><span class="p">[</span><span class="n">MassSurfaceFractal</span><span class="o">.</span><span class="n">__name__</span><span class="p">]</span> <span class="o">=</span> <span class="n">MassSurfaceFractal</span>
+            <span class="c">#        self.shape_indep_list.append(MassSurfaceFractal)</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">model_name_list</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">MassSurfaceFractal</span><span class="o">.</span><span class="n">__name__</span><span class="p">)</span>
+        <span class="k">except</span><span class="p">:</span>
+            <span class="n">logging</span><span class="o">.</span><span class="n">error</span><span class="p">(</span><span class="n">base_message</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">MassSurfaceFractal</span><span class="o">.</span><span class="n">__name__</span><span class="p">))</span>
+
+        <span class="k">try</span><span class="p">:</span>
+            <span class="kn">from</span> <span class="nn">sas.models.PeakGaussModel</span> <span class="kn">import</span> <span class="n">PeakGaussModel</span>
+
+            <span class="bp">self</span><span class="o">.</span><span class="n">model_dictionary</span><span class="p">[</span><span class="n">PeakGaussModel</span><span class="o">.</span><span class="n">__name__</span><span class="p">]</span> <span class="o">=</span> <span class="n">PeakGaussModel</span>
+            <span class="c">#        self.shape_indep_list.append(PeakGaussModel)</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">model_name_list</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">PeakGaussModel</span><span class="o">.</span><span class="n">__name__</span><span class="p">)</span>
+        <span class="k">except</span><span class="p">:</span>
+            <span class="n">logging</span><span class="o">.</span><span class="n">error</span><span class="p">(</span><span class="n">base_message</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">PeakGaussModel</span><span class="o">.</span><span class="n">__name__</span><span class="p">))</span>
+
+        <span class="k">try</span><span class="p">:</span>
+            <span class="kn">from</span> <span class="nn">sas.models.PeakLorentzModel</span> <span class="kn">import</span> <span class="n">PeakLorentzModel</span>
+
+            <span class="bp">self</span><span class="o">.</span><span class="n">model_dictionary</span><span class="p">[</span><span class="n">PeakLorentzModel</span><span class="o">.</span><span class="n">__name__</span><span class="p">]</span> <span class="o">=</span> <span class="n">PeakLorentzModel</span>
+            <span class="c">#        self.shape_indep_list.append(PeakLorentzModel)</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">model_name_list</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">PeakLorentzModel</span><span class="o">.</span><span class="n">__name__</span><span class="p">)</span>
+        <span class="k">except</span><span class="p">:</span>
+            <span class="n">logging</span><span class="o">.</span><span class="n">error</span><span class="p">(</span><span class="n">base_message</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">PeakLorentzModel</span><span class="o">.</span><span class="n">__name__</span><span class="p">))</span>
+
+        <span class="k">try</span><span class="p">:</span>
+            <span class="kn">from</span> <span class="nn">sas.models.Poly_GaussCoil</span> <span class="kn">import</span> <span class="n">Poly_GaussCoil</span>
+
+            <span class="bp">self</span><span class="o">.</span><span class="n">model_dictionary</span><span class="p">[</span><span class="n">Poly_GaussCoil</span><span class="o">.</span><span class="n">__name__</span><span class="p">]</span> <span class="o">=</span> <span class="n">Poly_GaussCoil</span>
+            <span class="c">#        self.shape_indep_list.append(Poly_GaussCoil)</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">model_name_list</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">Poly_GaussCoil</span><span class="o">.</span><span class="n">__name__</span><span class="p">)</span>
+        <span class="k">except</span><span class="p">:</span>
+            <span class="n">logging</span><span class="o">.</span><span class="n">error</span><span class="p">(</span><span class="n">base_message</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">Poly_GaussCoil</span><span class="o">.</span><span class="n">__name__</span><span class="p">))</span>
+
+        <span class="k">try</span><span class="p">:</span>
+            <span class="kn">from</span> <span class="nn">sas.models.PolymerExclVolume</span> <span class="kn">import</span> <span class="n">PolymerExclVolume</span>
+
+            <span class="bp">self</span><span class="o">.</span><span class="n">model_dictionary</span><span class="p">[</span><span class="n">PolymerExclVolume</span><span class="o">.</span><span class="n">__name__</span><span class="p">]</span> <span class="o">=</span> <span class="n">PolymerExclVolume</span>
+            <span class="c">#        self.shape_indep_list.append(PolymerExclVolume)</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">model_name_list</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">PolymerExclVolume</span><span class="o">.</span><span class="n">__name__</span><span class="p">)</span>
+        <span class="k">except</span><span class="p">:</span>
+            <span class="n">logging</span><span class="o">.</span><span class="n">error</span><span class="p">(</span><span class="n">base_message</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">PolymerExclVolume</span><span class="o">.</span><span class="n">__name__</span><span class="p">))</span>
+
+        <span class="k">try</span><span class="p">:</span>
+            <span class="kn">from</span> <span class="nn">sas.models.PorodModel</span> <span class="kn">import</span> <span class="n">PorodModel</span>
+
+            <span class="bp">self</span><span class="o">.</span><span class="n">model_dictionary</span><span class="p">[</span><span class="n">PorodModel</span><span class="o">.</span><span class="n">__name__</span><span class="p">]</span> <span class="o">=</span> <span class="n">PorodModel</span>
+            <span class="c">#        self.shape_indep_list.append(PorodModel)</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">model_name_list</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">PorodModel</span><span class="o">.</span><span class="n">__name__</span><span class="p">)</span>
+        <span class="k">except</span><span class="p">:</span>
+            <span class="n">logging</span><span class="o">.</span><span class="n">error</span><span class="p">(</span><span class="n">base_message</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">PorodModel</span><span class="o">.</span><span class="n">__name__</span><span class="p">))</span>
+
+        <span class="k">try</span><span class="p">:</span>
+            <span class="kn">from</span> <span class="nn">sas.models.RPA10Model</span> <span class="kn">import</span> <span class="n">RPA10Model</span>
+
+            <span class="bp">self</span><span class="o">.</span><span class="n">model_dictionary</span><span class="p">[</span><span class="n">RPA10Model</span><span class="o">.</span><span class="n">__name__</span><span class="p">]</span> <span class="o">=</span> <span class="n">RPA10Model</span>
+            <span class="c">#        self.shape_indep_list.append(RPA10Model)</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">multi_func_list</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">RPA10Model</span><span class="p">)</span>
+        <span class="k">except</span><span class="p">:</span>
+            <span class="n">logging</span><span class="o">.</span><span class="n">error</span><span class="p">(</span><span class="n">base_message</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">RPA10Model</span><span class="o">.</span><span class="n">__name__</span><span class="p">))</span>
+
+        <span class="k">try</span><span class="p">:</span>
+            <span class="kn">from</span> <span class="nn">sas.models.StarPolymer</span> <span class="kn">import</span> <span class="n">StarPolymer</span>
+
+            <span class="bp">self</span><span class="o">.</span><span class="n">model_dictionary</span><span class="p">[</span><span class="n">StarPolymer</span><span class="o">.</span><span class="n">__name__</span><span class="p">]</span> <span class="o">=</span> <span class="n">StarPolymer</span>
+            <span class="c">#        self.shape_indep_list.append(StarPolymer)</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">model_name_list</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">StarPolymer</span><span class="o">.</span><span class="n">__name__</span><span class="p">)</span>
+        <span class="k">except</span><span class="p">:</span>
+            <span class="n">logging</span><span class="o">.</span><span class="n">error</span><span class="p">(</span><span class="n">base_message</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">StarPolymer</span><span class="o">.</span><span class="n">__name__</span><span class="p">))</span>
+
+        <span class="k">try</span><span class="p">:</span>
+            <span class="kn">from</span> <span class="nn">sas.models.SurfaceFractalModel</span> <span class="kn">import</span> <span class="n">SurfaceFractalModel</span>
+
+            <span class="bp">self</span><span class="o">.</span><span class="n">model_dictionary</span><span class="p">[</span><span class="n">SurfaceFractalModel</span><span class="o">.</span><span class="n">__name__</span><span class="p">]</span> <span class="o">=</span> <span class="n">SurfaceFractalModel</span>
+            <span class="c">#        self.shape_indep_list.append(SurfaceFractalModel)</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">model_name_list</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">SurfaceFractalModel</span><span class="o">.</span><span class="n">__name__</span><span class="p">)</span>
+        <span class="k">except</span><span class="p">:</span>
+            <span class="n">logging</span><span class="o">.</span><span class="n">error</span><span class="p">(</span><span class="n">base_message</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">SurfaceFractalModel</span><span class="o">.</span><span class="n">__name__</span><span class="p">))</span>
+
+        <span class="k">try</span><span class="p">:</span>
+            <span class="kn">from</span> <span class="nn">sas.models.TeubnerStreyModel</span> <span class="kn">import</span> <span class="n">TeubnerStreyModel</span>
+
+            <span class="bp">self</span><span class="o">.</span><span class="n">model_dictionary</span><span class="p">[</span><span class="n">TeubnerStreyModel</span><span class="o">.</span><span class="n">__name__</span><span class="p">]</span> <span class="o">=</span> <span class="n">TeubnerStreyModel</span>
+            <span class="c">#        self.shape_indep_list.append(TeubnerStreyModel)</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">model_name_list</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">TeubnerStreyModel</span><span class="o">.</span><span class="n">__name__</span><span class="p">)</span>
+        <span class="k">except</span><span class="p">:</span>
+            <span class="n">logging</span><span class="o">.</span><span class="n">error</span><span class="p">(</span><span class="n">base_message</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">TeubnerStreyModel</span><span class="o">.</span><span class="n">__name__</span><span class="p">))</span>
+
+        <span class="k">try</span><span class="p">:</span>
+            <span class="kn">from</span> <span class="nn">sas.models.TwoLorentzianModel</span> <span class="kn">import</span> <span class="n">TwoLorentzianModel</span>
+
+            <span class="bp">self</span><span class="o">.</span><span class="n">model_dictionary</span><span class="p">[</span><span class="n">TwoLorentzianModel</span><span class="o">.</span><span class="n">__name__</span><span class="p">]</span> <span class="o">=</span> <span class="n">TwoLorentzianModel</span>
+            <span class="c">#        self.shape_indep_list.append(TwoLorentzianModel)</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">model_name_list</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">TwoLorentzianModel</span><span class="o">.</span><span class="n">__name__</span><span class="p">)</span>
+        <span class="k">except</span><span class="p">:</span>
+            <span class="n">logging</span><span class="o">.</span><span class="n">error</span><span class="p">(</span><span class="n">base_message</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">TwoLorentzianModel</span><span class="o">.</span><span class="n">__name__</span><span class="p">))</span>
+
+        <span class="k">try</span><span class="p">:</span>
+            <span class="kn">from</span> <span class="nn">sas.models.TwoPowerLawModel</span> <span class="kn">import</span> <span class="n">TwoPowerLawModel</span>
+
+            <span class="bp">self</span><span class="o">.</span><span class="n">model_dictionary</span><span class="p">[</span><span class="n">TwoPowerLawModel</span><span class="o">.</span><span class="n">__name__</span><span class="p">]</span> <span class="o">=</span> <span class="n">TwoPowerLawModel</span>
+            <span class="c">#        self.shape_indep_list.append(TwoPowerLawModel)</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">model_name_list</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">TwoPowerLawModel</span><span class="o">.</span><span class="n">__name__</span><span class="p">)</span>
+        <span class="k">except</span><span class="p">:</span>
+            <span class="n">logging</span><span class="o">.</span><span class="n">error</span><span class="p">(</span><span class="n">base_message</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">TwoPowerLawModel</span><span class="o">.</span><span class="n">__name__</span><span class="p">))</span>
+
+        <span class="k">try</span><span class="p">:</span>
+            <span class="kn">from</span> <span class="nn">sas.models.UnifiedPowerRgModel</span> <span class="kn">import</span> <span class="n">UnifiedPowerRgModel</span>
+
+            <span class="bp">self</span><span class="o">.</span><span class="n">model_dictionary</span><span class="p">[</span><span class="n">UnifiedPowerRgModel</span><span class="o">.</span><span class="n">__name__</span><span class="p">]</span> <span class="o">=</span> <span class="n">UnifiedPowerRgModel</span>
+            <span class="c">#        self.shape_indep_list.append(UnifiedPowerRgModel)</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">multi_func_list</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">UnifiedPowerRgModel</span><span class="p">)</span>
+        <span class="k">except</span><span class="p">:</span>
+            <span class="n">logging</span><span class="o">.</span><span class="n">error</span><span class="p">(</span><span class="n">base_message</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">UnifiedPowerRgModel</span><span class="o">.</span><span class="n">__name__</span><span class="p">))</span>
+
+        <span class="k">try</span><span class="p">:</span>
+            <span class="kn">from</span> <span class="nn">sas.models.LineModel</span> <span class="kn">import</span> <span class="n">LineModel</span>
+
+            <span class="bp">self</span><span class="o">.</span><span class="n">model_dictionary</span><span class="p">[</span><span class="n">LineModel</span><span class="o">.</span><span class="n">__name__</span><span class="p">]</span> <span class="o">=</span> <span class="n">LineModel</span>
+            <span class="c">#        self.shape_indep_list.append(LineModel)</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">model_name_list</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">LineModel</span><span class="o">.</span><span class="n">__name__</span><span class="p">)</span>
+        <span class="k">except</span><span class="p">:</span>
+            <span class="n">logging</span><span class="o">.</span><span class="n">error</span><span class="p">(</span><span class="n">base_message</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">LineModel</span><span class="o">.</span><span class="n">__name__</span><span class="p">))</span>
+
+        <span class="k">try</span><span class="p">:</span>
+            <span class="kn">from</span> <span class="nn">sas.models.ReflectivityModel</span> <span class="kn">import</span> <span class="n">ReflectivityModel</span>
+
+            <span class="bp">self</span><span class="o">.</span><span class="n">model_dictionary</span><span class="p">[</span><span class="n">ReflectivityModel</span><span class="o">.</span><span class="n">__name__</span><span class="p">]</span> <span class="o">=</span> <span class="n">ReflectivityModel</span>
+            <span class="c">#        self.shape_indep_list.append(ReflectivityModel)</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">multi_func_list</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">ReflectivityModel</span><span class="p">)</span>
+        <span class="k">except</span><span class="p">:</span>
+            <span class="n">logging</span><span class="o">.</span><span class="n">error</span><span class="p">(</span><span class="n">base_message</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">ReflectivityModel</span><span class="o">.</span><span class="n">__name__</span><span class="p">))</span>
+
+        <span class="k">try</span><span class="p">:</span>
+            <span class="kn">from</span> <span class="nn">sas.models.ReflectivityIIModel</span> <span class="kn">import</span> <span class="n">ReflectivityIIModel</span>
+
+            <span class="bp">self</span><span class="o">.</span><span class="n">model_dictionary</span><span class="p">[</span><span class="n">ReflectivityIIModel</span><span class="o">.</span><span class="n">__name__</span><span class="p">]</span> <span class="o">=</span> <span class="n">ReflectivityIIModel</span>
+            <span class="c">#        self.shape_indep_list.append(ReflectivityIIModel)</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">multi_func_list</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">ReflectivityIIModel</span><span class="p">)</span>
+        <span class="k">except</span><span class="p">:</span>
+            <span class="n">logging</span><span class="o">.</span><span class="n">error</span><span class="p">(</span><span class="n">base_message</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">ReflectivityIIModel</span><span class="o">.</span><span class="n">__name__</span><span class="p">))</span>
+
+        <span class="k">try</span><span class="p">:</span>
+            <span class="kn">from</span> <span class="nn">sas.models.GelFitModel</span> <span class="kn">import</span> <span class="n">GelFitModel</span>
+
+            <span class="bp">self</span><span class="o">.</span><span class="n">model_dictionary</span><span class="p">[</span><span class="n">GelFitModel</span><span class="o">.</span><span class="n">__name__</span><span class="p">]</span> <span class="o">=</span> <span class="n">GelFitModel</span>
+            <span class="c">#        self.shape_indep_list.append(GelFitModel)</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">model_name_list</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">GelFitModel</span><span class="o">.</span><span class="n">__name__</span><span class="p">)</span>
+        <span class="k">except</span><span class="p">:</span>
+            <span class="n">logging</span><span class="o">.</span><span class="n">error</span><span class="p">(</span><span class="n">base_message</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">GelFitModel</span><span class="o">.</span><span class="n">__name__</span><span class="p">))</span>
+
+        <span class="k">try</span><span class="p">:</span>
+            <span class="kn">from</span> <span class="nn">sas.models.PringlesModel</span> <span class="kn">import</span> <span class="n">PringlesModel</span>
+
+            <span class="bp">self</span><span class="o">.</span><span class="n">model_dictionary</span><span class="p">[</span><span class="n">PringlesModel</span><span class="o">.</span><span class="n">__name__</span><span class="p">]</span> <span class="o">=</span> <span class="n">PringlesModel</span>
+            <span class="c">#        self.shape_indep_list.append(PringlesModel)</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">model_name_list</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">PringlesModel</span><span class="o">.</span><span class="n">__name__</span><span class="p">)</span>
+        <span class="k">except</span><span class="p">:</span>
+            <span class="n">logging</span><span class="o">.</span><span class="n">error</span><span class="p">(</span><span class="n">base_message</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">PringlesModel</span><span class="o">.</span><span class="n">__name__</span><span class="p">))</span>
+
+        <span class="k">try</span><span class="p">:</span>
+            <span class="kn">from</span> <span class="nn">sas.models.RectangularPrismModel</span> <span class="kn">import</span> <span class="n">RectangularPrismModel</span>
+
+            <span class="bp">self</span><span class="o">.</span><span class="n">model_dictionary</span><span class="p">[</span><span class="n">RectangularPrismModel</span><span class="o">.</span><span class="n">__name__</span><span class="p">]</span> <span class="o">=</span> <span class="n">RectangularPrismModel</span>
+            <span class="c">#        self.shape_list.append(RectangularPrismModel)</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">multiplication_factor</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">RectangularPrismModel</span><span class="p">)</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">model_name_list</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">RectangularPrismModel</span><span class="o">.</span><span class="n">__name__</span><span class="p">)</span>
+        <span class="k">except</span><span class="p">:</span>
+            <span class="n">logging</span><span class="o">.</span><span class="n">error</span><span class="p">(</span><span class="n">base_message</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">RectangularPrismModel</span><span class="o">.</span><span class="n">__name__</span><span class="p">))</span>
+
+        <span class="k">try</span><span class="p">:</span>
+            <span class="kn">from</span> <span class="nn">sas.models.RectangularHollowPrismInfThinWallsModel</span> <span class="kn">import</span> <span class="n">RectangularHollowPrismInfThinWallsModel</span>
+
+            <span class="bp">self</span><span class="o">.</span><span class="n">model_dictionary</span><span class="p">[</span><span class="n">RectangularHollowPrismInfThinWallsModel</span><span class="o">.</span><span class="n">__name__</span><span class="p">]</span> <span class="o">=</span> <span class="n">RectangularHollowPrismInfThinWallsModel</span>
+            <span class="c">#        self.shape_list.append(RectangularHollowPrismInfThinWallsModel)</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">multiplication_factor</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">RectangularHollowPrismInfThinWallsModel</span><span class="p">)</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">model_name_list</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">RectangularHollowPrismInfThinWallsModel</span><span class="o">.</span><span class="n">__name__</span><span class="p">)</span>
+        <span class="k">except</span><span class="p">:</span>
+            <span class="n">logging</span><span class="o">.</span><span class="n">error</span><span class="p">(</span><span class="n">base_message</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">RectangularHollowPrismInfThinWallsModel</span><span class="o">.</span><span class="n">__name__</span><span class="p">))</span>
+
+        <span class="k">try</span><span class="p">:</span>
+            <span class="kn">from</span> <span class="nn">sas.models.RectangularHollowPrismModel</span> <span class="kn">import</span> <span class="n">RectangularHollowPrismModel</span>
+
+            <span class="bp">self</span><span class="o">.</span><span class="n">model_dictionary</span><span class="p">[</span><span class="n">RectangularHollowPrismModel</span><span class="o">.</span><span class="n">__name__</span><span class="p">]</span> <span class="o">=</span> <span class="n">RectangularHollowPrismModel</span>
+            <span class="c">#        self.shape_list.append(RectangularHollowPrismModel)</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">multiplication_factor</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">RectangularHollowPrismModel</span><span class="p">)</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">model_name_list</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">RectangularHollowPrismModel</span><span class="o">.</span><span class="n">__name__</span><span class="p">)</span>
+        <span class="k">except</span><span class="p">:</span>
+            <span class="n">logging</span><span class="o">.</span><span class="n">error</span><span class="p">(</span><span class="n">base_message</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">RectangularHollowPrismModel</span><span class="o">.</span><span class="n">__name__</span><span class="p">))</span>
+
+        <span class="k">try</span><span class="p">:</span>
+            <span class="kn">from</span> <span class="nn">sas.models.MicelleSphCoreModel</span> <span class="kn">import</span> <span class="n">MicelleSphCoreModel</span>
+
+            <span class="bp">self</span><span class="o">.</span><span class="n">model_dictionary</span><span class="p">[</span><span class="n">MicelleSphCoreModel</span><span class="o">.</span><span class="n">__name__</span><span class="p">]</span> <span class="o">=</span> <span class="n">MicelleSphCoreModel</span>
+            <span class="c">#        self.shape_list.append(MicelleSphCoreModel)</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">multiplication_factor</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">MicelleSphCoreModel</span><span class="p">)</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">model_name_list</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">MicelleSphCoreModel</span><span class="o">.</span><span class="n">__name__</span><span class="p">)</span>
+        <span class="k">except</span><span class="p">:</span>
+            <span class="n">logging</span><span class="o">.</span><span class="n">error</span><span class="p">(</span><span class="n">base_message</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">MicelleSphCoreModel</span><span class="o">.</span><span class="n">__name__</span><span class="p">))</span>
+
+
+
+        <span class="c">#from sas.models.FractalO_Z import FractalO_Z</span>
+        <span class="c">#self.model_dictionary[FractalO_Z.__name__] = FractalO_Z</span>
+        <span class="c">#self.shape_indep_list.append(FractalO_Z)</span>
+        <span class="c">#self.model_name_list.append(FractalO_Z.__name__)</span>
+
+        <span class="c">#Looking for plugins</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">stored_plugins</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">findModels</span><span class="p">()</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">plugins</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">stored_plugins</span><span class="o">.</span><span class="n">values</span><span class="p">()</span>
+        <span class="k">for</span> <span class="n">name</span><span class="p">,</span> <span class="n">plug</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">stored_plugins</span><span class="o">.</span><span class="n">iteritems</span><span class="p">():</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">model_dictionary</span><span class="p">[</span><span class="n">name</span><span class="p">]</span> <span class="o">=</span> <span class="n">plug</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">_get_multifunc_models</span><span class="p">()</span>
+
+        <span class="k">return</span> <span class="mi">0</span>
+
+<div class="viewcode-block" id="ModelManagerBase.is_changed"><a class="viewcode-back" href="../../../../dev/api/sas.perspectives.fitting.html#sas.perspectives.fitting.models.ModelManagerBase.is_changed">[docs]</a>    <span class="k">def</span> <span class="nf">is_changed</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        check the last time the plugin dir has changed and return true</span>
+<span class="sd">         is the directory was modified else return false</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">is_modified</span> <span class="o">=</span> <span class="bp">False</span>
+        <span class="n">plugin_dir</span> <span class="o">=</span> <span class="n">find_plugins_dir</span><span class="p">()</span>
+        <span class="k">if</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">isdir</span><span class="p">(</span><span class="n">plugin_dir</span><span class="p">):</span>
+            <span class="n">temp</span> <span class="o">=</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">getmtime</span><span class="p">(</span><span class="n">plugin_dir</span><span class="p">)</span>
+            <span class="k">if</span>  <span class="bp">self</span><span class="o">.</span><span class="n">last_time_dir_modified</span> <span class="o">!=</span> <span class="n">temp</span><span class="p">:</span>
+                <span class="n">is_modified</span> <span class="o">=</span> <span class="bp">True</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">last_time_dir_modified</span> <span class="o">=</span> <span class="n">temp</span>
+
+        <span class="k">return</span> <span class="n">is_modified</span>
+</div>
+<div class="viewcode-block" id="ModelManagerBase.update"><a class="viewcode-back" href="../../../../dev/api/sas.perspectives.fitting.html#sas.perspectives.fitting.models.ModelManagerBase.update">[docs]</a>    <span class="k">def</span> <span class="nf">update</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        return a dictionary of model if</span>
+<span class="sd">        new models were added else return empty dictionary</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">new_plugins</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">findModels</span><span class="p">()</span>
+        <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">new_plugins</span><span class="p">)</span> <span class="o">&gt;</span> <span class="mi">0</span><span class="p">:</span>
+            <span class="k">for</span> <span class="n">name</span><span class="p">,</span> <span class="n">plug</span> <span class="ow">in</span>  <span class="n">new_plugins</span><span class="o">.</span><span class="n">iteritems</span><span class="p">():</span>
+                <span class="k">if</span> <span class="n">name</span> <span class="ow">not</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">stored_plugins</span><span class="o">.</span><span class="n">keys</span><span class="p">():</span>
+                    <span class="bp">self</span><span class="o">.</span><span class="n">stored_plugins</span><span class="p">[</span><span class="n">name</span><span class="p">]</span> <span class="o">=</span> <span class="n">plug</span>
+                    <span class="bp">self</span><span class="o">.</span><span class="n">plugins</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">plug</span><span class="p">)</span>
+                    <span class="bp">self</span><span class="o">.</span><span class="n">model_dictionary</span><span class="p">[</span><span class="n">name</span><span class="p">]</span> <span class="o">=</span> <span class="n">plug</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">model_combobox</span><span class="o">.</span><span class="n">set_list</span><span class="p">(</span><span class="s">&quot;Customized Models&quot;</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">plugins</span><span class="p">)</span>
+            <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">model_combobox</span><span class="o">.</span><span class="n">get_list</span><span class="p">()</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="k">return</span> <span class="p">{}</span>
+</div>
+<div class="viewcode-block" id="ModelManagerBase.pulgins_reset"><a class="viewcode-back" href="../../../../dev/api/sas.perspectives.fitting.html#sas.perspectives.fitting.models.ModelManagerBase.pulgins_reset">[docs]</a>    <span class="k">def</span> <span class="nf">pulgins_reset</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        return a dictionary of model</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">plugins</span> <span class="o">=</span> <span class="p">[]</span>
+        <span class="n">new_plugins</span> <span class="o">=</span> <span class="n">_findModels</span><span class="p">(</span><span class="nb">dir</span><span class="p">)</span>
+        <span class="k">for</span> <span class="n">name</span><span class="p">,</span> <span class="n">plug</span> <span class="ow">in</span>  <span class="n">new_plugins</span><span class="o">.</span><span class="n">iteritems</span><span class="p">():</span>
+            <span class="k">for</span> <span class="n">stored_name</span><span class="p">,</span> <span class="n">_</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">stored_plugins</span><span class="o">.</span><span class="n">iteritems</span><span class="p">():</span>
+                <span class="k">if</span> <span class="n">name</span> <span class="o">==</span> <span class="n">stored_name</span><span class="p">:</span>
+                    <span class="k">del</span> <span class="bp">self</span><span class="o">.</span><span class="n">stored_plugins</span><span class="p">[</span><span class="n">name</span><span class="p">]</span>
+                    <span class="k">del</span> <span class="bp">self</span><span class="o">.</span><span class="n">model_dictionary</span><span class="p">[</span><span class="n">name</span><span class="p">]</span>
+                    <span class="k">break</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">stored_plugins</span><span class="p">[</span><span class="n">name</span><span class="p">]</span> <span class="o">=</span> <span class="n">plug</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">plugins</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">plug</span><span class="p">)</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">model_dictionary</span><span class="p">[</span><span class="n">name</span><span class="p">]</span> <span class="o">=</span> <span class="n">plug</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">model_combobox</span><span class="o">.</span><span class="n">reset_list</span><span class="p">(</span><span class="s">&quot;Customized Models&quot;</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">plugins</span><span class="p">)</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">model_combobox</span><span class="o">.</span><span class="n">get_list</span><span class="p">()</span>
+
+<span class="c">##   I believe the next four methods are for the old form factor GUI</span>
+<span class="c">##   where the dropdown showed a list of categories which then rolled out</span>
+<span class="c">##   in a second dropdown to the side. Some testing shows they indeed no longer</span>
+<span class="c">##   seem to be called.  If no problems are found during testing of release we</span>
+<span class="c">##   can remove this huge chunck of stuff.</span>
+<span class="c">##</span>
+<span class="c">##   -PDB  April 26, 2014</span>
+
+<span class="c">#   def populate_menu(self, modelmenu, event_owner):</span>
+<span class="c">#       &quot;&quot;&quot;</span>
+<span class="c">#       Populate a menu with our models</span>
+<span class="c">#       </span>
+<span class="c">#       :param id: first menu event ID to use when binding the menu events</span>
+<span class="c">#       :param modelmenu: wx.Menu object to populate</span>
+<span class="c">#       :param event_owner: wx object to bind the menu events to</span>
+<span class="c">#       </span>
+<span class="c">#       :return: the next free event ID following the new menu events</span>
+<span class="c">#       </span>
+<span class="c">#       &quot;&quot;&quot;</span>
+<span class="c"># </span>
+        <span class="c">## Fill model lists</span>
+<span class="c">#        self._getModelList()</span>
+        <span class="c">## store reference to model menu of guiframe</span>
+<span class="c">#        self.modelmenu = modelmenu</span>
+        <span class="c">## guiframe reference</span>
+<span class="c">#        self.event_owner = event_owner</span>
+
+<span class="c">#        shape_submenu = wx.Menu()</span>
+<span class="c">#        shape_indep_submenu = wx.Menu()</span>
+<span class="c">#        structure_factor = wx.Menu()</span>
+<span class="c">#        added_models = wx.Menu()</span>
+<span class="c">#        multip_models = wx.Menu()</span>
+        <span class="c">## create menu with shape</span>
+<span class="c">#        self._fill_simple_menu(menuinfo=[&quot;Shapes&quot;,</span>
+<span class="c">#                                         shape_submenu,</span>
+<span class="c">#                                         &quot; simple shape&quot;],</span>
+<span class="c">#                         list1=self.shape_list)</span>
+
+<span class="c">#        self._fill_simple_menu(menuinfo=[&quot;Shape-Independent&quot;,</span>
+<span class="c">#                                         shape_indep_submenu,</span>
+<span class="c">#                                         &quot;List of shape-independent models&quot;],</span>
+<span class="c">#                         list1=self.shape_indep_list)</span>
+
+<span class="c">#        self._fill_simple_menu(menuinfo=[&quot;Structure Factors&quot;,</span>
+<span class="c">#                                         structure_factor,</span>
+<span class="c">#                                         &quot;List of Structure factors models&quot;],</span>
+<span class="c">#                                list1=self.struct_list)</span>
+
+<span class="c">#        self._fill_plugin_menu(menuinfo=[&quot;Customized Models&quot;, added_models,</span>
+<span class="c">#                                            &quot;List of additional models&quot;],</span>
+<span class="c">#                                 list1=self.plugins)</span>
+
+<span class="c">#        self._fill_menu(menuinfo=[&quot;P(Q)*S(Q)&quot;, multip_models,</span>
+<span class="c">#                                  &quot;mulplication of 2 models&quot;],</span>
+<span class="c">#                                   list1=self.multiplication_factor,</span>
+<span class="c">#                                   list2=self.struct_list)</span>
+<span class="c">#        return 0</span>
+
+<span class="c">#    def _fill_plugin_menu(self, menuinfo, list1):</span>
+<span class="c">#        &quot;&quot;&quot;</span>
+<span class="c">#        fill the plugin menu with costumized models</span>
+<span class="c">#        &quot;&quot;&quot;</span>
+<span class="c">#        print (&quot;got to fill plugin menu&quot;)</span>
+<span class="c">#        if len(list1) == 0:</span>
+<span class="c">#            id = wx.NewId()</span>
+<span class="c">#            msg = &quot;No model available check plugins.log for errors to fix problem&quot;</span>
+<span class="c">#            menuinfo[1].Append(int(id), &quot;Empty&quot;, msg)</span>
+<span class="c">#        self._fill_simple_menu(menuinfo, list1)</span>
+
+<span class="c">#   def _fill_simple_menu(self, menuinfo, list1):</span>
+<span class="c">#       &quot;&quot;&quot;</span>
+<span class="c">#       Fill the menu with list item</span>
+<span class="c">#       </span>
+<span class="c">#       :param modelmenu: the menu to fill</span>
+<span class="c">#       :param menuinfo: submenu item for the first column of this modelmenu</span>
+<span class="c">#                        with info.Should be a list :</span>
+<span class="c">#                        [name(string) , menu(wx.menu), help(string)]</span>
+<span class="c">#       :param list1: contains item (form factor )to fill modelmenu second column</span>
+<span class="c">#       </span>
+<span class="c">#       &quot;&quot;&quot;</span>
+<span class="c">#       if len(list1) &gt; 0:</span>
+<span class="c">#           self.model_combobox.set_list(menuinfo[0], list1)</span>
+
+<span class="c">#            for item in list1:</span>
+<span class="c">#                try:</span>
+<span class="c">#                    id = wx.NewId()</span>
+<span class="c">#                    struct_factor = item()</span>
+<span class="c">#                    struct_name = struct_factor.__class__.__name__</span>
+<span class="c">#                    if hasattr(struct_factor, &quot;name&quot;):</span>
+<span class="c">#                        struct_name = struct_factor.name</span>
+<span class="c">#                        </span>
+<span class="c">#                    menuinfo[1].Append(int(id), struct_name, struct_name)</span>
+<span class="c">#                    if not  item in self.struct_factor_dict.itervalues():</span>
+<span class="c">#                        self.struct_factor_dict[str(id)] = item</span>
+<span class="c">#                    wx.EVT_MENU(self.event_owner, int(id), self._on_model)</span>
+<span class="c">#                except:</span>
+<span class="c">#                    msg = &quot;Error Occured: %s&quot; % sys.exc_value</span>
+<span class="c">#                    wx.PostEvent(self.event_owner, StatusEvent(status=msg))</span>
+<span class="c">#                </span>
+<span class="c">#        id = wx.NewId()</span>
+<span class="c">#        self.modelmenu.AppendMenu(id, menuinfo[0], menuinfo[1], menuinfo[2])</span>
+<span class="c">#        </span>
+<span class="c">#    def _fill_menu(self, menuinfo, list1, list2):</span>
+<span class="c">#        &quot;&quot;&quot;</span>
+<span class="c">#        Fill the menu with list item</span>
+<span class="c">#        </span>
+<span class="c">#        :param menuinfo: submenu item for the first column of this modelmenu</span>
+<span class="c">#                         with info.Should be a list :</span>
+<span class="c">#                         [name(string) , menu(wx.menu), help(string)]</span>
+<span class="c">#        :param list1: contains item (form factor )to fill modelmenu second column</span>
+<span class="c">#        :param list2: contains item (Structure factor )to fill modelmenu</span>
+<span class="c">#                third column</span>
+<span class="c">#                </span>
+<span class="c">#        &quot;&quot;&quot;</span>
+<span class="c">#        if len(list1) &gt; 0:</span>
+<span class="c">#            self.model_combobox.set_list(menuinfo[0], list1)</span>
+<span class="c">#            </span>
+<span class="c">#            for item in list1:</span>
+<span class="c">#                form_factor = item()</span>
+<span class="c">#                form_name = form_factor.__class__.__name__</span>
+<span class="c">#                if hasattr(form_factor, &quot;name&quot;):</span>
+<span class="c">#                    form_name = form_factor.name</span>
+<span class="c">#                ### store form factor to return to other users</span>
+<span class="c">#                newmenu = wx.Menu()</span>
+<span class="c">#                if len(list2) &gt; 0:</span>
+<span class="c">#                    for model  in list2:</span>
+<span class="c">#                        id = wx.NewId()</span>
+<span class="c">#                        struct_factor = model()</span>
+<span class="c">#                        name = struct_factor.__class__.__name__</span>
+<span class="c">#                        if hasattr(struct_factor, &quot;name&quot;):</span>
+<span class="c">#                            name = struct_factor.name</span>
+<span class="c">#                        newmenu.Append(id, name, name)</span>
+<span class="c">#                        wx.EVT_MENU(self.event_owner, int(id), self._on_model)</span>
+<span class="c">#                        ## save form_fact and struct_fact</span>
+<span class="c">#                        self.form_factor_dict[int(id)] = [form_factor,</span>
+<span class="c">#                                                          struct_factor]</span>
+<span class="c">#                        </span>
+<span class="c">#                form_id = wx.NewId()</span>
+<span class="c">#                menuinfo[1].AppendMenu(int(form_id), form_name,</span>
+<span class="c">#                                       newmenu, menuinfo[2])</span>
+<span class="c">#        id = wx.NewId()</span>
+<span class="c">#        self.modelmenu.AppendMenu(id, menuinfo[0], menuinfo[1], menuinfo[2])</span>
+</div>
+    <span class="k">def</span> <span class="nf">_on_model</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">evt</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        React to a model menu event</span>
+
+<span class="sd">        :param event: wx menu event</span>
+
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">if</span> <span class="nb">int</span><span class="p">(</span><span class="n">evt</span><span class="o">.</span><span class="n">GetId</span><span class="p">())</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">form_factor_dict</span><span class="o">.</span><span class="n">keys</span><span class="p">():</span>
+            <span class="kn">from</span> <span class="nn">sas.models.MultiplicationModel</span> <span class="kn">import</span> <span class="n">MultiplicationModel</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">model_dictionary</span><span class="p">[</span><span class="n">MultiplicationModel</span><span class="o">.</span><span class="n">__name__</span><span class="p">]</span> <span class="o">=</span> <span class="n">MultiplicationModel</span>
+            <span class="n">model1</span><span class="p">,</span> <span class="n">model2</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">form_factor_dict</span><span class="p">[</span><span class="nb">int</span><span class="p">(</span><span class="n">evt</span><span class="o">.</span><span class="n">GetId</span><span class="p">())]</span>
+            <span class="n">model</span> <span class="o">=</span> <span class="n">MultiplicationModel</span><span class="p">(</span><span class="n">model1</span><span class="p">,</span> <span class="n">model2</span><span class="p">)</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">model</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">struct_factor_dict</span><span class="p">[</span><span class="nb">str</span><span class="p">(</span><span class="n">evt</span><span class="o">.</span><span class="n">GetId</span><span class="p">())]()</span>
+
+        <span class="c">#TODO: investigate why the following two lines were left in the code</span>
+        <span class="c">#      even though the ModelEvent class doesn&#39;t exist</span>
+        <span class="c">#evt = ModelEvent(model=model)</span>
+        <span class="c">#wx.PostEvent(self.event_owner, evt)</span>
+
+    <span class="k">def</span> <span class="nf">_get_multifunc_models</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Get the multifunctional models</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">for</span> <span class="n">item</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">plugins</span><span class="p">:</span>
+            <span class="k">try</span><span class="p">:</span>
+                <span class="c"># check the multiplicity if any</span>
+                <span class="k">if</span> <span class="n">item</span><span class="o">.</span><span class="n">multiplicity_info</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="o">&gt;</span> <span class="mi">1</span><span class="p">:</span>
+                    <span class="bp">self</span><span class="o">.</span><span class="n">multi_func_list</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">item</span><span class="p">)</span>
+            <span class="k">except</span><span class="p">:</span>
+                <span class="c"># pass to other items</span>
+                <span class="k">pass</span>
+
+<div class="viewcode-block" id="ModelManagerBase.get_model_list"><a class="viewcode-back" href="../../../../dev/api/sas.perspectives.fitting.html#sas.perspectives.fitting.models.ModelManagerBase.get_model_list">[docs]</a>    <span class="k">def</span> <span class="nf">get_model_list</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        return dictionary of models for fitpanel use</span>
+
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="c">## Model_list now only contains attribute lists not category list.</span>
+        <span class="c">## Eventually this should be in one master list -- read in category</span>
+        <span class="c">## list then pull those models that exist and get attributes then add</span>
+        <span class="c">## to list ..and if model does not exist remove from list as now</span>
+        <span class="c">## and update json file.</span>
+        <span class="c">##</span>
+        <span class="c">## -PDB   April 26, 2014</span>
+
+<span class="c">#        self.model_combobox.set_list(&quot;Shapes&quot;, self.shape_list)</span>
+<span class="c">#        self.model_combobox.set_list(&quot;Shape-Independent&quot;,</span>
+<span class="c">#                                     self.shape_indep_list)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">model_combobox</span><span class="o">.</span><span class="n">set_list</span><span class="p">(</span><span class="s">&quot;Structure Factors&quot;</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">struct_list</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">model_combobox</span><span class="o">.</span><span class="n">set_list</span><span class="p">(</span><span class="s">&quot;Customized Models&quot;</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">plugins</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">model_combobox</span><span class="o">.</span><span class="n">set_list</span><span class="p">(</span><span class="s">&quot;P(Q)*S(Q)&quot;</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">multiplication_factor</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">model_combobox</span><span class="o">.</span><span class="n">set_list</span><span class="p">(</span><span class="s">&quot;multiplication&quot;</span><span class="p">,</span>
+                                     <span class="bp">self</span><span class="o">.</span><span class="n">multiplication_factor</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">model_combobox</span><span class="o">.</span><span class="n">set_list</span><span class="p">(</span><span class="s">&quot;Multi-Functions&quot;</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">multi_func_list</span><span class="p">)</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">model_combobox</span><span class="o">.</span><span class="n">get_list</span><span class="p">()</span>
+</div>
+<div class="viewcode-block" id="ModelManagerBase.get_model_name_list"><a class="viewcode-back" href="../../../../dev/api/sas.perspectives.fitting.html#sas.perspectives.fitting.models.ModelManagerBase.get_model_name_list">[docs]</a>    <span class="k">def</span> <span class="nf">get_model_name_list</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        return regular model name list</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">model_name_list</span>
+</div>
+<div class="viewcode-block" id="ModelManagerBase.get_model_dictionary"><a class="viewcode-back" href="../../../../dev/api/sas.perspectives.fitting.html#sas.perspectives.fitting.models.ModelManagerBase.get_model_dictionary">[docs]</a>    <span class="k">def</span> <span class="nf">get_model_dictionary</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        return dictionary linking model names to objects</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">model_dictionary</span>
+
+</div></div>
+<div class="viewcode-block" id="ModelManager"><a class="viewcode-back" href="../../../../dev/api/sas.perspectives.fitting.html#sas.perspectives.fitting.models.ModelManager">[docs]</a><span class="k">class</span> <span class="nc">ModelManager</span><span class="p">(</span><span class="nb">object</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    implement model</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">__modelmanager</span> <span class="o">=</span> <span class="n">ModelManagerBase</span><span class="p">()</span>
+    <span class="n">cat_model_list</span> <span class="o">=</span> <span class="p">[</span><span class="n">model_name</span> <span class="k">for</span> <span class="n">model_name</span> \
+                      <span class="ow">in</span> <span class="n">__modelmanager</span><span class="o">.</span><span class="n">model_dictionary</span><span class="o">.</span><span class="n">keys</span><span class="p">()</span> \
+                      <span class="k">if</span> <span class="n">model_name</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">__modelmanager</span><span class="o">.</span><span class="n">stored_plugins</span><span class="o">.</span><span class="n">keys</span><span class="p">()]</span>
+
+    <span class="n">CategoryInstaller</span><span class="o">.</span><span class="n">check_install</span><span class="p">(</span><span class="n">model_list</span><span class="o">=</span><span class="n">cat_model_list</span><span class="p">)</span>
+<div class="viewcode-block" id="ModelManager.findModels"><a class="viewcode-back" href="../../../../dev/api/sas.perspectives.fitting.html#sas.perspectives.fitting.models.ModelManager.findModels">[docs]</a>    <span class="k">def</span> <span class="nf">findModels</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">__modelmanager</span><span class="o">.</span><span class="n">findModels</span><span class="p">()</span>
+</div>
+    <span class="k">def</span> <span class="nf">_getModelList</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">__modelmanager</span><span class="o">.</span><span class="n">_getModelList</span><span class="p">()</span>
+
+<div class="viewcode-block" id="ModelManager.is_changed"><a class="viewcode-back" href="../../../../dev/api/sas.perspectives.fitting.html#sas.perspectives.fitting.models.ModelManager.is_changed">[docs]</a>    <span class="k">def</span> <span class="nf">is_changed</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">__modelmanager</span><span class="o">.</span><span class="n">is_changed</span><span class="p">()</span>
+</div>
+<div class="viewcode-block" id="ModelManager.update"><a class="viewcode-back" href="../../../../dev/api/sas.perspectives.fitting.html#sas.perspectives.fitting.models.ModelManager.update">[docs]</a>    <span class="k">def</span> <span class="nf">update</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">__modelmanager</span><span class="o">.</span><span class="n">update</span><span class="p">()</span>
+</div>
+<div class="viewcode-block" id="ModelManager.pulgins_reset"><a class="viewcode-back" href="../../../../dev/api/sas.perspectives.fitting.html#sas.perspectives.fitting.models.ModelManager.pulgins_reset">[docs]</a>    <span class="k">def</span> <span class="nf">pulgins_reset</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">__modelmanager</span><span class="o">.</span><span class="n">pulgins_reset</span><span class="p">()</span>
+</div>
+<div class="viewcode-block" id="ModelManager.populate_menu"><a class="viewcode-back" href="../../../../dev/api/sas.perspectives.fitting.html#sas.perspectives.fitting.models.ModelManager.populate_menu">[docs]</a>    <span class="k">def</span> <span class="nf">populate_menu</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">modelmenu</span><span class="p">,</span> <span class="n">event_owner</span><span class="p">):</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">__modelmanager</span><span class="o">.</span><span class="n">populate_menu</span><span class="p">(</span><span class="n">modelmenu</span><span class="p">,</span> <span class="n">event_owner</span><span class="p">)</span>
+</div>
+    <span class="k">def</span> <span class="nf">_on_model</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">evt</span><span class="p">):</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">__modelmanager</span><span class="o">.</span><span class="n">_on_model</span><span class="p">(</span><span class="n">evt</span><span class="p">)</span>
+
+    <span class="k">def</span> <span class="nf">_get_multifunc_models</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">__modelmanager</span><span class="o">.</span><span class="n">_get_multifunc_models</span><span class="p">()</span>
+
+<div class="viewcode-block" id="ModelManager.get_model_list"><a class="viewcode-back" href="../../../../dev/api/sas.perspectives.fitting.html#sas.perspectives.fitting.models.ModelManager.get_model_list">[docs]</a>    <span class="k">def</span> <span class="nf">get_model_list</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">__modelmanager</span><span class="o">.</span><span class="n">get_model_list</span><span class="p">()</span>
+</div>
+<div class="viewcode-block" id="ModelManager.get_model_name_list"><a class="viewcode-back" href="../../../../dev/api/sas.perspectives.fitting.html#sas.perspectives.fitting.models.ModelManager.get_model_name_list">[docs]</a>    <span class="k">def</span> <span class="nf">get_model_name_list</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">__modelmanager</span><span class="o">.</span><span class="n">get_model_name_list</span><span class="p">()</span>
+</div>
+<div class="viewcode-block" id="ModelManager.get_model_dictionary"><a class="viewcode-back" href="../../../../dev/api/sas.perspectives.fitting.html#sas.perspectives.fitting.models.ModelManager.get_model_dictionary">[docs]</a>    <span class="k">def</span> <span class="nf">get_model_dictionary</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">__modelmanager</span><span class="o">.</span><span class="n">get_model_dictionary</span><span class="p">()</span></div></div>
+</pre></div>
+
+          </div>
+        </div>
+      </div>
+      <div class="sphinxsidebar" role="navigation" aria-label="main navigation">
+        <div class="sphinxsidebarwrapper">
+<div id="searchbox" style="display: none" role="search">
+  <h3>Quick search</h3>
+    <form class="search" action="../../../../search.html" method="get">
+      <input type="text" name="q" />
+      <input type="submit" value="Go" />
+      <input type="hidden" name="check_keywords" value="yes" />
+      <input type="hidden" name="area" value="default" />
+    </form>
+    <p class="searchtip" style="font-size: 90%">
+    Enter search terms or a module, class or function name.
+    </p>
+</div>
+<script type="text/javascript">$('#searchbox').show(0);</script>
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="related" role="navigation" aria-label="related navigation">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="../../../../genindex.html" title="General Index"
+             >index</a></li>
+        <li class="right" >
+          <a href="../../../../py-modindex.html" title="Python Module Index"
+             >modules</a> |</li>
+        <li class="nav-item nav-item-0"><a href="../../../../index.html">SasView 3.1.0 documentation</a> &raquo;</li>
+          <li class="nav-item nav-item-1"><a href="../../../index.html" >Module code</a> &raquo;</li>
+          <li class="nav-item nav-item-2"><a href="../fitting.html" >sas.perspectives.fitting</a> &raquo;</li> 
+      </ul>
+    </div>
+    <div class="footer" role="contentinfo">
+        &copy; Copyright 2015, The SasView Project.
+      Created using <a href="http://sphinx-doc.org/">Sphinx</a> 1.3.1.
+    </div>
+  </body>
+</html>

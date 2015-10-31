@@ -1,0 +1,303 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+  "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+    
+    <title>sas.data_util.nxsunit &mdash; SasView 3.1.0 documentation</title>
+    
+    <link rel="stylesheet" href="../../../_static/classic.css" type="text/css" />
+    <link rel="stylesheet" href="../../../_static/pygments.css" type="text/css" />
+    
+    <script type="text/javascript">
+      var DOCUMENTATION_OPTIONS = {
+        URL_ROOT:    '../../../',
+        VERSION:     '3.1.0',
+        COLLAPSE_INDEX: false,
+        FILE_SUFFIX: '.html',
+        HAS_SOURCE:  true
+      };
+    </script>
+    <script type="text/javascript" src="../../../_static/jquery.js"></script>
+    <script type="text/javascript" src="../../../_static/underscore.js"></script>
+    <script type="text/javascript" src="../../../_static/doctools.js"></script>
+    <script type="text/javascript" src="https://cdn.mathjax.org/mathjax/latest/MathJax.js?config=TeX-AMS-MML_HTMLorMML"></script>
+    <link rel="top" title="SasView 3.1.0 documentation" href="../../../index.html" />
+    <link rel="up" title="Module code" href="../../index.html" /> 
+  </head>
+  <body role="document">
+    <div class="related" role="navigation" aria-label="related navigation">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="../../../genindex.html" title="General Index"
+             accesskey="I">index</a></li>
+        <li class="right" >
+          <a href="../../../py-modindex.html" title="Python Module Index"
+             >modules</a> |</li>
+        <li class="nav-item nav-item-0"><a href="../../../index.html">SasView 3.1.0 documentation</a> &raquo;</li>
+          <li class="nav-item nav-item-1"><a href="../../index.html" accesskey="U">Module code</a> &raquo;</li> 
+      </ul>
+    </div>  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          <div class="body" role="main">
+            
+  <h1>Source code for sas.data_util.nxsunit</h1><div class="highlight"><pre>
+<span class="c"># This program is public domain</span>
+<span class="c"># Author: Paul Kienzle</span>
+<span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">Define unit conversion support for NeXus style units.</span>
+
+<span class="sd">The unit format is somewhat complicated.  There are variant spellings</span>
+<span class="sd">and incorrect capitalization to worry about, as well as forms such as</span>
+<span class="sd">&quot;mili*metre&quot; and &quot;1e-7 seconds&quot;.</span>
+
+<span class="sd">This is a minimal implementation of units including only what I happen to</span>
+<span class="sd">need now.  It does not support the complete dimensional analysis provided</span>
+<span class="sd">by the package udunits on which NeXus is based, or even the units used</span>
+<span class="sd">in the NeXus definition files.</span>
+
+<span class="sd">Unlike other units packages, this package does not carry the units along with </span>
+<span class="sd">the value but merely provides a conversion function for transforming values.</span>
+
+<span class="sd">Usage example::</span>
+
+<span class="sd">    import nxsunit</span>
+<span class="sd">    u = nxsunit.Converter(&#39;mili*metre&#39;)  # Units stored in mm</span>
+<span class="sd">    v = u(3000,&#39;m&#39;)  # Convert the value 3000 mm into meters</span>
+
+<span class="sd">NeXus example::</span>
+
+<span class="sd">    # Load sample orientation in radians regardless of how it is stored.</span>
+<span class="sd">    # 1. Open the path</span>
+<span class="sd">    file.openpath(&#39;/entry1/sample/sample_orientation&#39;)</span>
+<span class="sd">    # 2. scan the attributes, retrieving &#39;units&#39;</span>
+<span class="sd">    units = [for attr,value in file.attrs() if attr == &#39;units&#39;]</span>
+<span class="sd">    # 3. set up the converter (assumes that units actually exists)</span>
+<span class="sd">    u = nxsunit.Converter(units[0])</span>
+<span class="sd">    # 4. read the data and convert to the correct units</span>
+<span class="sd">    v = u(file.read(),&#39;radians&#39;)</span>
+
+<span class="sd">This is a standalone module, not relying on either DANSE or NeXus, and</span>
+<span class="sd">can be used for other unit conversion tasks.</span>
+
+<span class="sd">Note: minutes are used for angle and seconds are used for time.  We</span>
+<span class="sd">cannot tell what the correct interpretation is without knowing something</span>
+<span class="sd">about the fields themselves.  If this becomes an issue, we will need to</span>
+<span class="sd">allow the application to set the dimension for the unit rather than</span>
+<span class="sd">inferring the dimension from an example unit.</span>
+<span class="sd">&quot;&quot;&quot;</span>
+
+<span class="c"># TODO: Add udunits to NAPI rather than reimplementing it in python</span>
+<span class="c"># TODO: Alternatively, parse the udunits database directly</span>
+<span class="c"># UDUnits:</span>
+<span class="c">#  http://www.unidata.ucar.edu/software/udunits/udunits-1/udunits.txt</span>
+
+<span class="kn">from</span> <span class="nn">__future__</span> <span class="kn">import</span> <span class="n">division</span>
+<span class="kn">import</span> <span class="nn">math</span>
+
+<span class="n">__all__</span> <span class="o">=</span> <span class="p">[</span><span class="s">&#39;Converter&#39;</span><span class="p">]</span>
+
+<span class="c"># Limited form of units for returning objects of a specific type.</span>
+<span class="c"># Maybe want to do full units handling with e.g., pyre&#39;s</span>
+<span class="c"># unit class. For now lets keep it simple.  Note that</span>
+<span class="k">def</span> <span class="nf">_build_metric_units</span><span class="p">(</span><span class="n">unit</span><span class="p">,</span><span class="n">abbr</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Construct standard SI names for the given unit.</span>
+<span class="sd">    Builds e.g.,</span>
+<span class="sd">        s, ns</span>
+<span class="sd">        second, nanosecond, nano*second</span>
+<span class="sd">        seconds, nanoseconds</span>
+<span class="sd">    Includes prefixes for femto through peta.</span>
+
+<span class="sd">    Ack! Allows, e.g., Coulomb and coulomb even though Coulomb is not</span>
+<span class="sd">    a unit because some NeXus files store it that way!</span>
+<span class="sd">    </span>
+<span class="sd">    Returns a dictionary of names and scales.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">prefix</span> <span class="o">=</span> <span class="nb">dict</span><span class="p">(</span><span class="n">peta</span><span class="o">=</span><span class="mf">1e15</span><span class="p">,</span><span class="n">tera</span><span class="o">=</span><span class="mf">1e12</span><span class="p">,</span><span class="n">giga</span><span class="o">=</span><span class="mf">1e9</span><span class="p">,</span><span class="n">mega</span><span class="o">=</span><span class="mf">1e6</span><span class="p">,</span><span class="n">kilo</span><span class="o">=</span><span class="mf">1e3</span><span class="p">,</span>
+                  <span class="n">deci</span><span class="o">=</span><span class="mf">1e-1</span><span class="p">,</span><span class="n">centi</span><span class="o">=</span><span class="mf">1e-2</span><span class="p">,</span><span class="n">milli</span><span class="o">=</span><span class="mf">1e-3</span><span class="p">,</span><span class="n">mili</span><span class="o">=</span><span class="mf">1e-3</span><span class="p">,</span><span class="n">micro</span><span class="o">=</span><span class="mf">1e-6</span><span class="p">,</span>
+                  <span class="n">nano</span><span class="o">=</span><span class="mf">1e-9</span><span class="p">,</span><span class="n">pico</span><span class="o">=</span><span class="mf">1e-12</span><span class="p">,</span><span class="n">femto</span><span class="o">=</span><span class="mf">1e-15</span><span class="p">)</span>
+    <span class="n">short_prefix</span> <span class="o">=</span> <span class="nb">dict</span><span class="p">(</span><span class="n">P</span><span class="o">=</span><span class="mf">1e15</span><span class="p">,</span><span class="n">T</span><span class="o">=</span><span class="mf">1e12</span><span class="p">,</span><span class="n">G</span><span class="o">=</span><span class="mf">1e9</span><span class="p">,</span><span class="n">M</span><span class="o">=</span><span class="mf">1e6</span><span class="p">,</span><span class="n">k</span><span class="o">=</span><span class="mf">1e3</span><span class="p">,</span>
+                        <span class="n">d</span><span class="o">=</span><span class="mf">1e-1</span><span class="p">,</span><span class="n">c</span><span class="o">=</span><span class="mf">1e-2</span><span class="p">,</span><span class="n">m</span><span class="o">=</span><span class="mf">1e-3</span><span class="p">,</span><span class="n">u</span><span class="o">=</span><span class="mf">1e-6</span><span class="p">,</span>
+                        <span class="n">n</span><span class="o">=</span><span class="mf">1e-9</span><span class="p">,</span><span class="n">p</span><span class="o">=</span><span class="mf">1e-12</span><span class="p">,</span><span class="n">f</span><span class="o">=</span><span class="mf">1e-15</span><span class="p">)</span>
+    <span class="nb">map</span> <span class="o">=</span> <span class="p">{</span><span class="n">abbr</span><span class="p">:</span><span class="mi">1</span><span class="p">}</span>
+    <span class="nb">map</span><span class="o">.</span><span class="n">update</span><span class="p">([(</span><span class="n">P</span><span class="o">+</span><span class="n">abbr</span><span class="p">,</span><span class="n">scale</span><span class="p">)</span> <span class="k">for</span> <span class="p">(</span><span class="n">P</span><span class="p">,</span><span class="n">scale</span><span class="p">)</span> <span class="ow">in</span> <span class="n">short_prefix</span><span class="o">.</span><span class="n">iteritems</span><span class="p">()])</span>
+    <span class="k">for</span> <span class="n">name</span> <span class="ow">in</span> <span class="p">[</span><span class="n">unit</span><span class="p">,</span><span class="n">unit</span><span class="o">.</span><span class="n">capitalize</span><span class="p">()]:</span>
+        <span class="nb">map</span><span class="o">.</span><span class="n">update</span><span class="p">({</span><span class="n">name</span><span class="p">:</span><span class="mi">1</span><span class="p">,</span><span class="n">name</span><span class="o">+</span><span class="s">&#39;s&#39;</span><span class="p">:</span><span class="mi">1</span><span class="p">})</span>
+        <span class="nb">map</span><span class="o">.</span><span class="n">update</span><span class="p">([(</span><span class="n">P</span><span class="o">+</span><span class="n">name</span><span class="p">,</span><span class="n">scale</span><span class="p">)</span> <span class="k">for</span> <span class="p">(</span><span class="n">P</span><span class="p">,</span><span class="n">scale</span><span class="p">)</span> <span class="ow">in</span> <span class="n">prefix</span><span class="o">.</span><span class="n">iteritems</span><span class="p">()])</span>
+        <span class="nb">map</span><span class="o">.</span><span class="n">update</span><span class="p">([(</span><span class="n">P</span><span class="o">+</span><span class="s">&#39;*&#39;</span><span class="o">+</span><span class="n">name</span><span class="p">,</span><span class="n">scale</span><span class="p">)</span> <span class="k">for</span> <span class="p">(</span><span class="n">P</span><span class="p">,</span><span class="n">scale</span><span class="p">)</span> <span class="ow">in</span> <span class="n">prefix</span><span class="o">.</span><span class="n">iteritems</span><span class="p">()])</span>
+        <span class="nb">map</span><span class="o">.</span><span class="n">update</span><span class="p">([(</span><span class="n">P</span><span class="o">+</span><span class="n">name</span><span class="o">+</span><span class="s">&#39;s&#39;</span><span class="p">,</span><span class="n">scale</span><span class="p">)</span> <span class="k">for</span> <span class="p">(</span><span class="n">P</span><span class="p">,</span><span class="n">scale</span><span class="p">)</span> <span class="ow">in</span> <span class="n">prefix</span><span class="o">.</span><span class="n">iteritems</span><span class="p">()])</span>
+    <span class="k">return</span> <span class="nb">map</span>
+
+<span class="k">def</span> <span class="nf">_build_plural_units</span><span class="p">(</span><span class="o">**</span><span class="n">kw</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Construct names for the given units.  Builds singular and plural form.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="nb">map</span> <span class="o">=</span> <span class="p">{}</span>
+    <span class="nb">map</span><span class="o">.</span><span class="n">update</span><span class="p">([(</span><span class="n">name</span><span class="p">,</span><span class="n">scale</span><span class="p">)</span> <span class="k">for</span> <span class="n">name</span><span class="p">,</span><span class="n">scale</span> <span class="ow">in</span> <span class="n">kw</span><span class="o">.</span><span class="n">iteritems</span><span class="p">()])</span>
+    <span class="nb">map</span><span class="o">.</span><span class="n">update</span><span class="p">([(</span><span class="n">name</span><span class="o">+</span><span class="s">&#39;s&#39;</span><span class="p">,</span><span class="n">scale</span><span class="p">)</span> <span class="k">for</span> <span class="n">name</span><span class="p">,</span><span class="n">scale</span> <span class="ow">in</span> <span class="n">kw</span><span class="o">.</span><span class="n">iteritems</span><span class="p">()])</span>
+    <span class="k">return</span> <span class="nb">map</span>
+
+<span class="k">def</span> <span class="nf">_caret_optional</span><span class="p">(</span><span class="n">s</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Strip &#39;^&#39; from unit names.</span>
+
+<span class="sd">    * WARNING * this will incorrect transform 10^3 to 103.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">s</span><span class="o">.</span><span class="n">update</span><span class="p">((</span><span class="n">k</span><span class="o">.</span><span class="n">replace</span><span class="p">(</span><span class="s">&#39;^&#39;</span><span class="p">,</span><span class="s">&#39;&#39;</span><span class="p">),</span><span class="n">v</span><span class="p">)</span> 
+             <span class="k">for</span> <span class="n">k</span><span class="p">,</span><span class="n">v</span> <span class="ow">in</span> <span class="n">s</span><span class="o">.</span><span class="n">items</span><span class="p">()</span>
+             <span class="k">if</span> <span class="s">&#39;^&#39;</span> <span class="ow">in</span> <span class="n">k</span><span class="p">)</span>
+
+<span class="k">def</span> <span class="nf">_build_all_units</span><span class="p">():</span>
+    <span class="n">distance</span> <span class="o">=</span> <span class="n">_build_metric_units</span><span class="p">(</span><span class="s">&#39;meter&#39;</span><span class="p">,</span><span class="s">&#39;m&#39;</span><span class="p">)</span>
+    <span class="n">distance</span><span class="o">.</span><span class="n">update</span><span class="p">(</span><span class="n">_build_metric_units</span><span class="p">(</span><span class="s">&#39;metre&#39;</span><span class="p">,</span><span class="s">&#39;m&#39;</span><span class="p">))</span>
+    <span class="n">distance</span><span class="o">.</span><span class="n">update</span><span class="p">(</span><span class="n">_build_plural_units</span><span class="p">(</span><span class="n">micron</span><span class="o">=</span><span class="mf">1e-6</span><span class="p">,</span> <span class="n">Angstrom</span><span class="o">=</span><span class="mf">1e-10</span><span class="p">))</span>
+    <span class="n">distance</span><span class="o">.</span><span class="n">update</span><span class="p">({</span><span class="s">&#39;A&#39;</span><span class="p">:</span><span class="mf">1e-10</span><span class="p">,</span> <span class="s">&#39;Ang&#39;</span><span class="p">:</span><span class="mf">1e-10</span><span class="p">})</span>
+
+    <span class="c"># Note: minutes are used for angle</span>
+    <span class="n">time</span> <span class="o">=</span> <span class="n">_build_metric_units</span><span class="p">(</span><span class="s">&#39;second&#39;</span><span class="p">,</span><span class="s">&#39;s&#39;</span><span class="p">)</span>
+    <span class="n">time</span><span class="o">.</span><span class="n">update</span><span class="p">(</span><span class="n">_build_plural_units</span><span class="p">(</span><span class="n">hour</span><span class="o">=</span><span class="mi">3600</span><span class="p">,</span><span class="n">day</span><span class="o">=</span><span class="mi">24</span><span class="o">*</span><span class="mi">3600</span><span class="p">,</span><span class="n">week</span><span class="o">=</span><span class="mi">7</span><span class="o">*</span><span class="mi">24</span><span class="o">*</span><span class="mi">3600</span><span class="p">))</span>
+
+    <span class="c"># Note: seconds are used for time</span>
+    <span class="n">angle</span> <span class="o">=</span> <span class="n">_build_plural_units</span><span class="p">(</span><span class="n">degree</span><span class="o">=</span><span class="mi">1</span><span class="p">,</span> <span class="n">minute</span><span class="o">=</span><span class="mi">1</span><span class="o">/</span><span class="mf">60.</span><span class="p">,</span>
+                  <span class="n">arcminute</span><span class="o">=</span><span class="mi">1</span><span class="o">/</span><span class="mf">60.</span><span class="p">,</span> <span class="n">arcsecond</span><span class="o">=</span><span class="mi">1</span><span class="o">/</span><span class="mf">3600.</span><span class="p">,</span> <span class="n">radian</span><span class="o">=</span><span class="mi">180</span><span class="o">/</span><span class="n">math</span><span class="o">.</span><span class="n">pi</span><span class="p">)</span>
+    <span class="n">angle</span><span class="o">.</span><span class="n">update</span><span class="p">(</span><span class="n">deg</span><span class="o">=</span><span class="mi">1</span><span class="p">,</span> <span class="n">arcmin</span><span class="o">=</span><span class="mi">1</span><span class="o">/</span><span class="mf">60.</span><span class="p">,</span> <span class="n">arcsec</span><span class="o">=</span><span class="mi">1</span><span class="o">/</span><span class="mf">3600.</span><span class="p">,</span> <span class="n">rad</span><span class="o">=</span><span class="mi">180</span><span class="o">/</span><span class="n">math</span><span class="o">.</span><span class="n">pi</span><span class="p">)</span>
+
+    <span class="n">frequency</span> <span class="o">=</span> <span class="n">_build_metric_units</span><span class="p">(</span><span class="s">&#39;hertz&#39;</span><span class="p">,</span><span class="s">&#39;Hz&#39;</span><span class="p">)</span>
+    <span class="n">frequency</span><span class="o">.</span><span class="n">update</span><span class="p">(</span><span class="n">_build_metric_units</span><span class="p">(</span><span class="s">&#39;Hertz&#39;</span><span class="p">,</span><span class="s">&#39;Hz&#39;</span><span class="p">))</span>
+    <span class="n">frequency</span><span class="o">.</span><span class="n">update</span><span class="p">(</span><span class="n">_build_plural_units</span><span class="p">(</span><span class="n">rpm</span><span class="o">=</span><span class="mi">1</span><span class="o">/</span><span class="mf">60.</span><span class="p">))</span>
+
+    <span class="c"># Note: degrees are used for angle</span>
+    <span class="c"># Note: temperature needs an offset as well as a scale</span>
+    <span class="n">temperature</span> <span class="o">=</span> <span class="n">_build_metric_units</span><span class="p">(</span><span class="s">&#39;kelvin&#39;</span><span class="p">,</span><span class="s">&#39;K&#39;</span><span class="p">)</span>
+    <span class="n">temperature</span><span class="o">.</span><span class="n">update</span><span class="p">(</span><span class="n">_build_metric_units</span><span class="p">(</span><span class="s">&#39;Kelvin&#39;</span><span class="p">,</span><span class="s">&#39;K&#39;</span><span class="p">))</span>
+    <span class="n">temperature</span><span class="o">.</span><span class="n">update</span><span class="p">(</span><span class="n">_build_metric_units</span><span class="p">(</span><span class="s">&#39;Celcius&#39;</span><span class="p">,</span> <span class="s">&#39;C&#39;</span><span class="p">))</span>
+    <span class="n">temperature</span><span class="o">.</span><span class="n">update</span><span class="p">(</span><span class="n">_build_metric_units</span><span class="p">(</span><span class="s">&#39;celcius&#39;</span><span class="p">,</span> <span class="s">&#39;C&#39;</span><span class="p">))</span>
+    
+    <span class="n">charge</span> <span class="o">=</span> <span class="n">_build_metric_units</span><span class="p">(</span><span class="s">&#39;coulomb&#39;</span><span class="p">,</span><span class="s">&#39;C&#39;</span><span class="p">)</span>
+    <span class="n">charge</span><span class="o">.</span><span class="n">update</span><span class="p">({</span><span class="s">&#39;microAmp*hour&#39;</span><span class="p">:</span><span class="mf">0.0036</span><span class="p">})</span>
+
+    <span class="n">sld</span> <span class="o">=</span> <span class="p">{</span> <span class="s">&#39;10^-6 Angstrom^-2&#39;</span><span class="p">:</span> <span class="mf">1e-6</span><span class="p">,</span> <span class="s">&#39;Angstrom^-2&#39;</span><span class="p">:</span> <span class="mi">1</span> <span class="p">}</span>
+    <span class="n">Q</span> <span class="o">=</span> <span class="p">{</span> <span class="s">&#39;invA&#39;</span><span class="p">:</span> <span class="mi">1</span><span class="p">,</span> <span class="s">&#39;invAng&#39;</span><span class="p">:</span> <span class="mi">1</span><span class="p">,</span> <span class="s">&#39;invAngstroms&#39;</span><span class="p">:</span> <span class="mi">1</span><span class="p">,</span> <span class="s">&#39;1/A&#39;</span><span class="p">:</span> <span class="mi">1</span><span class="p">,</span> 
+          <span class="s">&#39;10^-3 Angstrom^-1&#39;</span><span class="p">:</span> <span class="mf">1e-3</span><span class="p">,</span> <span class="s">&#39;1/cm&#39;</span><span class="p">:</span> <span class="mf">1e-8</span><span class="p">,</span>
+          <span class="s">&#39;nm^-1&#39;</span><span class="p">:</span> <span class="mf">0.1</span><span class="p">,</span> <span class="s">&#39;1/nm&#39;</span><span class="p">:</span> <span class="mf">0.1</span><span class="p">,</span> <span class="s">&#39;n_m^-1&#39;</span><span class="p">:</span> <span class="mf">0.1</span> <span class="p">}</span>
+
+    <span class="n">_caret_optional</span><span class="p">(</span><span class="n">sld</span><span class="p">)</span>
+    <span class="n">_caret_optional</span><span class="p">(</span><span class="n">Q</span><span class="p">)</span>
+
+    <span class="n">dims</span> <span class="o">=</span> <span class="p">[</span><span class="n">distance</span><span class="p">,</span> <span class="n">time</span><span class="p">,</span> <span class="n">angle</span><span class="p">,</span> <span class="n">frequency</span><span class="p">,</span> <span class="n">temperature</span><span class="p">,</span> <span class="n">charge</span><span class="p">,</span> <span class="n">sld</span><span class="p">,</span> <span class="n">Q</span><span class="p">]</span>
+    <span class="k">return</span> <span class="n">dims</span>
+
+<div class="viewcode-block" id="Converter"><a class="viewcode-back" href="../../../dev/api/sas.data_util.html#sas.data_util.nxsunit.Converter">[docs]</a><span class="k">class</span> <span class="nc">Converter</span><span class="p">(</span><span class="nb">object</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Unit converter for NeXus style units.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="c"># Define the units, using both American and European spelling.</span>
+    <span class="n">scalemap</span> <span class="o">=</span> <span class="bp">None</span>
+    <span class="n">scalebase</span> <span class="o">=</span> <span class="mi">1</span>
+    <span class="n">dims</span> <span class="o">=</span> <span class="n">_build_all_units</span><span class="p">()</span>
+
+    <span class="c"># Note: a.u. stands for arbitrary units, which should return the default</span>
+    <span class="c"># units for that particular dimension.</span>
+    <span class="c"># Note: don&#39;t have support for dimensionless units.</span>
+    <span class="n">unknown</span> <span class="o">=</span> <span class="p">{</span><span class="bp">None</span><span class="p">:</span><span class="mi">1</span><span class="p">,</span> <span class="s">&#39;???&#39;</span><span class="p">:</span><span class="mi">1</span><span class="p">,</span> <span class="s">&#39;&#39;</span><span class="p">:</span> <span class="mi">1</span><span class="p">,</span> <span class="s">&#39;a.u.&#39;</span><span class="p">:</span> <span class="mi">1</span><span class="p">}</span>
+
+    <span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">name</span><span class="p">):</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">base</span> <span class="o">=</span> <span class="n">name</span>
+        <span class="k">for</span> <span class="nb">map</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">dims</span><span class="p">:</span>
+            <span class="k">if</span> <span class="n">name</span> <span class="ow">in</span> <span class="nb">map</span><span class="p">:</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">scalemap</span> <span class="o">=</span> <span class="nb">map</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">scalebase</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">scalemap</span><span class="p">[</span><span class="n">name</span><span class="p">]</span>
+                <span class="k">return</span>
+        <span class="k">if</span> <span class="n">name</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">unknown</span><span class="p">:</span>
+            <span class="k">return</span> <span class="c"># default scalemap and scalebase correspond to unknown</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="ne">KeyError</span><span class="p">(</span><span class="s">&quot;Unknown unit </span><span class="si">%s</span><span class="s">&quot;</span><span class="o">%</span><span class="n">name</span><span class="p">)</span>
+
+<div class="viewcode-block" id="Converter.scale"><a class="viewcode-back" href="../../../dev/api/sas.data_util.html#sas.data_util.nxsunit.Converter.scale">[docs]</a>    <span class="k">def</span> <span class="nf">scale</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">units</span><span class="o">=</span><span class="s">&quot;&quot;</span><span class="p">):</span>
+        <span class="k">if</span> <span class="n">units</span> <span class="o">==</span> <span class="s">&quot;&quot;</span> <span class="ow">or</span> <span class="bp">self</span><span class="o">.</span><span class="n">scalemap</span> <span class="ow">is</span> <span class="bp">None</span><span class="p">:</span> <span class="k">return</span> <span class="mi">1</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">scalebase</span><span class="o">/</span><span class="bp">self</span><span class="o">.</span><span class="n">scalemap</span><span class="p">[</span><span class="n">units</span><span class="p">]</span>
+</div>
+    <span class="k">def</span> <span class="nf">__call__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">value</span><span class="p">,</span> <span class="n">units</span><span class="o">=</span><span class="s">&quot;&quot;</span><span class="p">):</span>
+        <span class="c"># Note: calculating a*1 rather than simply returning a would produce</span>
+        <span class="c"># an unnecessary copy of the array, which in the case of the raw</span>
+        <span class="c"># counts array would be bad.  Sometimes copying and other times</span>
+        <span class="c"># not copying is also bad, but copy on modify semantics isn&#39;t</span>
+        <span class="c"># supported.</span>
+        <span class="k">if</span> <span class="n">units</span> <span class="o">==</span> <span class="s">&quot;&quot;</span> <span class="ow">or</span> <span class="bp">self</span><span class="o">.</span><span class="n">scalemap</span> <span class="ow">is</span> <span class="bp">None</span><span class="p">:</span> <span class="k">return</span> <span class="n">value</span>
+        <span class="k">try</span><span class="p">:</span>
+            <span class="k">return</span> <span class="n">value</span> <span class="o">*</span> <span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">scalebase</span><span class="o">/</span><span class="bp">self</span><span class="o">.</span><span class="n">scalemap</span><span class="p">[</span><span class="n">units</span><span class="p">])</span>
+        <span class="k">except</span> <span class="ne">KeyError</span><span class="p">:</span>
+            <span class="n">possible_units</span> <span class="o">=</span> <span class="s">&quot;, &quot;</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="nb">str</span><span class="p">(</span><span class="n">k</span><span class="p">)</span> <span class="k">for</span> <span class="n">k</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">scalemap</span><span class="o">.</span><span class="n">keys</span><span class="p">())</span>
+            <span class="k">raise</span> <span class="ne">KeyError</span><span class="p">(</span><span class="s">&quot;</span><span class="si">%s</span><span class="s"> not in </span><span class="si">%s</span><span class="s">&quot;</span><span class="o">%</span><span class="p">(</span><span class="n">units</span><span class="p">,</span><span class="n">possible_units</span><span class="p">))</span>
+</div>
+<span class="k">def</span> <span class="nf">_check</span><span class="p">(</span><span class="n">expect</span><span class="p">,</span><span class="n">get</span><span class="p">):</span>
+    <span class="k">if</span> <span class="n">expect</span> <span class="o">!=</span> <span class="n">get</span><span class="p">:</span> <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">,</span> <span class="s">&quot;Expected </span><span class="si">%s</span><span class="s"> but got </span><span class="si">%s</span><span class="s">&quot;</span><span class="o">%</span><span class="p">(</span><span class="n">expect</span><span class="p">,</span><span class="n">get</span><span class="p">)</span>
+     <span class="c">#print expect,&quot;==&quot;,get</span>
+
+<span class="k">def</span> <span class="nf">test</span><span class="p">():</span>
+    <span class="n">_check</span><span class="p">(</span><span class="mi">1</span><span class="p">,</span><span class="n">Converter</span><span class="p">(</span><span class="s">&#39;n_m^-1&#39;</span><span class="p">)(</span><span class="mi">10</span><span class="p">,</span><span class="s">&#39;invA&#39;</span><span class="p">))</span> <span class="c"># 10 nm^-1 = 1 inv Angstroms</span>
+    <span class="n">_check</span><span class="p">(</span><span class="mi">2</span><span class="p">,</span><span class="n">Converter</span><span class="p">(</span><span class="s">&#39;mm&#39;</span><span class="p">)(</span><span class="mi">2000</span><span class="p">,</span><span class="s">&#39;m&#39;</span><span class="p">))</span> <span class="c"># 2000 mm -&gt; 2 m</span>
+    <span class="n">_check</span><span class="p">(</span><span class="mf">0.003</span><span class="p">,</span><span class="n">Converter</span><span class="p">(</span><span class="s">&#39;microseconds&#39;</span><span class="p">)(</span><span class="mi">3</span><span class="p">,</span><span class="n">units</span><span class="o">=</span><span class="s">&#39;ms&#39;</span><span class="p">))</span> <span class="c"># 3 us -&gt; 0.003 ms</span>
+    <span class="n">_check</span><span class="p">(</span><span class="mi">45</span><span class="p">,</span><span class="n">Converter</span><span class="p">(</span><span class="s">&#39;nanokelvin&#39;</span><span class="p">)(</span><span class="mi">45</span><span class="p">))</span>  <span class="c"># 45 nK -&gt; 45 nK</span>
+    <span class="n">_check</span><span class="p">(</span><span class="mf">0.5</span><span class="p">,</span><span class="n">Converter</span><span class="p">(</span><span class="s">&#39;seconds&#39;</span><span class="p">)(</span><span class="mi">1800</span><span class="p">,</span><span class="n">units</span><span class="o">=</span><span class="s">&#39;hours&#39;</span><span class="p">))</span> <span class="c"># 1800 s -&gt; 0.5 hr</span>
+    <span class="n">_check</span><span class="p">(</span><span class="mi">123</span><span class="p">,</span><span class="n">Converter</span><span class="p">(</span><span class="s">&#39;a.u.&#39;</span><span class="p">)(</span><span class="mi">123</span><span class="p">,</span><span class="n">units</span><span class="o">=</span><span class="s">&#39;mm&#39;</span><span class="p">))</span> <span class="c"># arbitrary units always returns the same value</span>
+    <span class="n">_check</span><span class="p">(</span><span class="mi">123</span><span class="p">,</span><span class="n">Converter</span><span class="p">(</span><span class="s">&#39;a.u.&#39;</span><span class="p">)(</span><span class="mi">123</span><span class="p">,</span><span class="n">units</span><span class="o">=</span><span class="s">&#39;s&#39;</span><span class="p">))</span> <span class="c"># arbitrary units always returns the same value</span>
+    <span class="n">_check</span><span class="p">(</span><span class="mi">123</span><span class="p">,</span><span class="n">Converter</span><span class="p">(</span><span class="s">&#39;a.u.&#39;</span><span class="p">)(</span><span class="mi">123</span><span class="p">,</span><span class="n">units</span><span class="o">=</span><span class="s">&#39;&#39;</span><span class="p">))</span> <span class="c"># arbitrary units always returns the same value</span>
+    <span class="k">try</span><span class="p">:</span> <span class="n">Converter</span><span class="p">(</span><span class="s">&#39;help&#39;</span><span class="p">)</span>
+    <span class="k">except</span> <span class="ne">KeyError</span><span class="p">:</span> <span class="k">pass</span>
+    <span class="k">else</span><span class="p">:</span> <span class="k">raise</span> <span class="ne">Exception</span><span class="p">(</span><span class="s">&quot;unknown unit did not raise an error&quot;</span><span class="p">)</span>
+
+    <span class="c"># TODO: more tests</span>
+
+<span class="k">if</span> <span class="n">__name__</span> <span class="o">==</span> <span class="s">&quot;__main__&quot;</span><span class="p">:</span>
+    <span class="n">test</span><span class="p">()</span>
+</pre></div>
+
+          </div>
+        </div>
+      </div>
+      <div class="sphinxsidebar" role="navigation" aria-label="main navigation">
+        <div class="sphinxsidebarwrapper">
+<div id="searchbox" style="display: none" role="search">
+  <h3>Quick search</h3>
+    <form class="search" action="../../../search.html" method="get">
+      <input type="text" name="q" />
+      <input type="submit" value="Go" />
+      <input type="hidden" name="check_keywords" value="yes" />
+      <input type="hidden" name="area" value="default" />
+    </form>
+    <p class="searchtip" style="font-size: 90%">
+    Enter search terms or a module, class or function name.
+    </p>
+</div>
+<script type="text/javascript">$('#searchbox').show(0);</script>
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="related" role="navigation" aria-label="related navigation">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="../../../genindex.html" title="General Index"
+             >index</a></li>
+        <li class="right" >
+          <a href="../../../py-modindex.html" title="Python Module Index"
+             >modules</a> |</li>
+        <li class="nav-item nav-item-0"><a href="../../../index.html">SasView 3.1.0 documentation</a> &raquo;</li>
+          <li class="nav-item nav-item-1"><a href="../../index.html" >Module code</a> &raquo;</li> 
+      </ul>
+    </div>
+    <div class="footer" role="contentinfo">
+        &copy; Copyright 2015, The SasView Project.
+      Created using <a href="http://sphinx-doc.org/">Sphinx</a> 1.3.1.
+    </div>
+  </body>
+</html>

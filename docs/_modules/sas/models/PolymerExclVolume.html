@@ -1,0 +1,219 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+  "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+    
+    <title>sas.models.PolymerExclVolume &mdash; SasView 3.1.0 documentation</title>
+    
+    <link rel="stylesheet" href="../../../_static/classic.css" type="text/css" />
+    <link rel="stylesheet" href="../../../_static/pygments.css" type="text/css" />
+    
+    <script type="text/javascript">
+      var DOCUMENTATION_OPTIONS = {
+        URL_ROOT:    '../../../',
+        VERSION:     '3.1.0',
+        COLLAPSE_INDEX: false,
+        FILE_SUFFIX: '.html',
+        HAS_SOURCE:  true
+      };
+    </script>
+    <script type="text/javascript" src="../../../_static/jquery.js"></script>
+    <script type="text/javascript" src="../../../_static/underscore.js"></script>
+    <script type="text/javascript" src="../../../_static/doctools.js"></script>
+    <script type="text/javascript" src="https://cdn.mathjax.org/mathjax/latest/MathJax.js?config=TeX-AMS-MML_HTMLorMML"></script>
+    <link rel="top" title="SasView 3.1.0 documentation" href="../../../index.html" />
+    <link rel="up" title="sas.models" href="../models.html" /> 
+  </head>
+  <body role="document">
+    <div class="related" role="navigation" aria-label="related navigation">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="../../../genindex.html" title="General Index"
+             accesskey="I">index</a></li>
+        <li class="right" >
+          <a href="../../../py-modindex.html" title="Python Module Index"
+             >modules</a> |</li>
+        <li class="nav-item nav-item-0"><a href="../../../index.html">SasView 3.1.0 documentation</a> &raquo;</li>
+          <li class="nav-item nav-item-1"><a href="../../index.html" >Module code</a> &raquo;</li>
+          <li class="nav-item nav-item-2"><a href="../models.html" accesskey="U">sas.models</a> &raquo;</li> 
+      </ul>
+    </div>  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          <div class="body" role="main">
+            
+  <h1>Source code for sas.models.PolymerExclVolume</h1><div class="highlight"><pre>
+<span class="c">#!/usr/bin/env python</span>
+
+<span class="c">##############################################################################</span>
+<span class="c">#	This software was developed by the University of Tennessee as part of the</span>
+<span class="c">#	Distributed Data Analysis of Neutron Scattering Experiments (DANSE)</span>
+<span class="c">#	project funded by the US National Science Foundation.</span>
+<span class="c">#</span>
+<span class="c">#	If you use DANSE applications to do scientific research that leads to</span>
+<span class="c">#	publication, we ask that you acknowledge the use of the software with the</span>
+<span class="c">#	following sentence:</span>
+<span class="c">#</span>
+<span class="c">#	&quot;This work benefited from DANSE software developed under NSF award DMR-0520547.&quot;</span>
+<span class="c">#</span>
+<span class="c">#	copyright 2008, University of Tennessee</span>
+<span class="c">##############################################################################</span>
+<span class="kn">from</span> <span class="nn">sas.models.BaseComponent</span> <span class="kn">import</span> <span class="n">BaseComponent</span>
+<span class="kn">from</span> <span class="nn">scipy.special</span> <span class="kn">import</span> <span class="n">gammainc</span><span class="p">,</span><span class="n">gamma</span>
+<span class="kn">import</span> <span class="nn">copy</span>    
+<span class="kn">import</span> <span class="nn">math</span>
+    
+<div class="viewcode-block" id="PolymerExclVolume"><a class="viewcode-back" href="../../../dev/api/sas.models.html#sas.models.PolymerExclVolume.PolymerExclVolume">[docs]</a><span class="k">class</span> <span class="nc">PolymerExclVolume</span><span class="p">(</span><span class="n">BaseComponent</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot; </span>
+<span class="sd">    Class that evaluates a PolymerExclVolModel model. </span>
+<span class="sd">    This file was auto-generated from ..\c_extensions\polyexclvol.h.</span>
+<span class="sd">    Refer to that file and the structure it contains</span>
+<span class="sd">    for details of the model.</span>
+
+<span class="sd">    List of default parameters:</span>
+<span class="sd">    </span>
+<span class="sd">    * scale           = 0.01 </span>
+<span class="sd">    * rg              = 100.0 [A]</span>
+<span class="sd">    * m               = 3.0 </span>
+<span class="sd">    * background      = 0.0 [1/cm]</span>
+
+<span class="sd">    &quot;&quot;&quot;</span>
+        
+    <span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot; Initialization &quot;&quot;&quot;</span>
+        
+        <span class="c"># Initialize BaseComponent first, then sphere</span>
+        <span class="n">BaseComponent</span><span class="o">.</span><span class="n">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span>
+        
+        <span class="c">## Name of the model</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">name</span> <span class="o">=</span> <span class="s">&quot;PolymerExclVolume&quot;</span>
+        <span class="c">## Model description</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">description</span> <span class="o">=</span><span class="s">&quot;&quot;&quot; Compute the scattering intensity from polymers with excluded volume effects.</span>
+<span class="s">		scale: scale factor times volume fraction,</span>
+<span class="s">		or just volume fraction for absolute scale data</span>
+<span class="s">		rg: radius of gyration</span>
+<span class="s">		m = Porod exponent</span>
+<span class="s">		background: incoherent background</span>
+<span class="s">		&quot;&quot;&quot;</span>
+        <span class="c">## Define parameters</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">params</span> <span class="o">=</span> <span class="p">{}</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">params</span><span class="p">[</span><span class="s">&#39;scale&#39;</span><span class="p">]</span>        <span class="o">=</span> <span class="mf">1.0</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">params</span><span class="p">[</span><span class="s">&#39;rg&#39;</span><span class="p">]</span>           <span class="o">=</span> <span class="mf">60.0</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">params</span><span class="p">[</span><span class="s">&#39;m&#39;</span><span class="p">]</span>            <span class="o">=</span> <span class="mf">3.0</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">params</span><span class="p">[</span><span class="s">&#39;background&#39;</span><span class="p">]</span>   <span class="o">=</span> <span class="mf">0.0</span>
+
+       
+        <span class="c">## Parameter details [units, min, max]</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">details</span> <span class="o">=</span> <span class="p">{}</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">details</span><span class="p">[</span><span class="s">&#39;scale&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="p">[</span><span class="s">&#39;&#39;</span><span class="p">,</span> <span class="bp">None</span><span class="p">,</span> <span class="bp">None</span><span class="p">]</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">details</span><span class="p">[</span><span class="s">&#39;rg&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="p">[</span><span class="s">&#39;[A]&#39;</span><span class="p">,</span> <span class="bp">None</span><span class="p">,</span> <span class="bp">None</span><span class="p">]</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">details</span><span class="p">[</span><span class="s">&#39;m&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="p">[</span><span class="s">&#39;&#39;</span><span class="p">,</span> <span class="bp">None</span><span class="p">,</span> <span class="bp">None</span><span class="p">]</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">details</span><span class="p">[</span><span class="s">&#39;background&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="p">[</span><span class="s">&#39;[1/cm]&#39;</span><span class="p">,</span> <span class="bp">None</span><span class="p">,</span> <span class="bp">None</span><span class="p">]</span>
+
+        <span class="c">## fittable parameters</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">fixed</span><span class="o">=</span><span class="p">[]</span>
+        
+        <span class="c">## non-fittable parameters</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">non_fittable</span><span class="o">=</span><span class="p">[]</span>
+        
+        <span class="c">## parameters with orientation</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">orientation_params</span> <span class="o">=</span><span class="p">[]</span>
+        
+    <span class="k">def</span> <span class="nf">_polymerexclvol</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">x</span><span class="p">):</span>
+        
+        <span class="n">sc</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">params</span><span class="p">[</span><span class="s">&#39;scale&#39;</span><span class="p">]</span>
+        <span class="n">rg</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">params</span><span class="p">[</span><span class="s">&#39;rg&#39;</span><span class="p">]</span>
+        <span class="n">mm</span>  <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">params</span><span class="p">[</span><span class="s">&#39;m&#39;</span><span class="p">]</span>
+        <span class="n">bg</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">params</span><span class="p">[</span><span class="s">&#39;background&#39;</span><span class="p">]</span>
+    
+        <span class="n">nu</span> <span class="o">=</span> <span class="mf">1.0</span> <span class="o">/</span> <span class="n">mm</span>
+    
+        <span class="n">Xx</span> <span class="o">=</span> <span class="n">x</span> <span class="o">*</span> <span class="n">x</span> <span class="o">*</span> <span class="n">rg</span> <span class="o">*</span> <span class="n">rg</span> <span class="o">*</span><span class="p">(</span><span class="mf">2.0</span> <span class="o">*</span> <span class="n">nu</span> <span class="o">+</span> <span class="mf">1.0</span><span class="p">)</span> <span class="o">*</span> <span class="p">(</span><span class="mf">2.0</span> <span class="o">*</span> <span class="n">nu</span> <span class="o">+</span> <span class="mf">2.0</span><span class="p">)</span> <span class="o">/</span> <span class="mf">6.0</span>
+        <span class="n">onu</span> <span class="o">=</span> <span class="mf">1.0</span> <span class="o">/</span> <span class="n">nu</span>
+        <span class="n">o2nu</span> <span class="o">=</span> <span class="mf">1.0</span> <span class="o">/</span><span class="p">(</span><span class="mf">2.0</span> <span class="o">*</span> <span class="n">nu</span><span class="p">)</span>
+        <span class="n">Ps</span> <span class="o">=</span><span class="p">(</span><span class="mf">1.0</span> <span class="o">/</span> <span class="p">(</span><span class="n">nu</span> <span class="o">*</span> <span class="nb">pow</span><span class="p">(</span><span class="n">Xx</span><span class="p">,</span><span class="n">o2nu</span><span class="p">)))</span> <span class="o">*</span> <span class="p">(</span><span class="n">gamma</span><span class="p">(</span><span class="n">o2nu</span><span class="p">)</span><span class="o">*</span><span class="n">gammainc</span><span class="p">(</span><span class="n">o2nu</span><span class="p">,</span><span class="n">Xx</span><span class="p">)</span> <span class="o">-</span> \
+                        <span class="mf">1.0</span> <span class="o">/</span> <span class="nb">pow</span><span class="p">(</span><span class="n">Xx</span><span class="p">,</span><span class="n">o2nu</span><span class="p">)</span> <span class="o">*</span> <span class="n">gamma</span><span class="p">(</span><span class="n">onu</span><span class="p">)</span><span class="o">*</span><span class="n">gammainc</span><span class="p">(</span><span class="n">onu</span><span class="p">,</span><span class="n">Xx</span><span class="p">))</span>
+
+        <span class="k">if</span> <span class="n">x</span> <span class="o">==</span> <span class="mi">0</span><span class="p">:</span>
+            <span class="n">Ps</span> <span class="o">=</span> <span class="mf">1.0</span>
+
+        <span class="k">return</span> <span class="p">(</span><span class="n">sc</span> <span class="o">*</span> <span class="n">Ps</span> <span class="o">+</span> <span class="n">bg</span><span class="p">);</span>
+
+<div class="viewcode-block" id="PolymerExclVolume.run"><a class="viewcode-back" href="../../../dev/api/sas.models.html#sas.models.PolymerExclVolume.PolymerExclVolume.run">[docs]</a>    <span class="k">def</span> <span class="nf">run</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">x</span> <span class="o">=</span> <span class="mf">0.0</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot; Evaluate the model</span>
+<span class="sd">            @param x: input q-value (float or [float, float] as [r, theta])</span>
+<span class="sd">            @return: (guinier value)</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">if</span> <span class="n">x</span><span class="o">.</span><span class="n">__class__</span><span class="o">.</span><span class="n">__name__</span> <span class="o">==</span> <span class="s">&#39;list&#39;</span><span class="p">:</span>
+            <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_polymerexclvol</span><span class="p">(</span><span class="n">x</span><span class="p">[</span><span class="mi">0</span><span class="p">])</span>
+        <span class="k">elif</span> <span class="n">x</span><span class="o">.</span><span class="n">__class__</span><span class="o">.</span><span class="n">__name__</span> <span class="o">==</span> <span class="s">&#39;tuple&#39;</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">,</span> <span class="s">&quot;Tuples are not allowed as input to BaseComponent models&quot;</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_polymerexclvol</span><span class="p">(</span><span class="n">x</span><span class="p">)</span>
+   </div>
+<div class="viewcode-block" id="PolymerExclVolume.runXY"><a class="viewcode-back" href="../../../dev/api/sas.models.html#sas.models.PolymerExclVolume.PolymerExclVolume.runXY">[docs]</a>    <span class="k">def</span> <span class="nf">runXY</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">x</span> <span class="o">=</span> <span class="mf">0.0</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot; Evaluate the model</span>
+<span class="sd">            @param x: input q-value (float or [float, float] as [qx, qy])</span>
+<span class="sd">            @return: guinier value</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">if</span> <span class="n">x</span><span class="o">.</span><span class="n">__class__</span><span class="o">.</span><span class="n">__name__</span> <span class="o">==</span> <span class="s">&#39;list&#39;</span><span class="p">:</span>
+            <span class="n">q</span> <span class="o">=</span> <span class="n">math</span><span class="o">.</span><span class="n">sqrt</span><span class="p">(</span><span class="n">x</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="o">**</span><span class="mi">2</span> <span class="o">+</span> <span class="n">x</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span><span class="o">**</span><span class="mi">2</span><span class="p">)</span>
+            <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_polymerexclvol</span><span class="p">(</span><span class="n">x</span><span class="p">)</span>
+        <span class="k">elif</span> <span class="n">x</span><span class="o">.</span><span class="n">__class__</span><span class="o">.</span><span class="n">__name__</span> <span class="o">==</span> <span class="s">&#39;tuple&#39;</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">,</span> <span class="s">&quot;Tuples are not allowed as input to BaseComponent models&quot;</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_polymerexclvol</span><span class="p">(</span><span class="n">x</span><span class="p">)</span>
+        
+
+   
+<span class="c"># End of file</span></div></div>
+</pre></div>
+
+          </div>
+        </div>
+      </div>
+      <div class="sphinxsidebar" role="navigation" aria-label="main navigation">
+        <div class="sphinxsidebarwrapper">
+<div id="searchbox" style="display: none" role="search">
+  <h3>Quick search</h3>
+    <form class="search" action="../../../search.html" method="get">
+      <input type="text" name="q" />
+      <input type="submit" value="Go" />
+      <input type="hidden" name="check_keywords" value="yes" />
+      <input type="hidden" name="area" value="default" />
+    </form>
+    <p class="searchtip" style="font-size: 90%">
+    Enter search terms or a module, class or function name.
+    </p>
+</div>
+<script type="text/javascript">$('#searchbox').show(0);</script>
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="related" role="navigation" aria-label="related navigation">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="../../../genindex.html" title="General Index"
+             >index</a></li>
+        <li class="right" >
+          <a href="../../../py-modindex.html" title="Python Module Index"
+             >modules</a> |</li>
+        <li class="nav-item nav-item-0"><a href="../../../index.html">SasView 3.1.0 documentation</a> &raquo;</li>
+          <li class="nav-item nav-item-1"><a href="../../index.html" >Module code</a> &raquo;</li>
+          <li class="nav-item nav-item-2"><a href="../models.html" >sas.models</a> &raquo;</li> 
+      </ul>
+    </div>
+    <div class="footer" role="contentinfo">
+        &copy; Copyright 2015, The SasView Project.
+      Created using <a href="http://sphinx-doc.org/">Sphinx</a> 1.3.1.
+    </div>
+  </body>
+</html>

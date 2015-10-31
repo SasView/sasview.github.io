@@ -1,0 +1,406 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+  "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+    
+    <title>sas.guiframe.local_perspectives.plotting.plotting &mdash; SasView 3.1.0 documentation</title>
+    
+    <link rel="stylesheet" href="../../../../../_static/classic.css" type="text/css" />
+    <link rel="stylesheet" href="../../../../../_static/pygments.css" type="text/css" />
+    
+    <script type="text/javascript">
+      var DOCUMENTATION_OPTIONS = {
+        URL_ROOT:    '../../../../../',
+        VERSION:     '3.1.0',
+        COLLAPSE_INDEX: false,
+        FILE_SUFFIX: '.html',
+        HAS_SOURCE:  true
+      };
+    </script>
+    <script type="text/javascript" src="../../../../../_static/jquery.js"></script>
+    <script type="text/javascript" src="../../../../../_static/underscore.js"></script>
+    <script type="text/javascript" src="../../../../../_static/doctools.js"></script>
+    <script type="text/javascript" src="https://cdn.mathjax.org/mathjax/latest/MathJax.js?config=TeX-AMS-MML_HTMLorMML"></script>
+    <link rel="top" title="SasView 3.1.0 documentation" href="../../../../../index.html" />
+    <link rel="up" title="sas.guiframe" href="../../../guiframe.html" /> 
+  </head>
+  <body role="document">
+    <div class="related" role="navigation" aria-label="related navigation">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="../../../../../genindex.html" title="General Index"
+             accesskey="I">index</a></li>
+        <li class="right" >
+          <a href="../../../../../py-modindex.html" title="Python Module Index"
+             >modules</a> |</li>
+        <li class="nav-item nav-item-0"><a href="../../../../../index.html">SasView 3.1.0 documentation</a> &raquo;</li>
+          <li class="nav-item nav-item-1"><a href="../../../../index.html" >Module code</a> &raquo;</li>
+          <li class="nav-item nav-item-2"><a href="../../../guiframe.html" accesskey="U">sas.guiframe</a> &raquo;</li> 
+      </ul>
+    </div>  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          <div class="body" role="main">
+            
+  <h1>Source code for sas.guiframe.local_perspectives.plotting.plotting</h1><div class="highlight"><pre>
+<span class="c">################################################################################</span>
+<span class="c">#This software was developed by the University of Tennessee as part of the</span>
+<span class="c">#Distributed Data Analysis of Neutron Scattering Experiments (DANSE)</span>
+<span class="c">#project funded by the US National Science Foundation.</span>
+<span class="c">#</span>
+<span class="c">#See the license text in license.txt</span>
+<span class="c">#</span>
+<span class="c">#copyright 2008, University of Tennessee</span>
+<span class="c">################################################################################</span>
+
+<span class="kn">import</span> <span class="nn">wx</span>
+<span class="kn">import</span> <span class="nn">sys</span>
+<span class="kn">from</span> <span class="nn">sas.guiframe.events</span> <span class="kn">import</span> <span class="n">EVT_NEW_PLOT</span>
+<span class="kn">from</span> <span class="nn">sas.guiframe.events</span> <span class="kn">import</span> <span class="n">EVT_PLOT_QRANGE</span>
+<span class="kn">from</span> <span class="nn">sas.guiframe.events</span> <span class="kn">import</span> <span class="n">DeletePlotPanelEvent</span>
+<span class="kn">from</span> <span class="nn">sas.guiframe.plugin_base</span> <span class="kn">import</span> <span class="n">PluginBase</span>
+<span class="kn">from</span> <span class="nn">sas.guiframe.dataFitting</span> <span class="kn">import</span> <span class="n">Data1D</span>
+<span class="kn">from</span> <span class="nn">sas.guiframe.dataFitting</span> <span class="kn">import</span> <span class="n">Data2D</span>
+<span class="kn">from</span> <span class="nn">sas.guiframe.gui_manager</span> <span class="kn">import</span> <span class="n">MDIFrame</span>
+<span class="n">DEFAULT_MENU_ITEM_LABEL</span> <span class="o">=</span> <span class="s">&quot;No graph available&quot;</span>
+<span class="n">DEFAULT_MENU_ITEM_ID</span> <span class="o">=</span> <span class="n">wx</span><span class="o">.</span><span class="n">NewId</span><span class="p">()</span>
+
+<span class="n">IS_WIN</span> <span class="o">=</span> <span class="bp">True</span>
+<span class="k">if</span> <span class="n">sys</span><span class="o">.</span><span class="n">platform</span><span class="o">.</span><span class="n">count</span><span class="p">(</span><span class="s">&quot;win32&quot;</span><span class="p">)</span> <span class="o">==</span> <span class="mi">0</span><span class="p">:</span>
+    <span class="k">if</span> <span class="nb">int</span><span class="p">(</span><span class="nb">str</span><span class="p">(</span><span class="n">wx</span><span class="o">.</span><span class="n">__version__</span><span class="p">)</span><span class="o">.</span><span class="n">split</span><span class="p">(</span><span class="s">&#39;.&#39;</span><span class="p">)[</span><span class="mi">0</span><span class="p">])</span> <span class="o">==</span> <span class="mi">2</span><span class="p">:</span>
+        <span class="k">if</span> <span class="nb">int</span><span class="p">(</span><span class="nb">str</span><span class="p">(</span><span class="n">wx</span><span class="o">.</span><span class="n">__version__</span><span class="p">)</span><span class="o">.</span><span class="n">split</span><span class="p">(</span><span class="s">&#39;.&#39;</span><span class="p">)[</span><span class="mi">1</span><span class="p">])</span> <span class="o">&lt;</span> <span class="mi">9</span><span class="p">:</span>
+            <span class="n">IS_WIN</span> <span class="o">=</span> <span class="bp">False</span>
+
+
+<span class="k">class</span> <span class="nc">Plugin</span><span class="p">(</span><span class="n">PluginBase</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Plug-in class to be instantiated by the GUI manager</span>
+<div class="viewcode-block" id="Plugin"><a class="viewcode-back" href="../../../../../dev/api/sas.guiframe.local_perspectives.plotting.html#sas.guiframe.local_perspectives.plotting.plotting.Plugin">[docs]</a><span class="sd">    &quot;&quot;&quot;</span>
+
+    <span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">standalone</span><span class="o">=</span><span class="bp">False</span><span class="p">):</span>
+        <span class="n">PluginBase</span><span class="o">.</span><span class="n">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">name</span><span class="o">=</span><span class="s">&quot;Plotting&quot;</span><span class="p">,</span> <span class="n">standalone</span><span class="o">=</span><span class="n">standalone</span><span class="p">)</span>
+
+        <span class="c">## Plot panels</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">plot_panels</span> <span class="o">=</span> <span class="p">{}</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_panel_on_focus</span> <span class="o">=</span> <span class="bp">None</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">menu_default_id</span> <span class="o">=</span> <span class="bp">None</span>
+        <span class="c"># Plot menu</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">menu</span> <span class="o">=</span> <span class="bp">None</span>
+
+
+    <span class="k">def</span> <span class="nf">set_panel_on_focus</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">panel</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+<div class="viewcode-block" id="Plugin.set_panel_on_focus"><a class="viewcode-back" href="../../../../../dev/api/sas.guiframe.local_perspectives.plotting.html#sas.guiframe.local_perspectives.plotting.plotting.Plugin.set_panel_on_focus">[docs]</a>        <span class="bp">self</span><span class="o">.</span><span class="n">_panel_on_focus</span> <span class="o">=</span> <span class="n">panel</span>
+
+    <span class="k">def</span> <span class="nf">is_always_active</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        return True is this plugin is always active even if the user is</span></div>
+<div class="viewcode-block" id="Plugin.is_always_active"><a class="viewcode-back" href="../../../../../dev/api/sas.guiframe.local_perspectives.plotting.html#sas.guiframe.local_perspectives.plotting.plotting.Plugin.is_always_active">[docs]</a><span class="sd">        switching between perspectives</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">return</span> <span class="bp">True</span>
+
+    <span class="k">def</span> <span class="nf">populate_menu</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">parent</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Create a &#39;Plot&#39; menu to list the panels</span></div>
+<div class="viewcode-block" id="Plugin.populate_menu"><a class="viewcode-back" href="../../../../../dev/api/sas.guiframe.local_perspectives.plotting.html#sas.guiframe.local_perspectives.plotting.plotting.Plugin.populate_menu">[docs]</a><span class="sd">        available for displaying</span>
+
+<span class="sd">        :param id: next available unique ID for wx events</span>
+<span class="sd">        :param parent: parent window</span>
+
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">return</span> <span class="p">[]</span>
+
+    <span class="k">def</span> <span class="nf">get_panels</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">parent</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Create and return a list of panel objects</span></div>
+<div class="viewcode-block" id="Plugin.get_panels"><a class="viewcode-back" href="../../../../../dev/api/sas.guiframe.local_perspectives.plotting.html#sas.guiframe.local_perspectives.plotting.plotting.Plugin.get_panels">[docs]</a><span class="sd">        &quot;&quot;&quot;</span>
+        <span class="c">## Save a reference to the parent</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">parent</span> <span class="o">=</span> <span class="n">parent</span>
+        <span class="c"># Connect to plotting events</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">parent</span><span class="o">.</span><span class="n">Bind</span><span class="p">(</span><span class="n">EVT_NEW_PLOT</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">_on_plot_event</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">parent</span><span class="o">.</span><span class="n">Bind</span><span class="p">(</span><span class="n">EVT_PLOT_QRANGE</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">_on_plot_qrange</span><span class="p">)</span>
+        <span class="c"># We have no initial panels for this plug-in</span>
+        <span class="k">return</span> <span class="p">[]</span>
+
+    <span class="k">def</span> <span class="nf">_on_plot_qrange</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">event</span><span class="o">=</span><span class="bp">None</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        On Qmin Qmax vertical line event</span></div>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">if</span> <span class="n">event</span> <span class="o">==</span> <span class="bp">None</span><span class="p">:</span>
+            <span class="k">return</span>
+        <span class="k">if</span> <span class="n">event</span><span class="o">.</span><span class="n">id</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">plot_panels</span><span class="o">.</span><span class="n">keys</span><span class="p">():</span>
+            <span class="n">panel</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">plot_panels</span><span class="p">[</span><span class="n">event</span><span class="o">.</span><span class="n">id</span><span class="p">]</span>
+        <span class="k">elif</span> <span class="n">event</span><span class="o">.</span><span class="n">group_id</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">plot_panels</span><span class="o">.</span><span class="n">keys</span><span class="p">():</span>
+            <span class="n">panel</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">plot_panels</span><span class="p">[</span><span class="n">event</span><span class="o">.</span><span class="n">group_id</span><span class="p">]</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="k">return</span>
+        <span class="n">panel</span><span class="o">.</span><span class="n">on_plot_qrange</span><span class="p">(</span><span class="n">event</span><span class="p">)</span>
+
+    <span class="k">def</span> <span class="nf">_on_show_panel</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">event</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;show plug-in panel&quot;&quot;&quot;</span>
+        <span class="k">pass</span>
+
+    <span class="k">def</span> <span class="nf">remove_plot</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">group_id</span><span class="p">,</span> <span class="nb">id</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        remove plot of ID = id from a panel of group ID =group_id</span>
+<div class="viewcode-block" id="Plugin.remove_plot"><a class="viewcode-back" href="../../../../../dev/api/sas.guiframe.local_perspectives.plotting.html#sas.guiframe.local_perspectives.plotting.plotting.Plugin.remove_plot">[docs]</a><span class="sd">        &quot;&quot;&quot;</span>
+
+        <span class="k">if</span> <span class="n">group_id</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">plot_panels</span><span class="o">.</span><span class="n">keys</span><span class="p">():</span>
+            <span class="n">panel</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">plot_panels</span><span class="p">[</span><span class="n">group_id</span><span class="p">]</span>
+            <span class="n">panel</span><span class="o">.</span><span class="n">remove_data_by_id</span><span class="p">(</span><span class="nb">id</span><span class="o">=</span><span class="nb">id</span><span class="p">)</span>
+
+            <span class="k">return</span> <span class="bp">True</span>
+        <span class="k">return</span> <span class="bp">False</span>
+
+    <span class="k">def</span> <span class="nf">clear_panel</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Clear and Hide all plot panels, and remove them from menu</span></div>
+<div class="viewcode-block" id="Plugin.clear_panel"><a class="viewcode-back" href="../../../../../dev/api/sas.guiframe.local_perspectives.plotting.html#sas.guiframe.local_perspectives.plotting.plotting.Plugin.clear_panel">[docs]</a><span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">for</span> <span class="n">group_id</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">plot_panels</span><span class="o">.</span><span class="n">keys</span><span class="p">():</span>
+            <span class="n">panel</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">plot_panels</span><span class="p">[</span><span class="n">group_id</span><span class="p">]</span>
+            <span class="n">panel</span><span class="o">.</span><span class="n">graph</span><span class="o">.</span><span class="n">reset</span><span class="p">()</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">hide_panel</span><span class="p">(</span><span class="n">group_id</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">plot_panels</span> <span class="o">=</span> <span class="p">{}</span>
+
+    <span class="k">def</span> <span class="nf">clear_panel_by_id</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">group_id</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        clear the graph</span></div>
+<div class="viewcode-block" id="Plugin.clear_panel_by_id"><a class="viewcode-back" href="../../../../../dev/api/sas.guiframe.local_perspectives.plotting.html#sas.guiframe.local_perspectives.plotting.plotting.Plugin.clear_panel_by_id">[docs]</a><span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">if</span> <span class="n">group_id</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">plot_panels</span><span class="o">.</span><span class="n">keys</span><span class="p">():</span>
+            <span class="n">panel</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">plot_panels</span><span class="p">[</span><span class="n">group_id</span><span class="p">]</span>
+            <span class="k">for</span> <span class="n">plottable</span> <span class="ow">in</span> <span class="n">panel</span><span class="o">.</span><span class="n">graph</span><span class="o">.</span><span class="n">plottables</span><span class="o">.</span><span class="n">keys</span><span class="p">():</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">remove_plot</span><span class="p">(</span><span class="n">group_id</span><span class="p">,</span> <span class="n">plottable</span><span class="o">.</span><span class="n">id</span><span class="p">)</span>
+            <span class="n">panel</span><span class="o">.</span><span class="n">graph</span><span class="o">.</span><span class="n">reset</span><span class="p">()</span>
+            <span class="k">return</span> <span class="bp">True</span>
+        <span class="k">return</span> <span class="bp">False</span>
+
+    <span class="k">def</span> <span class="nf">hide_panel</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">group_id</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        hide panel with group ID = group_id</span></div>
+<div class="viewcode-block" id="Plugin.hide_panel"><a class="viewcode-back" href="../../../../../dev/api/sas.guiframe.local_perspectives.plotting.html#sas.guiframe.local_perspectives.plotting.plotting.Plugin.hide_panel">[docs]</a><span class="sd">        &quot;&quot;&quot;</span>
+        <span class="c"># Not implemeted</span>
+        <span class="k">return</span> <span class="bp">False</span>
+
+    <span class="k">def</span> <span class="nf">create_panel_helper</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">new_panel</span><span class="p">,</span> <span class="n">data</span><span class="p">,</span> <span class="n">group_id</span><span class="p">,</span> <span class="n">title</span><span class="o">=</span><span class="bp">None</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        &quot;&quot;&quot;</span></div>
+<div class="viewcode-block" id="Plugin.create_panel_helper"><a class="viewcode-back" href="../../../../../dev/api/sas.guiframe.local_perspectives.plotting.html#sas.guiframe.local_perspectives.plotting.plotting.Plugin.create_panel_helper">[docs]</a>        <span class="c">## Set group ID if available</span>
+        <span class="c">## Assign data properties to the new create panel</span>
+        <span class="n">new_panel</span><span class="o">.</span><span class="n">set_manager</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span>
+        <span class="n">new_panel</span><span class="o">.</span><span class="n">group_id</span> <span class="o">=</span> <span class="n">group_id</span>
+        <span class="k">if</span> <span class="n">group_id</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">data</span><span class="o">.</span><span class="n">list_group_id</span><span class="p">:</span>
+            <span class="n">data</span><span class="o">.</span><span class="n">list_group_id</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">group_id</span><span class="p">)</span>
+        <span class="k">if</span> <span class="n">title</span> <span class="ow">is</span> <span class="bp">None</span><span class="p">:</span>
+            <span class="n">title</span> <span class="o">=</span> <span class="n">data</span><span class="o">.</span><span class="n">title</span>
+        <span class="n">new_panel</span><span class="o">.</span><span class="n">window_caption</span> <span class="o">=</span> <span class="n">title</span>
+        <span class="n">new_panel</span><span class="o">.</span><span class="n">window_name</span> <span class="o">=</span> <span class="n">data</span><span class="o">.</span><span class="n">title</span>
+        <span class="n">event_id</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">parent</span><span class="o">.</span><span class="n">popup_panel</span><span class="p">(</span><span class="n">new_panel</span><span class="p">)</span>
+
+        <span class="c"># Set UID to allow us to reference the panel later</span>
+        <span class="n">new_panel</span><span class="o">.</span><span class="n">uid</span> <span class="o">=</span> <span class="n">event_id</span>
+        <span class="c"># Ship the plottable to its panel</span>
+        <span class="n">wx</span><span class="o">.</span><span class="n">CallAfter</span><span class="p">(</span><span class="n">new_panel</span><span class="o">.</span><span class="n">plot_data</span><span class="p">,</span> <span class="n">data</span><span class="p">)</span>
+        <span class="c">#new_panel.canvas.set_resizing(new_panel.resizing)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">plot_panels</span><span class="p">[</span><span class="n">new_panel</span><span class="o">.</span><span class="n">group_id</span><span class="p">]</span> <span class="o">=</span> <span class="n">new_panel</span>
+
+    <span class="k">def</span> <span class="nf">create_1d_panel</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">data</span><span class="p">,</span> <span class="n">group_id</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        &quot;&quot;&quot;</span></div>
+<div class="viewcode-block" id="Plugin.create_1d_panel"><a class="viewcode-back" href="../../../../../dev/api/sas.guiframe.local_perspectives.plotting.html#sas.guiframe.local_perspectives.plotting.plotting.Plugin.create_1d_panel">[docs]</a>        <span class="c"># Create a new plot panel if none was available</span>
+        <span class="k">if</span> <span class="nb">issubclass</span><span class="p">(</span><span class="n">data</span><span class="o">.</span><span class="n">__class__</span><span class="p">,</span> <span class="n">Data1D</span><span class="p">):</span>
+            <span class="kn">from</span> <span class="nn">Plotter1D</span> <span class="kn">import</span> <span class="n">ModelPanel1D</span>
+            <span class="c">## get the data representation label of the data to plot</span>
+            <span class="c">## when even the user select &quot;change scale&quot;</span>
+            <span class="n">xtransform</span> <span class="o">=</span> <span class="n">data</span><span class="o">.</span><span class="n">xtransform</span>
+            <span class="n">ytransform</span> <span class="o">=</span> <span class="n">data</span><span class="o">.</span><span class="n">ytransform</span>
+            <span class="c">## create a plotpanel for 1D Data</span>
+            <span class="n">win</span> <span class="o">=</span> <span class="n">MDIFrame</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">parent</span><span class="p">,</span> <span class="bp">None</span><span class="p">,</span> <span class="s">&#39;None&#39;</span><span class="p">,</span> <span class="p">(</span><span class="mi">100</span><span class="p">,</span> <span class="mi">200</span><span class="p">))</span>
+            <span class="n">new_panel</span> <span class="o">=</span> <span class="n">ModelPanel1D</span><span class="p">(</span><span class="n">win</span><span class="p">,</span> <span class="o">-</span><span class="mi">1</span><span class="p">,</span> <span class="n">xtransform</span><span class="o">=</span><span class="n">xtransform</span><span class="p">,</span>
+                                     <span class="n">ytransform</span><span class="o">=</span><span class="n">ytransform</span><span class="p">,</span> <span class="n">style</span><span class="o">=</span><span class="n">wx</span><span class="o">.</span><span class="n">RAISED_BORDER</span><span class="p">)</span>
+            <span class="n">win</span><span class="o">.</span><span class="n">set_panel</span><span class="p">(</span><span class="n">new_panel</span><span class="p">)</span>
+            <span class="n">win</span><span class="o">.</span><span class="n">Show</span><span class="p">(</span><span class="bp">False</span><span class="p">)</span>
+            <span class="n">new_panel</span><span class="o">.</span><span class="n">frame</span> <span class="o">=</span> <span class="n">win</span>
+            <span class="c">#win.Show(True)</span>
+            <span class="k">return</span>  <span class="n">new_panel</span>
+
+        <span class="n">msg</span> <span class="o">=</span> <span class="s">&quot;1D Panel of group ID </span><span class="si">%s</span><span class="s"> could not be created&quot;</span> <span class="o">%</span> <span class="nb">str</span><span class="p">(</span><span class="n">group_id</span><span class="p">)</span>
+        <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">,</span> <span class="n">msg</span>
+
+    <span class="k">def</span> <span class="nf">create_2d_panel</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">data</span><span class="p">,</span> <span class="n">group_id</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        &quot;&quot;&quot;</span></div>
+<div class="viewcode-block" id="Plugin.create_2d_panel"><a class="viewcode-back" href="../../../../../dev/api/sas.guiframe.local_perspectives.plotting.html#sas.guiframe.local_perspectives.plotting.plotting.Plugin.create_2d_panel">[docs]</a>        <span class="k">if</span> <span class="nb">issubclass</span><span class="p">(</span><span class="n">data</span><span class="o">.</span><span class="n">__class__</span><span class="p">,</span> <span class="n">Data2D</span><span class="p">):</span>
+            <span class="c">##Create a new plotpanel for 2D data</span>
+            <span class="kn">from</span> <span class="nn">Plotter2D</span> <span class="kn">import</span> <span class="n">ModelPanel2D</span>
+            <span class="n">scale</span> <span class="o">=</span> <span class="n">data</span><span class="o">.</span><span class="n">scale</span>
+            <span class="n">win</span> <span class="o">=</span> <span class="n">MDIFrame</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">parent</span><span class="p">,</span> <span class="bp">None</span><span class="p">,</span> <span class="s">&#39;None&#39;</span><span class="p">,</span> <span class="p">(</span><span class="mi">200</span><span class="p">,</span> <span class="mi">150</span><span class="p">))</span>
+            <span class="n">win</span><span class="o">.</span><span class="n">Show</span><span class="p">(</span><span class="bp">False</span><span class="p">)</span>
+            <span class="n">new_panel</span> <span class="o">=</span> <span class="n">ModelPanel2D</span><span class="p">(</span><span class="n">win</span><span class="p">,</span> <span class="nb">id</span><span class="o">=-</span><span class="mi">1</span><span class="p">,</span>
+                                     <span class="n">data2d</span><span class="o">=</span><span class="n">data</span><span class="p">,</span> <span class="n">scale</span><span class="o">=</span><span class="n">scale</span><span class="p">,</span>
+                                     <span class="n">style</span><span class="o">=</span><span class="n">wx</span><span class="o">.</span><span class="n">RAISED_BORDER</span><span class="p">)</span>
+            <span class="n">win</span><span class="o">.</span><span class="n">set_panel</span><span class="p">(</span><span class="n">new_panel</span><span class="p">)</span>
+            <span class="n">new_panel</span><span class="o">.</span><span class="n">frame</span> <span class="o">=</span> <span class="n">win</span>
+            <span class="k">return</span> <span class="n">new_panel</span>
+        <span class="n">msg</span> <span class="o">=</span> <span class="s">&quot;2D Panel of group ID </span><span class="si">%s</span><span class="s"> could not be created&quot;</span> <span class="o">%</span> <span class="nb">str</span><span class="p">(</span><span class="n">group_id</span><span class="p">)</span>
+        <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">,</span> <span class="n">msg</span>
+
+    <span class="k">def</span> <span class="nf">update_panel</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">data</span><span class="p">,</span> <span class="n">panel</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        update the graph of a given panel</span></div>
+<div class="viewcode-block" id="Plugin.update_panel"><a class="viewcode-back" href="../../../../../dev/api/sas.guiframe.local_perspectives.plotting.html#sas.guiframe.local_perspectives.plotting.plotting.Plugin.update_panel">[docs]</a><span class="sd">        &quot;&quot;&quot;</span>
+        <span class="c"># Check whether we already have a graph with the same units</span>
+        <span class="c"># as the plottable we just received.</span>
+        <span class="n">_</span><span class="p">,</span> <span class="n">x_unit</span> <span class="o">=</span> <span class="n">data</span><span class="o">.</span><span class="n">get_xaxis</span><span class="p">()</span>
+        <span class="n">_</span><span class="p">,</span> <span class="n">y_unit</span> <span class="o">=</span> <span class="n">data</span><span class="o">.</span><span class="n">get_yaxis</span><span class="p">()</span>
+        <span class="n">flag_x</span> <span class="o">=</span> <span class="p">(</span><span class="n">panel</span><span class="o">.</span><span class="n">graph</span><span class="o">.</span><span class="n">prop</span><span class="p">[</span><span class="s">&quot;xunit&quot;</span><span class="p">]</span> <span class="ow">is</span> <span class="ow">not</span> <span class="bp">None</span><span class="p">)</span> <span class="ow">and</span> \
+                    <span class="p">(</span><span class="n">panel</span><span class="o">.</span><span class="n">graph</span><span class="o">.</span><span class="n">prop</span><span class="p">[</span><span class="s">&quot;xunit&quot;</span><span class="p">]</span><span class="o">.</span><span class="n">strip</span><span class="p">()</span> <span class="o">!=</span> <span class="s">&quot;&quot;</span><span class="p">)</span> <span class="ow">and</span>\
+                    <span class="p">(</span><span class="n">x_unit</span> <span class="o">!=</span> <span class="n">panel</span><span class="o">.</span><span class="n">graph</span><span class="o">.</span><span class="n">prop</span><span class="p">[</span><span class="s">&quot;xunit&quot;</span><span class="p">])</span> <span class="ow">and</span> <span class="bp">False</span>
+        <span class="n">flag_y</span> <span class="o">=</span> <span class="p">(</span><span class="n">panel</span><span class="o">.</span><span class="n">graph</span><span class="o">.</span><span class="n">prop</span><span class="p">[</span><span class="s">&quot;yunit&quot;</span><span class="p">]</span> <span class="ow">is</span> <span class="ow">not</span> <span class="bp">None</span><span class="p">)</span> <span class="ow">and</span> \
+                    <span class="p">(</span><span class="n">panel</span><span class="o">.</span><span class="n">graph</span><span class="o">.</span><span class="n">prop</span><span class="p">[</span><span class="s">&quot;yunit&quot;</span><span class="p">]</span><span class="o">.</span><span class="n">strip</span><span class="p">()</span> <span class="o">!=</span> <span class="s">&quot;&quot;</span><span class="p">)</span> <span class="ow">and</span>\
+                    <span class="p">(</span><span class="n">y_unit</span> <span class="o">!=</span> <span class="n">panel</span><span class="o">.</span><span class="n">graph</span><span class="o">.</span><span class="n">prop</span><span class="p">[</span><span class="s">&quot;yunit&quot;</span><span class="p">])</span> <span class="ow">and</span> <span class="bp">False</span>
+        <span class="k">if</span> <span class="n">flag_x</span> <span class="ow">and</span> <span class="n">flag_y</span><span class="p">:</span>
+            <span class="n">msg</span> <span class="o">=</span> <span class="s">&quot;Cannot add </span><span class="si">%s</span><span class="s">&quot;</span> <span class="o">%</span> <span class="nb">str</span><span class="p">(</span><span class="n">data</span><span class="o">.</span><span class="n">name</span><span class="p">)</span>
+            <span class="n">msg</span> <span class="o">+=</span> <span class="s">&quot; to panel </span><span class="si">%s</span><span class="se">\n</span><span class="s">&quot;</span> <span class="o">%</span> <span class="nb">str</span><span class="p">(</span><span class="n">panel</span><span class="o">.</span><span class="n">window_caption</span><span class="p">)</span>
+            <span class="n">msg</span> <span class="o">+=</span> <span class="s">&quot;Please edit </span><span class="si">%s</span><span class="s">&#39;s units, labels&quot;</span> <span class="o">%</span> <span class="nb">str</span><span class="p">(</span><span class="n">data</span><span class="o">.</span><span class="n">name</span><span class="p">)</span>
+            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">,</span> <span class="n">msg</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="k">if</span> <span class="n">panel</span><span class="o">.</span><span class="n">group_id</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">data</span><span class="o">.</span><span class="n">list_group_id</span><span class="p">:</span>
+                <span class="n">data</span><span class="o">.</span><span class="n">list_group_id</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">panel</span><span class="o">.</span><span class="n">group_id</span><span class="p">)</span>
+            <span class="n">wx</span><span class="o">.</span><span class="n">CallAfter</span><span class="p">(</span><span class="n">panel</span><span class="o">.</span><span class="n">plot_data</span><span class="p">,</span> <span class="n">data</span><span class="p">)</span>
+
+    <span class="k">def</span> <span class="nf">delete_panel</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">group_id</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        &quot;&quot;&quot;</span></div>
+<div class="viewcode-block" id="Plugin.delete_panel"><a class="viewcode-back" href="../../../../../dev/api/sas.guiframe.local_perspectives.plotting.html#sas.guiframe.local_perspectives.plotting.plotting.Plugin.delete_panel">[docs]</a>        <span class="k">if</span> <span class="n">group_id</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">plot_panels</span><span class="o">.</span><span class="n">keys</span><span class="p">():</span>
+            <span class="n">panel</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">plot_panels</span><span class="p">[</span><span class="n">group_id</span><span class="p">]</span>
+            <span class="n">uid</span> <span class="o">=</span> <span class="n">panel</span><span class="o">.</span><span class="n">uid</span>
+            <span class="n">wx</span><span class="o">.</span><span class="n">PostEvent</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">parent</span><span class="p">,</span>
+                         <span class="n">DeletePlotPanelEvent</span><span class="p">(</span><span class="n">name</span><span class="o">=</span><span class="n">panel</span><span class="o">.</span><span class="n">window_caption</span><span class="p">,</span>
+                                              <span class="n">caption</span><span class="o">=</span><span class="n">panel</span><span class="o">.</span><span class="n">window_caption</span><span class="p">))</span>
+            <span class="k">del</span> <span class="bp">self</span><span class="o">.</span><span class="n">plot_panels</span><span class="p">[</span><span class="n">group_id</span><span class="p">]</span>
+            <span class="k">if</span> <span class="n">uid</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">parent</span><span class="o">.</span><span class="n">plot_panels</span><span class="o">.</span><span class="n">keys</span><span class="p">():</span>
+                <span class="k">del</span> <span class="bp">self</span><span class="o">.</span><span class="n">parent</span><span class="o">.</span><span class="n">plot_panels</span><span class="p">[</span><span class="n">uid</span><span class="p">]</span>
+                <span class="n">panel</span><span class="o">.</span><span class="n">frame</span><span class="o">.</span><span class="n">Destroy</span><span class="p">()</span>
+            <span class="k">return</span> <span class="bp">True</span>
+
+        <span class="k">return</span> <span class="bp">False</span>
+
+    <span class="k">def</span> <span class="nf">_on_plot_event</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">event</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        A new plottable is being shipped to the plotting plug-in.</span></div>
+<span class="sd">        Check whether we have a panel to put in on, or create</span>
+<span class="sd">        a new one</span>
+
+<span class="sd">        :param event: EVT_NEW_PLOT event</span>
+
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">action_check</span> <span class="o">=</span> <span class="bp">False</span>
+        <span class="k">if</span> <span class="nb">hasattr</span><span class="p">(</span><span class="n">event</span><span class="p">,</span> <span class="s">&#39;action&#39;</span><span class="p">):</span>
+            <span class="n">action_string</span> <span class="o">=</span> <span class="n">event</span><span class="o">.</span><span class="n">action</span><span class="o">.</span><span class="n">lower</span><span class="p">()</span><span class="o">.</span><span class="n">strip</span><span class="p">()</span>
+            <span class="k">if</span> <span class="n">action_string</span> <span class="o">==</span> <span class="s">&#39;check&#39;</span><span class="p">:</span>
+                <span class="n">action_check</span> <span class="o">=</span> <span class="bp">True</span>
+            <span class="k">else</span><span class="p">:</span>
+                <span class="n">group_id</span> <span class="o">=</span> <span class="n">event</span><span class="o">.</span><span class="n">group_id</span>
+                <span class="k">if</span> <span class="n">group_id</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">plot_panels</span><span class="o">.</span><span class="n">keys</span><span class="p">():</span>
+                    <span class="c">#remove data from panel</span>
+                    <span class="k">if</span> <span class="n">action_string</span> <span class="o">==</span> <span class="s">&#39;remove&#39;</span><span class="p">:</span>
+                        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">remove_plot</span><span class="p">(</span><span class="n">group_id</span><span class="p">,</span> <span class="n">event</span><span class="o">.</span><span class="n">id</span><span class="p">)</span>
+                    <span class="k">if</span> <span class="n">action_string</span> <span class="o">==</span> <span class="s">&#39;hide&#39;</span><span class="p">:</span>
+                        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">hide_panel</span><span class="p">(</span><span class="n">group_id</span><span class="p">)</span>
+                    <span class="k">if</span> <span class="n">action_string</span> <span class="o">==</span> <span class="s">&#39;delete&#39;</span><span class="p">:</span>
+                        <span class="n">panel</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">plot_panels</span><span class="p">[</span><span class="n">group_id</span><span class="p">]</span>
+                        <span class="n">uid</span> <span class="o">=</span> <span class="n">panel</span><span class="o">.</span><span class="n">uid</span>
+                        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">parent</span><span class="o">.</span><span class="n">delete_panel</span><span class="p">(</span><span class="n">uid</span><span class="p">)</span>
+                    <span class="k">if</span> <span class="n">action_string</span> <span class="o">==</span> <span class="s">&quot;clear&quot;</span><span class="p">:</span>
+                        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">clear_panel_by_id</span><span class="p">(</span><span class="n">group_id</span><span class="p">)</span>
+
+        <span class="k">if</span> <span class="ow">not</span> <span class="nb">hasattr</span><span class="p">(</span><span class="n">event</span><span class="p">,</span> <span class="s">&#39;plot&#39;</span><span class="p">):</span>
+            <span class="k">return</span>
+        <span class="n">title</span> <span class="o">=</span> <span class="bp">None</span>
+        <span class="k">if</span> <span class="nb">hasattr</span><span class="p">(</span><span class="n">event</span><span class="p">,</span> <span class="s">&#39;title&#39;</span><span class="p">):</span>
+            <span class="n">title</span> <span class="o">=</span> <span class="s">&#39;Graph&#39;</span>  <span class="c">#event.title</span>
+        <span class="n">data</span> <span class="o">=</span> <span class="n">event</span><span class="o">.</span><span class="n">plot</span>
+        <span class="n">group_id</span> <span class="o">=</span> <span class="n">data</span><span class="o">.</span><span class="n">group_id</span>
+        <span class="k">if</span> <span class="n">group_id</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">plot_panels</span><span class="o">.</span><span class="n">keys</span><span class="p">():</span>
+            <span class="k">if</span> <span class="n">action_check</span><span class="p">:</span>
+                <span class="c"># Check if the plot already exist. if it does, do nothing.</span>
+                <span class="k">if</span> <span class="n">data</span><span class="o">.</span><span class="n">id</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">plot_panels</span><span class="p">[</span><span class="n">group_id</span><span class="p">]</span><span class="o">.</span><span class="n">plots</span><span class="o">.</span><span class="n">keys</span><span class="p">():</span>
+                    <span class="k">return</span>
+            <span class="c">#update a panel graph</span>
+            <span class="n">panel</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">plot_panels</span><span class="p">[</span><span class="n">group_id</span><span class="p">]</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">update_panel</span><span class="p">(</span><span class="n">data</span><span class="p">,</span> <span class="n">panel</span><span class="p">)</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="c">#create a new panel</span>
+            <span class="k">if</span> <span class="nb">issubclass</span><span class="p">(</span><span class="n">data</span><span class="o">.</span><span class="n">__class__</span><span class="p">,</span> <span class="n">Data1D</span><span class="p">):</span>
+                <span class="n">new_panel</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">create_1d_panel</span><span class="p">(</span><span class="n">data</span><span class="p">,</span> <span class="n">group_id</span><span class="p">)</span>
+            <span class="k">else</span><span class="p">:</span>
+                <span class="c"># Need to make the group_id consistent with 1D thus no if below</span>
+                <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">plot_panels</span><span class="o">.</span><span class="n">values</span><span class="p">())</span> <span class="o">&gt;</span> <span class="mi">0</span><span class="p">:</span>
+                    <span class="k">for</span> <span class="n">p_group_id</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">plot_panels</span><span class="o">.</span><span class="n">keys</span><span class="p">():</span>
+                        <span class="n">p_plot</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">plot_panels</span><span class="p">[</span><span class="n">p_group_id</span><span class="p">]</span>
+                        <span class="k">if</span> <span class="n">data</span><span class="o">.</span><span class="n">id</span> <span class="ow">in</span> <span class="n">p_plot</span><span class="o">.</span><span class="n">plots</span><span class="o">.</span><span class="n">keys</span><span class="p">():</span>
+                            <span class="n">p_plot</span><span class="o">.</span><span class="n">plots</span><span class="p">[</span><span class="n">data</span><span class="o">.</span><span class="n">id</span><span class="p">]</span> <span class="o">=</span> <span class="n">data</span>
+                            <span class="bp">self</span><span class="o">.</span><span class="n">plot_panels</span><span class="p">[</span><span class="n">group_id</span><span class="p">]</span> <span class="o">=</span> <span class="n">p_plot</span>
+                            <span class="k">if</span> <span class="n">group_id</span> <span class="o">!=</span> <span class="n">p_group_id</span><span class="p">:</span>
+                                <span class="k">del</span> <span class="bp">self</span><span class="o">.</span><span class="n">plot_panels</span><span class="p">[</span><span class="n">p_group_id</span><span class="p">]</span>
+                                <span class="k">if</span> <span class="n">p_group_id</span> <span class="ow">in</span> <span class="n">data</span><span class="o">.</span><span class="n">list_group_id</span><span class="p">:</span>
+                                    <span class="n">data</span><span class="o">.</span><span class="n">list_group_id</span><span class="o">.</span><span class="n">remove</span><span class="p">(</span><span class="n">p_group_id</span><span class="p">)</span>
+                                <span class="k">if</span> <span class="n">group_id</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">data</span><span class="o">.</span><span class="n">list_group_id</span><span class="p">:</span>
+                                    <span class="n">data</span><span class="o">.</span><span class="n">list_group_id</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">group_id</span><span class="p">)</span>
+                            <span class="n">p_plot</span><span class="o">.</span><span class="n">group_id</span> <span class="o">=</span> <span class="n">group_id</span>
+                            <span class="k">return</span>
+
+                <span class="n">new_panel</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">create_2d_panel</span><span class="p">(</span><span class="n">data</span><span class="p">,</span> <span class="n">group_id</span><span class="p">)</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">create_panel_helper</span><span class="p">(</span><span class="n">new_panel</span><span class="p">,</span> <span class="n">data</span><span class="p">,</span> <span class="n">group_id</span><span class="p">,</span> <span class="n">title</span><span class="p">)</span>
+        <span class="k">return</span>
+</pre></div></div>
+
+          </div>
+        </div>
+      </div>
+      <div class="sphinxsidebar" role="navigation" aria-label="main navigation">
+        <div class="sphinxsidebarwrapper">
+<div id="searchbox" style="display: none" role="search">
+  <h3>Quick search</h3>
+    <form class="search" action="../../../../../search.html" method="get">
+      <input type="text" name="q" />
+      <input type="submit" value="Go" />
+      <input type="hidden" name="check_keywords" value="yes" />
+      <input type="hidden" name="area" value="default" />
+    </form>
+    <p class="searchtip" style="font-size: 90%">
+    Enter search terms or a module, class or function name.
+    </p>
+</div>
+<script type="text/javascript">$('#searchbox').show(0);</script>
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="related" role="navigation" aria-label="related navigation">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="../../../../../genindex.html" title="General Index"
+             >index</a></li>
+        <li class="right" >
+          <a href="../../../../../py-modindex.html" title="Python Module Index"
+             >modules</a> |</li>
+        <li class="nav-item nav-item-0"><a href="../../../../../index.html">SasView 3.1.0 documentation</a> &raquo;</li>
+          <li class="nav-item nav-item-1"><a href="../../../../index.html" >Module code</a> &raquo;</li>
+          <li class="nav-item nav-item-2"><a href="../../../guiframe.html" >sas.guiframe</a> &raquo;</li> 
+      </ul>
+    </div>
+    <div class="footer" role="contentinfo">
+        &copy; Copyright 2015, The SasView Project.
+      Created using <a href="http://sphinx-doc.org/">Sphinx</a> 1.3.1.
+    </div>
+  </body>
+</html>

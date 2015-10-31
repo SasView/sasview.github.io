@@ -1,0 +1,442 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+  "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+    
+    <title>sas.fit.BumpsFitting &mdash; SasView 3.1.0 documentation</title>
+    
+    <link rel="stylesheet" href="../../../_static/classic.css" type="text/css" />
+    <link rel="stylesheet" href="../../../_static/pygments.css" type="text/css" />
+    
+    <script type="text/javascript">
+      var DOCUMENTATION_OPTIONS = {
+        URL_ROOT:    '../../../',
+        VERSION:     '3.1.0',
+        COLLAPSE_INDEX: false,
+        FILE_SUFFIX: '.html',
+        HAS_SOURCE:  true
+      };
+    </script>
+    <script type="text/javascript" src="../../../_static/jquery.js"></script>
+    <script type="text/javascript" src="../../../_static/underscore.js"></script>
+    <script type="text/javascript" src="../../../_static/doctools.js"></script>
+    <script type="text/javascript" src="https://cdn.mathjax.org/mathjax/latest/MathJax.js?config=TeX-AMS-MML_HTMLorMML"></script>
+    <link rel="top" title="SasView 3.1.0 documentation" href="../../../index.html" />
+    <link rel="up" title="Module code" href="../../index.html" /> 
+  </head>
+  <body role="document">
+    <div class="related" role="navigation" aria-label="related navigation">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="../../../genindex.html" title="General Index"
+             accesskey="I">index</a></li>
+        <li class="right" >
+          <a href="../../../py-modindex.html" title="Python Module Index"
+             >modules</a> |</li>
+        <li class="nav-item nav-item-0"><a href="../../../index.html">SasView 3.1.0 documentation</a> &raquo;</li>
+          <li class="nav-item nav-item-1"><a href="../../index.html" accesskey="U">Module code</a> &raquo;</li> 
+      </ul>
+    </div>  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          <div class="body" role="main">
+            
+  <h1>Source code for sas.fit.BumpsFitting</h1><div class="highlight"><pre>
+<span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">BumpsFitting module runs the bumps optimizer.</span>
+<span class="sd">&quot;&quot;&quot;</span>
+<span class="kn">import</span> <span class="nn">os</span>
+<span class="kn">from</span> <span class="nn">datetime</span> <span class="kn">import</span> <span class="n">timedelta</span><span class="p">,</span> <span class="n">datetime</span>
+
+<span class="kn">import</span> <span class="nn">numpy</span>
+
+<span class="kn">from</span> <span class="nn">bumps</span> <span class="kn">import</span> <span class="n">fitters</span>
+<span class="kn">from</span> <span class="nn">bumps.mapper</span> <span class="kn">import</span> <span class="n">SerialMapper</span><span class="p">,</span> <span class="n">MPMapper</span>
+<span class="kn">from</span> <span class="nn">bumps</span> <span class="kn">import</span> <span class="n">parameter</span>
+
+<span class="c"># TODO: remove globals from interface to bumps options!</span>
+<span class="c"># Default bumps to use the levenberg-marquardt optimizer</span>
+<span class="kn">from</span> <span class="nn">bumps.fitproblem</span> <span class="kn">import</span> <span class="n">FitProblem</span>
+<span class="n">fitters</span><span class="o">.</span><span class="n">FIT_DEFAULT</span> <span class="o">=</span> <span class="s">&#39;lm&#39;</span>
+
+<span class="kn">from</span> <span class="nn">sas.fit.AbstractFitEngine</span> <span class="kn">import</span> <span class="n">FitEngine</span>
+<span class="kn">from</span> <span class="nn">sas.fit.AbstractFitEngine</span> <span class="kn">import</span> <span class="n">FResult</span>
+<span class="kn">from</span> <span class="nn">sas.fit.expression</span> <span class="kn">import</span> <span class="n">compile_constraints</span>
+
+<div class="viewcode-block" id="Progress"><a class="viewcode-back" href="../../../dev/api/sas.fit.html#sas.fit.BumpsFitting.Progress">[docs]</a><span class="k">class</span> <span class="nc">Progress</span><span class="p">(</span><span class="nb">object</span><span class="p">):</span>
+    <span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">history</span><span class="p">,</span> <span class="n">max_step</span><span class="p">,</span> <span class="n">pars</span><span class="p">,</span> <span class="n">dof</span><span class="p">):</span>
+        <span class="n">remaining_time</span> <span class="o">=</span> <span class="nb">int</span><span class="p">(</span><span class="n">history</span><span class="o">.</span><span class="n">time</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="o">*</span><span class="p">(</span><span class="nb">float</span><span class="p">(</span><span class="n">max_step</span><span class="p">)</span><span class="o">/</span><span class="n">history</span><span class="o">.</span><span class="n">step</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="o">-</span><span class="mi">1</span><span class="p">))</span>
+        <span class="c"># Depending on the time remaining, either display the expected</span>
+        <span class="c"># time of completion, or the amount of time remaining.  Use precision</span>
+        <span class="c"># appropriate for the duration.</span>
+        <span class="k">if</span> <span class="n">remaining_time</span> <span class="o">&gt;=</span> <span class="mi">1800</span><span class="p">:</span>
+            <span class="n">completion_time</span> <span class="o">=</span> <span class="n">datetime</span><span class="o">.</span><span class="n">now</span><span class="p">()</span> <span class="o">+</span> <span class="n">timedelta</span><span class="p">(</span><span class="n">seconds</span><span class="o">=</span><span class="n">remaining_time</span><span class="p">)</span>
+            <span class="k">if</span> <span class="n">remaining_time</span> <span class="o">&gt;=</span> <span class="mi">36000</span><span class="p">:</span>
+                <span class="n">time</span> <span class="o">=</span> <span class="n">completion_time</span><span class="o">.</span><span class="n">strftime</span><span class="p">(</span><span class="s">&#39;%Y-%m-</span><span class="si">%d</span><span class="s"> %H:%M&#39;</span><span class="p">)</span>
+            <span class="k">else</span><span class="p">:</span>
+                <span class="n">time</span> <span class="o">=</span> <span class="n">completion_time</span><span class="o">.</span><span class="n">strftime</span><span class="p">(</span><span class="s">&#39;%H:%M&#39;</span><span class="p">)</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="k">if</span> <span class="n">remaining_time</span> <span class="o">&gt;=</span> <span class="mi">3600</span><span class="p">:</span>
+                <span class="n">time</span> <span class="o">=</span> <span class="s">&#39;</span><span class="si">%d</span><span class="s">h </span><span class="si">%d</span><span class="s">m&#39;</span><span class="o">%</span><span class="p">(</span><span class="n">remaining_time</span><span class="o">//</span><span class="mi">3600</span><span class="p">,</span> <span class="p">(</span><span class="n">remaining_time</span><span class="o">%</span><span class="mi">3600</span><span class="p">)</span><span class="o">//</span><span class="mi">60</span><span class="p">)</span>
+            <span class="k">elif</span> <span class="n">remaining_time</span> <span class="o">&gt;=</span> <span class="mi">60</span><span class="p">:</span>
+                <span class="n">time</span> <span class="o">=</span> <span class="s">&#39;</span><span class="si">%d</span><span class="s">m </span><span class="si">%d</span><span class="s">s&#39;</span><span class="o">%</span><span class="p">(</span><span class="n">remaining_time</span><span class="o">//</span><span class="mi">60</span><span class="p">,</span> <span class="n">remaining_time</span><span class="o">%</span><span class="mi">60</span><span class="p">)</span>
+            <span class="k">else</span><span class="p">:</span>
+                <span class="n">time</span> <span class="o">=</span> <span class="s">&#39;</span><span class="si">%d</span><span class="s">s&#39;</span><span class="o">%</span><span class="n">remaining_time</span>
+        <span class="n">chisq</span> <span class="o">=</span> <span class="s">&quot;</span><span class="si">%.3g</span><span class="s">&quot;</span><span class="o">%</span><span class="p">(</span><span class="mi">2</span><span class="o">*</span><span class="n">history</span><span class="o">.</span><span class="n">value</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="o">/</span><span class="n">dof</span><span class="p">)</span>
+        <span class="n">step</span> <span class="o">=</span> <span class="s">&quot;</span><span class="si">%d</span><span class="s"> of </span><span class="si">%d</span><span class="s">&quot;</span><span class="o">%</span><span class="p">(</span><span class="n">history</span><span class="o">.</span><span class="n">step</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span> <span class="n">max_step</span><span class="p">)</span>
+        <span class="n">header</span> <span class="o">=</span> <span class="s">&quot;=== Steps: </span><span class="si">%s</span><span class="s">  chisq: </span><span class="si">%s</span><span class="s">  ETA: </span><span class="si">%s</span><span class="se">\n</span><span class="s">&quot;</span><span class="o">%</span><span class="p">(</span><span class="n">step</span><span class="p">,</span> <span class="n">chisq</span><span class="p">,</span> <span class="n">time</span><span class="p">)</span>
+        <span class="n">parameters</span> <span class="o">=</span> <span class="p">[</span><span class="s">&quot;</span><span class="si">%15s</span><span class="s">: </span><span class="si">%-10.3g%s</span><span class="s">&quot;</span><span class="o">%</span><span class="p">(</span><span class="n">k</span><span class="p">,</span><span class="n">v</span><span class="p">,(</span><span class="s">&quot;</span><span class="se">\n</span><span class="s">&quot;</span> <span class="k">if</span> <span class="n">i</span><span class="o">%</span><span class="mi">3</span><span class="o">==</span><span class="mi">2</span> <span class="k">else</span> <span class="s">&quot; | &quot;</span><span class="p">))</span>
+                      <span class="k">for</span> <span class="n">i</span><span class="p">,(</span><span class="n">k</span><span class="p">,</span><span class="n">v</span><span class="p">)</span> <span class="ow">in</span> <span class="nb">enumerate</span><span class="p">(</span><span class="nb">zip</span><span class="p">(</span><span class="n">pars</span><span class="p">,</span><span class="n">history</span><span class="o">.</span><span class="n">point</span><span class="p">[</span><span class="mi">0</span><span class="p">]))]</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">msg</span> <span class="o">=</span> <span class="s">&quot;&quot;</span><span class="o">.</span><span class="n">join</span><span class="p">([</span><span class="n">header</span><span class="p">]</span><span class="o">+</span><span class="n">parameters</span><span class="p">)</span>
+
+    <span class="k">def</span> <span class="nf">__str__</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">msg</span>
+
+</div>
+<div class="viewcode-block" id="BumpsMonitor"><a class="viewcode-back" href="../../../dev/api/sas.fit.html#sas.fit.BumpsFitting.BumpsMonitor">[docs]</a><span class="k">class</span> <span class="nc">BumpsMonitor</span><span class="p">(</span><span class="nb">object</span><span class="p">):</span>
+    <span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">handler</span><span class="p">,</span> <span class="n">max_step</span><span class="p">,</span> <span class="n">pars</span><span class="p">,</span> <span class="n">dof</span><span class="p">):</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">handler</span> <span class="o">=</span> <span class="n">handler</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">max_step</span> <span class="o">=</span> <span class="n">max_step</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">pars</span> <span class="o">=</span> <span class="n">pars</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">dof</span> <span class="o">=</span> <span class="n">dof</span>
+
+<div class="viewcode-block" id="BumpsMonitor.config_history"><a class="viewcode-back" href="../../../dev/api/sas.fit.html#sas.fit.BumpsFitting.BumpsMonitor.config_history">[docs]</a>    <span class="k">def</span> <span class="nf">config_history</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">history</span><span class="p">):</span>
+        <span class="n">history</span><span class="o">.</span><span class="n">requires</span><span class="p">(</span><span class="n">time</span><span class="o">=</span><span class="mi">1</span><span class="p">,</span> <span class="n">value</span><span class="o">=</span><span class="mi">2</span><span class="p">,</span> <span class="n">point</span><span class="o">=</span><span class="mi">1</span><span class="p">,</span> <span class="n">step</span><span class="o">=</span><span class="mi">1</span><span class="p">)</span>
+</div>
+    <span class="k">def</span> <span class="nf">__call__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">history</span><span class="p">):</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">handler</span> <span class="ow">is</span> <span class="bp">None</span><span class="p">:</span> <span class="k">return</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">handler</span><span class="o">.</span><span class="n">set_result</span><span class="p">(</span><span class="n">Progress</span><span class="p">(</span><span class="n">history</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">max_step</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">pars</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">dof</span><span class="p">))</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">handler</span><span class="o">.</span><span class="n">progress</span><span class="p">(</span><span class="n">history</span><span class="o">.</span><span class="n">step</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span> <span class="bp">self</span><span class="o">.</span><span class="n">max_step</span><span class="p">)</span>
+        <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">history</span><span class="o">.</span><span class="n">step</span><span class="p">)</span><span class="o">&gt;</span><span class="mi">1</span> <span class="ow">and</span> <span class="n">history</span><span class="o">.</span><span class="n">step</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span> <span class="o">&gt;</span> <span class="n">history</span><span class="o">.</span><span class="n">step</span><span class="p">[</span><span class="mi">0</span><span class="p">]:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">handler</span><span class="o">.</span><span class="n">improvement</span><span class="p">()</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">handler</span><span class="o">.</span><span class="n">update_fit</span><span class="p">()</span>
+</div>
+<div class="viewcode-block" id="ConvergenceMonitor"><a class="viewcode-back" href="../../../dev/api/sas.fit.html#sas.fit.BumpsFitting.ConvergenceMonitor">[docs]</a><span class="k">class</span> <span class="nc">ConvergenceMonitor</span><span class="p">(</span><span class="nb">object</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    ConvergenceMonitor contains population summary statistics to show progress</span>
+<span class="sd">    of the fit.  This is a list [ (best, 0%, 25%, 50%, 75%, 100%) ] or</span>
+<span class="sd">    just a list [ (best, ) ] if population size is 1.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">convergence</span> <span class="o">=</span> <span class="p">[]</span>
+
+<div class="viewcode-block" id="ConvergenceMonitor.config_history"><a class="viewcode-back" href="../../../dev/api/sas.fit.html#sas.fit.BumpsFitting.ConvergenceMonitor.config_history">[docs]</a>    <span class="k">def</span> <span class="nf">config_history</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">history</span><span class="p">):</span>
+        <span class="n">history</span><span class="o">.</span><span class="n">requires</span><span class="p">(</span><span class="n">value</span><span class="o">=</span><span class="mi">1</span><span class="p">,</span> <span class="n">population_values</span><span class="o">=</span><span class="mi">1</span><span class="p">)</span>
+</div>
+    <span class="k">def</span> <span class="nf">__call__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">history</span><span class="p">):</span>
+        <span class="n">best</span> <span class="o">=</span> <span class="n">history</span><span class="o">.</span><span class="n">value</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
+        <span class="k">try</span><span class="p">:</span>
+            <span class="n">p</span> <span class="o">=</span> <span class="n">history</span><span class="o">.</span><span class="n">population_values</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
+            <span class="n">n</span><span class="p">,</span><span class="n">p</span> <span class="o">=</span> <span class="nb">len</span><span class="p">(</span><span class="n">p</span><span class="p">),</span> <span class="n">numpy</span><span class="o">.</span><span class="n">sort</span><span class="p">(</span><span class="n">p</span><span class="p">)</span>
+            <span class="n">QI</span><span class="p">,</span><span class="n">Qmid</span><span class="p">,</span> <span class="o">=</span> <span class="nb">int</span><span class="p">(</span><span class="mf">0.2</span><span class="o">*</span><span class="n">n</span><span class="p">),</span><span class="nb">int</span><span class="p">(</span><span class="mf">0.5</span><span class="o">*</span><span class="n">n</span><span class="p">)</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">convergence</span><span class="o">.</span><span class="n">append</span><span class="p">((</span><span class="n">best</span><span class="p">,</span> <span class="n">p</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span><span class="n">p</span><span class="p">[</span><span class="n">QI</span><span class="p">],</span><span class="n">p</span><span class="p">[</span><span class="n">Qmid</span><span class="p">],</span><span class="n">p</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="o">-</span><span class="n">QI</span><span class="p">],</span><span class="n">p</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">]))</span>
+        <span class="k">except</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">convergence</span><span class="o">.</span><span class="n">append</span><span class="p">((</span><span class="n">best</span><span class="p">,</span> <span class="n">best</span><span class="p">,</span><span class="n">best</span><span class="p">,</span><span class="n">best</span><span class="p">,</span><span class="n">best</span><span class="p">,</span><span class="n">best</span><span class="p">))</span>
+
+
+<span class="c"># Note: currently using bumps parameters for each parameter object so that</span>
+<span class="c"># a SasFitness can be used directly in bumps with the usual semantics.</span>
+<span class="c"># The disadvantage of this technique is that we need to copy every parameter</span>
+<span class="c"># back into the model each time the function is evaluated.  We could instead</span>
+<span class="c"># define reference parameters for each sas parameter, but then we would not</span>
+<span class="c"># be able to express constraints using python expressions in the usual way</span>
+<span class="c"># from bumps, and would instead need to use string expressions.</span></div>
+<div class="viewcode-block" id="SasFitness"><a class="viewcode-back" href="../../../dev/api/sas.fit.html#sas.fit.BumpsFitting.SasFitness">[docs]</a><span class="k">class</span> <span class="nc">SasFitness</span><span class="p">(</span><span class="nb">object</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Wrap SAS model as a bumps fitness object</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">model</span><span class="p">,</span> <span class="n">data</span><span class="p">,</span> <span class="n">fitted</span><span class="o">=</span><span class="p">[],</span> <span class="n">constraints</span><span class="o">=</span><span class="p">{},</span>
+                 <span class="n">initial_values</span><span class="o">=</span><span class="bp">None</span><span class="p">,</span> <span class="o">**</span><span class="n">kw</span><span class="p">):</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">name</span> <span class="o">=</span> <span class="n">model</span><span class="o">.</span><span class="n">name</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">model</span> <span class="o">=</span> <span class="n">model</span><span class="o">.</span><span class="n">model</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">data</span> <span class="o">=</span> <span class="n">data</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">data</span><span class="o">.</span><span class="n">smearer</span> <span class="ow">is</span> <span class="ow">not</span> <span class="bp">None</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">data</span><span class="o">.</span><span class="n">smearer</span><span class="o">.</span><span class="n">model</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">model</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_define_pars</span><span class="p">()</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_init_pars</span><span class="p">(</span><span class="n">kw</span><span class="p">)</span>
+        <span class="k">if</span> <span class="n">initial_values</span> <span class="ow">is</span> <span class="ow">not</span> <span class="bp">None</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_reset_pars</span><span class="p">(</span><span class="n">fitted</span><span class="p">,</span> <span class="n">initial_values</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">constraints</span> <span class="o">=</span> <span class="nb">dict</span><span class="p">(</span><span class="n">constraints</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">set_fitted</span><span class="p">(</span><span class="n">fitted</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">update</span><span class="p">()</span>
+
+    <span class="k">def</span> <span class="nf">_reset_pars</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">names</span><span class="p">,</span> <span class="n">values</span><span class="p">):</span>
+        <span class="k">for</span> <span class="n">k</span><span class="p">,</span><span class="n">v</span> <span class="ow">in</span> <span class="nb">zip</span><span class="p">(</span><span class="n">names</span><span class="p">,</span> <span class="n">values</span><span class="p">):</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_pars</span><span class="p">[</span><span class="n">k</span><span class="p">]</span><span class="o">.</span><span class="n">value</span> <span class="o">=</span> <span class="n">v</span>
+
+    <span class="k">def</span> <span class="nf">_define_pars</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_pars</span> <span class="o">=</span> <span class="p">{}</span>
+        <span class="k">for</span> <span class="n">k</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">model</span><span class="o">.</span><span class="n">getParamList</span><span class="p">():</span>
+            <span class="n">name</span> <span class="o">=</span> <span class="s">&quot;.&quot;</span><span class="o">.</span><span class="n">join</span><span class="p">((</span><span class="bp">self</span><span class="o">.</span><span class="n">name</span><span class="p">,</span><span class="n">k</span><span class="p">))</span>
+            <span class="n">value</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">model</span><span class="o">.</span><span class="n">getParam</span><span class="p">(</span><span class="n">k</span><span class="p">)</span>
+            <span class="n">bounds</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">model</span><span class="o">.</span><span class="n">details</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="n">k</span><span class="p">,[</span><span class="s">&quot;&quot;</span><span class="p">,</span><span class="bp">None</span><span class="p">,</span><span class="bp">None</span><span class="p">])[</span><span class="mi">1</span><span class="p">:</span><span class="mi">3</span><span class="p">]</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_pars</span><span class="p">[</span><span class="n">k</span><span class="p">]</span> <span class="o">=</span> <span class="n">parameter</span><span class="o">.</span><span class="n">Parameter</span><span class="p">(</span><span class="n">value</span><span class="o">=</span><span class="n">value</span><span class="p">,</span> <span class="n">bounds</span><span class="o">=</span><span class="n">bounds</span><span class="p">,</span>
+                                                <span class="n">fixed</span><span class="o">=</span><span class="bp">True</span><span class="p">,</span> <span class="n">name</span><span class="o">=</span><span class="n">name</span><span class="p">)</span>
+        <span class="c">#print parameter.summarize(self._pars.values())</span>
+
+    <span class="k">def</span> <span class="nf">_init_pars</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">kw</span><span class="p">):</span>
+        <span class="k">for</span> <span class="n">k</span><span class="p">,</span><span class="n">v</span> <span class="ow">in</span> <span class="n">kw</span><span class="o">.</span><span class="n">items</span><span class="p">():</span>
+            <span class="c"># dispersion parameters initialized with _field instead of .field</span>
+            <span class="k">if</span> <span class="n">k</span><span class="o">.</span><span class="n">endswith</span><span class="p">(</span><span class="s">&#39;_width&#39;</span><span class="p">):</span> <span class="n">k</span> <span class="o">=</span> <span class="n">k</span><span class="p">[:</span><span class="o">-</span><span class="mi">6</span><span class="p">]</span><span class="o">+</span><span class="s">&#39;.width&#39;</span>
+            <span class="k">elif</span> <span class="n">k</span><span class="o">.</span><span class="n">endswith</span><span class="p">(</span><span class="s">&#39;_npts&#39;</span><span class="p">):</span> <span class="n">k</span> <span class="o">=</span> <span class="n">k</span><span class="p">[:</span><span class="o">-</span><span class="mi">5</span><span class="p">]</span><span class="o">+</span><span class="s">&#39;.npts&#39;</span>
+            <span class="k">elif</span> <span class="n">k</span><span class="o">.</span><span class="n">endswith</span><span class="p">(</span><span class="s">&#39;_nsigmas&#39;</span><span class="p">):</span> <span class="n">k</span> <span class="o">=</span> <span class="n">k</span><span class="p">[:</span><span class="o">-</span><span class="mi">7</span><span class="p">]</span><span class="o">+</span><span class="s">&#39;.nsigmas&#39;</span>
+            <span class="k">elif</span> <span class="n">k</span><span class="o">.</span><span class="n">endswith</span><span class="p">(</span><span class="s">&#39;_type&#39;</span><span class="p">):</span> <span class="n">k</span> <span class="o">=</span> <span class="n">k</span><span class="p">[:</span><span class="o">-</span><span class="mi">5</span><span class="p">]</span><span class="o">+</span><span class="s">&#39;.type&#39;</span>
+            <span class="k">if</span> <span class="n">k</span> <span class="ow">not</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">_pars</span><span class="p">:</span>
+                <span class="n">formatted_pars</span> <span class="o">=</span> <span class="s">&quot;, &quot;</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="nb">sorted</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_pars</span><span class="o">.</span><span class="n">keys</span><span class="p">()))</span>
+                <span class="k">raise</span> <span class="ne">KeyError</span><span class="p">(</span><span class="s">&quot;invalid parameter </span><span class="si">%r</span><span class="s"> for </span><span class="si">%s</span><span class="s">--use one of: </span><span class="si">%s</span><span class="s">&quot;</span>
+                               <span class="o">%</span><span class="p">(</span><span class="n">k</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">model</span><span class="p">,</span> <span class="n">formatted_pars</span><span class="p">))</span>
+            <span class="k">if</span> <span class="s">&#39;.&#39;</span> <span class="ow">in</span> <span class="n">k</span> <span class="ow">and</span> <span class="ow">not</span> <span class="n">k</span><span class="o">.</span><span class="n">endswith</span><span class="p">(</span><span class="s">&#39;.width&#39;</span><span class="p">):</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">model</span><span class="o">.</span><span class="n">setParam</span><span class="p">(</span><span class="n">k</span><span class="p">,</span> <span class="n">v</span><span class="p">)</span>
+            <span class="k">elif</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">v</span><span class="p">,</span> <span class="n">parameter</span><span class="o">.</span><span class="n">BaseParameter</span><span class="p">):</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">_pars</span><span class="p">[</span><span class="n">k</span><span class="p">]</span> <span class="o">=</span> <span class="n">v</span>
+            <span class="k">elif</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">v</span><span class="p">,</span> <span class="p">(</span><span class="nb">tuple</span><span class="p">,</span><span class="nb">list</span><span class="p">)):</span>
+                <span class="n">low</span><span class="p">,</span> <span class="n">high</span> <span class="o">=</span> <span class="n">v</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">_pars</span><span class="p">[</span><span class="n">k</span><span class="p">]</span><span class="o">.</span><span class="n">value</span> <span class="o">=</span> <span class="p">(</span><span class="n">low</span><span class="o">+</span><span class="n">high</span><span class="p">)</span><span class="o">/</span><span class="mi">2</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">_pars</span><span class="p">[</span><span class="n">k</span><span class="p">]</span><span class="o">.</span><span class="n">range</span><span class="p">(</span><span class="n">low</span><span class="p">,</span><span class="n">high</span><span class="p">)</span>
+            <span class="k">else</span><span class="p">:</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">_pars</span><span class="p">[</span><span class="n">k</span><span class="p">]</span><span class="o">.</span><span class="n">value</span> <span class="o">=</span> <span class="n">v</span>
+
+<div class="viewcode-block" id="SasFitness.set_fitted"><a class="viewcode-back" href="../../../dev/api/sas.fit.html#sas.fit.BumpsFitting.SasFitness.set_fitted">[docs]</a>    <span class="k">def</span> <span class="nf">set_fitted</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">param_list</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Flag a set of parameters as fitted parameters.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">for</span> <span class="n">k</span><span class="p">,</span><span class="n">p</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">_pars</span><span class="o">.</span><span class="n">items</span><span class="p">():</span>
+            <span class="n">p</span><span class="o">.</span><span class="n">fixed</span> <span class="o">=</span> <span class="p">(</span><span class="n">k</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">param_list</span> <span class="ow">or</span> <span class="n">k</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">constraints</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">fitted_par_names</span> <span class="o">=</span> <span class="p">[</span><span class="n">k</span> <span class="k">for</span> <span class="n">k</span> <span class="ow">in</span> <span class="n">param_list</span> <span class="k">if</span> <span class="n">k</span> <span class="ow">not</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">constraints</span><span class="p">]</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">computed_par_names</span> <span class="o">=</span> <span class="p">[</span><span class="n">k</span> <span class="k">for</span> <span class="n">k</span> <span class="ow">in</span> <span class="n">param_list</span> <span class="k">if</span> <span class="n">k</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">constraints</span><span class="p">]</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">fitted_pars</span> <span class="o">=</span> <span class="p">[</span><span class="bp">self</span><span class="o">.</span><span class="n">_pars</span><span class="p">[</span><span class="n">k</span><span class="p">]</span> <span class="k">for</span> <span class="n">k</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">fitted_par_names</span><span class="p">]</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">computed_pars</span> <span class="o">=</span> <span class="p">[</span><span class="bp">self</span><span class="o">.</span><span class="n">_pars</span><span class="p">[</span><span class="n">k</span><span class="p">]</span> <span class="k">for</span> <span class="n">k</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">computed_par_names</span><span class="p">]</span>
+
+    <span class="c"># ===== Fitness interface ====</span></div>
+<div class="viewcode-block" id="SasFitness.parameters"><a class="viewcode-back" href="../../../dev/api/sas.fit.html#sas.fit.BumpsFitting.SasFitness.parameters">[docs]</a>    <span class="k">def</span> <span class="nf">parameters</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_pars</span>
+</div>
+<div class="viewcode-block" id="SasFitness.update"><a class="viewcode-back" href="../../../dev/api/sas.fit.html#sas.fit.BumpsFitting.SasFitness.update">[docs]</a>    <span class="k">def</span> <span class="nf">update</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="k">for</span> <span class="n">k</span><span class="p">,</span><span class="n">v</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">_pars</span><span class="o">.</span><span class="n">items</span><span class="p">():</span>
+            <span class="c">#print &quot;updating&quot;,k,v,v.value</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">model</span><span class="o">.</span><span class="n">setParam</span><span class="p">(</span><span class="n">k</span><span class="p">,</span><span class="n">v</span><span class="o">.</span><span class="n">value</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_dirty</span> <span class="o">=</span> <span class="bp">True</span>
+</div>
+    <span class="k">def</span> <span class="nf">_recalculate</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">_dirty</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_residuals</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">_theory</span> \
+                <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">data</span><span class="o">.</span><span class="n">residuals</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">model</span><span class="o">.</span><span class="n">evalDistribution</span><span class="p">)</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_dirty</span> <span class="o">=</span> <span class="bp">False</span>
+
+<div class="viewcode-block" id="SasFitness.numpoints"><a class="viewcode-back" href="../../../dev/api/sas.fit.html#sas.fit.BumpsFitting.SasFitness.numpoints">[docs]</a>    <span class="k">def</span> <span class="nf">numpoints</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="k">return</span> <span class="n">numpy</span><span class="o">.</span><span class="n">sum</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">data</span><span class="o">.</span><span class="n">idx</span><span class="p">)</span> <span class="c"># number of fitted points</span>
+</div>
+<div class="viewcode-block" id="SasFitness.nllf"><a class="viewcode-back" href="../../../dev/api/sas.fit.html#sas.fit.BumpsFitting.SasFitness.nllf">[docs]</a>    <span class="k">def</span> <span class="nf">nllf</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="k">return</span> <span class="mf">0.5</span><span class="o">*</span><span class="n">numpy</span><span class="o">.</span><span class="n">sum</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">residuals</span><span class="p">()</span><span class="o">**</span><span class="mi">2</span><span class="p">)</span>
+</div>
+<div class="viewcode-block" id="SasFitness.theory"><a class="viewcode-back" href="../../../dev/api/sas.fit.html#sas.fit.BumpsFitting.SasFitness.theory">[docs]</a>    <span class="k">def</span> <span class="nf">theory</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_recalculate</span><span class="p">()</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_theory</span>
+</div>
+<div class="viewcode-block" id="SasFitness.residuals"><a class="viewcode-back" href="../../../dev/api/sas.fit.html#sas.fit.BumpsFitting.SasFitness.residuals">[docs]</a>    <span class="k">def</span> <span class="nf">residuals</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_recalculate</span><span class="p">()</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_residuals</span>
+
+    <span class="c"># Not implementing the data methods for now:</span>
+    <span class="c">#</span>
+    <span class="c">#     resynth_data/restore_data/save/plot</span>
+</div></div>
+<div class="viewcode-block" id="ParameterExpressions"><a class="viewcode-back" href="../../../dev/api/sas.fit.html#sas.fit.BumpsFitting.ParameterExpressions">[docs]</a><span class="k">class</span> <span class="nc">ParameterExpressions</span><span class="p">(</span><span class="nb">object</span><span class="p">):</span>
+    <span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">models</span><span class="p">):</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">models</span> <span class="o">=</span> <span class="n">models</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_setup</span><span class="p">()</span>
+
+    <span class="k">def</span> <span class="nf">_setup</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="n">exprs</span> <span class="o">=</span> <span class="p">{}</span>
+        <span class="k">for</span> <span class="n">M</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">models</span><span class="p">:</span>
+            <span class="n">exprs</span><span class="o">.</span><span class="n">update</span><span class="p">((</span><span class="s">&quot;.&quot;</span><span class="o">.</span><span class="n">join</span><span class="p">((</span><span class="n">M</span><span class="o">.</span><span class="n">name</span><span class="p">,</span> <span class="n">k</span><span class="p">)),</span> <span class="n">v</span><span class="p">)</span> <span class="k">for</span> <span class="n">k</span><span class="p">,</span> <span class="n">v</span> <span class="ow">in</span> <span class="n">M</span><span class="o">.</span><span class="n">constraints</span><span class="o">.</span><span class="n">items</span><span class="p">())</span>
+        <span class="k">if</span> <span class="n">exprs</span><span class="p">:</span>
+            <span class="n">symtab</span> <span class="o">=</span> <span class="nb">dict</span><span class="p">((</span><span class="s">&quot;.&quot;</span><span class="o">.</span><span class="n">join</span><span class="p">((</span><span class="n">M</span><span class="o">.</span><span class="n">name</span><span class="p">,</span> <span class="n">k</span><span class="p">)),</span> <span class="n">p</span><span class="p">)</span>
+                          <span class="k">for</span> <span class="n">M</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">models</span>
+                          <span class="k">for</span> <span class="n">k</span><span class="p">,</span><span class="n">p</span> <span class="ow">in</span> <span class="n">M</span><span class="o">.</span><span class="n">parameters</span><span class="p">()</span><span class="o">.</span><span class="n">items</span><span class="p">())</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">update</span> <span class="o">=</span> <span class="n">compile_constraints</span><span class="p">(</span><span class="n">symtab</span><span class="p">,</span> <span class="n">exprs</span><span class="p">)</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">update</span> <span class="o">=</span> <span class="k">lambda</span><span class="p">:</span> <span class="mi">0</span>
+
+    <span class="k">def</span> <span class="nf">__call__</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">update</span><span class="p">()</span>
+
+    <span class="k">def</span> <span class="nf">__getstate__</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">models</span>
+
+    <span class="k">def</span> <span class="nf">__setstate__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">state</span><span class="p">):</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">models</span> <span class="o">=</span> <span class="n">state</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_setup</span><span class="p">()</span>
+</div>
+<div class="viewcode-block" id="BumpsFit"><a class="viewcode-back" href="../../../dev/api/sas.fit.html#sas.fit.BumpsFitting.BumpsFit">[docs]</a><span class="k">class</span> <span class="nc">BumpsFit</span><span class="p">(</span><span class="n">FitEngine</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Fit a model using bumps.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Creates a dictionary (self.fit_arrange_dict={})of FitArrange elements</span>
+<span class="sd">        with Uid as keys</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">FitEngine</span><span class="o">.</span><span class="n">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">curr_thread</span> <span class="o">=</span> <span class="bp">None</span>
+
+<div class="viewcode-block" id="BumpsFit.fit"><a class="viewcode-back" href="../../../dev/api/sas.fit.html#sas.fit.BumpsFitting.BumpsFit.fit">[docs]</a>    <span class="k">def</span> <span class="nf">fit</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">msg_q</span><span class="o">=</span><span class="bp">None</span><span class="p">,</span>
+            <span class="n">q</span><span class="o">=</span><span class="bp">None</span><span class="p">,</span> <span class="n">handler</span><span class="o">=</span><span class="bp">None</span><span class="p">,</span> <span class="n">curr_thread</span><span class="o">=</span><span class="bp">None</span><span class="p">,</span>
+            <span class="n">ftol</span><span class="o">=</span><span class="mf">1.49012e-8</span><span class="p">,</span> <span class="n">reset_flag</span><span class="o">=</span><span class="bp">False</span><span class="p">):</span>
+        <span class="c"># Build collection of bumps fitness calculators</span>
+        <span class="n">models</span> <span class="o">=</span> <span class="p">[</span><span class="n">SasFitness</span><span class="p">(</span><span class="n">model</span><span class="o">=</span><span class="n">M</span><span class="o">.</span><span class="n">get_model</span><span class="p">(),</span>
+                             <span class="n">data</span><span class="o">=</span><span class="n">M</span><span class="o">.</span><span class="n">get_data</span><span class="p">(),</span>
+                             <span class="n">constraints</span><span class="o">=</span><span class="n">M</span><span class="o">.</span><span class="n">constraints</span><span class="p">,</span>
+                             <span class="n">fitted</span><span class="o">=</span><span class="n">M</span><span class="o">.</span><span class="n">pars</span><span class="p">,</span>
+                             <span class="n">initial_values</span><span class="o">=</span><span class="n">M</span><span class="o">.</span><span class="n">vals</span> <span class="k">if</span> <span class="n">reset_flag</span> <span class="k">else</span> <span class="bp">None</span><span class="p">)</span>
+                  <span class="k">for</span> <span class="n">M</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">fit_arrange_dict</span><span class="o">.</span><span class="n">values</span><span class="p">()</span>
+                  <span class="k">if</span> <span class="n">M</span><span class="o">.</span><span class="n">get_to_fit</span><span class="p">()]</span>
+        <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">models</span><span class="p">)</span> <span class="o">==</span> <span class="mi">0</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="ne">RuntimeError</span><span class="p">(</span><span class="s">&quot;Nothing to fit&quot;</span><span class="p">)</span>
+        <span class="n">problem</span> <span class="o">=</span> <span class="n">FitProblem</span><span class="p">(</span><span class="n">models</span><span class="p">)</span>
+
+        <span class="c"># TODO: need better handling of parameter expressions and bounds constraints</span>
+        <span class="c"># so that they are applied during polydispersity calculations.  This</span>
+        <span class="c"># will remove the immediate need for the setp_hook in bumps, though</span>
+        <span class="c"># bumps may still need something similar, such as a sane class structure</span>
+        <span class="c"># which allows a subclass to override setp.</span>
+        <span class="n">problem</span><span class="o">.</span><span class="n">setp_hook</span> <span class="o">=</span> <span class="n">ParameterExpressions</span><span class="p">(</span><span class="n">models</span><span class="p">)</span>
+
+        <span class="c"># Run the fit</span>
+        <span class="n">result</span> <span class="o">=</span> <span class="n">run_bumps</span><span class="p">(</span><span class="n">problem</span><span class="p">,</span> <span class="n">handler</span><span class="p">,</span> <span class="n">curr_thread</span><span class="p">)</span>
+        <span class="k">if</span> <span class="n">handler</span> <span class="ow">is</span> <span class="ow">not</span> <span class="bp">None</span><span class="p">:</span>
+            <span class="n">handler</span><span class="o">.</span><span class="n">update_fit</span><span class="p">(</span><span class="n">last</span><span class="o">=</span><span class="bp">True</span><span class="p">)</span>
+
+        <span class="c"># TODO: shouldn&#39;t reference internal parameters of fit problem</span>
+        <span class="n">varying</span> <span class="o">=</span> <span class="n">problem</span><span class="o">.</span><span class="n">_parameters</span>
+        <span class="c"># collect the results</span>
+        <span class="n">all_results</span> <span class="o">=</span> <span class="p">[]</span>
+        <span class="k">for</span> <span class="n">M</span> <span class="ow">in</span> <span class="n">problem</span><span class="o">.</span><span class="n">models</span><span class="p">:</span>
+            <span class="n">fitness</span> <span class="o">=</span> <span class="n">M</span><span class="o">.</span><span class="n">fitness</span>
+            <span class="n">fitted_index</span> <span class="o">=</span> <span class="p">[</span><span class="n">varying</span><span class="o">.</span><span class="n">index</span><span class="p">(</span><span class="n">p</span><span class="p">)</span> <span class="k">for</span> <span class="n">p</span> <span class="ow">in</span> <span class="n">fitness</span><span class="o">.</span><span class="n">fitted_pars</span><span class="p">]</span>
+            <span class="n">param_list</span> <span class="o">=</span> <span class="n">fitness</span><span class="o">.</span><span class="n">fitted_par_names</span> <span class="o">+</span> <span class="n">fitness</span><span class="o">.</span><span class="n">computed_par_names</span>
+            <span class="n">R</span> <span class="o">=</span> <span class="n">FResult</span><span class="p">(</span><span class="n">model</span><span class="o">=</span><span class="n">fitness</span><span class="o">.</span><span class="n">model</span><span class="p">,</span> <span class="n">data</span><span class="o">=</span><span class="n">fitness</span><span class="o">.</span><span class="n">data</span><span class="p">,</span>
+                        <span class="n">param_list</span><span class="o">=</span><span class="n">param_list</span><span class="p">)</span>
+            <span class="n">R</span><span class="o">.</span><span class="n">theory</span> <span class="o">=</span> <span class="n">fitness</span><span class="o">.</span><span class="n">theory</span><span class="p">()</span>
+            <span class="n">R</span><span class="o">.</span><span class="n">residuals</span> <span class="o">=</span> <span class="n">fitness</span><span class="o">.</span><span class="n">residuals</span><span class="p">()</span>
+            <span class="n">R</span><span class="o">.</span><span class="n">index</span> <span class="o">=</span> <span class="n">fitness</span><span class="o">.</span><span class="n">data</span><span class="o">.</span><span class="n">idx</span>
+            <span class="n">R</span><span class="o">.</span><span class="n">fitter_id</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">fitter_id</span>
+            <span class="c"># TODO: should scale stderr by sqrt(chisq/DOF) if dy is unknown</span>
+            <span class="n">R</span><span class="o">.</span><span class="n">success</span> <span class="o">=</span> <span class="n">result</span><span class="p">[</span><span class="s">&#39;success&#39;</span><span class="p">]</span>
+            <span class="k">if</span> <span class="n">R</span><span class="o">.</span><span class="n">success</span><span class="p">:</span>
+                <span class="n">R</span><span class="o">.</span><span class="n">stderr</span> <span class="o">=</span> <span class="n">numpy</span><span class="o">.</span><span class="n">hstack</span><span class="p">((</span><span class="n">result</span><span class="p">[</span><span class="s">&#39;stderr&#39;</span><span class="p">][</span><span class="n">fitted_index</span><span class="p">],</span>
+                                         <span class="n">numpy</span><span class="o">.</span><span class="n">NaN</span><span class="o">*</span><span class="n">numpy</span><span class="o">.</span><span class="n">ones</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">fitness</span><span class="o">.</span><span class="n">computed_pars</span><span class="p">))))</span>
+                <span class="n">R</span><span class="o">.</span><span class="n">pvec</span> <span class="o">=</span> <span class="n">numpy</span><span class="o">.</span><span class="n">hstack</span><span class="p">((</span><span class="n">result</span><span class="p">[</span><span class="s">&#39;value&#39;</span><span class="p">][</span><span class="n">fitted_index</span><span class="p">],</span>
+                                      <span class="p">[</span><span class="n">p</span><span class="o">.</span><span class="n">value</span> <span class="k">for</span> <span class="n">p</span> <span class="ow">in</span> <span class="n">fitness</span><span class="o">.</span><span class="n">computed_pars</span><span class="p">]))</span>
+                <span class="n">R</span><span class="o">.</span><span class="n">fitness</span> <span class="o">=</span> <span class="n">numpy</span><span class="o">.</span><span class="n">sum</span><span class="p">(</span><span class="n">R</span><span class="o">.</span><span class="n">residuals</span><span class="o">**</span><span class="mi">2</span><span class="p">)</span><span class="o">/</span><span class="p">(</span><span class="n">fitness</span><span class="o">.</span><span class="n">numpoints</span><span class="p">()</span> <span class="o">-</span> <span class="nb">len</span><span class="p">(</span><span class="n">fitted_index</span><span class="p">))</span>
+            <span class="k">else</span><span class="p">:</span>
+                <span class="n">R</span><span class="o">.</span><span class="n">stderr</span> <span class="o">=</span> <span class="n">numpy</span><span class="o">.</span><span class="n">NaN</span><span class="o">*</span><span class="n">numpy</span><span class="o">.</span><span class="n">ones</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">param_list</span><span class="p">))</span>
+                <span class="n">R</span><span class="o">.</span><span class="n">pvec</span> <span class="o">=</span> <span class="n">numpy</span><span class="o">.</span><span class="n">asarray</span><span class="p">(</span> <span class="p">[</span><span class="n">p</span><span class="o">.</span><span class="n">value</span> <span class="k">for</span> <span class="n">p</span> <span class="ow">in</span> <span class="n">fitness</span><span class="o">.</span><span class="n">fitted_pars</span><span class="o">+</span><span class="n">fitness</span><span class="o">.</span><span class="n">computed_pars</span><span class="p">])</span>
+                <span class="n">R</span><span class="o">.</span><span class="n">fitness</span> <span class="o">=</span> <span class="n">numpy</span><span class="o">.</span><span class="n">NaN</span>
+            <span class="n">R</span><span class="o">.</span><span class="n">convergence</span> <span class="o">=</span> <span class="n">result</span><span class="p">[</span><span class="s">&#39;convergence&#39;</span><span class="p">]</span>
+            <span class="k">if</span> <span class="n">result</span><span class="p">[</span><span class="s">&#39;uncertainty&#39;</span><span class="p">]</span> <span class="ow">is</span> <span class="ow">not</span> <span class="bp">None</span><span class="p">:</span>
+                <span class="n">R</span><span class="o">.</span><span class="n">uncertainty_state</span> <span class="o">=</span> <span class="n">result</span><span class="p">[</span><span class="s">&#39;uncertainty&#39;</span><span class="p">]</span>
+            <span class="n">all_results</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">R</span><span class="p">)</span>
+
+        <span class="k">if</span> <span class="n">q</span> <span class="ow">is</span> <span class="ow">not</span> <span class="bp">None</span><span class="p">:</span>
+            <span class="n">q</span><span class="o">.</span><span class="n">put</span><span class="p">(</span><span class="n">all_results</span><span class="p">)</span>
+            <span class="k">return</span> <span class="n">q</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="k">return</span> <span class="n">all_results</span>
+</div></div>
+<div class="viewcode-block" id="run_bumps"><a class="viewcode-back" href="../../../dev/api/sas.fit.html#sas.fit.BumpsFitting.run_bumps">[docs]</a><span class="k">def</span> <span class="nf">run_bumps</span><span class="p">(</span><span class="n">problem</span><span class="p">,</span> <span class="n">handler</span><span class="p">,</span> <span class="n">curr_thread</span><span class="p">):</span>
+    <span class="k">def</span> <span class="nf">abort_test</span><span class="p">():</span>
+        <span class="k">if</span> <span class="n">curr_thread</span> <span class="ow">is</span> <span class="bp">None</span><span class="p">:</span> <span class="k">return</span> <span class="bp">False</span>
+        <span class="k">try</span><span class="p">:</span> <span class="n">curr_thread</span><span class="o">.</span><span class="n">isquit</span><span class="p">()</span>
+        <span class="k">except</span> <span class="ne">KeyboardInterrupt</span><span class="p">:</span>
+            <span class="k">if</span> <span class="n">handler</span> <span class="ow">is</span> <span class="ow">not</span> <span class="bp">None</span><span class="p">:</span>
+                <span class="n">handler</span><span class="o">.</span><span class="n">stop</span><span class="p">(</span><span class="s">&quot;Fitting: Terminated!!!&quot;</span><span class="p">)</span>
+            <span class="k">return</span> <span class="bp">True</span>
+        <span class="k">return</span> <span class="bp">False</span>
+
+    <span class="n">fitopts</span> <span class="o">=</span> <span class="n">fitters</span><span class="o">.</span><span class="n">FIT_OPTIONS</span><span class="p">[</span><span class="n">fitters</span><span class="o">.</span><span class="n">FIT_DEFAULT</span><span class="p">]</span>
+    <span class="n">fitclass</span> <span class="o">=</span> <span class="n">fitopts</span><span class="o">.</span><span class="n">fitclass</span>
+    <span class="n">options</span> <span class="o">=</span> <span class="n">fitopts</span><span class="o">.</span><span class="n">options</span><span class="o">.</span><span class="n">copy</span><span class="p">()</span>
+    <span class="n">max_step</span> <span class="o">=</span> <span class="n">fitopts</span><span class="o">.</span><span class="n">options</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s">&#39;steps&#39;</span><span class="p">,</span> <span class="mi">0</span><span class="p">)</span> <span class="o">+</span> <span class="n">fitopts</span><span class="o">.</span><span class="n">options</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s">&#39;burn&#39;</span><span class="p">,</span> <span class="mi">0</span><span class="p">)</span>
+    <span class="n">pars</span> <span class="o">=</span> <span class="p">[</span><span class="n">p</span><span class="o">.</span><span class="n">name</span> <span class="k">for</span> <span class="n">p</span> <span class="ow">in</span> <span class="n">problem</span><span class="o">.</span><span class="n">_parameters</span><span class="p">]</span>
+    <span class="c">#x0 = numpy.asarray([p.value for p in problem._parameters])</span>
+    <span class="n">options</span><span class="p">[</span><span class="s">&#39;monitors&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="p">[</span>
+        <span class="n">BumpsMonitor</span><span class="p">(</span><span class="n">handler</span><span class="p">,</span> <span class="n">max_step</span><span class="p">,</span> <span class="n">pars</span><span class="p">,</span> <span class="n">problem</span><span class="o">.</span><span class="n">dof</span><span class="p">),</span>
+        <span class="n">ConvergenceMonitor</span><span class="p">(),</span>
+        <span class="p">]</span>
+    <span class="n">fitdriver</span> <span class="o">=</span> <span class="n">fitters</span><span class="o">.</span><span class="n">FitDriver</span><span class="p">(</span><span class="n">fitclass</span><span class="p">,</span> <span class="n">problem</span><span class="o">=</span><span class="n">problem</span><span class="p">,</span>
+                                  <span class="n">abort_test</span><span class="o">=</span><span class="n">abort_test</span><span class="p">,</span> <span class="o">**</span><span class="n">options</span><span class="p">)</span>
+    <span class="n">omp_threads</span> <span class="o">=</span> <span class="nb">int</span><span class="p">(</span><span class="n">os</span><span class="o">.</span><span class="n">environ</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s">&#39;OMP_NUM_THREADS&#39;</span><span class="p">,</span><span class="s">&#39;0&#39;</span><span class="p">))</span>
+    <span class="n">mapper</span> <span class="o">=</span> <span class="n">MPMapper</span> <span class="k">if</span> <span class="n">omp_threads</span> <span class="o">==</span> <span class="mi">1</span> <span class="k">else</span> <span class="n">SerialMapper</span>
+    <span class="n">fitdriver</span><span class="o">.</span><span class="n">mapper</span> <span class="o">=</span> <span class="n">mapper</span><span class="o">.</span><span class="n">start_mapper</span><span class="p">(</span><span class="n">problem</span><span class="p">,</span> <span class="bp">None</span><span class="p">)</span>
+    <span class="c">#import time; T0 = time.time()</span>
+    <span class="k">try</span><span class="p">:</span>
+        <span class="n">best</span><span class="p">,</span> <span class="n">fbest</span> <span class="o">=</span> <span class="n">fitdriver</span><span class="o">.</span><span class="n">fit</span><span class="p">()</span>
+    <span class="k">except</span><span class="p">:</span>
+        <span class="kn">import</span> <span class="nn">traceback</span><span class="p">;</span> <span class="n">traceback</span><span class="o">.</span><span class="n">print_exc</span><span class="p">()</span>
+        <span class="k">raise</span>
+    <span class="k">finally</span><span class="p">:</span>
+        <span class="n">mapper</span><span class="o">.</span><span class="n">stop_mapper</span><span class="p">(</span><span class="n">fitdriver</span><span class="o">.</span><span class="n">mapper</span><span class="p">)</span>
+
+
+    <span class="n">convergence_list</span> <span class="o">=</span> <span class="n">options</span><span class="p">[</span><span class="s">&#39;monitors&#39;</span><span class="p">][</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span><span class="o">.</span><span class="n">convergence</span>
+    <span class="n">convergence</span> <span class="o">=</span> <span class="p">(</span><span class="mi">2</span><span class="o">*</span><span class="n">numpy</span><span class="o">.</span><span class="n">asarray</span><span class="p">(</span><span class="n">convergence_list</span><span class="p">)</span><span class="o">/</span><span class="n">problem</span><span class="o">.</span><span class="n">dof</span>
+                   <span class="k">if</span> <span class="n">convergence_list</span> <span class="k">else</span> <span class="n">numpy</span><span class="o">.</span><span class="n">empty</span><span class="p">((</span><span class="mi">0</span><span class="p">,</span><span class="mi">1</span><span class="p">),</span><span class="s">&#39;d&#39;</span><span class="p">))</span>
+
+    <span class="n">success</span> <span class="o">=</span> <span class="n">best</span> <span class="ow">is</span> <span class="ow">not</span> <span class="bp">None</span>
+    <span class="k">return</span> <span class="p">{</span>
+        <span class="s">&#39;value&#39;</span><span class="p">:</span> <span class="n">best</span> <span class="k">if</span> <span class="n">success</span> <span class="k">else</span> <span class="bp">None</span><span class="p">,</span>
+        <span class="s">&#39;stderr&#39;</span><span class="p">:</span> <span class="n">fitdriver</span><span class="o">.</span><span class="n">stderr</span><span class="p">()</span> <span class="k">if</span> <span class="n">success</span> <span class="k">else</span> <span class="bp">None</span><span class="p">,</span>
+        <span class="s">&#39;success&#39;</span><span class="p">:</span> <span class="n">success</span><span class="p">,</span>
+        <span class="s">&#39;convergence&#39;</span><span class="p">:</span> <span class="n">convergence</span><span class="p">,</span>
+        <span class="s">&#39;uncertainty&#39;</span><span class="p">:</span> <span class="nb">getattr</span><span class="p">(</span><span class="n">fitdriver</span><span class="o">.</span><span class="n">fitter</span><span class="p">,</span> <span class="s">&#39;state&#39;</span><span class="p">,</span> <span class="bp">None</span><span class="p">),</span>
+        <span class="p">}</span>
+</pre></div></div>
+
+          </div>
+        </div>
+      </div>
+      <div class="sphinxsidebar" role="navigation" aria-label="main navigation">
+        <div class="sphinxsidebarwrapper">
+<div id="searchbox" style="display: none" role="search">
+  <h3>Quick search</h3>
+    <form class="search" action="../../../search.html" method="get">
+      <input type="text" name="q" />
+      <input type="submit" value="Go" />
+      <input type="hidden" name="check_keywords" value="yes" />
+      <input type="hidden" name="area" value="default" />
+    </form>
+    <p class="searchtip" style="font-size: 90%">
+    Enter search terms or a module, class or function name.
+    </p>
+</div>
+<script type="text/javascript">$('#searchbox').show(0);</script>
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="related" role="navigation" aria-label="related navigation">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="../../../genindex.html" title="General Index"
+             >index</a></li>
+        <li class="right" >
+          <a href="../../../py-modindex.html" title="Python Module Index"
+             >modules</a> |</li>
+        <li class="nav-item nav-item-0"><a href="../../../index.html">SasView 3.1.0 documentation</a> &raquo;</li>
+          <li class="nav-item nav-item-1"><a href="../../index.html" >Module code</a> &raquo;</li> 
+      </ul>
+    </div>
+    <div class="footer" role="contentinfo">
+        &copy; Copyright 2015, The SasView Project.
+      Created using <a href="http://sphinx-doc.org/">Sphinx</a> 1.3.1.
+    </div>
+  </body>
+</html>

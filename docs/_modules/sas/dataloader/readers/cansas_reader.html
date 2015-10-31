@@ -1,0 +1,1276 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+  "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+    
+    <title>sas.dataloader.readers.cansas_reader &mdash; SasView 3.1.0 documentation</title>
+    
+    <link rel="stylesheet" href="../../../../_static/classic.css" type="text/css" />
+    <link rel="stylesheet" href="../../../../_static/pygments.css" type="text/css" />
+    
+    <script type="text/javascript">
+      var DOCUMENTATION_OPTIONS = {
+        URL_ROOT:    '../../../../',
+        VERSION:     '3.1.0',
+        COLLAPSE_INDEX: false,
+        FILE_SUFFIX: '.html',
+        HAS_SOURCE:  true
+      };
+    </script>
+    <script type="text/javascript" src="../../../../_static/jquery.js"></script>
+    <script type="text/javascript" src="../../../../_static/underscore.js"></script>
+    <script type="text/javascript" src="../../../../_static/doctools.js"></script>
+    <script type="text/javascript" src="https://cdn.mathjax.org/mathjax/latest/MathJax.js?config=TeX-AMS-MML_HTMLorMML"></script>
+    <link rel="top" title="SasView 3.1.0 documentation" href="../../../../index.html" />
+    <link rel="up" title="sas.dataloader.readers" href="../readers.html" /> 
+  </head>
+  <body role="document">
+    <div class="related" role="navigation" aria-label="related navigation">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="../../../../genindex.html" title="General Index"
+             accesskey="I">index</a></li>
+        <li class="right" >
+          <a href="../../../../py-modindex.html" title="Python Module Index"
+             >modules</a> |</li>
+        <li class="nav-item nav-item-0"><a href="../../../../index.html">SasView 3.1.0 documentation</a> &raquo;</li>
+          <li class="nav-item nav-item-1"><a href="../../../index.html" >Module code</a> &raquo;</li>
+          <li class="nav-item nav-item-2"><a href="../readers.html" accesskey="U">sas.dataloader.readers</a> &raquo;</li> 
+      </ul>
+    </div>  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          <div class="body" role="main">
+            
+  <h1>Source code for sas.dataloader.readers.cansas_reader</h1><div class="highlight"><pre>
+<span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    CanSAS data reader - new recursive cansas_version.</span>
+<span class="sd">&quot;&quot;&quot;</span>
+<span class="c">############################################################################</span>
+<span class="c">#This software was developed by the University of Tennessee as part of the</span>
+<span class="c">#Distributed Data Analysis of Neutron Scattering Experiments (DANSE)</span>
+<span class="c">#project funded by the US National Science Foundation.</span>
+<span class="c">#If you use DANSE applications to do scientific research that leads to</span>
+<span class="c">#publication, we ask that you acknowledge the use of the software with the</span>
+<span class="c">#following sentence:</span>
+<span class="c">#This work benefited from DANSE software developed under NSF award DMR-0520547.</span>
+<span class="c">#copyright 2008,2009 University of Tennessee</span>
+<span class="c">#############################################################################</span>
+
+<span class="kn">import</span> <span class="nn">logging</span>
+<span class="kn">import</span> <span class="nn">numpy</span>
+<span class="kn">import</span> <span class="nn">os</span>
+<span class="kn">import</span> <span class="nn">sys</span>
+<span class="kn">import</span> <span class="nn">datetime</span>
+<span class="kn">import</span> <span class="nn">inspect</span>
+<span class="c"># For saving individual sections of data</span>
+<span class="kn">from</span> <span class="nn">sas.dataloader.data_info</span> <span class="kn">import</span> <span class="n">Data1D</span>
+<span class="kn">from</span> <span class="nn">sas.dataloader.data_info</span> <span class="kn">import</span> <span class="n">Collimation</span>
+<span class="kn">from</span> <span class="nn">sas.dataloader.data_info</span> <span class="kn">import</span> <span class="n">TransmissionSpectrum</span>
+<span class="kn">from</span> <span class="nn">sas.dataloader.data_info</span> <span class="kn">import</span> <span class="n">Detector</span>
+<span class="kn">from</span> <span class="nn">sas.dataloader.data_info</span> <span class="kn">import</span> <span class="n">Process</span>
+<span class="kn">from</span> <span class="nn">sas.dataloader.data_info</span> <span class="kn">import</span> <span class="n">Aperture</span>
+<span class="kn">import</span> <span class="nn">sas.dataloader.readers.xml_reader</span> <span class="kn">as</span> <span class="nn">xml_reader</span>
+<span class="kn">from</span> <span class="nn">sas.dataloader.readers.xml_reader</span> <span class="kn">import</span> <span class="n">XMLreader</span>
+<span class="kn">from</span> <span class="nn">sas.dataloader.readers.cansas_constants</span> <span class="kn">import</span> <span class="n">CansasConstants</span>
+
+<span class="c"># The following 2 imports *ARE* used. Do not remove either.</span>
+<span class="kn">import</span> <span class="nn">xml.dom.minidom</span>
+<span class="kn">from</span> <span class="nn">xml.dom.minidom</span> <span class="kn">import</span> <span class="n">parseString</span>
+
+<span class="n">_ZERO</span> <span class="o">=</span> <span class="mf">1e-16</span>
+<span class="n">PREPROCESS</span> <span class="o">=</span> <span class="s">&quot;xmlpreprocess&quot;</span>
+<span class="n">ENCODING</span> <span class="o">=</span> <span class="s">&quot;encoding&quot;</span>
+<span class="n">RUN_NAME_DEFAULT</span> <span class="o">=</span> <span class="s">&quot;None&quot;</span>
+<span class="n">HAS_CONVERTER</span> <span class="o">=</span> <span class="bp">True</span>
+<span class="k">try</span><span class="p">:</span>
+    <span class="kn">from</span> <span class="nn">sas.data_util.nxsunit</span> <span class="kn">import</span> <span class="n">Converter</span>
+<span class="k">except</span> <span class="ne">ImportError</span><span class="p">:</span>
+    <span class="n">HAS_CONVERTER</span> <span class="o">=</span> <span class="bp">False</span>
+
+<span class="n">CONSTANTS</span> <span class="o">=</span> <span class="n">CansasConstants</span><span class="p">()</span>
+<span class="n">CANSAS_FORMAT</span> <span class="o">=</span> <span class="n">CONSTANTS</span><span class="o">.</span><span class="n">format</span>
+<span class="n">CANSAS_NS</span> <span class="o">=</span> <span class="n">CONSTANTS</span><span class="o">.</span><span class="n">names</span>
+<span class="n">ALLOW_ALL</span> <span class="o">=</span> <span class="bp">True</span>
+
+<span class="c"># DO NOT REMOVE Called by outside packages:</span>
+<span class="c">#    sas.perspectives.invariant.invariant_state</span>
+<span class="c">#    sas.perspectives.fitting.pagestate</span>
+<div class="viewcode-block" id="get_content"><a class="viewcode-back" href="../../../../dev/api/sas.dataloader.readers.html#sas.dataloader.readers.cansas_reader.get_content">[docs]</a><span class="k">def</span> <span class="nf">get_content</span><span class="p">(</span><span class="n">location</span><span class="p">,</span> <span class="n">node</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Get the first instance of the content of a xpath location.</span>
+
+<span class="sd">    :param location: xpath location</span>
+<span class="sd">    :param node: node to start at</span>
+
+<span class="sd">    :return: Element, or None</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">nodes</span> <span class="o">=</span> <span class="n">node</span><span class="o">.</span><span class="n">xpath</span><span class="p">(</span><span class="n">location</span><span class="p">,</span>
+                       <span class="n">namespaces</span><span class="o">=</span><span class="p">{</span><span class="s">&#39;ns&#39;</span><span class="p">:</span> <span class="n">CANSAS_NS</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s">&quot;1.0&quot;</span><span class="p">)</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s">&quot;ns&quot;</span><span class="p">)})</span>
+    <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">nodes</span><span class="p">)</span> <span class="o">&gt;</span> <span class="mi">0</span><span class="p">:</span>
+        <span class="k">return</span> <span class="n">nodes</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
+    <span class="k">else</span><span class="p">:</span>
+        <span class="k">return</span> <span class="bp">None</span>
+
+<span class="c"># DO NOT REMOVE Called by outside packages:</span>
+<span class="c">#    sas.perspectives.fitting.pagestate</span></div>
+<div class="viewcode-block" id="write_node"><a class="viewcode-back" href="../../../../dev/api/sas.dataloader.readers.html#sas.dataloader.readers.cansas_reader.write_node">[docs]</a><span class="k">def</span> <span class="nf">write_node</span><span class="p">(</span><span class="n">doc</span><span class="p">,</span> <span class="n">parent</span><span class="p">,</span> <span class="n">name</span><span class="p">,</span> <span class="n">value</span><span class="p">,</span> <span class="n">attr</span><span class="o">=</span><span class="bp">None</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    :param doc: document DOM</span>
+<span class="sd">    :param parent: parent node</span>
+<span class="sd">    :param name: tag of the element</span>
+<span class="sd">    :param value: value of the child text node</span>
+<span class="sd">    :param attr: attribute dictionary</span>
+
+<span class="sd">    :return: True if something was appended, otherwise False</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="k">if</span> <span class="n">attr</span> <span class="ow">is</span> <span class="bp">None</span><span class="p">:</span>
+        <span class="n">attr</span> <span class="o">=</span> <span class="p">{}</span>
+    <span class="k">if</span> <span class="n">value</span> <span class="ow">is</span> <span class="ow">not</span> <span class="bp">None</span><span class="p">:</span>
+        <span class="n">node</span> <span class="o">=</span> <span class="n">doc</span><span class="o">.</span><span class="n">createElement</span><span class="p">(</span><span class="n">name</span><span class="p">)</span>
+        <span class="n">node</span><span class="o">.</span><span class="n">appendChild</span><span class="p">(</span><span class="n">doc</span><span class="o">.</span><span class="n">createTextNode</span><span class="p">(</span><span class="nb">str</span><span class="p">(</span><span class="n">value</span><span class="p">)))</span>
+        <span class="k">for</span> <span class="n">item</span> <span class="ow">in</span> <span class="n">attr</span><span class="p">:</span>
+            <span class="n">node</span><span class="o">.</span><span class="n">setAttribute</span><span class="p">(</span><span class="n">item</span><span class="p">,</span> <span class="n">attr</span><span class="p">[</span><span class="n">item</span><span class="p">])</span>
+        <span class="n">parent</span><span class="o">.</span><span class="n">appendChild</span><span class="p">(</span><span class="n">node</span><span class="p">)</span>
+        <span class="k">return</span> <span class="bp">True</span>
+    <span class="k">return</span> <span class="bp">False</span>
+</div>
+<div class="viewcode-block" id="Reader"><a class="viewcode-back" href="../../../../dev/api/sas.dataloader.readers.html#sas.dataloader.readers.cansas_reader.Reader">[docs]</a><span class="k">class</span> <span class="nc">Reader</span><span class="p">(</span><span class="n">XMLreader</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Class to load cansas 1D XML files</span>
+
+<span class="sd">    :Dependencies:</span>
+<span class="sd">        The CanSAS reader requires PyXML 0.8.4 or later.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="c">##CanSAS version - defaults to version 1.0</span>
+    <span class="n">cansas_version</span> <span class="o">=</span> <span class="s">&quot;1.0&quot;</span>
+    <span class="n">base_ns</span> <span class="o">=</span> <span class="s">&quot;{cansas1d/1.0}&quot;</span>
+    <span class="n">logging</span> <span class="o">=</span> <span class="bp">None</span>
+    <span class="n">errors</span> <span class="o">=</span> <span class="bp">None</span>
+    <span class="n">type_name</span> <span class="o">=</span> <span class="s">&quot;canSAS&quot;</span>
+    <span class="c">## Wildcards</span>
+    <span class="nb">type</span> <span class="o">=</span> <span class="p">[</span><span class="s">&quot;XML files (*.xml)|*.xml&quot;</span><span class="p">,</span> <span class="s">&quot;SasView Save Files (*.svs)|*.svs&quot;</span><span class="p">]</span>
+    <span class="c">## List of allowed extensions</span>
+    <span class="n">ext</span> <span class="o">=</span> <span class="p">[</span><span class="s">&#39;.xml&#39;</span><span class="p">,</span> <span class="s">&#39;.XML&#39;</span><span class="p">,</span> <span class="s">&#39;.svs&#39;</span><span class="p">,</span> <span class="s">&#39;.SVS&#39;</span><span class="p">]</span>
+    <span class="c">## Flag to bypass extension check</span>
+    <span class="n">allow_all</span> <span class="o">=</span> <span class="bp">True</span>
+
+    <span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="c">## List of errors</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">errors</span> <span class="o">=</span> <span class="nb">set</span><span class="p">()</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">logging</span> <span class="o">=</span> <span class="p">[]</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">encoding</span> <span class="o">=</span> <span class="bp">None</span>
+
+<div class="viewcode-block" id="Reader.is_cansas"><a class="viewcode-back" href="../../../../dev/api/sas.dataloader.readers.html#sas.dataloader.readers.cansas_reader.Reader.is_cansas">[docs]</a>    <span class="k">def</span> <span class="nf">is_cansas</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">ext</span><span class="o">=</span><span class="s">&quot;xml&quot;</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Checks to see if the xml file is a CanSAS file</span>
+
+<span class="sd">        :param ext: The file extension of the data file</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">validate_xml</span><span class="p">():</span>
+            <span class="n">name</span> <span class="o">=</span> <span class="s">&quot;{http://www.w3.org/2001/XMLSchema-instance}schemaLocation&quot;</span>
+            <span class="n">value</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">xmlroot</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="n">name</span><span class="p">)</span>
+            <span class="k">if</span> <span class="n">CANSAS_NS</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">cansas_version</span><span class="p">)</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s">&quot;ns&quot;</span><span class="p">)</span> <span class="o">==</span> \
+                    <span class="n">value</span><span class="o">.</span><span class="n">rsplit</span><span class="p">(</span><span class="s">&quot; &quot;</span><span class="p">)[</span><span class="mi">0</span><span class="p">]:</span>
+                <span class="k">return</span> <span class="bp">True</span>
+        <span class="k">if</span> <span class="n">ext</span> <span class="o">==</span> <span class="s">&quot;svs&quot;</span><span class="p">:</span>
+            <span class="k">return</span> <span class="bp">True</span>
+        <span class="k">return</span> <span class="bp">False</span>
+</div>
+<div class="viewcode-block" id="Reader.load_file_and_schema"><a class="viewcode-back" href="../../../../dev/api/sas.dataloader.readers.html#sas.dataloader.readers.cansas_reader.Reader.load_file_and_schema">[docs]</a>    <span class="k">def</span> <span class="nf">load_file_and_schema</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">xml_file</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Loads the file and associates a schema, if a known schema exists</span>
+
+<span class="sd">        :param xml_file: The xml file path sent to Reader.read</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">base_name</span> <span class="o">=</span> <span class="n">xml_reader</span><span class="o">.</span><span class="n">__file__</span>
+        <span class="n">base_name</span> <span class="o">=</span> <span class="n">base_name</span><span class="o">.</span><span class="n">replace</span><span class="p">(</span><span class="s">&quot;</span><span class="se">\\</span><span class="s">&quot;</span><span class="p">,</span> <span class="s">&quot;/&quot;</span><span class="p">)</span>
+        <span class="n">base</span> <span class="o">=</span> <span class="n">base_name</span><span class="o">.</span><span class="n">split</span><span class="p">(</span><span class="s">&quot;/sas/&quot;</span><span class="p">)[</span><span class="mi">0</span><span class="p">]</span>
+
+        <span class="c"># Load in xml file and get the cansas version from the header</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">set_xml_file</span><span class="p">(</span><span class="n">xml_file</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">cansas_version</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">xmlroot</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s">&quot;version&quot;</span><span class="p">,</span> <span class="s">&quot;1.0&quot;</span><span class="p">)</span>
+
+        <span class="c"># Generic values for the cansas file based on the version</span>
+        <span class="n">cansas_defaults</span> <span class="o">=</span> <span class="n">CANSAS_NS</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">cansas_version</span><span class="p">,</span> <span class="s">&quot;1.0&quot;</span><span class="p">)</span>
+        <span class="n">schema_path</span> <span class="o">=</span> <span class="s">&quot;{0}/sas/dataloader/readers/schema/{1}&quot;</span><span class="o">.</span><span class="n">format</span>\
+                <span class="p">(</span><span class="n">base</span><span class="p">,</span> <span class="n">cansas_defaults</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s">&quot;schema&quot;</span><span class="p">))</span><span class="o">.</span><span class="n">replace</span><span class="p">(</span><span class="s">&quot;</span><span class="se">\\</span><span class="s">&quot;</span><span class="p">,</span> <span class="s">&quot;/&quot;</span><span class="p">)</span>
+
+        <span class="c"># Link a schema to the XML file.</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">set_schema</span><span class="p">(</span><span class="n">schema_path</span><span class="p">)</span>
+        <span class="k">return</span> <span class="n">cansas_defaults</span>
+</div>
+<div class="viewcode-block" id="Reader.read"><a class="viewcode-back" href="../../../../dev/api/sas.dataloader.readers.html#sas.dataloader.readers.cansas_reader.Reader.read">[docs]</a>    <span class="k">def</span> <span class="nf">read</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">xml_file</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Validate and read in an xml_file file in the canSAS format.</span>
+
+<span class="sd">        :param xml_file: A canSAS file path in proper XML format</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="c"># output - Final list of Data1D objects</span>
+        <span class="n">output</span> <span class="o">=</span> <span class="p">[]</span>
+        <span class="c"># ns - Namespace hierarchy for current xml_file object</span>
+        <span class="n">ns_list</span> <span class="o">=</span> <span class="p">[]</span>
+
+        <span class="c"># Check that the file exists</span>
+        <span class="k">if</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">isfile</span><span class="p">(</span><span class="n">xml_file</span><span class="p">):</span>
+            <span class="n">basename</span> <span class="o">=</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">basename</span><span class="p">(</span><span class="n">xml_file</span><span class="p">)</span>
+            <span class="n">_</span><span class="p">,</span> <span class="n">extension</span> <span class="o">=</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">splitext</span><span class="p">(</span><span class="n">basename</span><span class="p">)</span>
+            <span class="c"># If the file type is not allowed, return nothing</span>
+            <span class="k">if</span> <span class="n">extension</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">ext</span> <span class="ow">or</span> <span class="bp">self</span><span class="o">.</span><span class="n">allow_all</span><span class="p">:</span>
+                <span class="c"># Get the file location of</span>
+                <span class="n">cansas_defaults</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">load_file_and_schema</span><span class="p">(</span><span class="n">xml_file</span><span class="p">)</span>
+
+                <span class="c"># Try to load the file, but raise an error if unable to.</span>
+                <span class="c"># Check the file matches the XML schema</span>
+                <span class="k">try</span><span class="p">:</span>
+                    <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">is_cansas</span><span class="p">(</span><span class="n">extension</span><span class="p">):</span>
+                        <span class="c"># Get each SASentry from XML file and add it to a list.</span>
+                        <span class="n">entry_list</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">xmlroot</span><span class="o">.</span><span class="n">xpath</span><span class="p">(</span>
+                                <span class="s">&#39;/ns:SASroot/ns:SASentry&#39;</span><span class="p">,</span>
+                                <span class="n">namespaces</span><span class="o">=</span><span class="p">{</span><span class="s">&#39;ns&#39;</span><span class="p">:</span> <span class="n">cansas_defaults</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s">&quot;ns&quot;</span><span class="p">)})</span>
+                        <span class="n">ns_list</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="s">&quot;SASentry&quot;</span><span class="p">)</span>
+
+                        <span class="c"># If multiple files, modify the name for each is unique</span>
+                        <span class="n">increment</span> <span class="o">=</span> <span class="mi">0</span>
+                        <span class="c"># Parse each SASentry item</span>
+                        <span class="k">for</span> <span class="n">entry</span> <span class="ow">in</span> <span class="n">entry_list</span><span class="p">:</span>
+                            <span class="c"># Define a new Data1D object with zeroes for</span>
+                            <span class="c"># x_vals and y_vals</span>
+                            <span class="n">data1d</span> <span class="o">=</span> <span class="n">Data1D</span><span class="p">(</span><span class="n">numpy</span><span class="o">.</span><span class="n">empty</span><span class="p">(</span><span class="mi">0</span><span class="p">),</span> <span class="n">numpy</span><span class="o">.</span><span class="n">empty</span><span class="p">(</span><span class="mi">0</span><span class="p">),</span>
+                                            <span class="n">numpy</span><span class="o">.</span><span class="n">empty</span><span class="p">(</span><span class="mi">0</span><span class="p">),</span> <span class="n">numpy</span><span class="o">.</span><span class="n">empty</span><span class="p">(</span><span class="mi">0</span><span class="p">))</span>
+                            <span class="n">data1d</span><span class="o">.</span><span class="n">dxl</span> <span class="o">=</span> <span class="n">numpy</span><span class="o">.</span><span class="n">empty</span><span class="p">(</span><span class="mi">0</span><span class="p">)</span>
+                            <span class="n">data1d</span><span class="o">.</span><span class="n">dxw</span> <span class="o">=</span> <span class="n">numpy</span><span class="o">.</span><span class="n">empty</span><span class="p">(</span><span class="mi">0</span><span class="p">)</span>
+
+                            <span class="c"># If more than one SASentry, increment each in order</span>
+                            <span class="n">name</span> <span class="o">=</span> <span class="n">basename</span>
+                            <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">entry_list</span><span class="p">)</span> <span class="o">-</span> <span class="mi">1</span> <span class="o">&gt;</span> <span class="mi">0</span><span class="p">:</span>
+                                <span class="n">name</span> <span class="o">+=</span> <span class="s">&quot;_{0}&quot;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">increment</span><span class="p">)</span>
+                                <span class="n">increment</span> <span class="o">+=</span> <span class="mi">1</span>
+
+                            <span class="c"># Set the Data1D name and then parse the entry.</span>
+                            <span class="c"># The entry is appended to a list of entry values</span>
+                            <span class="n">data1d</span><span class="o">.</span><span class="n">filename</span> <span class="o">=</span> <span class="n">name</span>
+                            <span class="n">data1d</span><span class="o">.</span><span class="n">meta_data</span><span class="p">[</span><span class="s">&quot;loader&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="s">&quot;CanSAS 1D&quot;</span>
+
+                            <span class="c"># Get all preprocessing events and encoding</span>
+                            <span class="bp">self</span><span class="o">.</span><span class="n">set_processing_instructions</span><span class="p">()</span>
+                            <span class="n">data1d</span><span class="o">.</span><span class="n">meta_data</span><span class="p">[</span><span class="n">PREPROCESS</span><span class="p">]</span> <span class="o">=</span> \
+                                    <span class="bp">self</span><span class="o">.</span><span class="n">processing_instructions</span>
+
+                            <span class="c"># Parse the XML file</span>
+                            <span class="n">return_value</span><span class="p">,</span> <span class="n">extras</span> <span class="o">=</span> \
+                                <span class="bp">self</span><span class="o">.</span><span class="n">_parse_entry</span><span class="p">(</span><span class="n">entry</span><span class="p">,</span> <span class="n">ns_list</span><span class="p">,</span> <span class="n">data1d</span><span class="p">)</span>
+                            <span class="k">del</span> <span class="n">extras</span><span class="p">[:]</span>
+
+                            <span class="n">return_value</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_final_cleanup</span><span class="p">(</span><span class="n">return_value</span><span class="p">)</span>
+                            <span class="n">output</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">return_value</span><span class="p">)</span>
+                    <span class="k">else</span><span class="p">:</span>
+                        <span class="n">output</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="s">&quot;Invalid XML at: {0}&quot;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span>\
+                                                    <span class="bp">self</span><span class="o">.</span><span class="n">find_invalid_xml</span><span class="p">()))</span>
+                <span class="k">except</span><span class="p">:</span>
+                    <span class="c"># If the file does not match the schema, raise this error</span>
+                    <span class="k">raise</span> <span class="ne">RuntimeError</span><span class="p">,</span> <span class="s">&quot;</span><span class="si">%s</span><span class="s"> cannot be read&quot;</span> <span class="o">%</span> <span class="n">xml_file</span>
+                <span class="k">return</span> <span class="n">output</span>
+        <span class="c"># Return a list of parsed entries that dataloader can manage</span>
+        <span class="k">return</span> <span class="bp">None</span>
+</div>
+    <span class="k">def</span> <span class="nf">_final_cleanup</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">data1d</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Final cleanup of the Data1D object to be sure it has all the</span>
+<span class="sd">        appropriate information needed for perspectives</span>
+
+<span class="sd">        :param data1d: Data1D object that has been populated</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="c"># Final cleanup</span>
+        <span class="c"># Remove empty nodes, verify array sizes are correct</span>
+        <span class="k">for</span> <span class="n">error</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">errors</span><span class="p">:</span>
+            <span class="n">data1d</span><span class="o">.</span><span class="n">errors</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">error</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">errors</span><span class="o">.</span><span class="n">clear</span><span class="p">()</span>
+        <span class="n">numpy</span><span class="o">.</span><span class="n">trim_zeros</span><span class="p">(</span><span class="n">data1d</span><span class="o">.</span><span class="n">x</span><span class="p">)</span>
+        <span class="n">numpy</span><span class="o">.</span><span class="n">trim_zeros</span><span class="p">(</span><span class="n">data1d</span><span class="o">.</span><span class="n">y</span><span class="p">)</span>
+        <span class="n">numpy</span><span class="o">.</span><span class="n">trim_zeros</span><span class="p">(</span><span class="n">data1d</span><span class="o">.</span><span class="n">dy</span><span class="p">)</span>
+        <span class="n">size_dx</span> <span class="o">=</span> <span class="n">data1d</span><span class="o">.</span><span class="n">dx</span><span class="o">.</span><span class="n">size</span>
+        <span class="n">size_dxl</span> <span class="o">=</span> <span class="n">data1d</span><span class="o">.</span><span class="n">dxl</span><span class="o">.</span><span class="n">size</span>
+        <span class="n">size_dxw</span> <span class="o">=</span> <span class="n">data1d</span><span class="o">.</span><span class="n">dxw</span><span class="o">.</span><span class="n">size</span>
+        <span class="k">if</span> <span class="n">data1d</span><span class="o">.</span><span class="n">_xunit</span> <span class="o">!=</span> <span class="n">data1d</span><span class="o">.</span><span class="n">x_unit</span><span class="p">:</span>
+            <span class="n">data1d</span><span class="o">.</span><span class="n">x_unit</span> <span class="o">=</span> <span class="n">data1d</span><span class="o">.</span><span class="n">_xunit</span>
+        <span class="k">if</span> <span class="n">data1d</span><span class="o">.</span><span class="n">_yunit</span> <span class="o">!=</span> <span class="n">data1d</span><span class="o">.</span><span class="n">y_unit</span><span class="p">:</span>
+            <span class="n">data1d</span><span class="o">.</span><span class="n">y_unit</span> <span class="o">=</span> <span class="n">data1d</span><span class="o">.</span><span class="n">_yunit</span>
+        <span class="k">if</span> <span class="n">size_dxl</span> <span class="o">==</span> <span class="mi">0</span> <span class="ow">and</span> <span class="n">size_dxw</span> <span class="o">==</span> <span class="mi">0</span><span class="p">:</span>
+            <span class="n">data1d</span><span class="o">.</span><span class="n">dxl</span> <span class="o">=</span> <span class="bp">None</span>
+            <span class="n">data1d</span><span class="o">.</span><span class="n">dxw</span> <span class="o">=</span> <span class="bp">None</span>
+            <span class="n">numpy</span><span class="o">.</span><span class="n">trim_zeros</span><span class="p">(</span><span class="n">data1d</span><span class="o">.</span><span class="n">dx</span><span class="p">)</span>
+        <span class="k">elif</span> <span class="n">size_dx</span> <span class="o">==</span> <span class="mi">0</span><span class="p">:</span>
+            <span class="n">data1d</span><span class="o">.</span><span class="n">dx</span> <span class="o">=</span> <span class="bp">None</span>
+            <span class="n">size_dx</span> <span class="o">=</span> <span class="n">size_dxl</span>
+            <span class="n">numpy</span><span class="o">.</span><span class="n">trim_zeros</span><span class="p">(</span><span class="n">data1d</span><span class="o">.</span><span class="n">dxl</span><span class="p">)</span>
+            <span class="n">numpy</span><span class="o">.</span><span class="n">trim_zeros</span><span class="p">(</span><span class="n">data1d</span><span class="o">.</span><span class="n">dxw</span><span class="p">)</span>
+        <span class="k">return</span> <span class="n">data1d</span>
+
+    <span class="k">def</span> <span class="nf">_create_unique_key</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">dictionary</span><span class="p">,</span> <span class="n">name</span><span class="p">,</span> <span class="n">numb</span><span class="o">=</span><span class="mi">0</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Create a unique key value for any dictionary to prevent overwriting</span>
+<span class="sd">        Recurses until a unique key value is found.</span>
+
+<span class="sd">        :param dictionary: A dictionary with any number of entries</span>
+<span class="sd">        :param name: The index of the item to be added to dictionary</span>
+<span class="sd">        :param numb: The number to be appended to the name, starts at 0</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">if</span> <span class="n">dictionary</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="n">name</span><span class="p">)</span> <span class="ow">is</span> <span class="ow">not</span> <span class="bp">None</span><span class="p">:</span>
+            <span class="n">numb</span> <span class="o">+=</span> <span class="mi">1</span>
+            <span class="n">name</span> <span class="o">=</span> <span class="n">name</span><span class="o">.</span><span class="n">split</span><span class="p">(</span><span class="s">&quot;_&quot;</span><span class="p">)[</span><span class="mi">0</span><span class="p">]</span>
+            <span class="n">name</span> <span class="o">+=</span> <span class="s">&quot;_{0}&quot;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">numb</span><span class="p">)</span>
+            <span class="n">name</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_create_unique_key</span><span class="p">(</span><span class="n">dictionary</span><span class="p">,</span> <span class="n">name</span><span class="p">,</span> <span class="n">numb</span><span class="p">)</span>
+        <span class="k">return</span> <span class="n">name</span>
+
+    <span class="k">def</span> <span class="nf">_unit_conversion</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">node</span><span class="p">,</span> <span class="n">new_current_level</span><span class="p">,</span> <span class="n">data1d</span><span class="p">,</span> \
+                                                <span class="n">tagname</span><span class="p">,</span> <span class="n">node_value</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        A unit converter method used to convert the data included in the file</span>
+<span class="sd">        to the default units listed in data_info</span>
+
+<span class="sd">        :param new_current_level: cansas_constants level as returned by</span>
+<span class="sd">            iterate_namespace</span>
+<span class="sd">        :param attr: The attributes of the node</span>
+<span class="sd">        :param data1d: Where the values will be saved</span>
+<span class="sd">        :param node_value: The value of the current dom node</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">attr</span> <span class="o">=</span> <span class="n">node</span><span class="o">.</span><span class="n">attrib</span>
+        <span class="n">value_unit</span> <span class="o">=</span> <span class="s">&#39;&#39;</span>
+        <span class="n">err_msg</span> <span class="o">=</span> <span class="bp">None</span>
+        <span class="n">default_unit</span> <span class="o">=</span> <span class="bp">None</span>
+        <span class="k">if</span> <span class="s">&#39;unit&#39;</span> <span class="ow">in</span> <span class="n">attr</span> <span class="ow">and</span> <span class="n">new_current_level</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s">&#39;unit&#39;</span><span class="p">)</span> <span class="ow">is</span> <span class="ow">not</span> <span class="bp">None</span><span class="p">:</span>
+            <span class="k">try</span><span class="p">:</span>
+                <span class="n">local_unit</span> <span class="o">=</span> <span class="n">attr</span><span class="p">[</span><span class="s">&#39;unit&#39;</span><span class="p">]</span>
+                <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">node_value</span><span class="p">,</span> <span class="nb">float</span><span class="p">)</span> <span class="ow">is</span> <span class="bp">False</span><span class="p">:</span>
+                    <span class="k">exec</span><span class="p">(</span><span class="s">&quot;node_value = float({0})&quot;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">node_value</span><span class="p">))</span>
+                <span class="n">unitname</span> <span class="o">=</span> <span class="n">new_current_level</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s">&quot;unit&quot;</span><span class="p">)</span>
+                <span class="k">exec</span> <span class="s">&quot;default_unit = data1d.{0}&quot;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">unitname</span><span class="p">)</span>
+                <span class="k">if</span> <span class="n">local_unit</span> <span class="ow">is</span> <span class="ow">not</span> <span class="bp">None</span> <span class="ow">and</span> <span class="n">default_unit</span> <span class="ow">is</span> <span class="ow">not</span> <span class="bp">None</span> <span class="ow">and</span> \
+                        <span class="n">local_unit</span><span class="o">.</span><span class="n">lower</span><span class="p">()</span> <span class="o">!=</span> <span class="n">default_unit</span><span class="o">.</span><span class="n">lower</span><span class="p">()</span> \
+                        <span class="ow">and</span> <span class="n">local_unit</span><span class="o">.</span><span class="n">lower</span><span class="p">()</span> <span class="o">!=</span> <span class="s">&quot;none&quot;</span><span class="p">:</span>
+                    <span class="k">if</span> <span class="n">HAS_CONVERTER</span> <span class="o">==</span> <span class="bp">True</span><span class="p">:</span>
+                        <span class="c">## Check local units - bad units raise KeyError</span>
+                        <span class="n">data_conv_q</span> <span class="o">=</span> <span class="n">Converter</span><span class="p">(</span><span class="n">local_unit</span><span class="p">)</span>
+                        <span class="n">value_unit</span> <span class="o">=</span> <span class="n">default_unit</span>
+                        <span class="n">node_value</span> <span class="o">=</span> <span class="n">data_conv_q</span><span class="p">(</span><span class="n">node_value</span><span class="p">,</span> <span class="n">units</span><span class="o">=</span><span class="n">default_unit</span><span class="p">)</span>
+                    <span class="k">else</span><span class="p">:</span>
+                        <span class="n">value_unit</span> <span class="o">=</span> <span class="n">local_unit</span>
+                        <span class="n">err_msg</span> <span class="o">=</span> <span class="s">&quot;Unit converter is not available.</span><span class="se">\n</span><span class="s">&quot;</span>
+                <span class="k">else</span><span class="p">:</span>
+                    <span class="n">value_unit</span> <span class="o">=</span> <span class="n">local_unit</span>
+            <span class="k">except</span> <span class="ne">KeyError</span><span class="p">:</span>
+                <span class="n">err_msg</span> <span class="o">=</span> <span class="s">&quot;CanSAS reader: unexpected &quot;</span>
+                <span class="n">err_msg</span> <span class="o">+=</span> <span class="s">&quot;</span><span class="se">\&quot;</span><span class="s">{0}</span><span class="se">\&quot;</span><span class="s"> unit [{1}]; &quot;</span>
+                <span class="n">err_msg</span> <span class="o">=</span> <span class="n">err_msg</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">tagname</span><span class="p">,</span> <span class="n">local_unit</span><span class="p">)</span>
+                <span class="n">err_msg</span> <span class="o">+=</span> <span class="s">&quot;expecting [{0}]&quot;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">default_unit</span><span class="p">)</span>
+                <span class="n">value_unit</span> <span class="o">=</span> <span class="n">local_unit</span>
+            <span class="k">except</span><span class="p">:</span>
+                <span class="n">err_msg</span> <span class="o">=</span> <span class="s">&quot;CanSAS reader: unknown error converting &quot;</span>
+                <span class="n">err_msg</span> <span class="o">+=</span> <span class="s">&quot;</span><span class="se">\&quot;</span><span class="s">{0}</span><span class="se">\&quot;</span><span class="s"> unit [{1}]&quot;</span>
+                <span class="n">err_msg</span> <span class="o">=</span> <span class="n">err_msg</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">tagname</span><span class="p">,</span> <span class="n">local_unit</span><span class="p">)</span>
+                <span class="n">value_unit</span> <span class="o">=</span> <span class="n">local_unit</span>
+        <span class="k">elif</span> <span class="s">&#39;unit&#39;</span> <span class="ow">in</span> <span class="n">attr</span><span class="p">:</span>
+            <span class="n">value_unit</span> <span class="o">=</span> <span class="n">attr</span><span class="p">[</span><span class="s">&#39;unit&#39;</span><span class="p">]</span>
+        <span class="k">if</span> <span class="n">err_msg</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">errors</span><span class="o">.</span><span class="n">add</span><span class="p">(</span><span class="n">err_msg</span><span class="p">)</span>
+        <span class="n">node_value</span> <span class="o">=</span> <span class="s">&quot;float({0})&quot;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">node_value</span><span class="p">)</span>
+        <span class="k">return</span> <span class="n">node_value</span><span class="p">,</span> <span class="n">value_unit</span>
+
+    <span class="k">def</span> <span class="nf">_check_for_empty_data</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">data1d</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Creates an empty data set if no data is passed to the reader</span>
+
+<span class="sd">        :param data1d: presumably a Data1D object</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">if</span> <span class="n">data1d</span> <span class="o">==</span> <span class="bp">None</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">errors</span> <span class="o">=</span> <span class="nb">set</span><span class="p">()</span>
+            <span class="n">x_vals</span> <span class="o">=</span> <span class="n">numpy</span><span class="o">.</span><span class="n">empty</span><span class="p">(</span><span class="mi">0</span><span class="p">)</span>
+            <span class="n">y_vals</span> <span class="o">=</span> <span class="n">numpy</span><span class="o">.</span><span class="n">empty</span><span class="p">(</span><span class="mi">0</span><span class="p">)</span>
+            <span class="n">dx_vals</span> <span class="o">=</span> <span class="n">numpy</span><span class="o">.</span><span class="n">empty</span><span class="p">(</span><span class="mi">0</span><span class="p">)</span>
+            <span class="n">dy_vals</span> <span class="o">=</span> <span class="n">numpy</span><span class="o">.</span><span class="n">empty</span><span class="p">(</span><span class="mi">0</span><span class="p">)</span>
+            <span class="n">dxl</span> <span class="o">=</span> <span class="n">numpy</span><span class="o">.</span><span class="n">empty</span><span class="p">(</span><span class="mi">0</span><span class="p">)</span>
+            <span class="n">dxw</span> <span class="o">=</span> <span class="n">numpy</span><span class="o">.</span><span class="n">empty</span><span class="p">(</span><span class="mi">0</span><span class="p">)</span>
+            <span class="n">data1d</span> <span class="o">=</span> <span class="n">Data1D</span><span class="p">(</span><span class="n">x_vals</span><span class="p">,</span> <span class="n">y_vals</span><span class="p">,</span> <span class="n">dx_vals</span><span class="p">,</span> <span class="n">dy_vals</span><span class="p">)</span>
+            <span class="n">data1d</span><span class="o">.</span><span class="n">dxl</span> <span class="o">=</span> <span class="n">dxl</span>
+            <span class="n">data1d</span><span class="o">.</span><span class="n">dxw</span> <span class="o">=</span> <span class="n">dxw</span>
+        <span class="k">return</span> <span class="n">data1d</span>
+
+    <span class="k">def</span> <span class="nf">_handle_special_cases</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">tagname</span><span class="p">,</span> <span class="n">data1d</span><span class="p">,</span> <span class="n">children</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Handle cases where the data type in Data1D is a dictionary or list</span>
+
+<span class="sd">        :param tagname: XML tagname in use</span>
+<span class="sd">        :param data1d: The original Data1D object</span>
+<span class="sd">        :param children: Child nodes of node</span>
+<span class="sd">        :param node: existing node with tag name &#39;tagname&#39;</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">if</span> <span class="n">tagname</span> <span class="o">==</span> <span class="s">&quot;SASdetector&quot;</span><span class="p">:</span>
+            <span class="n">data1d</span> <span class="o">=</span> <span class="n">Detector</span><span class="p">()</span>
+        <span class="k">elif</span> <span class="n">tagname</span> <span class="o">==</span> <span class="s">&quot;SAScollimation&quot;</span><span class="p">:</span>
+            <span class="n">data1d</span> <span class="o">=</span> <span class="n">Collimation</span><span class="p">()</span>
+        <span class="k">elif</span> <span class="n">tagname</span> <span class="o">==</span> <span class="s">&quot;SAStransmission_spectrum&quot;</span><span class="p">:</span>
+            <span class="n">data1d</span> <span class="o">=</span> <span class="n">TransmissionSpectrum</span><span class="p">()</span>
+        <span class="k">elif</span> <span class="n">tagname</span> <span class="o">==</span> <span class="s">&quot;SASprocess&quot;</span><span class="p">:</span>
+            <span class="n">data1d</span> <span class="o">=</span> <span class="n">Process</span><span class="p">()</span>
+            <span class="k">for</span> <span class="n">child</span> <span class="ow">in</span> <span class="n">children</span><span class="p">:</span>
+                <span class="k">if</span> <span class="n">child</span><span class="o">.</span><span class="n">tag</span><span class="o">.</span><span class="n">replace</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">base_ns</span><span class="p">,</span> <span class="s">&quot;&quot;</span><span class="p">)</span> <span class="o">==</span> <span class="s">&quot;term&quot;</span><span class="p">:</span>
+                    <span class="n">term_attr</span> <span class="o">=</span> <span class="p">{}</span>
+                    <span class="k">for</span> <span class="n">attr</span> <span class="ow">in</span> <span class="n">child</span><span class="o">.</span><span class="n">keys</span><span class="p">():</span>
+                        <span class="n">term_attr</span><span class="p">[</span><span class="n">attr</span><span class="p">]</span> <span class="o">=</span> \
+                            <span class="s">&#39; &#39;</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">child</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="n">attr</span><span class="p">)</span><span class="o">.</span><span class="n">split</span><span class="p">())</span>
+                    <span class="k">if</span> <span class="n">child</span><span class="o">.</span><span class="n">text</span> <span class="ow">is</span> <span class="ow">not</span> <span class="bp">None</span><span class="p">:</span>
+                        <span class="n">term_attr</span><span class="p">[</span><span class="s">&#39;value&#39;</span><span class="p">]</span> <span class="o">=</span> \
+                            <span class="s">&#39; &#39;</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">child</span><span class="o">.</span><span class="n">text</span><span class="o">.</span><span class="n">split</span><span class="p">())</span>
+                    <span class="n">data1d</span><span class="o">.</span><span class="n">term</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">term_attr</span><span class="p">)</span>
+        <span class="k">elif</span> <span class="n">tagname</span> <span class="o">==</span> <span class="s">&quot;aperture&quot;</span><span class="p">:</span>
+            <span class="n">data1d</span> <span class="o">=</span> <span class="n">Aperture</span><span class="p">()</span>
+        <span class="k">if</span> <span class="n">tagname</span> <span class="o">==</span> <span class="s">&quot;Idata&quot;</span> <span class="ow">and</span> <span class="n">children</span> <span class="ow">is</span> <span class="ow">not</span> <span class="bp">None</span><span class="p">:</span>
+            <span class="n">data1d</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_check_for_empty_resolution</span><span class="p">(</span><span class="n">data1d</span><span class="p">,</span> <span class="n">children</span><span class="p">)</span>
+        <span class="k">return</span> <span class="n">data1d</span>
+
+    <span class="k">def</span> <span class="nf">_check_for_empty_resolution</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">data1d</span><span class="p">,</span> <span class="n">children</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        A method to check all resolution data sets are the same size as I and Q</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">dql_exists</span> <span class="o">=</span> <span class="bp">False</span>
+        <span class="n">dqw_exists</span> <span class="o">=</span> <span class="bp">False</span>
+        <span class="n">dq_exists</span> <span class="o">=</span> <span class="bp">False</span>
+        <span class="n">di_exists</span> <span class="o">=</span> <span class="bp">False</span>
+        <span class="k">for</span> <span class="n">child</span> <span class="ow">in</span> <span class="n">children</span><span class="p">:</span>
+            <span class="n">tag</span> <span class="o">=</span> <span class="n">child</span><span class="o">.</span><span class="n">tag</span><span class="o">.</span><span class="n">replace</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">base_ns</span><span class="p">,</span> <span class="s">&quot;&quot;</span><span class="p">)</span>
+            <span class="k">if</span> <span class="n">tag</span> <span class="o">==</span> <span class="s">&quot;dQl&quot;</span><span class="p">:</span>
+                <span class="n">dql_exists</span> <span class="o">=</span> <span class="bp">True</span>
+            <span class="k">if</span> <span class="n">tag</span> <span class="o">==</span> <span class="s">&quot;dQw&quot;</span><span class="p">:</span>
+                <span class="n">dqw_exists</span> <span class="o">=</span> <span class="bp">True</span>
+            <span class="k">if</span> <span class="n">tag</span> <span class="o">==</span> <span class="s">&quot;Qdev&quot;</span><span class="p">:</span>
+                <span class="n">dq_exists</span> <span class="o">=</span> <span class="bp">True</span>
+            <span class="k">if</span> <span class="n">tag</span> <span class="o">==</span> <span class="s">&quot;Idev&quot;</span><span class="p">:</span>
+                <span class="n">di_exists</span> <span class="o">=</span> <span class="bp">True</span>
+        <span class="k">if</span> <span class="n">dqw_exists</span> <span class="ow">and</span> <span class="n">dql_exists</span> <span class="o">==</span> <span class="bp">False</span><span class="p">:</span>
+            <span class="n">data1d</span><span class="o">.</span><span class="n">dxl</span> <span class="o">=</span> <span class="n">numpy</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">data1d</span><span class="o">.</span><span class="n">dxl</span><span class="p">,</span> <span class="mf">0.0</span><span class="p">)</span>
+        <span class="k">elif</span> <span class="n">dql_exists</span> <span class="ow">and</span> <span class="n">dqw_exists</span> <span class="o">==</span> <span class="bp">False</span><span class="p">:</span>
+            <span class="n">data1d</span><span class="o">.</span><span class="n">dxw</span> <span class="o">=</span> <span class="n">numpy</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">data1d</span><span class="o">.</span><span class="n">dxw</span><span class="p">,</span> <span class="mf">0.0</span><span class="p">)</span>
+        <span class="k">elif</span> <span class="n">dql_exists</span> <span class="o">==</span> <span class="bp">False</span> <span class="ow">and</span> <span class="n">dqw_exists</span> <span class="o">==</span> <span class="bp">False</span> \
+                                            <span class="ow">and</span> <span class="n">dq_exists</span> <span class="o">==</span> <span class="bp">False</span><span class="p">:</span>
+            <span class="n">data1d</span><span class="o">.</span><span class="n">dx</span> <span class="o">=</span> <span class="n">numpy</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">data1d</span><span class="o">.</span><span class="n">dx</span><span class="p">,</span> <span class="mf">0.0</span><span class="p">)</span>
+        <span class="k">if</span> <span class="n">di_exists</span> <span class="o">==</span> <span class="bp">False</span><span class="p">:</span>
+            <span class="n">data1d</span><span class="o">.</span><span class="n">dy</span> <span class="o">=</span> <span class="n">numpy</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">data1d</span><span class="o">.</span><span class="n">dy</span><span class="p">,</span> <span class="mf">0.0</span><span class="p">)</span>
+        <span class="k">return</span> <span class="n">data1d</span>
+
+    <span class="k">def</span> <span class="nf">_restore_original_case</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span>
+                               <span class="n">tagname_original</span><span class="p">,</span>
+                               <span class="n">tagname</span><span class="p">,</span>
+                               <span class="n">save_data1d</span><span class="p">,</span>
+                               <span class="n">data1d</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Save the special case data to the appropriate location and restore</span>
+<span class="sd">        the original Data1D object</span>
+
+<span class="sd">        :param tagname_original: Unmodified tagname for the node</span>
+<span class="sd">        :param tagname: modified tagname for the node</span>
+<span class="sd">        :param save_data1d: The original Data1D object</span>
+<span class="sd">        :param data1d: If a special case was handled, an object of that type</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">if</span> <span class="n">tagname_original</span> <span class="o">==</span> <span class="s">&quot;SASdetector&quot;</span><span class="p">:</span>
+            <span class="n">save_data1d</span><span class="o">.</span><span class="n">detector</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">data1d</span><span class="p">)</span>
+        <span class="k">elif</span> <span class="n">tagname_original</span> <span class="o">==</span> <span class="s">&quot;SAScollimation&quot;</span><span class="p">:</span>
+            <span class="n">save_data1d</span><span class="o">.</span><span class="n">collimation</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">data1d</span><span class="p">)</span>
+        <span class="k">elif</span> <span class="n">tagname</span> <span class="o">==</span> <span class="s">&quot;SAStransmission_spectrum&quot;</span><span class="p">:</span>
+            <span class="n">save_data1d</span><span class="o">.</span><span class="n">trans_spectrum</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">data1d</span><span class="p">)</span>
+        <span class="k">elif</span> <span class="n">tagname_original</span> <span class="o">==</span> <span class="s">&quot;SASprocess&quot;</span><span class="p">:</span>
+            <span class="n">save_data1d</span><span class="o">.</span><span class="n">process</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">data1d</span><span class="p">)</span>
+        <span class="k">elif</span> <span class="n">tagname_original</span> <span class="o">==</span> <span class="s">&quot;aperture&quot;</span><span class="p">:</span>
+            <span class="n">save_data1d</span><span class="o">.</span><span class="n">aperture</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">data1d</span><span class="p">)</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">save_data1d</span> <span class="o">=</span> <span class="n">data1d</span>
+        <span class="k">return</span> <span class="n">save_data1d</span>
+
+    <span class="k">def</span> <span class="nf">_handle_attributes</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">node</span><span class="p">,</span> <span class="n">data1d</span><span class="p">,</span> <span class="n">cs_values</span><span class="p">,</span> <span class="n">tagname</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Process all of the attributes for a node</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">attr</span> <span class="o">=</span> <span class="n">node</span><span class="o">.</span><span class="n">attrib</span>
+        <span class="k">if</span> <span class="n">attr</span> <span class="ow">is</span> <span class="ow">not</span> <span class="bp">None</span><span class="p">:</span>
+            <span class="k">for</span> <span class="n">key</span> <span class="ow">in</span> <span class="n">node</span><span class="o">.</span><span class="n">keys</span><span class="p">():</span>
+                <span class="k">try</span><span class="p">:</span>
+                    <span class="n">node_value</span><span class="p">,</span> <span class="n">unit</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_get_node_value</span><span class="p">(</span><span class="n">node</span><span class="p">,</span> <span class="n">cs_values</span><span class="p">,</span> \
+                                                   <span class="n">data1d</span><span class="p">,</span> <span class="n">tagname</span><span class="p">)</span>
+                    <span class="n">cansas_attrib</span> <span class="o">=</span> \
+                        <span class="n">cs_values</span><span class="o">.</span><span class="n">current_level</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s">&quot;attributes&quot;</span><span class="p">)</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="n">key</span><span class="p">)</span>
+                    <span class="n">attrib_variable</span> <span class="o">=</span> <span class="n">cansas_attrib</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s">&quot;variable&quot;</span><span class="p">)</span>
+                    <span class="k">if</span> <span class="n">key</span> <span class="o">==</span> <span class="s">&#39;unit&#39;</span> <span class="ow">and</span> <span class="n">unit</span> <span class="o">!=</span> <span class="s">&#39;&#39;</span><span class="p">:</span>
+                        <span class="n">attrib_value</span> <span class="o">=</span> <span class="n">unit</span>
+                    <span class="k">else</span><span class="p">:</span>
+                        <span class="n">attrib_value</span> <span class="o">=</span> <span class="n">node</span><span class="o">.</span><span class="n">attrib</span><span class="p">[</span><span class="n">key</span><span class="p">]</span>
+                    <span class="n">store_attr</span> <span class="o">=</span> <span class="n">attrib_variable</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="s">&quot;data1d&quot;</span><span class="p">,</span>
+                                                        <span class="n">attrib_value</span><span class="p">,</span>
+                                                        <span class="n">key</span><span class="p">,</span>
+                                                        <span class="n">node_value</span><span class="p">)</span>
+                    <span class="k">exec</span> <span class="n">store_attr</span>
+                <span class="k">except</span> <span class="ne">AttributeError</span><span class="p">:</span>
+                    <span class="k">pass</span>
+        <span class="k">return</span> <span class="n">data1d</span>
+
+    <span class="k">def</span> <span class="nf">_get_node_value</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">node</span><span class="p">,</span> <span class="n">cs_values</span><span class="p">,</span> <span class="n">data1d</span><span class="p">,</span> <span class="n">tagname</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Get the value of a node and any applicable units</span>
+
+<span class="sd">        :param node: The XML node to get the value of</span>
+<span class="sd">        :param cs_values: A CansasConstants.CurrentLevel object</span>
+<span class="sd">        :param attr: The node attributes</span>
+<span class="sd">        :param dataid: The working object to be modified</span>
+<span class="sd">        :param tagname: The tagname of the node</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="c">#Get the text from the node and convert all whitespace to spaces</span>
+        <span class="n">units</span> <span class="o">=</span> <span class="s">&#39;&#39;</span>
+        <span class="n">node_value</span> <span class="o">=</span> <span class="n">node</span><span class="o">.</span><span class="n">text</span>
+        <span class="k">if</span> <span class="n">node_value</span> <span class="o">==</span> <span class="s">&quot;&quot;</span><span class="p">:</span>
+            <span class="n">node_value</span> <span class="o">=</span> <span class="bp">None</span>
+        <span class="k">if</span> <span class="n">node_value</span> <span class="ow">is</span> <span class="ow">not</span> <span class="bp">None</span><span class="p">:</span>
+            <span class="n">node_value</span> <span class="o">=</span> <span class="s">&#39; &#39;</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">node_value</span><span class="o">.</span><span class="n">split</span><span class="p">())</span>
+
+        <span class="c"># If the value is a float, compile with units.</span>
+        <span class="k">if</span> <span class="n">cs_values</span><span class="o">.</span><span class="n">ns_datatype</span> <span class="o">==</span> <span class="s">&quot;float&quot;</span><span class="p">:</span>
+            <span class="c"># If an empty value is given, set as zero.</span>
+            <span class="k">if</span> <span class="n">node_value</span> <span class="ow">is</span> <span class="bp">None</span> <span class="ow">or</span> <span class="n">node_value</span><span class="o">.</span><span class="n">isspace</span><span class="p">()</span> \
+                                    <span class="ow">or</span> <span class="n">node_value</span><span class="o">.</span><span class="n">lower</span><span class="p">()</span> <span class="o">==</span> <span class="s">&quot;nan&quot;</span><span class="p">:</span>
+                <span class="n">node_value</span> <span class="o">=</span> <span class="s">&quot;0.0&quot;</span>
+            <span class="c">#Convert the value to the base units</span>
+            <span class="n">node_value</span><span class="p">,</span> <span class="n">units</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_unit_conversion</span><span class="p">(</span><span class="n">node</span><span class="p">,</span> \
+                        <span class="n">cs_values</span><span class="o">.</span><span class="n">current_level</span><span class="p">,</span> <span class="n">data1d</span><span class="p">,</span> <span class="n">tagname</span><span class="p">,</span> <span class="n">node_value</span><span class="p">)</span>
+
+        <span class="c"># If the value is a timestamp, convert to a datetime object</span>
+        <span class="k">elif</span> <span class="n">cs_values</span><span class="o">.</span><span class="n">ns_datatype</span> <span class="o">==</span> <span class="s">&quot;timestamp&quot;</span><span class="p">:</span>
+            <span class="k">if</span> <span class="n">node_value</span> <span class="ow">is</span> <span class="bp">None</span> <span class="ow">or</span> <span class="n">node_value</span><span class="o">.</span><span class="n">isspace</span><span class="p">():</span>
+                <span class="k">pass</span>
+            <span class="k">else</span><span class="p">:</span>
+                <span class="k">try</span><span class="p">:</span>
+                    <span class="n">node_value</span> <span class="o">=</span> \
+                        <span class="n">datetime</span><span class="o">.</span><span class="n">datetime</span><span class="o">.</span><span class="n">fromtimestamp</span><span class="p">(</span><span class="n">node_value</span><span class="p">)</span>
+                <span class="k">except</span> <span class="ne">ValueError</span><span class="p">:</span>
+                    <span class="n">node_value</span> <span class="o">=</span> <span class="bp">None</span>
+        <span class="k">return</span> <span class="n">node_value</span><span class="p">,</span> <span class="n">units</span>
+
+    <span class="k">def</span> <span class="nf">_parse_entry</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">dom</span><span class="p">,</span> <span class="n">names</span><span class="o">=</span><span class="bp">None</span><span class="p">,</span> <span class="n">data1d</span><span class="o">=</span><span class="bp">None</span><span class="p">,</span> <span class="n">extras</span><span class="o">=</span><span class="bp">None</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Parse a SASEntry - new recursive method for parsing the dom of</span>
+<span class="sd">            the CanSAS data format. This will allow multiple data files</span>
+<span class="sd">            and extra nodes to be read in simultaneously.</span>
+
+<span class="sd">        :param dom: dom object with a namespace base of names</span>
+<span class="sd">        :param names: A list of element names that lead up to the dom object</span>
+<span class="sd">        :param data1d: The data1d object that will be modified</span>
+<span class="sd">        :param extras: Any values that should go into meta_data when data1d</span>
+<span class="sd">            is not a Data1D object</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+
+        <span class="k">if</span> <span class="n">extras</span> <span class="ow">is</span> <span class="bp">None</span><span class="p">:</span>
+            <span class="n">extras</span> <span class="o">=</span> <span class="p">[]</span>
+        <span class="k">if</span> <span class="n">names</span> <span class="ow">is</span> <span class="bp">None</span> <span class="ow">or</span> <span class="n">names</span> <span class="o">==</span> <span class="p">[]:</span>
+            <span class="n">names</span> <span class="o">=</span> <span class="p">[</span><span class="s">&quot;SASentry&quot;</span><span class="p">]</span>
+
+        <span class="n">data1d</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_check_for_empty_data</span><span class="p">(</span><span class="n">data1d</span><span class="p">)</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">base_ns</span> <span class="o">=</span> <span class="s">&quot;{0}{1}{2}&quot;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="s">&quot;{&quot;</span><span class="p">,</span> \
+                            <span class="n">CANSAS_NS</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">cansas_version</span><span class="p">)</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s">&quot;ns&quot;</span><span class="p">),</span> <span class="s">&quot;}&quot;</span><span class="p">)</span>
+        <span class="n">tagname</span> <span class="o">=</span> <span class="s">&#39;&#39;</span>
+        <span class="n">tagname_original</span> <span class="o">=</span> <span class="s">&#39;&#39;</span>
+
+        <span class="c"># Go through each child in the parent element</span>
+        <span class="k">for</span> <span class="n">node</span> <span class="ow">in</span> <span class="n">dom</span><span class="p">:</span>
+            <span class="k">try</span><span class="p">:</span>
+                <span class="c"># Get the element name and set the current names level</span>
+                <span class="n">tagname</span> <span class="o">=</span> <span class="n">node</span><span class="o">.</span><span class="n">tag</span><span class="o">.</span><span class="n">replace</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">base_ns</span><span class="p">,</span> <span class="s">&quot;&quot;</span><span class="p">)</span>
+                <span class="n">tagname_original</span> <span class="o">=</span> <span class="n">tagname</span>
+                <span class="k">if</span> <span class="n">tagname</span> <span class="o">==</span> <span class="s">&quot;fitting_plug_in&quot;</span> <span class="ow">or</span> <span class="n">tagname</span> <span class="o">==</span> <span class="s">&quot;pr_inversion&quot;</span> <span class="ow">or</span>\
+                    <span class="n">tagname</span> <span class="o">==</span> <span class="s">&quot;invariant&quot;</span><span class="p">:</span>
+                    <span class="k">continue</span>
+                <span class="n">names</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">tagname</span><span class="p">)</span>
+                <span class="n">children</span> <span class="o">=</span> <span class="n">node</span><span class="o">.</span><span class="n">getchildren</span><span class="p">()</span>
+                <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">children</span><span class="p">)</span> <span class="o">==</span> <span class="mi">0</span><span class="p">:</span>
+                    <span class="n">children</span> <span class="o">=</span> <span class="bp">None</span>
+                <span class="n">save_data1d</span> <span class="o">=</span> <span class="n">data1d</span>
+
+                <span class="c"># Look for special cases</span>
+                <span class="n">data1d</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_handle_special_cases</span><span class="p">(</span><span class="n">tagname</span><span class="p">,</span> <span class="n">data1d</span><span class="p">,</span> <span class="n">children</span><span class="p">)</span>
+
+                <span class="c"># Get where to store content</span>
+                <span class="n">cs_values</span> <span class="o">=</span> <span class="n">CONSTANTS</span><span class="o">.</span><span class="n">iterate_namespace</span><span class="p">(</span><span class="n">names</span><span class="p">)</span>
+                <span class="c"># If the element is a child element, recurse</span>
+                <span class="k">if</span> <span class="n">children</span> <span class="ow">is</span> <span class="ow">not</span> <span class="bp">None</span><span class="p">:</span>
+                    <span class="c"># Returned value is new Data1D object with all previous and</span>
+                    <span class="c"># new values in it.</span>
+                    <span class="n">data1d</span><span class="p">,</span> <span class="n">extras</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_parse_entry</span><span class="p">(</span><span class="n">node</span><span class="p">,</span>
+                                                       <span class="n">names</span><span class="p">,</span> <span class="n">data1d</span><span class="p">,</span> <span class="n">extras</span><span class="p">)</span>
+
+                <span class="c">#Get the information from the node</span>
+                <span class="n">node_value</span><span class="p">,</span> <span class="n">_</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_get_node_value</span><span class="p">(</span><span class="n">node</span><span class="p">,</span> <span class="n">cs_values</span><span class="p">,</span> \
+                                                            <span class="n">data1d</span><span class="p">,</span> <span class="n">tagname</span><span class="p">)</span>
+
+                <span class="c"># If appending to a dictionary (meta_data | run_name)</span>
+                <span class="c"># make sure the key is unique</span>
+                <span class="k">if</span> <span class="n">cs_values</span><span class="o">.</span><span class="n">ns_variable</span> <span class="o">==</span> <span class="s">&quot;{0}.meta_data[</span><span class="se">\&quot;</span><span class="s">{2}</span><span class="se">\&quot;</span><span class="s">] = </span><span class="se">\&quot;</span><span class="s">{1}</span><span class="se">\&quot;</span><span class="s">&quot;</span><span class="p">:</span>
+                    <span class="c"># If we are within a Process, Detector, Collimation or</span>
+                    <span class="c"># Aperture instance, pull out old data1d</span>
+                    <span class="n">tagname</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_create_unique_key</span><span class="p">(</span><span class="n">data1d</span><span class="o">.</span><span class="n">meta_data</span><span class="p">,</span> \
+                                                      <span class="n">tagname</span><span class="p">,</span> <span class="mi">0</span><span class="p">)</span>
+                    <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">data1d</span><span class="p">,</span> <span class="n">Data1D</span><span class="p">)</span> <span class="o">==</span> <span class="bp">False</span><span class="p">:</span>
+                        <span class="n">store_me</span> <span class="o">=</span> <span class="n">cs_values</span><span class="o">.</span><span class="n">ns_variable</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="s">&quot;data1d&quot;</span><span class="p">,</span> \
+                                                            <span class="n">node_value</span><span class="p">,</span> <span class="n">tagname</span><span class="p">)</span>
+                        <span class="n">extras</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">store_me</span><span class="p">)</span>
+                        <span class="n">cs_values</span><span class="o">.</span><span class="n">ns_variable</span> <span class="o">=</span> <span class="bp">None</span>
+                <span class="k">if</span> <span class="n">cs_values</span><span class="o">.</span><span class="n">ns_variable</span> <span class="o">==</span> <span class="s">&quot;{0}.run_name[</span><span class="se">\&quot;</span><span class="s">{2}</span><span class="se">\&quot;</span><span class="s">] = </span><span class="se">\&quot;</span><span class="s">{1}</span><span class="se">\&quot;</span><span class="s">&quot;</span><span class="p">:</span>
+                    <span class="n">tagname</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_create_unique_key</span><span class="p">(</span><span class="n">data1d</span><span class="o">.</span><span class="n">run_name</span><span class="p">,</span> \
+                                                      <span class="n">tagname</span><span class="p">,</span> <span class="mi">0</span><span class="p">)</span>
+
+                <span class="c"># Check for Data1D object and any extra commands to save</span>
+                <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">data1d</span><span class="p">,</span> <span class="n">Data1D</span><span class="p">):</span>
+                    <span class="k">for</span> <span class="n">item</span> <span class="ow">in</span> <span class="n">extras</span><span class="p">:</span>
+                        <span class="k">exec</span> <span class="n">item</span>
+                <span class="c"># Don&#39;t bother saving empty information unless it is a float</span>
+                <span class="k">if</span> <span class="n">cs_values</span><span class="o">.</span><span class="n">ns_variable</span> <span class="ow">is</span> <span class="ow">not</span> <span class="bp">None</span> <span class="ow">and</span> \
+                            <span class="n">node_value</span> <span class="ow">is</span> <span class="ow">not</span> <span class="bp">None</span> <span class="ow">and</span> \
+                            <span class="n">node_value</span><span class="o">.</span><span class="n">isspace</span><span class="p">()</span> <span class="o">==</span> <span class="bp">False</span><span class="p">:</span>
+                    <span class="c"># Format a string and then execute it.</span>
+                    <span class="n">store_me</span> <span class="o">=</span> <span class="n">cs_values</span><span class="o">.</span><span class="n">ns_variable</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="s">&quot;data1d&quot;</span><span class="p">,</span> \
+                                                            <span class="n">node_value</span><span class="p">,</span> <span class="n">tagname</span><span class="p">)</span>
+                    <span class="k">exec</span> <span class="n">store_me</span>
+                <span class="c"># Get attributes and process them</span>
+                <span class="n">data1d</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_handle_attributes</span><span class="p">(</span><span class="n">node</span><span class="p">,</span> <span class="n">data1d</span><span class="p">,</span> <span class="n">cs_values</span><span class="p">,</span> \
+                                                 <span class="n">tagname</span><span class="p">)</span>
+
+            <span class="k">except</span> <span class="ne">TypeError</span><span class="p">:</span>
+                <span class="k">pass</span>
+            <span class="k">except</span> <span class="ne">Exception</span> <span class="k">as</span> <span class="n">excep</span><span class="p">:</span>
+                <span class="n">exc_type</span><span class="p">,</span> <span class="n">exc_obj</span><span class="p">,</span> <span class="n">exc_tb</span> <span class="o">=</span> <span class="n">sys</span><span class="o">.</span><span class="n">exc_info</span><span class="p">()</span>
+                <span class="n">fname</span> <span class="o">=</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">split</span><span class="p">(</span><span class="n">exc_tb</span><span class="o">.</span><span class="n">tb_frame</span><span class="o">.</span><span class="n">f_code</span><span class="o">.</span><span class="n">co_filename</span><span class="p">)[</span><span class="mi">1</span><span class="p">]</span>
+                <span class="k">print</span><span class="p">(</span><span class="n">excep</span><span class="p">,</span> <span class="n">exc_type</span><span class="p">,</span> <span class="n">fname</span><span class="p">,</span> <span class="n">exc_tb</span><span class="o">.</span><span class="n">tb_lineno</span><span class="p">,</span> \
+                      <span class="n">tagname</span><span class="p">,</span> <span class="n">exc_obj</span><span class="p">)</span>
+            <span class="k">finally</span><span class="p">:</span>
+                <span class="c"># Save special cases in original data1d object</span>
+                <span class="c"># then restore the data1d</span>
+                <span class="n">save_data1d</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_restore_original_case</span><span class="p">(</span><span class="n">tagname_original</span><span class="p">,</span> \
+                                                <span class="n">tagname</span><span class="p">,</span> <span class="n">save_data1d</span><span class="p">,</span> <span class="n">data1d</span><span class="p">)</span>
+                <span class="k">if</span> <span class="n">tagname_original</span> <span class="o">==</span> <span class="s">&quot;fitting_plug_in&quot;</span> <span class="ow">or</span> \
+                    <span class="n">tagname_original</span> <span class="o">==</span> <span class="s">&quot;invariant&quot;</span> <span class="ow">or</span> \
+                    <span class="n">tagname_original</span> <span class="o">==</span> <span class="s">&quot;pr_inversion&quot;</span><span class="p">:</span>
+                    <span class="k">pass</span>
+                <span class="k">else</span><span class="p">:</span>
+                    <span class="n">data1d</span> <span class="o">=</span> <span class="n">save_data1d</span>
+                    <span class="c"># Remove tagname from names to restore original base</span>
+                    <span class="n">names</span><span class="o">.</span><span class="n">remove</span><span class="p">(</span><span class="n">tagname_original</span><span class="p">)</span>
+        <span class="k">return</span> <span class="n">data1d</span><span class="p">,</span> <span class="n">extras</span>
+
+    <span class="k">def</span> <span class="nf">_get_pi_string</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Creates the processing instructions header for writing to file</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">pis</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">return_processing_instructions</span><span class="p">()</span>
+        <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">pis</span><span class="p">)</span> <span class="o">&gt;</span> <span class="mi">0</span><span class="p">:</span>
+            <span class="n">pi_tree</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">create_tree</span><span class="p">(</span><span class="n">pis</span><span class="p">[</span><span class="mi">0</span><span class="p">])</span>
+            <span class="n">i</span> <span class="o">=</span> <span class="mi">1</span>
+            <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="mi">1</span><span class="p">,</span> <span class="nb">len</span><span class="p">(</span><span class="n">pis</span><span class="p">)</span> <span class="o">-</span> <span class="mi">1</span><span class="p">):</span>
+                <span class="n">pi_tree</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">pis</span><span class="p">[</span><span class="n">i</span><span class="p">],</span> <span class="n">pi_tree</span><span class="p">)</span>
+            <span class="n">pi_string</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">to_string</span><span class="p">(</span><span class="n">pi_tree</span><span class="p">)</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">pi_string</span> <span class="o">=</span> <span class="s">&quot;&quot;</span>
+        <span class="k">return</span> <span class="n">pi_string</span>
+
+    <span class="k">def</span> <span class="nf">_create_main_node</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Creates the primary xml header used when writing to file</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">xsi</span> <span class="o">=</span> <span class="s">&quot;http://www.w3.org/2001/XMLSchema-instance&quot;</span>
+        <span class="n">version</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">cansas_version</span>
+        <span class="n">n_s</span> <span class="o">=</span> <span class="n">CANSAS_NS</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="n">version</span><span class="p">)</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s">&quot;ns&quot;</span><span class="p">)</span>
+        <span class="k">if</span> <span class="n">version</span> <span class="o">==</span> <span class="s">&quot;1.1&quot;</span><span class="p">:</span>
+            <span class="n">url</span> <span class="o">=</span> <span class="s">&quot;http://www.cansas.org/formats/1.1/&quot;</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">url</span> <span class="o">=</span> <span class="s">&quot;http://svn.smallangles.net/svn/canSAS/1dwg/trunk/&quot;</span>
+        <span class="n">schema_location</span> <span class="o">=</span> <span class="s">&quot;{0} {1}cansas1d.xsd&quot;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">n_s</span><span class="p">,</span> <span class="n">url</span><span class="p">)</span>
+        <span class="n">attrib</span> <span class="o">=</span> <span class="p">{</span><span class="s">&quot;{&quot;</span> <span class="o">+</span> <span class="n">xsi</span> <span class="o">+</span> <span class="s">&quot;}schemaLocation&quot;</span> <span class="p">:</span> <span class="n">schema_location</span><span class="p">,</span>
+                  <span class="s">&quot;version&quot;</span> <span class="p">:</span> <span class="n">version</span><span class="p">}</span>
+        <span class="n">nsmap</span> <span class="o">=</span> <span class="p">{</span><span class="s">&#39;xsi&#39;</span> <span class="p">:</span> <span class="n">xsi</span><span class="p">,</span> <span class="bp">None</span><span class="p">:</span> <span class="n">n_s</span><span class="p">}</span>
+
+        <span class="n">main_node</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">create_element</span><span class="p">(</span><span class="s">&quot;{&quot;</span> <span class="o">+</span> <span class="n">n_s</span> <span class="o">+</span> <span class="s">&quot;}SASroot&quot;</span><span class="p">,</span>
+                                        <span class="n">attrib</span><span class="o">=</span><span class="n">attrib</span><span class="p">,</span> <span class="n">nsmap</span><span class="o">=</span><span class="n">nsmap</span><span class="p">)</span>
+        <span class="k">return</span> <span class="n">main_node</span>
+
+    <span class="k">def</span> <span class="nf">_write_run_names</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">datainfo</span><span class="p">,</span> <span class="n">entry_node</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Writes the run names to the XML file</span>
+
+<span class="sd">        :param datainfo: The Data1D object the information is coming from</span>
+<span class="sd">        :param entry_node: lxml node ElementTree object to be appended to</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">if</span> <span class="n">datainfo</span><span class="o">.</span><span class="n">run</span> <span class="o">==</span> <span class="bp">None</span> <span class="ow">or</span> <span class="n">datainfo</span><span class="o">.</span><span class="n">run</span> <span class="o">==</span> <span class="p">[]:</span>
+            <span class="n">datainfo</span><span class="o">.</span><span class="n">run</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">RUN_NAME_DEFAULT</span><span class="p">)</span>
+            <span class="n">datainfo</span><span class="o">.</span><span class="n">run_name</span><span class="p">[</span><span class="n">RUN_NAME_DEFAULT</span><span class="p">]</span> <span class="o">=</span> <span class="n">RUN_NAME_DEFAULT</span>
+        <span class="k">for</span> <span class="n">item</span> <span class="ow">in</span> <span class="n">datainfo</span><span class="o">.</span><span class="n">run</span><span class="p">:</span>
+            <span class="n">runname</span> <span class="o">=</span> <span class="p">{}</span>
+            <span class="k">if</span> <span class="n">item</span> <span class="ow">in</span> <span class="n">datainfo</span><span class="o">.</span><span class="n">run_name</span> <span class="ow">and</span> \
+            <span class="nb">len</span><span class="p">(</span><span class="nb">str</span><span class="p">(</span><span class="n">datainfo</span><span class="o">.</span><span class="n">run_name</span><span class="p">[</span><span class="n">item</span><span class="p">]))</span> <span class="o">&gt;</span> <span class="mi">1</span><span class="p">:</span>
+                <span class="n">runname</span> <span class="o">=</span> <span class="p">{</span><span class="s">&#39;name&#39;</span><span class="p">:</span> <span class="n">datainfo</span><span class="o">.</span><span class="n">run_name</span><span class="p">[</span><span class="n">item</span><span class="p">]}</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">write_node</span><span class="p">(</span><span class="n">entry_node</span><span class="p">,</span> <span class="s">&quot;Run&quot;</span><span class="p">,</span> <span class="n">item</span><span class="p">,</span> <span class="n">runname</span><span class="p">)</span>
+
+    <span class="k">def</span> <span class="nf">_write_data</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">datainfo</span><span class="p">,</span> <span class="n">entry_node</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Writes the I and Q data to the XML file</span>
+
+<span class="sd">        :param datainfo: The Data1D object the information is coming from</span>
+<span class="sd">        :param entry_node: lxml node ElementTree object to be appended to</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">node</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">create_element</span><span class="p">(</span><span class="s">&quot;SASdata&quot;</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">node</span><span class="p">,</span> <span class="n">entry_node</span><span class="p">)</span>
+
+        <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">datainfo</span><span class="o">.</span><span class="n">x</span><span class="p">)):</span>
+            <span class="n">point</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">create_element</span><span class="p">(</span><span class="s">&quot;Idata&quot;</span><span class="p">)</span>
+            <span class="n">node</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">point</span><span class="p">)</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">write_node</span><span class="p">(</span><span class="n">point</span><span class="p">,</span> <span class="s">&quot;Q&quot;</span><span class="p">,</span> <span class="n">datainfo</span><span class="o">.</span><span class="n">x</span><span class="p">[</span><span class="n">i</span><span class="p">],</span>
+                            <span class="p">{</span><span class="s">&#39;unit&#39;</span><span class="p">:</span> <span class="n">datainfo</span><span class="o">.</span><span class="n">x_unit</span><span class="p">})</span>
+            <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">datainfo</span><span class="o">.</span><span class="n">y</span><span class="p">)</span> <span class="o">&gt;=</span> <span class="n">i</span><span class="p">:</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">write_node</span><span class="p">(</span><span class="n">point</span><span class="p">,</span> <span class="s">&quot;I&quot;</span><span class="p">,</span> <span class="n">datainfo</span><span class="o">.</span><span class="n">y</span><span class="p">[</span><span class="n">i</span><span class="p">],</span>
+                                <span class="p">{</span><span class="s">&#39;unit&#39;</span><span class="p">:</span> <span class="n">datainfo</span><span class="o">.</span><span class="n">y_unit</span><span class="p">})</span>
+            <span class="k">if</span> <span class="n">datainfo</span><span class="o">.</span><span class="n">dy</span> <span class="o">!=</span> <span class="bp">None</span> <span class="ow">and</span> <span class="nb">len</span><span class="p">(</span><span class="n">datainfo</span><span class="o">.</span><span class="n">dy</span><span class="p">)</span> <span class="o">&gt;</span> <span class="n">i</span><span class="p">:</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">write_node</span><span class="p">(</span><span class="n">point</span><span class="p">,</span> <span class="s">&quot;Idev&quot;</span><span class="p">,</span> <span class="n">datainfo</span><span class="o">.</span><span class="n">dy</span><span class="p">[</span><span class="n">i</span><span class="p">],</span>
+                                <span class="p">{</span><span class="s">&#39;unit&#39;</span><span class="p">:</span> <span class="n">datainfo</span><span class="o">.</span><span class="n">y_unit</span><span class="p">})</span>
+            <span class="k">if</span> <span class="n">datainfo</span><span class="o">.</span><span class="n">dx</span> <span class="o">!=</span> <span class="bp">None</span> <span class="ow">and</span> <span class="nb">len</span><span class="p">(</span><span class="n">datainfo</span><span class="o">.</span><span class="n">dx</span><span class="p">)</span> <span class="o">&gt;</span> <span class="n">i</span><span class="p">:</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">write_node</span><span class="p">(</span><span class="n">point</span><span class="p">,</span> <span class="s">&quot;Qdev&quot;</span><span class="p">,</span> <span class="n">datainfo</span><span class="o">.</span><span class="n">dx</span><span class="p">[</span><span class="n">i</span><span class="p">],</span>
+                                <span class="p">{</span><span class="s">&#39;unit&#39;</span><span class="p">:</span> <span class="n">datainfo</span><span class="o">.</span><span class="n">x_unit</span><span class="p">})</span>
+            <span class="k">if</span> <span class="n">datainfo</span><span class="o">.</span><span class="n">dxw</span> <span class="o">!=</span> <span class="bp">None</span> <span class="ow">and</span> <span class="nb">len</span><span class="p">(</span><span class="n">datainfo</span><span class="o">.</span><span class="n">dxw</span><span class="p">)</span> <span class="o">&gt;</span> <span class="n">i</span><span class="p">:</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">write_node</span><span class="p">(</span><span class="n">point</span><span class="p">,</span> <span class="s">&quot;dQw&quot;</span><span class="p">,</span> <span class="n">datainfo</span><span class="o">.</span><span class="n">dxw</span><span class="p">[</span><span class="n">i</span><span class="p">],</span>
+                                <span class="p">{</span><span class="s">&#39;unit&#39;</span><span class="p">:</span> <span class="n">datainfo</span><span class="o">.</span><span class="n">x_unit</span><span class="p">})</span>
+            <span class="k">if</span> <span class="n">datainfo</span><span class="o">.</span><span class="n">dxl</span> <span class="o">!=</span> <span class="bp">None</span> <span class="ow">and</span> <span class="nb">len</span><span class="p">(</span><span class="n">datainfo</span><span class="o">.</span><span class="n">dxl</span><span class="p">)</span> <span class="o">&gt;</span> <span class="n">i</span><span class="p">:</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">write_node</span><span class="p">(</span><span class="n">point</span><span class="p">,</span> <span class="s">&quot;dQl&quot;</span><span class="p">,</span> <span class="n">datainfo</span><span class="o">.</span><span class="n">dxl</span><span class="p">[</span><span class="n">i</span><span class="p">],</span>
+                                <span class="p">{</span><span class="s">&#39;unit&#39;</span><span class="p">:</span> <span class="n">datainfo</span><span class="o">.</span><span class="n">x_unit</span><span class="p">})</span>
+
+    <span class="k">def</span> <span class="nf">_write_trans_spectrum</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">datainfo</span><span class="p">,</span> <span class="n">entry_node</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Writes the transmission spectrum data to the XML file</span>
+
+<span class="sd">        :param datainfo: The Data1D object the information is coming from</span>
+<span class="sd">        :param entry_node: lxml node ElementTree object to be appended to</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">datainfo</span><span class="o">.</span><span class="n">trans_spectrum</span><span class="p">)):</span>
+            <span class="n">spectrum</span> <span class="o">=</span> <span class="n">datainfo</span><span class="o">.</span><span class="n">trans_spectrum</span><span class="p">[</span><span class="n">i</span><span class="p">]</span>
+            <span class="n">node</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">create_element</span><span class="p">(</span><span class="s">&quot;SAStransmission_spectrum&quot;</span><span class="p">,</span>
+                                       <span class="p">{</span><span class="s">&quot;name&quot;</span> <span class="p">:</span> <span class="n">spectrum</span><span class="o">.</span><span class="n">name</span><span class="p">})</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">node</span><span class="p">,</span> <span class="n">entry_node</span><span class="p">)</span>
+            <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">spectrum</span><span class="o">.</span><span class="n">timestamp</span><span class="p">,</span> <span class="n">datetime</span><span class="o">.</span><span class="n">datetime</span><span class="p">):</span>
+                <span class="n">node</span><span class="o">.</span><span class="n">setAttribute</span><span class="p">(</span><span class="s">&quot;timestamp&quot;</span><span class="p">,</span> <span class="n">spectrum</span><span class="o">.</span><span class="n">timestamp</span><span class="p">)</span>
+            <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">spectrum</span><span class="o">.</span><span class="n">wavelength</span><span class="p">)):</span>
+                <span class="n">point</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">create_element</span><span class="p">(</span><span class="s">&quot;Tdata&quot;</span><span class="p">)</span>
+                <span class="n">node</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">point</span><span class="p">)</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">write_node</span><span class="p">(</span><span class="n">point</span><span class="p">,</span> <span class="s">&quot;Lambda&quot;</span><span class="p">,</span> <span class="n">spectrum</span><span class="o">.</span><span class="n">wavelength</span><span class="p">[</span><span class="n">i</span><span class="p">],</span>
+                                <span class="p">{</span><span class="s">&#39;unit&#39;</span><span class="p">:</span> <span class="n">spectrum</span><span class="o">.</span><span class="n">wavelength_unit</span><span class="p">})</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">write_node</span><span class="p">(</span><span class="n">point</span><span class="p">,</span> <span class="s">&quot;T&quot;</span><span class="p">,</span> <span class="n">spectrum</span><span class="o">.</span><span class="n">transmission</span><span class="p">[</span><span class="n">i</span><span class="p">],</span>
+                                <span class="p">{</span><span class="s">&#39;unit&#39;</span><span class="p">:</span> <span class="n">spectrum</span><span class="o">.</span><span class="n">transmission_unit</span><span class="p">})</span>
+                <span class="k">if</span> <span class="n">spectrum</span><span class="o">.</span><span class="n">transmission_deviation</span> <span class="o">!=</span> <span class="bp">None</span> \
+                <span class="ow">and</span> <span class="nb">len</span><span class="p">(</span><span class="n">spectrum</span><span class="o">.</span><span class="n">transmission_deviation</span><span class="p">)</span> <span class="o">&gt;=</span> <span class="n">i</span><span class="p">:</span>
+                    <span class="bp">self</span><span class="o">.</span><span class="n">write_node</span><span class="p">(</span><span class="n">point</span><span class="p">,</span> <span class="s">&quot;Tdev&quot;</span><span class="p">,</span>
+                                    <span class="n">spectrum</span><span class="o">.</span><span class="n">transmission_deviation</span><span class="p">[</span><span class="n">i</span><span class="p">],</span>
+                                    <span class="p">{</span><span class="s">&#39;unit&#39;</span><span class="p">:</span>
+                                     <span class="n">spectrum</span><span class="o">.</span><span class="n">transmission_deviation_unit</span><span class="p">})</span>
+
+    <span class="k">def</span> <span class="nf">_write_sample_info</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">datainfo</span><span class="p">,</span> <span class="n">entry_node</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Writes the sample information to the XML file</span>
+
+<span class="sd">        :param datainfo: The Data1D object the information is coming from</span>
+<span class="sd">        :param entry_node: lxml node ElementTree object to be appended to</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">sample</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">create_element</span><span class="p">(</span><span class="s">&quot;SASsample&quot;</span><span class="p">)</span>
+        <span class="k">if</span> <span class="n">datainfo</span><span class="o">.</span><span class="n">sample</span><span class="o">.</span><span class="n">name</span> <span class="ow">is</span> <span class="ow">not</span> <span class="bp">None</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">write_attribute</span><span class="p">(</span><span class="n">sample</span><span class="p">,</span> <span class="s">&quot;name&quot;</span><span class="p">,</span>
+                                 <span class="nb">str</span><span class="p">(</span><span class="n">datainfo</span><span class="o">.</span><span class="n">sample</span><span class="o">.</span><span class="n">name</span><span class="p">))</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">sample</span><span class="p">,</span> <span class="n">entry_node</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">write_node</span><span class="p">(</span><span class="n">sample</span><span class="p">,</span> <span class="s">&quot;ID&quot;</span><span class="p">,</span> <span class="nb">str</span><span class="p">(</span><span class="n">datainfo</span><span class="o">.</span><span class="n">sample</span><span class="o">.</span><span class="n">ID</span><span class="p">))</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">write_node</span><span class="p">(</span><span class="n">sample</span><span class="p">,</span> <span class="s">&quot;thickness&quot;</span><span class="p">,</span> <span class="n">datainfo</span><span class="o">.</span><span class="n">sample</span><span class="o">.</span><span class="n">thickness</span><span class="p">,</span>
+                        <span class="p">{</span><span class="s">&quot;unit&quot;</span><span class="p">:</span> <span class="n">datainfo</span><span class="o">.</span><span class="n">sample</span><span class="o">.</span><span class="n">thickness_unit</span><span class="p">})</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">write_node</span><span class="p">(</span><span class="n">sample</span><span class="p">,</span> <span class="s">&quot;transmission&quot;</span><span class="p">,</span> <span class="n">datainfo</span><span class="o">.</span><span class="n">sample</span><span class="o">.</span><span class="n">transmission</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">write_node</span><span class="p">(</span><span class="n">sample</span><span class="p">,</span> <span class="s">&quot;temperature&quot;</span><span class="p">,</span> <span class="n">datainfo</span><span class="o">.</span><span class="n">sample</span><span class="o">.</span><span class="n">temperature</span><span class="p">,</span>
+                        <span class="p">{</span><span class="s">&quot;unit&quot;</span><span class="p">:</span> <span class="n">datainfo</span><span class="o">.</span><span class="n">sample</span><span class="o">.</span><span class="n">temperature_unit</span><span class="p">})</span>
+
+        <span class="n">pos</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">create_element</span><span class="p">(</span><span class="s">&quot;position&quot;</span><span class="p">)</span>
+        <span class="n">written</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">write_node</span><span class="p">(</span><span class="n">pos</span><span class="p">,</span>
+                                  <span class="s">&quot;x&quot;</span><span class="p">,</span>
+                                  <span class="n">datainfo</span><span class="o">.</span><span class="n">sample</span><span class="o">.</span><span class="n">position</span><span class="o">.</span><span class="n">x</span><span class="p">,</span>
+                                  <span class="p">{</span><span class="s">&quot;unit&quot;</span><span class="p">:</span> <span class="n">datainfo</span><span class="o">.</span><span class="n">sample</span><span class="o">.</span><span class="n">position_unit</span><span class="p">})</span>
+        <span class="n">written</span> <span class="o">=</span> <span class="n">written</span> <span class="o">|</span> <span class="bp">self</span><span class="o">.</span><span class="n">write_node</span><span class="p">(</span> \
+            <span class="n">pos</span><span class="p">,</span> <span class="s">&quot;y&quot;</span><span class="p">,</span> <span class="n">datainfo</span><span class="o">.</span><span class="n">sample</span><span class="o">.</span><span class="n">position</span><span class="o">.</span><span class="n">y</span><span class="p">,</span>
+            <span class="p">{</span><span class="s">&quot;unit&quot;</span><span class="p">:</span> <span class="n">datainfo</span><span class="o">.</span><span class="n">sample</span><span class="o">.</span><span class="n">position_unit</span><span class="p">})</span>
+        <span class="n">written</span> <span class="o">=</span> <span class="n">written</span> <span class="o">|</span> <span class="bp">self</span><span class="o">.</span><span class="n">write_node</span><span class="p">(</span> \
+            <span class="n">pos</span><span class="p">,</span> <span class="s">&quot;z&quot;</span><span class="p">,</span> <span class="n">datainfo</span><span class="o">.</span><span class="n">sample</span><span class="o">.</span><span class="n">position</span><span class="o">.</span><span class="n">z</span><span class="p">,</span>
+            <span class="p">{</span><span class="s">&quot;unit&quot;</span><span class="p">:</span> <span class="n">datainfo</span><span class="o">.</span><span class="n">sample</span><span class="o">.</span><span class="n">position_unit</span><span class="p">})</span>
+        <span class="k">if</span> <span class="n">written</span> <span class="o">==</span> <span class="bp">True</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">pos</span><span class="p">,</span> <span class="n">sample</span><span class="p">)</span>
+
+        <span class="n">ori</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">create_element</span><span class="p">(</span><span class="s">&quot;orientation&quot;</span><span class="p">)</span>
+        <span class="n">written</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">write_node</span><span class="p">(</span><span class="n">ori</span><span class="p">,</span> <span class="s">&quot;roll&quot;</span><span class="p">,</span>
+                                  <span class="n">datainfo</span><span class="o">.</span><span class="n">sample</span><span class="o">.</span><span class="n">orientation</span><span class="o">.</span><span class="n">x</span><span class="p">,</span>
+                                  <span class="p">{</span><span class="s">&quot;unit&quot;</span><span class="p">:</span> <span class="n">datainfo</span><span class="o">.</span><span class="n">sample</span><span class="o">.</span><span class="n">orientation_unit</span><span class="p">})</span>
+        <span class="n">written</span> <span class="o">=</span> <span class="n">written</span> <span class="o">|</span> <span class="bp">self</span><span class="o">.</span><span class="n">write_node</span><span class="p">(</span> \
+            <span class="n">ori</span><span class="p">,</span> <span class="s">&quot;pitch&quot;</span><span class="p">,</span> <span class="n">datainfo</span><span class="o">.</span><span class="n">sample</span><span class="o">.</span><span class="n">orientation</span><span class="o">.</span><span class="n">y</span><span class="p">,</span>
+            <span class="p">{</span><span class="s">&quot;unit&quot;</span><span class="p">:</span> <span class="n">datainfo</span><span class="o">.</span><span class="n">sample</span><span class="o">.</span><span class="n">orientation_unit</span><span class="p">})</span>
+        <span class="n">written</span> <span class="o">=</span> <span class="n">written</span> <span class="o">|</span> <span class="bp">self</span><span class="o">.</span><span class="n">write_node</span><span class="p">(</span> \
+            <span class="n">ori</span><span class="p">,</span> <span class="s">&quot;yaw&quot;</span><span class="p">,</span> <span class="n">datainfo</span><span class="o">.</span><span class="n">sample</span><span class="o">.</span><span class="n">orientation</span><span class="o">.</span><span class="n">z</span><span class="p">,</span>
+            <span class="p">{</span><span class="s">&quot;unit&quot;</span><span class="p">:</span> <span class="n">datainfo</span><span class="o">.</span><span class="n">sample</span><span class="o">.</span><span class="n">orientation_unit</span><span class="p">})</span>
+        <span class="k">if</span> <span class="n">written</span> <span class="o">==</span> <span class="bp">True</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">ori</span><span class="p">,</span> <span class="n">sample</span><span class="p">)</span>
+
+        <span class="k">for</span> <span class="n">item</span> <span class="ow">in</span> <span class="n">datainfo</span><span class="o">.</span><span class="n">sample</span><span class="o">.</span><span class="n">details</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">write_node</span><span class="p">(</span><span class="n">sample</span><span class="p">,</span> <span class="s">&quot;details&quot;</span><span class="p">,</span> <span class="n">item</span><span class="p">)</span>
+
+    <span class="k">def</span> <span class="nf">_write_instrument</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">datainfo</span><span class="p">,</span> <span class="n">entry_node</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Writes the instrumental information to the XML file</span>
+
+<span class="sd">        :param datainfo: The Data1D object the information is coming from</span>
+<span class="sd">        :param entry_node: lxml node ElementTree object to be appended to</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">instr</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">create_element</span><span class="p">(</span><span class="s">&quot;SASinstrument&quot;</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">instr</span><span class="p">,</span> <span class="n">entry_node</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">write_node</span><span class="p">(</span><span class="n">instr</span><span class="p">,</span> <span class="s">&quot;name&quot;</span><span class="p">,</span> <span class="n">datainfo</span><span class="o">.</span><span class="n">instrument</span><span class="p">)</span>
+        <span class="k">return</span> <span class="n">instr</span>
+
+    <span class="k">def</span> <span class="nf">_write_source</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">datainfo</span><span class="p">,</span> <span class="n">instr</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Writes the source information to the XML file</span>
+
+<span class="sd">        :param datainfo: The Data1D object the information is coming from</span>
+<span class="sd">        :param instr: instrument node  to be appended to</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">source</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">create_element</span><span class="p">(</span><span class="s">&quot;SASsource&quot;</span><span class="p">)</span>
+        <span class="k">if</span> <span class="n">datainfo</span><span class="o">.</span><span class="n">source</span><span class="o">.</span><span class="n">name</span> <span class="ow">is</span> <span class="ow">not</span> <span class="bp">None</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">write_attribute</span><span class="p">(</span><span class="n">source</span><span class="p">,</span> <span class="s">&quot;name&quot;</span><span class="p">,</span>
+                                 <span class="nb">str</span><span class="p">(</span><span class="n">datainfo</span><span class="o">.</span><span class="n">source</span><span class="o">.</span><span class="n">name</span><span class="p">))</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">source</span><span class="p">,</span> <span class="n">instr</span><span class="p">)</span>
+        <span class="k">if</span> <span class="n">datainfo</span><span class="o">.</span><span class="n">source</span><span class="o">.</span><span class="n">radiation</span> <span class="o">==</span> <span class="bp">None</span> <span class="ow">or</span> <span class="n">datainfo</span><span class="o">.</span><span class="n">source</span><span class="o">.</span><span class="n">radiation</span> <span class="o">==</span> <span class="s">&#39;&#39;</span><span class="p">:</span>
+            <span class="n">datainfo</span><span class="o">.</span><span class="n">source</span><span class="o">.</span><span class="n">radiation</span> <span class="o">=</span> <span class="s">&quot;neutron&quot;</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">write_node</span><span class="p">(</span><span class="n">source</span><span class="p">,</span> <span class="s">&quot;radiation&quot;</span><span class="p">,</span> <span class="n">datainfo</span><span class="o">.</span><span class="n">source</span><span class="o">.</span><span class="n">radiation</span><span class="p">)</span>
+
+        <span class="n">size</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">create_element</span><span class="p">(</span><span class="s">&quot;beam_size&quot;</span><span class="p">)</span>
+        <span class="k">if</span> <span class="n">datainfo</span><span class="o">.</span><span class="n">source</span><span class="o">.</span><span class="n">beam_size_name</span> <span class="ow">is</span> <span class="ow">not</span> <span class="bp">None</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">write_attribute</span><span class="p">(</span><span class="n">size</span><span class="p">,</span> <span class="s">&quot;name&quot;</span><span class="p">,</span>
+                                 <span class="nb">str</span><span class="p">(</span><span class="n">datainfo</span><span class="o">.</span><span class="n">source</span><span class="o">.</span><span class="n">beam_size_name</span><span class="p">))</span>
+        <span class="n">written</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">write_node</span><span class="p">(</span> \
+            <span class="n">size</span><span class="p">,</span> <span class="s">&quot;x&quot;</span><span class="p">,</span> <span class="n">datainfo</span><span class="o">.</span><span class="n">source</span><span class="o">.</span><span class="n">beam_size</span><span class="o">.</span><span class="n">x</span><span class="p">,</span>
+            <span class="p">{</span><span class="s">&quot;unit&quot;</span><span class="p">:</span> <span class="n">datainfo</span><span class="o">.</span><span class="n">source</span><span class="o">.</span><span class="n">beam_size_unit</span><span class="p">})</span>
+        <span class="n">written</span> <span class="o">=</span> <span class="n">written</span> <span class="o">|</span> <span class="bp">self</span><span class="o">.</span><span class="n">write_node</span><span class="p">(</span> \
+            <span class="n">size</span><span class="p">,</span> <span class="s">&quot;y&quot;</span><span class="p">,</span> <span class="n">datainfo</span><span class="o">.</span><span class="n">source</span><span class="o">.</span><span class="n">beam_size</span><span class="o">.</span><span class="n">y</span><span class="p">,</span>
+            <span class="p">{</span><span class="s">&quot;unit&quot;</span><span class="p">:</span> <span class="n">datainfo</span><span class="o">.</span><span class="n">source</span><span class="o">.</span><span class="n">beam_size_unit</span><span class="p">})</span>
+        <span class="n">written</span> <span class="o">=</span> <span class="n">written</span> <span class="o">|</span> <span class="bp">self</span><span class="o">.</span><span class="n">write_node</span><span class="p">(</span> \
+            <span class="n">size</span><span class="p">,</span> <span class="s">&quot;z&quot;</span><span class="p">,</span> <span class="n">datainfo</span><span class="o">.</span><span class="n">source</span><span class="o">.</span><span class="n">beam_size</span><span class="o">.</span><span class="n">z</span><span class="p">,</span>
+            <span class="p">{</span><span class="s">&quot;unit&quot;</span><span class="p">:</span> <span class="n">datainfo</span><span class="o">.</span><span class="n">source</span><span class="o">.</span><span class="n">beam_size_unit</span><span class="p">})</span>
+        <span class="k">if</span> <span class="n">written</span> <span class="o">==</span> <span class="bp">True</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">size</span><span class="p">,</span> <span class="n">source</span><span class="p">)</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">write_node</span><span class="p">(</span><span class="n">source</span><span class="p">,</span> <span class="s">&quot;beam_shape&quot;</span><span class="p">,</span> <span class="n">datainfo</span><span class="o">.</span><span class="n">source</span><span class="o">.</span><span class="n">beam_shape</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">write_node</span><span class="p">(</span><span class="n">source</span><span class="p">,</span> <span class="s">&quot;wavelength&quot;</span><span class="p">,</span>
+                        <span class="n">datainfo</span><span class="o">.</span><span class="n">source</span><span class="o">.</span><span class="n">wavelength</span><span class="p">,</span>
+                        <span class="p">{</span><span class="s">&quot;unit&quot;</span><span class="p">:</span> <span class="n">datainfo</span><span class="o">.</span><span class="n">source</span><span class="o">.</span><span class="n">wavelength_unit</span><span class="p">})</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">write_node</span><span class="p">(</span><span class="n">source</span><span class="p">,</span> <span class="s">&quot;wavelength_min&quot;</span><span class="p">,</span>
+                        <span class="n">datainfo</span><span class="o">.</span><span class="n">source</span><span class="o">.</span><span class="n">wavelength_min</span><span class="p">,</span>
+                        <span class="p">{</span><span class="s">&quot;unit&quot;</span><span class="p">:</span> <span class="n">datainfo</span><span class="o">.</span><span class="n">source</span><span class="o">.</span><span class="n">wavelength_min_unit</span><span class="p">})</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">write_node</span><span class="p">(</span><span class="n">source</span><span class="p">,</span> <span class="s">&quot;wavelength_max&quot;</span><span class="p">,</span>
+                        <span class="n">datainfo</span><span class="o">.</span><span class="n">source</span><span class="o">.</span><span class="n">wavelength_max</span><span class="p">,</span>
+                        <span class="p">{</span><span class="s">&quot;unit&quot;</span><span class="p">:</span> <span class="n">datainfo</span><span class="o">.</span><span class="n">source</span><span class="o">.</span><span class="n">wavelength_max_unit</span><span class="p">})</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">write_node</span><span class="p">(</span><span class="n">source</span><span class="p">,</span> <span class="s">&quot;wavelength_spread&quot;</span><span class="p">,</span>
+                        <span class="n">datainfo</span><span class="o">.</span><span class="n">source</span><span class="o">.</span><span class="n">wavelength_spread</span><span class="p">,</span>
+                        <span class="p">{</span><span class="s">&quot;unit&quot;</span><span class="p">:</span> <span class="n">datainfo</span><span class="o">.</span><span class="n">source</span><span class="o">.</span><span class="n">wavelength_spread_unit</span><span class="p">})</span>
+
+    <span class="k">def</span> <span class="nf">_write_collimation</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">datainfo</span><span class="p">,</span> <span class="n">instr</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Writes the collimation information to the XML file</span>
+
+<span class="sd">        :param datainfo: The Data1D object the information is coming from</span>
+<span class="sd">        :param instr: lxml node ElementTree object to be appended to</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">if</span> <span class="n">datainfo</span><span class="o">.</span><span class="n">collimation</span> <span class="o">==</span> <span class="p">[]</span> <span class="ow">or</span> <span class="n">datainfo</span><span class="o">.</span><span class="n">collimation</span> <span class="o">==</span> <span class="bp">None</span><span class="p">:</span>
+            <span class="n">coll</span> <span class="o">=</span> <span class="n">Collimation</span><span class="p">()</span>
+            <span class="n">datainfo</span><span class="o">.</span><span class="n">collimation</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">coll</span><span class="p">)</span>
+        <span class="k">for</span> <span class="n">item</span> <span class="ow">in</span> <span class="n">datainfo</span><span class="o">.</span><span class="n">collimation</span><span class="p">:</span>
+            <span class="n">coll</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">create_element</span><span class="p">(</span><span class="s">&quot;SAScollimation&quot;</span><span class="p">)</span>
+            <span class="k">if</span> <span class="n">item</span><span class="o">.</span><span class="n">name</span> <span class="ow">is</span> <span class="ow">not</span> <span class="bp">None</span><span class="p">:</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">write_attribute</span><span class="p">(</span><span class="n">coll</span><span class="p">,</span> <span class="s">&quot;name&quot;</span><span class="p">,</span> <span class="nb">str</span><span class="p">(</span><span class="n">item</span><span class="o">.</span><span class="n">name</span><span class="p">))</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">coll</span><span class="p">,</span> <span class="n">instr</span><span class="p">)</span>
+
+            <span class="bp">self</span><span class="o">.</span><span class="n">write_node</span><span class="p">(</span><span class="n">coll</span><span class="p">,</span> <span class="s">&quot;length&quot;</span><span class="p">,</span> <span class="n">item</span><span class="o">.</span><span class="n">length</span><span class="p">,</span>
+                            <span class="p">{</span><span class="s">&quot;unit&quot;</span><span class="p">:</span> <span class="n">item</span><span class="o">.</span><span class="n">length_unit</span><span class="p">})</span>
+
+            <span class="k">for</span> <span class="n">aperture</span> <span class="ow">in</span> <span class="n">item</span><span class="o">.</span><span class="n">aperture</span><span class="p">:</span>
+                <span class="n">apert</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">create_element</span><span class="p">(</span><span class="s">&quot;aperture&quot;</span><span class="p">)</span>
+                <span class="k">if</span> <span class="n">aperture</span><span class="o">.</span><span class="n">name</span> <span class="ow">is</span> <span class="ow">not</span> <span class="bp">None</span><span class="p">:</span>
+                    <span class="bp">self</span><span class="o">.</span><span class="n">write_attribute</span><span class="p">(</span><span class="n">apert</span><span class="p">,</span> <span class="s">&quot;name&quot;</span><span class="p">,</span> <span class="nb">str</span><span class="p">(</span><span class="n">aperture</span><span class="o">.</span><span class="n">name</span><span class="p">))</span>
+                <span class="k">if</span> <span class="n">aperture</span><span class="o">.</span><span class="n">type</span> <span class="ow">is</span> <span class="ow">not</span> <span class="bp">None</span><span class="p">:</span>
+                    <span class="bp">self</span><span class="o">.</span><span class="n">write_attribute</span><span class="p">(</span><span class="n">apert</span><span class="p">,</span> <span class="s">&quot;type&quot;</span><span class="p">,</span> <span class="nb">str</span><span class="p">(</span><span class="n">aperture</span><span class="o">.</span><span class="n">type</span><span class="p">))</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">apert</span><span class="p">,</span> <span class="n">coll</span><span class="p">)</span>
+
+                <span class="n">size</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">create_element</span><span class="p">(</span><span class="s">&quot;size&quot;</span><span class="p">)</span>
+                <span class="k">if</span> <span class="n">aperture</span><span class="o">.</span><span class="n">size_name</span> <span class="ow">is</span> <span class="ow">not</span> <span class="bp">None</span><span class="p">:</span>
+                    <span class="bp">self</span><span class="o">.</span><span class="n">write_attribute</span><span class="p">(</span><span class="n">size</span><span class="p">,</span> <span class="s">&quot;name&quot;</span><span class="p">,</span>
+                                         <span class="nb">str</span><span class="p">(</span><span class="n">aperture</span><span class="o">.</span><span class="n">size_name</span><span class="p">))</span>
+                <span class="n">written</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">write_node</span><span class="p">(</span><span class="n">size</span><span class="p">,</span> <span class="s">&quot;x&quot;</span><span class="p">,</span> <span class="n">aperture</span><span class="o">.</span><span class="n">size</span><span class="o">.</span><span class="n">x</span><span class="p">,</span>
+                                          <span class="p">{</span><span class="s">&quot;unit&quot;</span><span class="p">:</span> <span class="n">aperture</span><span class="o">.</span><span class="n">size_unit</span><span class="p">})</span>
+                <span class="n">written</span> <span class="o">=</span> <span class="n">written</span> <span class="o">|</span> <span class="bp">self</span><span class="o">.</span><span class="n">write_node</span><span class="p">(</span> \
+                    <span class="n">size</span><span class="p">,</span> <span class="s">&quot;y&quot;</span><span class="p">,</span> <span class="n">aperture</span><span class="o">.</span><span class="n">size</span><span class="o">.</span><span class="n">y</span><span class="p">,</span>
+                    <span class="p">{</span><span class="s">&quot;unit&quot;</span><span class="p">:</span> <span class="n">aperture</span><span class="o">.</span><span class="n">size_unit</span><span class="p">})</span>
+                <span class="n">written</span> <span class="o">=</span> <span class="n">written</span> <span class="o">|</span> <span class="bp">self</span><span class="o">.</span><span class="n">write_node</span><span class="p">(</span> \
+                    <span class="n">size</span><span class="p">,</span> <span class="s">&quot;z&quot;</span><span class="p">,</span> <span class="n">aperture</span><span class="o">.</span><span class="n">size</span><span class="o">.</span><span class="n">z</span><span class="p">,</span>
+                    <span class="p">{</span><span class="s">&quot;unit&quot;</span><span class="p">:</span> <span class="n">aperture</span><span class="o">.</span><span class="n">size_unit</span><span class="p">})</span>
+                <span class="k">if</span> <span class="n">written</span> <span class="o">==</span> <span class="bp">True</span><span class="p">:</span>
+                    <span class="bp">self</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">size</span><span class="p">,</span> <span class="n">apert</span><span class="p">)</span>
+
+                <span class="bp">self</span><span class="o">.</span><span class="n">write_node</span><span class="p">(</span><span class="n">apert</span><span class="p">,</span> <span class="s">&quot;distance&quot;</span><span class="p">,</span> <span class="n">aperture</span><span class="o">.</span><span class="n">distance</span><span class="p">,</span>
+                                <span class="p">{</span><span class="s">&quot;unit&quot;</span><span class="p">:</span> <span class="n">aperture</span><span class="o">.</span><span class="n">distance_unit</span><span class="p">})</span>
+
+    <span class="k">def</span> <span class="nf">_write_detectors</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">datainfo</span><span class="p">,</span> <span class="n">instr</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Writes the detector information to the XML file</span>
+
+<span class="sd">        :param datainfo: The Data1D object the information is coming from</span>
+<span class="sd">        :param inst: lxml instrument node to be appended to</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">if</span> <span class="n">datainfo</span><span class="o">.</span><span class="n">detector</span> <span class="o">==</span> <span class="bp">None</span> <span class="ow">or</span> <span class="n">datainfo</span><span class="o">.</span><span class="n">detector</span> <span class="o">==</span> <span class="p">[]:</span>
+            <span class="n">det</span> <span class="o">=</span> <span class="n">Detector</span><span class="p">()</span>
+            <span class="n">det</span><span class="o">.</span><span class="n">name</span> <span class="o">=</span> <span class="s">&quot;&quot;</span>
+            <span class="n">datainfo</span><span class="o">.</span><span class="n">detector</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">det</span><span class="p">)</span>
+
+        <span class="k">for</span> <span class="n">item</span> <span class="ow">in</span> <span class="n">datainfo</span><span class="o">.</span><span class="n">detector</span><span class="p">:</span>
+            <span class="n">det</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">create_element</span><span class="p">(</span><span class="s">&quot;SASdetector&quot;</span><span class="p">)</span>
+            <span class="n">written</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">write_node</span><span class="p">(</span><span class="n">det</span><span class="p">,</span> <span class="s">&quot;name&quot;</span><span class="p">,</span> <span class="n">item</span><span class="o">.</span><span class="n">name</span><span class="p">)</span>
+            <span class="n">written</span> <span class="o">=</span> <span class="n">written</span> <span class="o">|</span> <span class="bp">self</span><span class="o">.</span><span class="n">write_node</span><span class="p">(</span><span class="n">det</span><span class="p">,</span> <span class="s">&quot;SDD&quot;</span><span class="p">,</span> <span class="n">item</span><span class="o">.</span><span class="n">distance</span><span class="p">,</span>
+                                                <span class="p">{</span><span class="s">&quot;unit&quot;</span><span class="p">:</span> <span class="n">item</span><span class="o">.</span><span class="n">distance_unit</span><span class="p">})</span>
+            <span class="k">if</span> <span class="n">written</span> <span class="o">==</span> <span class="bp">True</span><span class="p">:</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">det</span><span class="p">,</span> <span class="n">instr</span><span class="p">)</span>
+
+            <span class="n">off</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">create_element</span><span class="p">(</span><span class="s">&quot;offset&quot;</span><span class="p">)</span>
+            <span class="n">written</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">write_node</span><span class="p">(</span><span class="n">off</span><span class="p">,</span> <span class="s">&quot;x&quot;</span><span class="p">,</span> <span class="n">item</span><span class="o">.</span><span class="n">offset</span><span class="o">.</span><span class="n">x</span><span class="p">,</span>
+                                      <span class="p">{</span><span class="s">&quot;unit&quot;</span><span class="p">:</span> <span class="n">item</span><span class="o">.</span><span class="n">offset_unit</span><span class="p">})</span>
+            <span class="n">written</span> <span class="o">=</span> <span class="n">written</span> <span class="o">|</span> <span class="bp">self</span><span class="o">.</span><span class="n">write_node</span><span class="p">(</span><span class="n">off</span><span class="p">,</span> <span class="s">&quot;y&quot;</span><span class="p">,</span> <span class="n">item</span><span class="o">.</span><span class="n">offset</span><span class="o">.</span><span class="n">y</span><span class="p">,</span>
+                                                <span class="p">{</span><span class="s">&quot;unit&quot;</span><span class="p">:</span> <span class="n">item</span><span class="o">.</span><span class="n">offset_unit</span><span class="p">})</span>
+            <span class="n">written</span> <span class="o">=</span> <span class="n">written</span> <span class="o">|</span> <span class="bp">self</span><span class="o">.</span><span class="n">write_node</span><span class="p">(</span><span class="n">off</span><span class="p">,</span> <span class="s">&quot;z&quot;</span><span class="p">,</span> <span class="n">item</span><span class="o">.</span><span class="n">offset</span><span class="o">.</span><span class="n">z</span><span class="p">,</span>
+                                                <span class="p">{</span><span class="s">&quot;unit&quot;</span><span class="p">:</span> <span class="n">item</span><span class="o">.</span><span class="n">offset_unit</span><span class="p">})</span>
+            <span class="k">if</span> <span class="n">written</span> <span class="o">==</span> <span class="bp">True</span><span class="p">:</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">off</span><span class="p">,</span> <span class="n">det</span><span class="p">)</span>
+
+            <span class="n">ori</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">create_element</span><span class="p">(</span><span class="s">&quot;orientation&quot;</span><span class="p">)</span>
+            <span class="n">written</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">write_node</span><span class="p">(</span><span class="n">ori</span><span class="p">,</span> <span class="s">&quot;roll&quot;</span><span class="p">,</span> <span class="n">item</span><span class="o">.</span><span class="n">orientation</span><span class="o">.</span><span class="n">x</span><span class="p">,</span>
+                                      <span class="p">{</span><span class="s">&quot;unit&quot;</span><span class="p">:</span> <span class="n">item</span><span class="o">.</span><span class="n">orientation_unit</span><span class="p">})</span>
+            <span class="n">written</span> <span class="o">=</span> <span class="n">written</span> <span class="o">|</span> <span class="bp">self</span><span class="o">.</span><span class="n">write_node</span><span class="p">(</span><span class="n">ori</span><span class="p">,</span> <span class="s">&quot;pitch&quot;</span><span class="p">,</span>
+                                                <span class="n">item</span><span class="o">.</span><span class="n">orientation</span><span class="o">.</span><span class="n">y</span><span class="p">,</span>
+                                                <span class="p">{</span><span class="s">&quot;unit&quot;</span><span class="p">:</span> <span class="n">item</span><span class="o">.</span><span class="n">orientation_unit</span><span class="p">})</span>
+            <span class="n">written</span> <span class="o">=</span> <span class="n">written</span> <span class="o">|</span> <span class="bp">self</span><span class="o">.</span><span class="n">write_node</span><span class="p">(</span><span class="n">ori</span><span class="p">,</span> <span class="s">&quot;yaw&quot;</span><span class="p">,</span>
+                                                <span class="n">item</span><span class="o">.</span><span class="n">orientation</span><span class="o">.</span><span class="n">z</span><span class="p">,</span>
+                                                <span class="p">{</span><span class="s">&quot;unit&quot;</span><span class="p">:</span> <span class="n">item</span><span class="o">.</span><span class="n">orientation_unit</span><span class="p">})</span>
+            <span class="k">if</span> <span class="n">written</span> <span class="o">==</span> <span class="bp">True</span><span class="p">:</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">ori</span><span class="p">,</span> <span class="n">det</span><span class="p">)</span>
+
+            <span class="n">center</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">create_element</span><span class="p">(</span><span class="s">&quot;beam_center&quot;</span><span class="p">)</span>
+            <span class="n">written</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">write_node</span><span class="p">(</span><span class="n">center</span><span class="p">,</span> <span class="s">&quot;x&quot;</span><span class="p">,</span> <span class="n">item</span><span class="o">.</span><span class="n">beam_center</span><span class="o">.</span><span class="n">x</span><span class="p">,</span>
+                                      <span class="p">{</span><span class="s">&quot;unit&quot;</span><span class="p">:</span> <span class="n">item</span><span class="o">.</span><span class="n">beam_center_unit</span><span class="p">})</span>
+            <span class="n">written</span> <span class="o">=</span> <span class="n">written</span> <span class="o">|</span> <span class="bp">self</span><span class="o">.</span><span class="n">write_node</span><span class="p">(</span><span class="n">center</span><span class="p">,</span> <span class="s">&quot;y&quot;</span><span class="p">,</span>
+                                                <span class="n">item</span><span class="o">.</span><span class="n">beam_center</span><span class="o">.</span><span class="n">y</span><span class="p">,</span>
+                                                <span class="p">{</span><span class="s">&quot;unit&quot;</span><span class="p">:</span> <span class="n">item</span><span class="o">.</span><span class="n">beam_center_unit</span><span class="p">})</span>
+            <span class="n">written</span> <span class="o">=</span> <span class="n">written</span> <span class="o">|</span> <span class="bp">self</span><span class="o">.</span><span class="n">write_node</span><span class="p">(</span><span class="n">center</span><span class="p">,</span> <span class="s">&quot;z&quot;</span><span class="p">,</span>
+                                                <span class="n">item</span><span class="o">.</span><span class="n">beam_center</span><span class="o">.</span><span class="n">z</span><span class="p">,</span>
+                                                <span class="p">{</span><span class="s">&quot;unit&quot;</span><span class="p">:</span> <span class="n">item</span><span class="o">.</span><span class="n">beam_center_unit</span><span class="p">})</span>
+            <span class="k">if</span> <span class="n">written</span> <span class="o">==</span> <span class="bp">True</span><span class="p">:</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">center</span><span class="p">,</span> <span class="n">det</span><span class="p">)</span>
+
+            <span class="n">pix</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">create_element</span><span class="p">(</span><span class="s">&quot;pixel_size&quot;</span><span class="p">)</span>
+            <span class="n">written</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">write_node</span><span class="p">(</span><span class="n">pix</span><span class="p">,</span> <span class="s">&quot;x&quot;</span><span class="p">,</span> <span class="n">item</span><span class="o">.</span><span class="n">pixel_size</span><span class="o">.</span><span class="n">x</span><span class="p">,</span>
+                                      <span class="p">{</span><span class="s">&quot;unit&quot;</span><span class="p">:</span> <span class="n">item</span><span class="o">.</span><span class="n">pixel_size_unit</span><span class="p">})</span>
+            <span class="n">written</span> <span class="o">=</span> <span class="n">written</span> <span class="o">|</span> <span class="bp">self</span><span class="o">.</span><span class="n">write_node</span><span class="p">(</span><span class="n">pix</span><span class="p">,</span> <span class="s">&quot;y&quot;</span><span class="p">,</span> <span class="n">item</span><span class="o">.</span><span class="n">pixel_size</span><span class="o">.</span><span class="n">y</span><span class="p">,</span>
+                                                <span class="p">{</span><span class="s">&quot;unit&quot;</span><span class="p">:</span> <span class="n">item</span><span class="o">.</span><span class="n">pixel_size_unit</span><span class="p">})</span>
+            <span class="n">written</span> <span class="o">=</span> <span class="n">written</span> <span class="o">|</span> <span class="bp">self</span><span class="o">.</span><span class="n">write_node</span><span class="p">(</span><span class="n">pix</span><span class="p">,</span> <span class="s">&quot;z&quot;</span><span class="p">,</span> <span class="n">item</span><span class="o">.</span><span class="n">pixel_size</span><span class="o">.</span><span class="n">z</span><span class="p">,</span>
+                                                <span class="p">{</span><span class="s">&quot;unit&quot;</span><span class="p">:</span> <span class="n">item</span><span class="o">.</span><span class="n">pixel_size_unit</span><span class="p">})</span>
+            <span class="n">written</span> <span class="o">=</span> <span class="n">written</span> <span class="o">|</span> <span class="bp">self</span><span class="o">.</span><span class="n">write_node</span><span class="p">(</span><span class="n">det</span><span class="p">,</span> <span class="s">&quot;slit_length&quot;</span><span class="p">,</span>
+                                                <span class="n">item</span><span class="o">.</span><span class="n">slit_length</span><span class="p">,</span>
+                                                <span class="p">{</span><span class="s">&quot;unit&quot;</span><span class="p">:</span> <span class="n">item</span><span class="o">.</span><span class="n">slit_length_unit</span><span class="p">})</span>
+            <span class="k">if</span> <span class="n">written</span> <span class="o">==</span> <span class="bp">True</span><span class="p">:</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">pix</span><span class="p">,</span> <span class="n">det</span><span class="p">)</span>
+
+    <span class="k">def</span> <span class="nf">_write_process_notes</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">datainfo</span><span class="p">,</span> <span class="n">entry_node</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Writes the process notes to the XML file</span>
+
+<span class="sd">        :param datainfo: The Data1D object the information is coming from</span>
+<span class="sd">        :param entry_node: lxml node ElementTree object to be appended to</span>
+
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">for</span> <span class="n">item</span> <span class="ow">in</span> <span class="n">datainfo</span><span class="o">.</span><span class="n">process</span><span class="p">:</span>
+            <span class="n">node</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">create_element</span><span class="p">(</span><span class="s">&quot;SASprocess&quot;</span><span class="p">)</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">node</span><span class="p">,</span> <span class="n">entry_node</span><span class="p">)</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">write_node</span><span class="p">(</span><span class="n">node</span><span class="p">,</span> <span class="s">&quot;name&quot;</span><span class="p">,</span> <span class="n">item</span><span class="o">.</span><span class="n">name</span><span class="p">)</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">write_node</span><span class="p">(</span><span class="n">node</span><span class="p">,</span> <span class="s">&quot;date&quot;</span><span class="p">,</span> <span class="n">item</span><span class="o">.</span><span class="n">date</span><span class="p">)</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">write_node</span><span class="p">(</span><span class="n">node</span><span class="p">,</span> <span class="s">&quot;description&quot;</span><span class="p">,</span> <span class="n">item</span><span class="o">.</span><span class="n">description</span><span class="p">)</span>
+            <span class="k">for</span> <span class="n">term</span> <span class="ow">in</span> <span class="n">item</span><span class="o">.</span><span class="n">term</span><span class="p">:</span>
+                <span class="n">value</span> <span class="o">=</span> <span class="n">term</span><span class="p">[</span><span class="s">&#39;value&#39;</span><span class="p">]</span>
+                <span class="k">del</span> <span class="n">term</span><span class="p">[</span><span class="s">&#39;value&#39;</span><span class="p">]</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">write_node</span><span class="p">(</span><span class="n">node</span><span class="p">,</span> <span class="s">&quot;term&quot;</span><span class="p">,</span> <span class="n">value</span><span class="p">,</span> <span class="n">term</span><span class="p">)</span>
+            <span class="k">for</span> <span class="n">note</span> <span class="ow">in</span> <span class="n">item</span><span class="o">.</span><span class="n">notes</span><span class="p">:</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">write_node</span><span class="p">(</span><span class="n">node</span><span class="p">,</span> <span class="s">&quot;SASprocessnote&quot;</span><span class="p">,</span> <span class="n">note</span><span class="p">)</span>
+            <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">item</span><span class="o">.</span><span class="n">notes</span><span class="p">)</span> <span class="o">==</span> <span class="mi">0</span><span class="p">:</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">write_node</span><span class="p">(</span><span class="n">node</span><span class="p">,</span> <span class="s">&quot;SASprocessnote&quot;</span><span class="p">,</span> <span class="s">&quot;&quot;</span><span class="p">)</span>
+
+    <span class="k">def</span> <span class="nf">_write_notes</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">datainfo</span><span class="p">,</span> <span class="n">entry_node</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Writes the notes to the XML file and creates an empty note if none</span>
+<span class="sd">        exist</span>
+
+<span class="sd">        :param datainfo: The Data1D object the information is coming from</span>
+<span class="sd">        :param entry_node: lxml node ElementTree object to be appended to</span>
+
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">datainfo</span><span class="o">.</span><span class="n">notes</span><span class="p">)</span> <span class="o">==</span> <span class="mi">0</span><span class="p">:</span>
+            <span class="n">node</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">create_element</span><span class="p">(</span><span class="s">&quot;SASnote&quot;</span><span class="p">)</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">node</span><span class="p">,</span> <span class="n">entry_node</span><span class="p">)</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="k">for</span> <span class="n">item</span> <span class="ow">in</span> <span class="n">datainfo</span><span class="o">.</span><span class="n">notes</span><span class="p">:</span>
+                <span class="n">node</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">create_element</span><span class="p">(</span><span class="s">&quot;SASnote&quot;</span><span class="p">)</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">write_text</span><span class="p">(</span><span class="n">node</span><span class="p">,</span> <span class="n">item</span><span class="p">)</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">node</span><span class="p">,</span> <span class="n">entry_node</span><span class="p">)</span>
+
+    <span class="k">def</span> <span class="nf">_check_origin</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">entry_node</span><span class="p">,</span> <span class="n">doc</span><span class="p">,</span> <span class="n">frm</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Return the document, and the SASentry node associated with</span>
+<span class="sd">        the data we just wrote.</span>
+<span class="sd">        If the calling function was not the cansas reader, return a minidom</span>
+<span class="sd">        object rather than an lxml object.</span>
+
+<span class="sd">        :param entry_node: lxml node ElementTree object to be appended to</span>
+<span class="sd">        :param doc: entire xml tree</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="n">frm</span><span class="p">:</span>
+            <span class="n">frm</span> <span class="o">=</span> <span class="n">inspect</span><span class="o">.</span><span class="n">stack</span><span class="p">()[</span><span class="mi">1</span><span class="p">]</span>
+        <span class="n">mod_name</span> <span class="o">=</span> <span class="n">frm</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span><span class="o">.</span><span class="n">replace</span><span class="p">(</span><span class="s">&quot;</span><span class="se">\\</span><span class="s">&quot;</span><span class="p">,</span> <span class="s">&quot;/&quot;</span><span class="p">)</span><span class="o">.</span><span class="n">replace</span><span class="p">(</span><span class="s">&quot;.pyc&quot;</span><span class="p">,</span> <span class="s">&quot;&quot;</span><span class="p">)</span>
+        <span class="n">mod_name</span> <span class="o">=</span> <span class="n">mod_name</span><span class="o">.</span><span class="n">replace</span><span class="p">(</span><span class="s">&quot;.py&quot;</span><span class="p">,</span> <span class="s">&quot;&quot;</span><span class="p">)</span>
+        <span class="n">mod</span> <span class="o">=</span> <span class="n">mod_name</span><span class="o">.</span><span class="n">split</span><span class="p">(</span><span class="s">&quot;sas/&quot;</span><span class="p">)</span>
+        <span class="n">mod_name</span> <span class="o">=</span> <span class="n">mod</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span>
+        <span class="k">if</span> <span class="n">mod_name</span> <span class="o">!=</span> <span class="s">&quot;dataloader/readers/cansas_reader&quot;</span><span class="p">:</span>
+            <span class="n">string</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">to_string</span><span class="p">(</span><span class="n">doc</span><span class="p">,</span> <span class="n">pretty_print</span><span class="o">=</span><span class="bp">False</span><span class="p">)</span>
+            <span class="n">doc</span> <span class="o">=</span> <span class="n">parseString</span><span class="p">(</span><span class="n">string</span><span class="p">)</span>
+            <span class="n">node_name</span> <span class="o">=</span> <span class="n">entry_node</span><span class="o">.</span><span class="n">tag</span>
+            <span class="n">node_list</span> <span class="o">=</span> <span class="n">doc</span><span class="o">.</span><span class="n">getElementsByTagName</span><span class="p">(</span><span class="n">node_name</span><span class="p">)</span>
+            <span class="n">entry_node</span> <span class="o">=</span> <span class="n">node_list</span><span class="o">.</span><span class="n">item</span><span class="p">(</span><span class="mi">0</span><span class="p">)</span>
+        <span class="k">return</span> <span class="n">doc</span><span class="p">,</span> <span class="n">entry_node</span>
+
+    <span class="k">def</span> <span class="nf">_to_xml_doc</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">datainfo</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Create an XML document to contain the content of a Data1D</span>
+
+<span class="sd">        :param datainfo: Data1D object</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="nb">issubclass</span><span class="p">(</span><span class="n">datainfo</span><span class="o">.</span><span class="n">__class__</span><span class="p">,</span> <span class="n">Data1D</span><span class="p">):</span>
+            <span class="k">raise</span> <span class="ne">RuntimeError</span><span class="p">,</span> <span class="s">&quot;The cansas writer expects a Data1D instance&quot;</span>
+
+        <span class="c"># Get PIs and create root element</span>
+        <span class="n">pi_string</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_get_pi_string</span><span class="p">()</span>
+        <span class="c"># Define namespaces and create SASroot object</span>
+        <span class="n">main_node</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_create_main_node</span><span class="p">()</span>
+        <span class="c"># Create ElementTree, append SASroot and apply processing instructions</span>
+        <span class="n">base_string</span> <span class="o">=</span> <span class="n">pi_string</span> <span class="o">+</span> <span class="bp">self</span><span class="o">.</span><span class="n">to_string</span><span class="p">(</span><span class="n">main_node</span><span class="p">)</span>
+        <span class="n">base_element</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">create_element_from_string</span><span class="p">(</span><span class="n">base_string</span><span class="p">)</span>
+        <span class="n">doc</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">create_tree</span><span class="p">(</span><span class="n">base_element</span><span class="p">)</span>
+        <span class="c"># Create SASentry Element</span>
+        <span class="n">entry_node</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">create_element</span><span class="p">(</span><span class="s">&quot;SASentry&quot;</span><span class="p">)</span>
+        <span class="n">root</span> <span class="o">=</span> <span class="n">doc</span><span class="o">.</span><span class="n">getroot</span><span class="p">()</span>
+        <span class="n">root</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">entry_node</span><span class="p">)</span>
+
+        <span class="c"># Add Title to SASentry</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">write_node</span><span class="p">(</span><span class="n">entry_node</span><span class="p">,</span> <span class="s">&quot;Title&quot;</span><span class="p">,</span> <span class="n">datainfo</span><span class="o">.</span><span class="n">title</span><span class="p">)</span>
+        <span class="c"># Add Run to SASentry</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_write_run_names</span><span class="p">(</span><span class="n">datainfo</span><span class="p">,</span> <span class="n">entry_node</span><span class="p">)</span>
+        <span class="c"># Add Data info to SASEntry</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_write_data</span><span class="p">(</span><span class="n">datainfo</span><span class="p">,</span> <span class="n">entry_node</span><span class="p">)</span>
+        <span class="c"># Transmission Spectrum Info</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_write_trans_spectrum</span><span class="p">(</span><span class="n">datainfo</span><span class="p">,</span> <span class="n">entry_node</span><span class="p">)</span>
+        <span class="c"># Sample info</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_write_sample_info</span><span class="p">(</span><span class="n">datainfo</span><span class="p">,</span> <span class="n">entry_node</span><span class="p">)</span>
+        <span class="c"># Instrument info</span>
+        <span class="n">instr</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_write_instrument</span><span class="p">(</span><span class="n">datainfo</span><span class="p">,</span> <span class="n">entry_node</span><span class="p">)</span>
+        <span class="c">#   Source</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_write_source</span><span class="p">(</span><span class="n">datainfo</span><span class="p">,</span> <span class="n">instr</span><span class="p">)</span>
+        <span class="c">#   Collimation</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_write_collimation</span><span class="p">(</span><span class="n">datainfo</span><span class="p">,</span> <span class="n">instr</span><span class="p">)</span>
+        <span class="c">#   Detectors</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_write_detectors</span><span class="p">(</span><span class="n">datainfo</span><span class="p">,</span> <span class="n">instr</span><span class="p">)</span>
+        <span class="c"># Processes info</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_write_process_notes</span><span class="p">(</span><span class="n">datainfo</span><span class="p">,</span> <span class="n">entry_node</span><span class="p">)</span>
+        <span class="c"># Note info</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_write_notes</span><span class="p">(</span><span class="n">datainfo</span><span class="p">,</span> <span class="n">entry_node</span><span class="p">)</span>
+        <span class="c"># Return the document, and the SASentry node associated with</span>
+        <span class="c">#      the data we just wrote</span>
+        <span class="c"># If the calling function was not the cansas reader, return a minidom</span>
+        <span class="c">#      object rather than an lxml object.</span>
+        <span class="n">frm</span> <span class="o">=</span> <span class="n">inspect</span><span class="o">.</span><span class="n">stack</span><span class="p">()[</span><span class="mi">1</span><span class="p">]</span>
+        <span class="n">doc</span><span class="p">,</span> <span class="n">entry_node</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_check_origin</span><span class="p">(</span><span class="n">entry_node</span><span class="p">,</span> <span class="n">doc</span><span class="p">,</span> <span class="n">frm</span><span class="p">)</span>
+        <span class="k">return</span> <span class="n">doc</span><span class="p">,</span> <span class="n">entry_node</span>
+
+<div class="viewcode-block" id="Reader.write_node"><a class="viewcode-back" href="../../../../dev/api/sas.dataloader.readers.html#sas.dataloader.readers.cansas_reader.Reader.write_node">[docs]</a>    <span class="k">def</span> <span class="nf">write_node</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">parent</span><span class="p">,</span> <span class="n">name</span><span class="p">,</span> <span class="n">value</span><span class="p">,</span> <span class="n">attr</span><span class="o">=</span><span class="bp">None</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        :param doc: document DOM</span>
+<span class="sd">        :param parent: parent node</span>
+<span class="sd">        :param name: tag of the element</span>
+<span class="sd">        :param value: value of the child text node</span>
+<span class="sd">        :param attr: attribute dictionary</span>
+
+<span class="sd">        :return: True if something was appended, otherwise False</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">if</span> <span class="n">value</span> <span class="ow">is</span> <span class="ow">not</span> <span class="bp">None</span><span class="p">:</span>
+            <span class="n">parent</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">ebuilder</span><span class="p">(</span><span class="n">parent</span><span class="p">,</span> <span class="n">name</span><span class="p">,</span> <span class="n">value</span><span class="p">,</span> <span class="n">attr</span><span class="p">)</span>
+            <span class="k">return</span> <span class="bp">True</span>
+        <span class="k">return</span> <span class="bp">False</span>
+</div>
+<div class="viewcode-block" id="Reader.write"><a class="viewcode-back" href="../../../../dev/api/sas.dataloader.readers.html#sas.dataloader.readers.cansas_reader.Reader.write">[docs]</a>    <span class="k">def</span> <span class="nf">write</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">filename</span><span class="p">,</span> <span class="n">datainfo</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Write the content of a Data1D as a CanSAS XML file</span>
+
+<span class="sd">        :param filename: name of the file to write</span>
+<span class="sd">        :param datainfo: Data1D object</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="c"># Create XML document</span>
+        <span class="n">doc</span><span class="p">,</span> <span class="n">_</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_to_xml_doc</span><span class="p">(</span><span class="n">datainfo</span><span class="p">)</span>
+        <span class="c"># Write the file</span>
+        <span class="n">file_ref</span> <span class="o">=</span> <span class="nb">open</span><span class="p">(</span><span class="n">filename</span><span class="p">,</span> <span class="s">&#39;w&#39;</span><span class="p">)</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">encoding</span> <span class="o">==</span> <span class="bp">None</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">encoding</span> <span class="o">=</span> <span class="s">&quot;UTF-8&quot;</span>
+        <span class="n">doc</span><span class="o">.</span><span class="n">write</span><span class="p">(</span><span class="n">file_ref</span><span class="p">,</span> <span class="n">encoding</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">encoding</span><span class="p">,</span>
+                  <span class="n">pretty_print</span><span class="o">=</span><span class="bp">True</span><span class="p">,</span> <span class="n">xml_declaration</span><span class="o">=</span><span class="bp">True</span><span class="p">)</span>
+        <span class="n">file_ref</span><span class="o">.</span><span class="n">close</span><span class="p">()</span>
+
+    <span class="c"># DO NOT REMOVE - used in saving and loading panel states.</span></div>
+    <span class="k">def</span> <span class="nf">_store_float</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">location</span><span class="p">,</span> <span class="n">node</span><span class="p">,</span> <span class="n">variable</span><span class="p">,</span> <span class="n">storage</span><span class="p">,</span> <span class="n">optional</span><span class="o">=</span><span class="bp">True</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Get the content of a xpath location and store</span>
+<span class="sd">        the result. Check that the units are compatible</span>
+<span class="sd">        with the destination. The value is expected to</span>
+<span class="sd">        be a float.</span>
+
+<span class="sd">        The xpath location might or might not exist.</span>
+<span class="sd">        If it does not exist, nothing is done</span>
+
+<span class="sd">        :param location: xpath location to fetch</span>
+<span class="sd">        :param node: node to read the data from</span>
+<span class="sd">        :param variable: name of the data member to store it in [string]</span>
+<span class="sd">        :param storage: data object that has the &#39;variable&#39; data member</span>
+<span class="sd">        :param optional: if True, no exception will be raised</span>
+<span class="sd">            if unit conversion can&#39;t be done</span>
+
+<span class="sd">        :raise ValueError: raised when the units are not recognized</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">entry</span> <span class="o">=</span> <span class="n">get_content</span><span class="p">(</span><span class="n">location</span><span class="p">,</span> <span class="n">node</span><span class="p">)</span>
+        <span class="k">try</span><span class="p">:</span>
+            <span class="n">value</span> <span class="o">=</span> <span class="nb">float</span><span class="p">(</span><span class="n">entry</span><span class="o">.</span><span class="n">text</span><span class="p">)</span>
+        <span class="k">except</span><span class="p">:</span>
+            <span class="n">value</span> <span class="o">=</span> <span class="bp">None</span>
+
+        <span class="k">if</span> <span class="n">value</span> <span class="ow">is</span> <span class="ow">not</span> <span class="bp">None</span><span class="p">:</span>
+            <span class="c"># If the entry has units, check to see that they are</span>
+            <span class="c"># compatible with what we currently have in the data object</span>
+            <span class="n">units</span> <span class="o">=</span> <span class="n">entry</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s">&#39;unit&#39;</span><span class="p">)</span>
+            <span class="k">if</span> <span class="n">units</span> <span class="ow">is</span> <span class="ow">not</span> <span class="bp">None</span><span class="p">:</span>
+                <span class="n">toks</span> <span class="o">=</span> <span class="n">variable</span><span class="o">.</span><span class="n">split</span><span class="p">(</span><span class="s">&#39;.&#39;</span><span class="p">)</span>
+                <span class="n">local_unit</span> <span class="o">=</span> <span class="bp">None</span>
+                <span class="k">exec</span> <span class="s">&quot;local_unit = storage.</span><span class="si">%s</span><span class="s">_unit&quot;</span> <span class="o">%</span> <span class="n">toks</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
+                <span class="k">if</span> <span class="n">local_unit</span> <span class="o">!=</span> <span class="bp">None</span> <span class="ow">and</span> <span class="n">units</span><span class="o">.</span><span class="n">lower</span><span class="p">()</span> <span class="o">!=</span> <span class="n">local_unit</span><span class="o">.</span><span class="n">lower</span><span class="p">():</span>
+                    <span class="k">if</span> <span class="n">HAS_CONVERTER</span> <span class="o">==</span> <span class="bp">True</span><span class="p">:</span>
+                        <span class="k">try</span><span class="p">:</span>
+                            <span class="n">conv</span> <span class="o">=</span> <span class="n">Converter</span><span class="p">(</span><span class="n">units</span><span class="p">)</span>
+                            <span class="k">exec</span> <span class="s">&quot;storage.</span><span class="si">%s</span><span class="s"> = </span><span class="si">%g</span><span class="s">&quot;</span> <span class="o">%</span> \
+                                <span class="p">(</span><span class="n">variable</span><span class="p">,</span> <span class="n">conv</span><span class="p">(</span><span class="n">value</span><span class="p">,</span> <span class="n">units</span><span class="o">=</span><span class="n">local_unit</span><span class="p">))</span>
+                        <span class="k">except</span><span class="p">:</span>
+                            <span class="n">_</span><span class="p">,</span> <span class="n">exc_value</span><span class="p">,</span> <span class="n">_</span> <span class="o">=</span> <span class="n">sys</span><span class="o">.</span><span class="n">exc_info</span><span class="p">()</span>
+                            <span class="n">err_mess</span> <span class="o">=</span> <span class="s">&quot;CanSAS reader: could not convert&quot;</span>
+                            <span class="n">err_mess</span> <span class="o">+=</span> <span class="s">&quot; </span><span class="si">%s</span><span class="s"> unit [</span><span class="si">%s</span><span class="s">]; expecting [</span><span class="si">%s</span><span class="s">]</span><span class="se">\n</span><span class="s">  </span><span class="si">%s</span><span class="s">&quot;</span> \
+                                <span class="o">%</span> <span class="p">(</span><span class="n">variable</span><span class="p">,</span> <span class="n">units</span><span class="p">,</span> <span class="n">local_unit</span><span class="p">,</span> <span class="n">exc_value</span><span class="p">)</span>
+                            <span class="bp">self</span><span class="o">.</span><span class="n">errors</span><span class="o">.</span><span class="n">add</span><span class="p">(</span><span class="n">err_mess</span><span class="p">)</span>
+                            <span class="k">if</span> <span class="n">optional</span><span class="p">:</span>
+                                <span class="n">logging</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="n">err_mess</span><span class="p">)</span>
+                            <span class="k">else</span><span class="p">:</span>
+                                <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">,</span> <span class="n">err_mess</span>
+                    <span class="k">else</span><span class="p">:</span>
+                        <span class="n">err_mess</span> <span class="o">=</span> <span class="s">&quot;CanSAS reader: unrecognized </span><span class="si">%s</span><span class="s"> unit [</span><span class="si">%s</span><span class="s">];&quot;</span>\
+                        <span class="o">%</span> <span class="p">(</span><span class="n">variable</span><span class="p">,</span> <span class="n">units</span><span class="p">)</span>
+                        <span class="n">err_mess</span> <span class="o">+=</span> <span class="s">&quot; expecting [</span><span class="si">%s</span><span class="s">]&quot;</span> <span class="o">%</span> <span class="n">local_unit</span>
+                        <span class="bp">self</span><span class="o">.</span><span class="n">errors</span><span class="o">.</span><span class="n">add</span><span class="p">(</span><span class="n">err_mess</span><span class="p">)</span>
+                        <span class="k">if</span> <span class="n">optional</span><span class="p">:</span>
+                            <span class="n">logging</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="n">err_mess</span><span class="p">)</span>
+                        <span class="k">else</span><span class="p">:</span>
+                            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">,</span> <span class="n">err_mess</span>
+                <span class="k">else</span><span class="p">:</span>
+                    <span class="k">exec</span> <span class="s">&quot;storage.</span><span class="si">%s</span><span class="s"> = value&quot;</span> <span class="o">%</span> <span class="n">variable</span>
+            <span class="k">else</span><span class="p">:</span>
+                <span class="k">exec</span> <span class="s">&quot;storage.</span><span class="si">%s</span><span class="s"> = value&quot;</span> <span class="o">%</span> <span class="n">variable</span>
+
+    <span class="c"># DO NOT REMOVE - used in saving and loading panel states.</span>
+    <span class="k">def</span> <span class="nf">_store_content</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">location</span><span class="p">,</span> <span class="n">node</span><span class="p">,</span> <span class="n">variable</span><span class="p">,</span> <span class="n">storage</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Get the content of a xpath location and store</span>
+<span class="sd">        the result. The value is treated as a string.</span>
+
+<span class="sd">        The xpath location might or might not exist.</span>
+<span class="sd">        If it does not exist, nothing is done</span>
+
+<span class="sd">        :param location: xpath location to fetch</span>
+<span class="sd">        :param node: node to read the data from</span>
+<span class="sd">        :param variable: name of the data member to store it in [string]</span>
+<span class="sd">        :param storage: data object that has the &#39;variable&#39; data member</span>
+
+<span class="sd">        :return: return a list of errors</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">entry</span> <span class="o">=</span> <span class="n">get_content</span><span class="p">(</span><span class="n">location</span><span class="p">,</span> <span class="n">node</span><span class="p">)</span>
+        <span class="k">if</span> <span class="n">entry</span> <span class="ow">is</span> <span class="ow">not</span> <span class="bp">None</span> <span class="ow">and</span> <span class="n">entry</span><span class="o">.</span><span class="n">text</span> <span class="ow">is</span> <span class="ow">not</span> <span class="bp">None</span><span class="p">:</span>
+            <span class="k">exec</span> <span class="s">&quot;storage.</span><span class="si">%s</span><span class="s"> = entry.text.strip()&quot;</span> <span class="o">%</span> <span class="n">variable</span></div>
+</pre></div>
+
+          </div>
+        </div>
+      </div>
+      <div class="sphinxsidebar" role="navigation" aria-label="main navigation">
+        <div class="sphinxsidebarwrapper">
+<div id="searchbox" style="display: none" role="search">
+  <h3>Quick search</h3>
+    <form class="search" action="../../../../search.html" method="get">
+      <input type="text" name="q" />
+      <input type="submit" value="Go" />
+      <input type="hidden" name="check_keywords" value="yes" />
+      <input type="hidden" name="area" value="default" />
+    </form>
+    <p class="searchtip" style="font-size: 90%">
+    Enter search terms or a module, class or function name.
+    </p>
+</div>
+<script type="text/javascript">$('#searchbox').show(0);</script>
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="related" role="navigation" aria-label="related navigation">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="../../../../genindex.html" title="General Index"
+             >index</a></li>
+        <li class="right" >
+          <a href="../../../../py-modindex.html" title="Python Module Index"
+             >modules</a> |</li>
+        <li class="nav-item nav-item-0"><a href="../../../../index.html">SasView 3.1.0 documentation</a> &raquo;</li>
+          <li class="nav-item nav-item-1"><a href="../../../index.html" >Module code</a> &raquo;</li>
+          <li class="nav-item nav-item-2"><a href="../readers.html" >sas.dataloader.readers</a> &raquo;</li> 
+      </ul>
+    </div>
+    <div class="footer" role="contentinfo">
+        &copy; Copyright 2015, The SasView Project.
+      Created using <a href="http://sphinx-doc.org/">Sphinx</a> 1.3.1.
+    </div>
+  </body>
+</html>

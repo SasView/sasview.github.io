@@ -1,0 +1,351 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+  "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+    
+    <title>sas.models.UnifiedPowerRgModel &mdash; SasView 3.1.0 documentation</title>
+    
+    <link rel="stylesheet" href="../../../_static/classic.css" type="text/css" />
+    <link rel="stylesheet" href="../../../_static/pygments.css" type="text/css" />
+    
+    <script type="text/javascript">
+      var DOCUMENTATION_OPTIONS = {
+        URL_ROOT:    '../../../',
+        VERSION:     '3.1.0',
+        COLLAPSE_INDEX: false,
+        FILE_SUFFIX: '.html',
+        HAS_SOURCE:  true
+      };
+    </script>
+    <script type="text/javascript" src="../../../_static/jquery.js"></script>
+    <script type="text/javascript" src="../../../_static/underscore.js"></script>
+    <script type="text/javascript" src="../../../_static/doctools.js"></script>
+    <script type="text/javascript" src="https://cdn.mathjax.org/mathjax/latest/MathJax.js?config=TeX-AMS-MML_HTMLorMML"></script>
+    <link rel="top" title="SasView 3.1.0 documentation" href="../../../index.html" />
+    <link rel="up" title="sas.models" href="../models.html" /> 
+  </head>
+  <body role="document">
+    <div class="related" role="navigation" aria-label="related navigation">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="../../../genindex.html" title="General Index"
+             accesskey="I">index</a></li>
+        <li class="right" >
+          <a href="../../../py-modindex.html" title="Python Module Index"
+             >modules</a> |</li>
+        <li class="nav-item nav-item-0"><a href="../../../index.html">SasView 3.1.0 documentation</a> &raquo;</li>
+          <li class="nav-item nav-item-1"><a href="../../index.html" >Module code</a> &raquo;</li>
+          <li class="nav-item nav-item-2"><a href="../models.html" accesskey="U">sas.models</a> &raquo;</li> 
+      </ul>
+    </div>  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          <div class="body" role="main">
+            
+  <h1>Source code for sas.models.UnifiedPowerRgModel</h1><div class="highlight"><pre>
+<span class="kn">from</span> <span class="nn">sas.models.BaseComponent</span> <span class="kn">import</span> <span class="n">BaseComponent</span>
+<span class="kn">from</span> <span class="nn">math</span> <span class="kn">import</span> <span class="n">exp</span><span class="p">,</span> <span class="n">sqrt</span>
+<span class="kn">from</span> <span class="nn">numpy</span> <span class="kn">import</span> <span class="n">power</span>
+<span class="kn">from</span> <span class="nn">scipy.special</span> <span class="kn">import</span> <span class="n">erf</span>
+<span class="n">max_level_n</span> <span class="o">=</span> <span class="mi">7</span>
+<div class="viewcode-block" id="UnifiedPowerRgModel"><a class="viewcode-back" href="../../../dev/api/sas.models.html#sas.models.UnifiedPowerRgModel.UnifiedPowerRgModel">[docs]</a><span class="k">class</span> <span class="nc">UnifiedPowerRgModel</span><span class="p">(</span><span class="n">BaseComponent</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    This model is based on Exponential/Power-law fit method developed </span>
+<span class="sd">    by G. Beaucage</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">multfactor</span><span class="o">=</span><span class="mi">1</span><span class="p">):</span>
+        <span class="n">BaseComponent</span><span class="o">.</span><span class="n">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        :param multfactor: number of levels in the model, </span>
+<span class="sd">            assumes 0&lt;= level# &lt;=5.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+
+        <span class="c">## Setting  model name model description</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">name</span> <span class="o">=</span> <span class="s">&quot;UnifiedPowerRg&quot;</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">description</span> <span class="o">=</span> <span class="s">&quot;&quot;&quot;</span>
+<span class="s">        Multiple Levels of Unified Exponential/Power-law Method.</span>
+<span class="s">        Up to Level 6 is provided.</span>
+<span class="s">        Note; the additional Level 0 is an inverse linear function, </span>
+<span class="s">        i.e., y = scale/x + background.</span>
+<span class="s">        The Level N is defined as</span>
+<span class="s">        y = background + scale * Sum(1..N)[G_i*exp(-x^2*Rg_i^2/3)</span>
+<span class="s">        + B_i/x^(power_i)*(erf(x*Rg_i/sqrt(6))^(3*power_i))].</span>
+<span class="s">        Ref:</span>
+<span class="s">        G. Beaucage (1995).  J. Appl. Cryst., vol. 28, p717-728.</span>
+<span class="s">        G. Beaucage (1996).  J. Appl. Cryst., vol. 29, p134-146.</span>
+<span class="s">        &quot;&quot;&quot;</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">level_num</span> <span class="o">=</span> <span class="n">multfactor</span>
+        <span class="c">## Define parameters</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">params</span> <span class="o">=</span> <span class="p">{}</span>
+
+        <span class="c">## Parameter details [units, min, max]</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">details</span> <span class="o">=</span> <span class="p">{}</span>
+        
+        <span class="c"># non-fittable parameters</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">non_fittable</span> <span class="o">=</span> <span class="p">[]</span>
+
+        <span class="c"># list of function in order of the function number </span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">fun_list</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_get_func_list</span><span class="p">()</span>
+        <span class="c">## dispersion</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_set_dispersion</span><span class="p">()</span>
+        <span class="c">## Define parameters</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_set_params</span><span class="p">()</span>
+        
+        <span class="c">## Parameter details [units, min, max]</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_set_details</span><span class="p">()</span>
+        
+        <span class="c">#list of parameter that can be fitted</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_set_fixed_params</span><span class="p">()</span>  
+        
+        <span class="c">## functional multiplicity of the model</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">multiplicity_info</span> <span class="o">=</span> <span class="p">[</span><span class="n">max_level_n</span><span class="p">,</span> <span class="s">&quot;Level No.:&quot;</span><span class="p">,</span> <span class="p">[],</span> <span class="p">[]]</span>
+    
+    <span class="k">def</span> <span class="nf">_unifiedpowerrg</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">x</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Scattering function</span>
+<span class="sd">        </span>
+<span class="sd">        :param x: q value(s)</span>
+<span class="sd">        :return answer: output of the function</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="c"># common parameters for the model functions</span>
+        <span class="n">bkg</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">params</span><span class="p">[</span><span class="s">&#39;background&#39;</span><span class="p">]</span> 
+        <span class="n">scale</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">params</span><span class="p">[</span><span class="s">&#39;scale&#39;</span><span class="p">]</span>
+        <span class="n">l_num</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">level_num</span>
+        <span class="c"># set default output</span>
+        <span class="n">answer</span> <span class="o">=</span> <span class="mf">0.0</span>
+        <span class="c"># Set constant on lebel zero (special case)</span>
+        <span class="k">if</span> <span class="n">l_num</span> <span class="o">==</span> <span class="mi">0</span><span class="p">:</span>
+            <span class="n">answer</span> <span class="o">=</span> <span class="n">scale</span> <span class="o">/</span> <span class="n">x</span> <span class="o">+</span> <span class="n">bkg</span>
+            <span class="k">return</span> <span class="n">answer</span>
+        <span class="c"># rearrange the parameters for the given label no.</span>
+        <span class="k">for</span> <span class="n">ind</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="mi">1</span><span class="p">,</span> <span class="n">l_num</span><span class="o">+</span><span class="mi">1</span><span class="p">):</span>
+            <span class="c"># get exp term</span>
+            <span class="n">exp_now</span> <span class="o">=</span> <span class="n">exp</span><span class="p">(</span><span class="o">-</span><span class="n">power</span><span class="p">(</span><span class="n">x</span><span class="o">*</span><span class="bp">self</span><span class="o">.</span><span class="n">params</span><span class="p">[</span><span class="s">&#39;Rg</span><span class="si">%s</span><span class="s">&#39;</span><span class="o">%</span> <span class="n">ind</span><span class="p">],</span> <span class="mi">2</span><span class="p">)</span><span class="o">/</span><span class="mf">3.0</span><span class="p">)</span>
+            <span class="c"># get erf term</span>
+            <span class="n">erf_now</span> <span class="o">=</span> <span class="n">erf</span><span class="p">(</span><span class="n">x</span><span class="o">*</span><span class="bp">self</span><span class="o">.</span><span class="n">params</span><span class="p">[</span><span class="s">&#39;Rg</span><span class="si">%s</span><span class="s">&#39;</span><span class="o">%</span> <span class="n">ind</span><span class="p">]</span><span class="o">/</span><span class="n">sqrt</span><span class="p">(</span><span class="mf">6.0</span><span class="p">))</span>
+            <span class="c"># get power term</span>
+            <span class="n">pow_now</span> <span class="o">=</span> <span class="n">power</span><span class="p">((</span><span class="n">erf_now</span><span class="o">*</span><span class="n">erf_now</span><span class="o">*</span><span class="n">erf_now</span><span class="o">/</span><span class="n">x</span><span class="p">),</span> 
+                            <span class="bp">self</span><span class="o">.</span><span class="n">params</span><span class="p">[</span><span class="s">&#39;power</span><span class="si">%s</span><span class="s">&#39;</span><span class="o">%</span> <span class="n">ind</span><span class="p">])</span>
+            <span class="c"># get next exp term only if it exists</span>
+            <span class="k">try</span><span class="p">:</span>
+                <span class="n">exp_next</span> <span class="o">=</span> <span class="n">exp</span><span class="p">(</span><span class="o">-</span><span class="n">power</span><span class="p">(</span><span class="n">x</span><span class="o">*</span><span class="bp">self</span><span class="o">.</span><span class="n">params</span><span class="p">[</span><span class="s">&#39;Rg</span><span class="si">%s</span><span class="s">&#39;</span><span class="o">%</span> <span class="p">(</span><span class="n">ind</span><span class="o">+</span><span class="mi">1</span><span class="p">)],</span> <span class="mi">2</span><span class="p">)</span><span class="o">/</span><span class="mf">3.0</span><span class="p">)</span>
+            <span class="k">except</span><span class="p">:</span>
+                <span class="n">exp_next</span> <span class="o">=</span> <span class="mf">1.0</span>
+            <span class="c"># get to the calculation</span>
+            <span class="n">answer</span> <span class="o">+=</span> <span class="bp">self</span><span class="o">.</span><span class="n">params</span><span class="p">[</span><span class="s">&#39;G</span><span class="si">%s</span><span class="s">&#39;</span><span class="o">%</span> <span class="n">ind</span><span class="p">]</span><span class="o">*</span><span class="n">exp_now</span> <span class="o">+</span> \
+                            <span class="bp">self</span><span class="o">.</span><span class="n">params</span><span class="p">[</span><span class="s">&#39;B</span><span class="si">%s</span><span class="s">&#39;</span><span class="o">%</span> <span class="n">ind</span><span class="p">]</span> <span class="o">*</span> <span class="n">exp_next</span> <span class="o">*</span> <span class="n">pow_now</span>
+        <span class="c"># take care of the singular point</span>
+        <span class="k">if</span> <span class="n">x</span> <span class="o">==</span> <span class="mf">0.0</span><span class="p">:</span>
+            <span class="n">answer</span> <span class="o">=</span> <span class="mf">0.0</span>
+            <span class="k">for</span> <span class="n">ind</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="mi">1</span><span class="p">,</span> <span class="n">l_num</span><span class="o">+</span><span class="mi">1</span><span class="p">):</span>
+                <span class="n">answer</span> <span class="o">+=</span> <span class="bp">self</span><span class="o">.</span><span class="n">params</span><span class="p">[</span><span class="s">&#39;G</span><span class="si">%s</span><span class="s">&#39;</span><span class="o">%</span> <span class="n">ind</span><span class="p">]</span>
+        <span class="c"># get scaled</span>
+        <span class="n">answer</span> <span class="o">*=</span> <span class="n">scale</span>
+        <span class="c"># add background</span>
+        <span class="n">answer</span> <span class="o">+=</span> <span class="n">bkg</span>
+        <span class="k">return</span> <span class="n">answer</span>
+        
+    <span class="k">def</span> <span class="nf">_set_dispersion</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        model dispersions</span>
+<span class="sd">        &quot;&quot;&quot;</span> 
+        <span class="c">##set dispersion from model </span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">dispersion</span> <span class="o">=</span> <span class="p">{}</span>
+                    
+
+    <span class="k">def</span> <span class="nf">_set_params</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Concatenate the parameters of the model to create</span>
+<span class="sd">        this model parameters </span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="c"># common parameters for the model functions</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">params</span><span class="p">[</span><span class="s">&#39;background&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="mf">0.0</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">params</span><span class="p">[</span><span class="s">&#39;scale&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="mf">1.0</span>
+        <span class="n">l_num</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">level_num</span>
+        <span class="c"># rearrange the parameters for the given label no.</span>
+        <span class="k">for</span> <span class="n">ind</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="n">l_num</span><span class="o">+</span><span class="mi">1</span><span class="p">):</span>
+            <span class="k">if</span> <span class="n">ind</span> <span class="o">==</span> <span class="mi">0</span><span class="p">:</span>
+                <span class="k">continue</span>
+            <span class="c"># multiple factor for higher labels</span>
+            <span class="n">mult</span> <span class="o">=</span> <span class="mf">1.0</span>
+            <span class="n">mul_pow</span> <span class="o">=</span> <span class="mf">1.0</span>
+            <span class="k">if</span> <span class="n">ind</span> <span class="o">!=</span> <span class="n">l_num</span><span class="p">:</span>
+                <span class="n">mult</span> <span class="o">=</span> <span class="mf">10.0</span> <span class="o">*</span> <span class="mf">4.0</span><span class="o">/</span><span class="mf">3.0</span>
+                <span class="n">mul_pow</span> <span class="o">=</span> <span class="mf">2.0</span>
+            <span class="c"># Set reasonably define default values that consistent </span>
+            <span class="c"># w/NIST for label #1</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">params</span><span class="p">[</span><span class="s">&#39;G</span><span class="si">%s</span><span class="s">&#39;</span><span class="o">%</span> <span class="n">ind</span><span class="p">]</span> <span class="o">=</span> <span class="mf">0.3</span> <span class="o">*</span> <span class="n">mult</span> <span class="o">*</span> <span class="nb">pow</span><span class="p">(</span><span class="mi">10</span><span class="p">,</span> \
+                            <span class="p">(</span><span class="n">l_num</span><span class="o">+</span><span class="mi">1</span> <span class="o">-</span> <span class="nb">float</span><span class="p">(</span><span class="s">&#39;</span><span class="si">%s</span><span class="s">&#39;</span><span class="o">%</span> <span class="n">ind</span><span class="p">)))</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">params</span><span class="p">[</span><span class="s">&#39;Rg</span><span class="si">%s</span><span class="s">&#39;</span><span class="o">%</span> <span class="n">ind</span><span class="p">]</span> <span class="o">=</span> <span class="mf">21.0</span> <span class="o">/</span> <span class="n">mult</span> <span class="o">*</span> <span class="nb">pow</span><span class="p">(</span><span class="mi">10</span><span class="p">,</span> \
+                              <span class="p">(</span><span class="n">l_num</span> <span class="o">-</span> <span class="nb">float</span><span class="p">(</span><span class="s">&#39;</span><span class="si">%s</span><span class="s">&#39;</span><span class="o">%</span> <span class="n">ind</span><span class="p">)))</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">params</span><span class="p">[</span><span class="s">&#39;B</span><span class="si">%s</span><span class="s">&#39;</span><span class="o">%</span> <span class="n">ind</span><span class="p">]</span> <span class="o">=</span> <span class="mf">6e-03</span><span class="o">/</span><span class="n">mult</span> <span class="o">*</span> <span class="nb">pow</span><span class="p">(</span><span class="mi">10</span><span class="p">,</span> \
+                           <span class="o">-</span><span class="p">(</span><span class="n">l_num</span><span class="o">+</span><span class="mi">1</span> <span class="o">-</span> <span class="nb">float</span><span class="p">(</span><span class="s">&#39;</span><span class="si">%s</span><span class="s">&#39;</span><span class="o">%</span> <span class="n">ind</span><span class="p">)))</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">params</span><span class="p">[</span><span class="s">&#39;power</span><span class="si">%s</span><span class="s">&#39;</span><span class="o">%</span> <span class="n">ind</span><span class="p">]</span> <span class="o">=</span> <span class="mf">2.0</span> <span class="o">*</span> <span class="n">mul_pow</span>
+            
+
+    <span class="k">def</span> <span class="nf">_set_details</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Concatenate details of the original model to create</span>
+<span class="sd">        this model details </span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="c"># common parameters for the model functions</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">details</span><span class="p">[</span><span class="s">&#39;background&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="p">[</span><span class="s">&#39;[1/cm]&#39;</span><span class="p">,</span> <span class="bp">None</span><span class="p">,</span> <span class="bp">None</span><span class="p">]</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">details</span><span class="p">[</span><span class="s">&#39;scale&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="p">[</span><span class="s">&#39;&#39;</span><span class="p">,</span> <span class="bp">None</span><span class="p">,</span> <span class="bp">None</span><span class="p">]</span>
+        <span class="c"># rearrange the parameters for the given label no.</span>
+        <span class="k">for</span> <span class="n">ind</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">level_num</span><span class="o">+</span><span class="mi">1</span><span class="p">):</span>
+            <span class="k">if</span> <span class="n">ind</span> <span class="o">==</span> <span class="mi">0</span><span class="p">:</span>
+                <span class="k">continue</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">details</span><span class="p">[</span><span class="s">&#39;G</span><span class="si">%s</span><span class="s">&#39;</span><span class="o">%</span> <span class="n">ind</span><span class="p">]</span> <span class="o">=</span> <span class="p">[</span><span class="s">&#39;[1/(cm.sr)]&#39;</span><span class="p">,</span> <span class="bp">None</span><span class="p">,</span> <span class="bp">None</span><span class="p">]</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">details</span><span class="p">[</span><span class="s">&#39;Rg</span><span class="si">%s</span><span class="s">&#39;</span><span class="o">%</span> <span class="n">ind</span><span class="p">]</span> <span class="o">=</span> <span class="p">[</span><span class="s">&#39;[A]&#39;</span><span class="p">,</span> <span class="bp">None</span><span class="p">,</span> <span class="bp">None</span><span class="p">]</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">details</span><span class="p">[</span><span class="s">&#39;B</span><span class="si">%s</span><span class="s">&#39;</span><span class="o">%</span> <span class="n">ind</span><span class="p">]</span> <span class="o">=</span> <span class="p">[</span><span class="s">&#39;[1/(cm.sr)]&#39;</span><span class="p">,</span> <span class="bp">None</span><span class="p">,</span> <span class="bp">None</span><span class="p">]</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">details</span><span class="p">[</span><span class="s">&#39;power</span><span class="si">%s</span><span class="s">&#39;</span><span class="o">%</span> <span class="n">ind</span><span class="p">]</span> <span class="o">=</span> <span class="p">[</span><span class="s">&#39;&#39;</span><span class="p">,</span> <span class="bp">None</span><span class="p">,</span> <span class="bp">None</span><span class="p">]</span>
+
+    
+    <span class="k">def</span> <span class="nf">_get_func_list</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Get the list of functions in each cases </span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">func_list</span> <span class="o">=</span> <span class="p">{}</span>
+        <span class="k">return</span> <span class="n">func_list</span>
+        
+<div class="viewcode-block" id="UnifiedPowerRgModel.getProfile"><a class="viewcode-back" href="../../../dev/api/sas.models.html#sas.models.UnifiedPowerRgModel.UnifiedPowerRgModel.getProfile">[docs]</a>    <span class="k">def</span> <span class="nf">getProfile</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Get SLD profile </span>
+<span class="sd">        </span>
+<span class="sd">        : return: None, No SLD profile supporting for this model</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">return</span> <span class="bp">None</span>
+        </div>
+<div class="viewcode-block" id="UnifiedPowerRgModel.setParam"><a class="viewcode-back" href="../../../dev/api/sas.models.html#sas.models.UnifiedPowerRgModel.UnifiedPowerRgModel.setParam">[docs]</a>    <span class="k">def</span> <span class="nf">setParam</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">name</span><span class="p">,</span> <span class="n">value</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot; </span>
+<span class="sd">        Set the value of a model parameter</span>
+<span class="sd">    </span>
+<span class="sd">        : param name: name of the parameter</span>
+<span class="sd">        : param value: value of the parameter</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="c"># set param to new model</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_setParamHelper</span><span class="p">(</span><span class="n">name</span><span class="p">,</span> <span class="n">value</span><span class="p">)</span>
+</div>
+    <span class="k">def</span> <span class="nf">_setParamHelper</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">name</span><span class="p">,</span> <span class="n">value</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Helper function to setParam</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+
+        <span class="c"># Look for standard parameter</span>
+        <span class="k">for</span> <span class="n">item</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">params</span><span class="o">.</span><span class="n">keys</span><span class="p">():</span>
+            <span class="k">if</span> <span class="n">item</span><span class="o">.</span><span class="n">lower</span><span class="p">()</span><span class="o">==</span><span class="n">name</span><span class="o">.</span><span class="n">lower</span><span class="p">():</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">params</span><span class="p">[</span><span class="n">item</span><span class="p">]</span> <span class="o">=</span> <span class="n">value</span>
+                <span class="k">return</span>
+        
+        <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">,</span> <span class="s">&quot;Model does not contain parameter </span><span class="si">%s</span><span class="s">&quot;</span> <span class="o">%</span> <span class="n">name</span>
+             
+   
+    <span class="k">def</span> <span class="nf">_set_fixed_params</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Fill the self.fixed list with the model fixed list</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">pass</span>         
+
+                
+<div class="viewcode-block" id="UnifiedPowerRgModel.run"><a class="viewcode-back" href="../../../dev/api/sas.models.html#sas.models.UnifiedPowerRgModel.UnifiedPowerRgModel.run">[docs]</a>    <span class="k">def</span> <span class="nf">run</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">x</span> <span class="o">=</span> <span class="mf">0.0</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot; </span>
+<span class="sd">        Evaluate the model</span>
+<span class="sd">        </span>
+<span class="sd">        : param x: input q-value (float or [float, float] as [r, theta])</span>
+<span class="sd">        : return: (DAB value)</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">if</span> <span class="n">x</span><span class="o">.</span><span class="n">__class__</span><span class="o">.</span><span class="n">__name__</span> <span class="o">==</span> <span class="s">&#39;list&#39;</span><span class="p">:</span>
+            <span class="c"># Take absolute value of Q, since this model is really meant to</span>
+            <span class="c"># be defined in 1D for a given length of Q</span>
+            <span class="c">#qx = math.fabs(x[0]*math.cos(x[1]))</span>
+            <span class="c">#qy = math.fabs(x[0]*math.sin(x[1]))</span>
+            <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_unifiedpowerrg</span><span class="p">(</span><span class="n">x</span><span class="p">)</span>
+        <span class="k">elif</span> <span class="n">x</span><span class="o">.</span><span class="n">__class__</span><span class="o">.</span><span class="n">__name__</span> <span class="o">==</span> <span class="s">&#39;tuple&#39;</span><span class="p">:</span>
+            <span class="n">msg</span> <span class="o">=</span> <span class="s">&quot;Tuples are not allowed as input to BaseComponent models&quot;</span>
+            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">,</span> <span class="n">msg</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_unifiedpowerrg</span><span class="p">(</span><span class="n">x</span><span class="p">)</span>
+
+
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_unifiedpowerrg</span><span class="p">(</span><span class="n">x</span><span class="p">)</span>
+</div>
+<div class="viewcode-block" id="UnifiedPowerRgModel.runXY"><a class="viewcode-back" href="../../../dev/api/sas.models.html#sas.models.UnifiedPowerRgModel.UnifiedPowerRgModel.runXY">[docs]</a>    <span class="k">def</span> <span class="nf">runXY</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">x</span> <span class="o">=</span> <span class="mf">0.0</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot; </span>
+<span class="sd">        Evaluate the model</span>
+<span class="sd">        </span>
+<span class="sd">        : param x: input q-value (float or [float, float] as [qx, qy])</span>
+<span class="sd">        : return: DAB value</span>
+<span class="sd">        &quot;&quot;&quot;</span>  
+        <span class="k">if</span> <span class="n">x</span><span class="o">.</span><span class="n">__class__</span><span class="o">.</span><span class="n">__name__</span> <span class="o">==</span> <span class="s">&#39;list&#39;</span><span class="p">:</span>
+            <span class="n">q</span> <span class="o">=</span> <span class="n">sqrt</span><span class="p">(</span><span class="n">x</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="o">**</span><span class="mi">2</span> <span class="o">+</span> <span class="n">x</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span><span class="o">**</span><span class="mi">2</span><span class="p">)</span>
+            <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_unifiedpowerrg</span><span class="p">(</span><span class="n">x</span><span class="p">)</span>
+        <span class="k">elif</span> <span class="n">x</span><span class="o">.</span><span class="n">__class__</span><span class="o">.</span><span class="n">__name__</span> <span class="o">==</span> <span class="s">&#39;tuple&#39;</span><span class="p">:</span>
+            <span class="n">msg</span> <span class="o">=</span> <span class="s">&quot;Tuples are not allowed as input to BaseComponent models&quot;</span>
+            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">,</span> <span class="n">msg</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_unifiedpowerrg</span><span class="p">(</span><span class="n">x</span><span class="p">)</span>
+</div>
+<div class="viewcode-block" id="UnifiedPowerRgModel.calculate_ER"><a class="viewcode-back" href="../../../dev/api/sas.models.html#sas.models.UnifiedPowerRgModel.UnifiedPowerRgModel.calculate_ER">[docs]</a>    <span class="k">def</span> <span class="nf">calculate_ER</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="c"># Not implemented!!!</span>
+        <span class="k">pass</span>
+    </div>
+<div class="viewcode-block" id="UnifiedPowerRgModel.set_dispersion"><a class="viewcode-back" href="../../../dev/api/sas.models.html#sas.models.UnifiedPowerRgModel.UnifiedPowerRgModel.set_dispersion">[docs]</a>    <span class="k">def</span> <span class="nf">set_dispersion</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">parameter</span><span class="p">,</span> <span class="n">dispersion</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Set the dispersion object for a model parameter</span>
+<span class="sd">        </span>
+<span class="sd">        : param parameter: name of the parameter [string]</span>
+<span class="sd">        :dispersion: dispersion object of type DispersionModel</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">pass</span></div></div>
+</pre></div>
+
+          </div>
+        </div>
+      </div>
+      <div class="sphinxsidebar" role="navigation" aria-label="main navigation">
+        <div class="sphinxsidebarwrapper">
+<div id="searchbox" style="display: none" role="search">
+  <h3>Quick search</h3>
+    <form class="search" action="../../../search.html" method="get">
+      <input type="text" name="q" />
+      <input type="submit" value="Go" />
+      <input type="hidden" name="check_keywords" value="yes" />
+      <input type="hidden" name="area" value="default" />
+    </form>
+    <p class="searchtip" style="font-size: 90%">
+    Enter search terms or a module, class or function name.
+    </p>
+</div>
+<script type="text/javascript">$('#searchbox').show(0);</script>
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="related" role="navigation" aria-label="related navigation">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="../../../genindex.html" title="General Index"
+             >index</a></li>
+        <li class="right" >
+          <a href="../../../py-modindex.html" title="Python Module Index"
+             >modules</a> |</li>
+        <li class="nav-item nav-item-0"><a href="../../../index.html">SasView 3.1.0 documentation</a> &raquo;</li>
+          <li class="nav-item nav-item-1"><a href="../../index.html" >Module code</a> &raquo;</li>
+          <li class="nav-item nav-item-2"><a href="../models.html" >sas.models</a> &raquo;</li> 
+      </ul>
+    </div>
+    <div class="footer" role="contentinfo">
+        &copy; Copyright 2015, The SasView Project.
+      Created using <a href="http://sphinx-doc.org/">Sphinx</a> 1.3.1.
+    </div>
+  </body>
+</html>

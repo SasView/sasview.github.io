@@ -1,0 +1,695 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+  "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+    
+    <title>sas.guiframe.local_perspectives.plotting.AnnulusSlicer &mdash; SasView 3.1.0 documentation</title>
+    
+    <link rel="stylesheet" href="../../../../../_static/classic.css" type="text/css" />
+    <link rel="stylesheet" href="../../../../../_static/pygments.css" type="text/css" />
+    
+    <script type="text/javascript">
+      var DOCUMENTATION_OPTIONS = {
+        URL_ROOT:    '../../../../../',
+        VERSION:     '3.1.0',
+        COLLAPSE_INDEX: false,
+        FILE_SUFFIX: '.html',
+        HAS_SOURCE:  true
+      };
+    </script>
+    <script type="text/javascript" src="../../../../../_static/jquery.js"></script>
+    <script type="text/javascript" src="../../../../../_static/underscore.js"></script>
+    <script type="text/javascript" src="../../../../../_static/doctools.js"></script>
+    <script type="text/javascript" src="https://cdn.mathjax.org/mathjax/latest/MathJax.js?config=TeX-AMS-MML_HTMLorMML"></script>
+    <link rel="top" title="SasView 3.1.0 documentation" href="../../../../../index.html" />
+    <link rel="up" title="sas.guiframe" href="../../../guiframe.html" /> 
+  </head>
+  <body role="document">
+    <div class="related" role="navigation" aria-label="related navigation">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="../../../../../genindex.html" title="General Index"
+             accesskey="I">index</a></li>
+        <li class="right" >
+          <a href="../../../../../py-modindex.html" title="Python Module Index"
+             >modules</a> |</li>
+        <li class="nav-item nav-item-0"><a href="../../../../../index.html">SasView 3.1.0 documentation</a> &raquo;</li>
+          <li class="nav-item nav-item-1"><a href="../../../../index.html" >Module code</a> &raquo;</li>
+          <li class="nav-item nav-item-2"><a href="../../../guiframe.html" accesskey="U">sas.guiframe</a> &raquo;</li> 
+      </ul>
+    </div>  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          <div class="body" role="main">
+            
+  <h1>Source code for sas.guiframe.local_perspectives.plotting.AnnulusSlicer</h1><div class="highlight"><pre>
+<span class="c"># TODO: the line slicer should listen to all 2DREFRESH events, get the data and slice it</span>
+<span class="c">#      before pushing a new 1D data update.</span>
+
+<span class="c">#</span>
+<span class="c"># TODO: NEED MAJOR REFACTOR</span>
+<span class="c">#</span>
+
+<span class="kn">import</span> <span class="nn">math</span>
+<span class="kn">import</span> <span class="nn">wx</span>
+<span class="c"># from copy import deepcopy</span>
+<span class="c"># Debug printout</span>
+<span class="kn">from</span> <span class="nn">sas.guiframe.events</span> <span class="kn">import</span> <span class="n">NewPlotEvent</span>
+<span class="kn">from</span> <span class="nn">sas.guiframe.events</span> <span class="kn">import</span> <span class="n">StatusEvent</span>
+<span class="kn">from</span> <span class="nn">sas.guiframe.events</span> <span class="kn">import</span> <span class="n">SlicerParameterEvent</span>
+<span class="kn">from</span> <span class="nn">sas.guiframe.events</span> <span class="kn">import</span> <span class="n">EVT_SLICER_PARS</span>
+<span class="kn">from</span> <span class="nn">BaseInteractor</span> <span class="kn">import</span> <span class="n">_BaseInteractor</span>
+<span class="kn">from</span> <span class="nn">sas.guiframe.dataFitting</span> <span class="kn">import</span> <span class="n">Data1D</span>
+
+<div class="viewcode-block" id="AnnulusInteractor"><a class="viewcode-back" href="../../../../../dev/api/sas.guiframe.local_perspectives.plotting.html#sas.guiframe.local_perspectives.plotting.AnnulusSlicer.AnnulusInteractor">[docs]</a><span class="k">class</span> <span class="nc">AnnulusInteractor</span><span class="p">(</span><span class="n">_BaseInteractor</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Select an annulus through a 2D plot.</span>
+<span class="sd">    This interactor is used to average 2D data  with the region</span>
+<span class="sd">    defined by 2 radius.</span>
+<span class="sd">    this class is defined by 2 Ringinterators.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">base</span><span class="p">,</span> <span class="n">axes</span><span class="p">,</span> <span class="n">color</span><span class="o">=</span><span class="s">&#39;black&#39;</span><span class="p">,</span> <span class="n">zorder</span><span class="o">=</span><span class="mi">3</span><span class="p">):</span>
+
+        <span class="n">_BaseInteractor</span><span class="o">.</span><span class="n">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">base</span><span class="p">,</span> <span class="n">axes</span><span class="p">,</span> <span class="n">color</span><span class="o">=</span><span class="n">color</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">markers</span> <span class="o">=</span> <span class="p">[]</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">axes</span> <span class="o">=</span> <span class="n">axes</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">base</span> <span class="o">=</span> <span class="n">base</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">qmax</span> <span class="o">=</span> <span class="nb">min</span><span class="p">(</span><span class="n">math</span><span class="o">.</span><span class="n">fabs</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">base</span><span class="o">.</span><span class="n">data2D</span><span class="o">.</span><span class="n">xmax</span><span class="p">),</span>
+                        <span class="n">math</span><span class="o">.</span><span class="n">fabs</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">base</span><span class="o">.</span><span class="n">data2D</span><span class="o">.</span><span class="n">xmin</span><span class="p">))</span>  <span class="c"># must be positive</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">connect</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">base</span><span class="o">.</span><span class="n">connect</span>
+
+        <span class="c"># # Number of points on the plot</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">nbins</span> <span class="o">=</span> <span class="mi">36</span>
+        <span class="c"># Cursor position of Rings (Left(-1) or Right(1))</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">xmaxd</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">base</span><span class="o">.</span><span class="n">data2D</span><span class="o">.</span><span class="n">xmax</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">xmind</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">base</span><span class="o">.</span><span class="n">data2D</span><span class="o">.</span><span class="n">xmin</span>
+
+        <span class="k">if</span> <span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">xmaxd</span> <span class="o">+</span> <span class="bp">self</span><span class="o">.</span><span class="n">xmind</span><span class="p">)</span> <span class="o">&gt;</span> <span class="mi">0</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">sign</span> <span class="o">=</span> <span class="mi">1</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">sign</span> <span class="o">=</span> <span class="o">-</span><span class="mi">1</span>
+        <span class="c"># Inner circle</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">inner_circle</span> <span class="o">=</span> <span class="n">RingInteractor</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">base</span><span class="o">.</span><span class="n">subplot</span><span class="p">,</span>
+                                           <span class="n">zorder</span><span class="o">=</span><span class="n">zorder</span><span class="p">,</span>
+                                           <span class="n">r</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">qmax</span> <span class="o">/</span> <span class="mf">2.0</span><span class="p">,</span> <span class="n">sign</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">sign</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">inner_circle</span><span class="o">.</span><span class="n">qmax</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">qmax</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">outer_circle</span> <span class="o">=</span> <span class="n">RingInteractor</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">base</span><span class="o">.</span><span class="n">subplot</span><span class="p">,</span>
+                                           <span class="n">zorder</span><span class="o">=</span><span class="n">zorder</span> <span class="o">+</span> <span class="mi">1</span><span class="p">,</span> <span class="n">r</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">qmax</span> <span class="o">/</span> <span class="mf">1.8</span><span class="p">,</span>
+                                           <span class="n">sign</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">sign</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">outer_circle</span><span class="o">.</span><span class="n">qmax</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">qmax</span> <span class="o">*</span> <span class="mf">1.2</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">update</span><span class="p">()</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_post_data</span><span class="p">()</span>
+
+        <span class="c"># Bind to slice parameter events</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">base</span><span class="o">.</span><span class="n">Bind</span><span class="p">(</span><span class="n">EVT_SLICER_PARS</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">_onEVT_SLICER_PARS</span><span class="p">)</span>
+
+    <span class="k">def</span> <span class="nf">_onEVT_SLICER_PARS</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">event</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        receive an event containing parameters values to reset the slicer</span>
+
+<span class="sd">        :param event: event of type SlicerParameterEvent with params as</span>
+<span class="sd">            attribute</span>
+
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">wx</span><span class="o">.</span><span class="n">PostEvent</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">base</span><span class="p">,</span>
+                     <span class="n">StatusEvent</span><span class="p">(</span><span class="n">status</span><span class="o">=</span><span class="s">&quot;AnnulusSlicer._onEVT_SLICER_PARS&quot;</span><span class="p">))</span>
+        <span class="n">event</span><span class="o">.</span><span class="n">Skip</span><span class="p">()</span>
+        <span class="k">if</span> <span class="n">event</span><span class="o">.</span><span class="n">type</span> <span class="o">==</span> <span class="bp">self</span><span class="o">.</span><span class="n">__class__</span><span class="o">.</span><span class="n">__name__</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">set_params</span><span class="p">(</span><span class="n">event</span><span class="o">.</span><span class="n">params</span><span class="p">)</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">base</span><span class="o">.</span><span class="n">update</span><span class="p">()</span>
+
+<div class="viewcode-block" id="AnnulusInteractor.set_layer"><a class="viewcode-back" href="../../../../../dev/api/sas.guiframe.local_perspectives.plotting.html#sas.guiframe.local_perspectives.plotting.AnnulusSlicer.AnnulusInteractor.set_layer">[docs]</a>    <span class="k">def</span> <span class="nf">set_layer</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">n</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Allow adding plot to the same panel</span>
+
+<span class="sd">        :param n: the number of layer</span>
+
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">layernum</span> <span class="o">=</span> <span class="n">n</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">update</span><span class="p">()</span>
+</div>
+<div class="viewcode-block" id="AnnulusInteractor.clear"><a class="viewcode-back" href="../../../../../dev/api/sas.guiframe.local_perspectives.plotting.html#sas.guiframe.local_perspectives.plotting.AnnulusSlicer.AnnulusInteractor.clear">[docs]</a>    <span class="k">def</span> <span class="nf">clear</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Clear the slicer and all connected events related to this slicer</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">clear_markers</span><span class="p">()</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">outer_circle</span><span class="o">.</span><span class="n">clear</span><span class="p">()</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">inner_circle</span><span class="o">.</span><span class="n">clear</span><span class="p">()</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">base</span><span class="o">.</span><span class="n">connect</span><span class="o">.</span><span class="n">clearall</span><span class="p">()</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">base</span><span class="o">.</span><span class="n">Unbind</span><span class="p">(</span><span class="n">EVT_SLICER_PARS</span><span class="p">)</span>
+</div>
+<div class="viewcode-block" id="AnnulusInteractor.update"><a class="viewcode-back" href="../../../../../dev/api/sas.guiframe.local_perspectives.plotting.html#sas.guiframe.local_perspectives.plotting.AnnulusSlicer.AnnulusInteractor.update">[docs]</a>    <span class="k">def</span> <span class="nf">update</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Respond to changes in the model by recalculating the profiles and</span>
+<span class="sd">        resetting the widgets.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="c"># Update locations</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">inner_circle</span><span class="o">.</span><span class="n">update</span><span class="p">()</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">outer_circle</span><span class="o">.</span><span class="n">update</span><span class="p">()</span>
+</div>
+<div class="viewcode-block" id="AnnulusInteractor.save"><a class="viewcode-back" href="../../../../../dev/api/sas.guiframe.local_perspectives.plotting.html#sas.guiframe.local_perspectives.plotting.AnnulusSlicer.AnnulusInteractor.save">[docs]</a>    <span class="k">def</span> <span class="nf">save</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">ev</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Remember the roughness for this layer and the next so that we</span>
+<span class="sd">        can restore on Esc.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">base</span><span class="o">.</span><span class="n">freeze_axes</span><span class="p">()</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">inner_circle</span><span class="o">.</span><span class="n">save</span><span class="p">(</span><span class="n">ev</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">outer_circle</span><span class="o">.</span><span class="n">save</span><span class="p">(</span><span class="n">ev</span><span class="p">)</span>
+</div>
+    <span class="k">def</span> <span class="nf">_post_data</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">nbins</span><span class="o">=</span><span class="bp">None</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Uses annulus parameters to plot averaged data into 1D data.</span>
+
+<span class="sd">        :param nbins: the number of points to plot</span>
+
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="c"># Data to average</span>
+        <span class="n">data</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">base</span><span class="o">.</span><span class="n">data2D</span>
+        <span class="c"># If we have no data, just return</span>
+        <span class="k">if</span> <span class="n">data</span> <span class="o">==</span> <span class="bp">None</span><span class="p">:</span>
+            <span class="k">return</span>
+
+        <span class="kn">from</span> <span class="nn">sas.dataloader.manipulations</span> <span class="kn">import</span> <span class="n">Ring</span>
+        <span class="n">rmin</span> <span class="o">=</span> <span class="nb">min</span><span class="p">(</span><span class="n">math</span><span class="o">.</span><span class="n">fabs</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">inner_circle</span><span class="o">.</span><span class="n">get_radius</span><span class="p">()),</span>
+                   <span class="n">math</span><span class="o">.</span><span class="n">fabs</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">outer_circle</span><span class="o">.</span><span class="n">get_radius</span><span class="p">()))</span>
+        <span class="n">rmax</span> <span class="o">=</span> <span class="nb">max</span><span class="p">(</span><span class="n">math</span><span class="o">.</span><span class="n">fabs</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">inner_circle</span><span class="o">.</span><span class="n">get_radius</span><span class="p">()),</span>
+                   <span class="n">math</span><span class="o">.</span><span class="n">fabs</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">outer_circle</span><span class="o">.</span><span class="n">get_radius</span><span class="p">()))</span>
+        <span class="c"># if the user does not specify the numbers of points to plot</span>
+        <span class="c"># the default number will be nbins= 36</span>
+        <span class="k">if</span> <span class="n">nbins</span> <span class="o">==</span> <span class="bp">None</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">nbins</span> <span class="o">=</span> <span class="mi">36</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">nbins</span> <span class="o">=</span> <span class="n">nbins</span>
+        <span class="c"># # create the data1D Q average of data2D</span>
+        <span class="n">sect</span> <span class="o">=</span> <span class="n">Ring</span><span class="p">(</span><span class="n">r_min</span><span class="o">=</span><span class="n">rmin</span><span class="p">,</span> <span class="n">r_max</span><span class="o">=</span><span class="n">rmax</span><span class="p">,</span> <span class="n">nbins</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">nbins</span><span class="p">)</span>
+        <span class="n">sector</span> <span class="o">=</span> <span class="n">sect</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">base</span><span class="o">.</span><span class="n">data2D</span><span class="p">)</span>
+
+        <span class="k">if</span> <span class="nb">hasattr</span><span class="p">(</span><span class="n">sector</span><span class="p">,</span> <span class="s">&quot;dxl&quot;</span><span class="p">):</span>
+            <span class="n">dxl</span> <span class="o">=</span> <span class="n">sector</span><span class="o">.</span><span class="n">dxl</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">dxl</span> <span class="o">=</span> <span class="bp">None</span>
+        <span class="k">if</span> <span class="nb">hasattr</span><span class="p">(</span><span class="n">sector</span><span class="p">,</span> <span class="s">&quot;dxw&quot;</span><span class="p">):</span>
+            <span class="n">dxw</span> <span class="o">=</span> <span class="n">sector</span><span class="o">.</span><span class="n">dxw</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">dxw</span> <span class="o">=</span> <span class="bp">None</span>
+        <span class="n">new_plot</span> <span class="o">=</span> <span class="n">Data1D</span><span class="p">(</span><span class="n">x</span><span class="o">=</span><span class="p">(</span><span class="n">sector</span><span class="o">.</span><span class="n">x</span> <span class="o">-</span> <span class="n">math</span><span class="o">.</span><span class="n">pi</span><span class="p">)</span> <span class="o">*</span> <span class="mi">180</span> <span class="o">/</span> <span class="n">math</span><span class="o">.</span><span class="n">pi</span><span class="p">,</span>
+                          <span class="n">y</span><span class="o">=</span><span class="n">sector</span><span class="o">.</span><span class="n">y</span><span class="p">,</span> <span class="n">dy</span><span class="o">=</span><span class="n">sector</span><span class="o">.</span><span class="n">dy</span><span class="p">)</span>
+        <span class="n">new_plot</span><span class="o">.</span><span class="n">dxl</span> <span class="o">=</span> <span class="n">dxl</span>
+        <span class="n">new_plot</span><span class="o">.</span><span class="n">dxw</span> <span class="o">=</span> <span class="n">dxw</span>
+        <span class="n">new_plot</span><span class="o">.</span><span class="n">name</span> <span class="o">=</span> <span class="s">&quot;AnnulusPhi&quot;</span> <span class="o">+</span> <span class="s">&quot;(&quot;</span> <span class="o">+</span> <span class="bp">self</span><span class="o">.</span><span class="n">base</span><span class="o">.</span><span class="n">data2D</span><span class="o">.</span><span class="n">name</span> <span class="o">+</span> <span class="s">&quot;)&quot;</span>
+
+        <span class="n">new_plot</span><span class="o">.</span><span class="n">source</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">base</span><span class="o">.</span><span class="n">data2D</span><span class="o">.</span><span class="n">source</span>
+        <span class="c"># new_plot.info=self.base.data2D.info</span>
+        <span class="n">new_plot</span><span class="o">.</span><span class="n">interactive</span> <span class="o">=</span> <span class="bp">True</span>
+        <span class="n">new_plot</span><span class="o">.</span><span class="n">detector</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">base</span><span class="o">.</span><span class="n">data2D</span><span class="o">.</span><span class="n">detector</span>
+        <span class="c"># If the data file does not tell us what the axes are, just assume...</span>
+        <span class="n">new_plot</span><span class="o">.</span><span class="n">xaxis</span><span class="p">(</span><span class="s">&quot;</span><span class="se">\\</span><span class="s">rm{\phi}&quot;</span><span class="p">,</span> <span class="s">&#39;degrees&#39;</span><span class="p">)</span>
+        <span class="n">new_plot</span><span class="o">.</span><span class="n">yaxis</span><span class="p">(</span><span class="s">&quot;</span><span class="se">\\</span><span class="s">rm{Intensity} &quot;</span><span class="p">,</span> <span class="s">&quot;cm^{-1}&quot;</span><span class="p">)</span>
+        <span class="k">if</span> <span class="nb">hasattr</span><span class="p">(</span><span class="n">data</span><span class="p">,</span> <span class="s">&quot;scale&quot;</span><span class="p">)</span> <span class="ow">and</span> <span class="n">data</span><span class="o">.</span><span class="n">scale</span> <span class="o">==</span> <span class="s">&#39;linear&#39;</span> <span class="ow">and</span> \
+                <span class="bp">self</span><span class="o">.</span><span class="n">base</span><span class="o">.</span><span class="n">data2D</span><span class="o">.</span><span class="n">name</span><span class="o">.</span><span class="n">count</span><span class="p">(</span><span class="s">&quot;Residuals&quot;</span><span class="p">)</span> <span class="o">&gt;</span> <span class="mi">0</span><span class="p">:</span>
+            <span class="n">new_plot</span><span class="o">.</span><span class="n">ytransform</span> <span class="o">=</span> <span class="s">&#39;y&#39;</span>
+            <span class="n">new_plot</span><span class="o">.</span><span class="n">yaxis</span><span class="p">(</span><span class="s">&quot;</span><span class="se">\\</span><span class="s">rm{Residuals} &quot;</span><span class="p">,</span> <span class="s">&quot;/&quot;</span><span class="p">)</span>
+
+        <span class="n">new_plot</span><span class="o">.</span><span class="n">group_id</span> <span class="o">=</span> <span class="s">&quot;AnnulusPhi&quot;</span> <span class="o">+</span> <span class="bp">self</span><span class="o">.</span><span class="n">base</span><span class="o">.</span><span class="n">data2D</span><span class="o">.</span><span class="n">name</span>
+        <span class="n">new_plot</span><span class="o">.</span><span class="n">id</span> <span class="o">=</span> <span class="s">&quot;AnnulusPhi&quot;</span> <span class="o">+</span> <span class="bp">self</span><span class="o">.</span><span class="n">base</span><span class="o">.</span><span class="n">data2D</span><span class="o">.</span><span class="n">name</span>
+        <span class="n">new_plot</span><span class="o">.</span><span class="n">is_data</span> <span class="o">=</span> <span class="bp">True</span>
+        <span class="n">new_plot</span><span class="o">.</span><span class="n">xtransform</span> <span class="o">=</span> <span class="s">&quot;x&quot;</span>
+        <span class="n">new_plot</span><span class="o">.</span><span class="n">ytransform</span> <span class="o">=</span> <span class="s">&quot;y&quot;</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">base</span><span class="o">.</span><span class="n">parent</span><span class="o">.</span><span class="n">update_theory</span><span class="p">(</span><span class="n">data_id</span><span class="o">=</span><span class="n">data</span><span class="o">.</span><span class="n">id</span><span class="p">,</span> <span class="n">theory</span><span class="o">=</span><span class="n">new_plot</span><span class="p">)</span>
+        <span class="n">wx</span><span class="o">.</span><span class="n">PostEvent</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">base</span><span class="o">.</span><span class="n">parent</span><span class="p">,</span> <span class="n">NewPlotEvent</span><span class="p">(</span><span class="n">plot</span><span class="o">=</span><span class="n">new_plot</span><span class="p">,</span> <span class="n">title</span><span class="o">=</span><span class="s">&quot;AnnulusPhi&quot;</span><span class="p">))</span>
+
+<div class="viewcode-block" id="AnnulusInteractor.moveend"><a class="viewcode-back" href="../../../../../dev/api/sas.guiframe.local_perspectives.plotting.html#sas.guiframe.local_perspectives.plotting.AnnulusSlicer.AnnulusInteractor.moveend">[docs]</a>    <span class="k">def</span> <span class="nf">moveend</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">ev</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Called when any dragging motion ends.</span>
+<span class="sd">        Post an event (type =SlicerParameterEvent)</span>
+<span class="sd">        to plotter 2D with a copy  slicer parameters</span>
+<span class="sd">        Call  _post_data method</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">base</span><span class="o">.</span><span class="n">thaw_axes</span><span class="p">()</span>
+        <span class="c"># Post parameters to plotter 2D</span>
+        <span class="n">event</span> <span class="o">=</span> <span class="n">SlicerParameterEvent</span><span class="p">()</span>
+        <span class="n">event</span><span class="o">.</span><span class="n">type</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">__class__</span><span class="o">.</span><span class="n">__name__</span>
+        <span class="n">event</span><span class="o">.</span><span class="n">params</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">get_params</span><span class="p">()</span>
+        <span class="n">wx</span><span class="o">.</span><span class="n">PostEvent</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">base</span><span class="p">,</span> <span class="n">event</span><span class="p">)</span>
+</div>
+<div class="viewcode-block" id="AnnulusInteractor.restore"><a class="viewcode-back" href="../../../../../dev/api/sas.guiframe.local_perspectives.plotting.html#sas.guiframe.local_perspectives.plotting.AnnulusSlicer.AnnulusInteractor.restore">[docs]</a>    <span class="k">def</span> <span class="nf">restore</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Restore the roughness for this layer.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">inner_circle</span><span class="o">.</span><span class="n">restore</span><span class="p">()</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">outer_circle</span><span class="o">.</span><span class="n">restore</span><span class="p">()</span>
+</div>
+<div class="viewcode-block" id="AnnulusInteractor.move"><a class="viewcode-back" href="../../../../../dev/api/sas.guiframe.local_perspectives.plotting.html#sas.guiframe.local_perspectives.plotting.AnnulusSlicer.AnnulusInteractor.move">[docs]</a>    <span class="k">def</span> <span class="nf">move</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">x</span><span class="p">,</span> <span class="n">y</span><span class="p">,</span> <span class="n">ev</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Process move to a new position, making sure that the move is allowed.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">pass</span>
+</div>
+<div class="viewcode-block" id="AnnulusInteractor.set_cursor"><a class="viewcode-back" href="../../../../../dev/api/sas.guiframe.local_perspectives.plotting.html#sas.guiframe.local_perspectives.plotting.AnnulusSlicer.AnnulusInteractor.set_cursor">[docs]</a>    <span class="k">def</span> <span class="nf">set_cursor</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">x</span><span class="p">,</span> <span class="n">y</span><span class="p">):</span>
+        <span class="k">pass</span>
+</div>
+<div class="viewcode-block" id="AnnulusInteractor.get_params"><a class="viewcode-back" href="../../../../../dev/api/sas.guiframe.local_perspectives.plotting.html#sas.guiframe.local_perspectives.plotting.AnnulusSlicer.AnnulusInteractor.get_params">[docs]</a>    <span class="k">def</span> <span class="nf">get_params</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Store a copy of values of parameters of the slicer into a dictionary.</span>
+
+<span class="sd">        :return params: the dictionary created</span>
+
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">params</span> <span class="o">=</span> <span class="p">{}</span>
+        <span class="n">params</span><span class="p">[</span><span class="s">&quot;inner_radius&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">math</span><span class="o">.</span><span class="n">fabs</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">inner_circle</span><span class="o">.</span><span class="n">_inner_mouse_x</span><span class="p">)</span>
+        <span class="n">params</span><span class="p">[</span><span class="s">&quot;outer_radius&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">math</span><span class="o">.</span><span class="n">fabs</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">outer_circle</span><span class="o">.</span><span class="n">_inner_mouse_x</span><span class="p">)</span>
+        <span class="n">params</span><span class="p">[</span><span class="s">&quot;nbins&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">nbins</span>
+        <span class="k">return</span> <span class="n">params</span>
+</div>
+<div class="viewcode-block" id="AnnulusInteractor.set_params"><a class="viewcode-back" href="../../../../../dev/api/sas.guiframe.local_perspectives.plotting.html#sas.guiframe.local_perspectives.plotting.AnnulusSlicer.AnnulusInteractor.set_params">[docs]</a>    <span class="k">def</span> <span class="nf">set_params</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">params</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Receive a dictionary and reset the slicer with values contained</span>
+<span class="sd">        in the values of the dictionary.</span>
+
+<span class="sd">        :param params: a dictionary containing name of slicer parameters and</span>
+<span class="sd">            values the user assigned to the slicer.</span>
+
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">inner</span> <span class="o">=</span> <span class="n">math</span><span class="o">.</span><span class="n">fabs</span><span class="p">(</span><span class="n">params</span><span class="p">[</span><span class="s">&quot;inner_radius&quot;</span><span class="p">])</span>
+        <span class="n">outer</span> <span class="o">=</span> <span class="n">math</span><span class="o">.</span><span class="n">fabs</span><span class="p">(</span><span class="n">params</span><span class="p">[</span><span class="s">&quot;outer_radius&quot;</span><span class="p">])</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">nbins</span> <span class="o">=</span> <span class="nb">int</span><span class="p">(</span><span class="n">params</span><span class="p">[</span><span class="s">&quot;nbins&quot;</span><span class="p">])</span>
+        <span class="c"># # Update the picture</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">inner_circle</span><span class="o">.</span><span class="n">set_cursor</span><span class="p">(</span><span class="n">inner</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">inner_circle</span><span class="o">.</span><span class="n">_inner_mouse_y</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">outer_circle</span><span class="o">.</span><span class="n">set_cursor</span><span class="p">(</span><span class="n">outer</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">outer_circle</span><span class="o">.</span><span class="n">_inner_mouse_y</span><span class="p">)</span>
+        <span class="c"># # Post the data given the nbins entered by the user</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_post_data</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">nbins</span><span class="p">)</span>
+</div>
+<div class="viewcode-block" id="AnnulusInteractor.freeze_axes"><a class="viewcode-back" href="../../../../../dev/api/sas.guiframe.local_perspectives.plotting.html#sas.guiframe.local_perspectives.plotting.AnnulusSlicer.AnnulusInteractor.freeze_axes">[docs]</a>    <span class="k">def</span> <span class="nf">freeze_axes</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">base</span><span class="o">.</span><span class="n">freeze_axes</span><span class="p">()</span>
+</div>
+<div class="viewcode-block" id="AnnulusInteractor.thaw_axes"><a class="viewcode-back" href="../../../../../dev/api/sas.guiframe.local_perspectives.plotting.html#sas.guiframe.local_perspectives.plotting.AnnulusSlicer.AnnulusInteractor.thaw_axes">[docs]</a>    <span class="k">def</span> <span class="nf">thaw_axes</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">base</span><span class="o">.</span><span class="n">thaw_axes</span><span class="p">()</span>
+</div>
+<div class="viewcode-block" id="AnnulusInteractor.draw"><a class="viewcode-back" href="../../../../../dev/api/sas.guiframe.local_perspectives.plotting.html#sas.guiframe.local_perspectives.plotting.AnnulusSlicer.AnnulusInteractor.draw">[docs]</a>    <span class="k">def</span> <span class="nf">draw</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">base</span><span class="o">.</span><span class="n">draw</span><span class="p">()</span>
+
+</div></div>
+<div class="viewcode-block" id="RingInteractor"><a class="viewcode-back" href="../../../../../dev/api/sas.guiframe.local_perspectives.plotting.html#sas.guiframe.local_perspectives.plotting.AnnulusSlicer.RingInteractor">[docs]</a><span class="k">class</span> <span class="nc">RingInteractor</span><span class="p">(</span><span class="n">_BaseInteractor</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">     Draw a ring Given a radius</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">base</span><span class="p">,</span> <span class="n">axes</span><span class="p">,</span> <span class="n">color</span><span class="o">=</span><span class="s">&#39;black&#39;</span><span class="p">,</span> <span class="n">zorder</span><span class="o">=</span><span class="mi">5</span><span class="p">,</span> <span class="n">r</span><span class="o">=</span><span class="mf">1.0</span><span class="p">,</span> <span class="n">sign</span><span class="o">=</span><span class="mi">1</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        :param: the color of the line that defined the ring</span>
+<span class="sd">        :param r: the radius of the ring</span>
+<span class="sd">        :param sign: the direction of motion the the marker</span>
+
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">_BaseInteractor</span><span class="o">.</span><span class="n">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">base</span><span class="p">,</span> <span class="n">axes</span><span class="p">,</span> <span class="n">color</span><span class="o">=</span><span class="n">color</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">markers</span> <span class="o">=</span> <span class="p">[]</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">axes</span> <span class="o">=</span> <span class="n">axes</span>
+        <span class="c"># Current radius of the ring</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_inner_mouse_x</span> <span class="o">=</span> <span class="n">r</span>
+        <span class="c"># Value of the center of the ring</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_inner_mouse_y</span> <span class="o">=</span> <span class="mi">0</span>
+        <span class="c"># previous value of that radius</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_inner_save_x</span> <span class="o">=</span> <span class="n">r</span>
+        <span class="c"># Save value of the center of the ring</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_inner_save_y</span> <span class="o">=</span> <span class="mi">0</span>
+        <span class="c"># Class instantiating RingIterator class</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">base</span> <span class="o">=</span> <span class="n">base</span>
+        <span class="c"># the direction of the motion of the marker</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">sign</span> <span class="o">=</span> <span class="n">sign</span>
+        <span class="c"># # Create a marker</span>
+        <span class="k">try</span><span class="p">:</span>
+            <span class="c"># Inner circle marker</span>
+            <span class="n">x_value</span> <span class="o">=</span> <span class="p">[</span><span class="bp">self</span><span class="o">.</span><span class="n">sign</span> <span class="o">*</span> <span class="n">math</span><span class="o">.</span><span class="n">fabs</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_inner_mouse_x</span><span class="p">)]</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">inner_marker</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">axes</span><span class="o">.</span><span class="n">plot</span><span class="p">(</span><span class="n">x_value</span><span class="p">,</span> <span class="p">[</span><span class="mi">0</span><span class="p">],</span> <span class="n">linestyle</span><span class="o">=</span><span class="s">&#39;&#39;</span><span class="p">,</span>
+                                               <span class="n">marker</span><span class="o">=</span><span class="s">&#39;s&#39;</span><span class="p">,</span> <span class="n">markersize</span><span class="o">=</span><span class="mi">10</span><span class="p">,</span>
+                                               <span class="n">color</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">color</span><span class="p">,</span> <span class="n">alpha</span><span class="o">=</span><span class="mf">0.6</span><span class="p">,</span>
+                                               <span class="n">pickradius</span><span class="o">=</span><span class="mi">5</span><span class="p">,</span> <span class="n">label</span><span class="o">=</span><span class="s">&quot;pick&quot;</span><span class="p">,</span>
+                                               <span class="n">zorder</span><span class="o">=</span><span class="n">zorder</span><span class="p">,</span>
+                                               <span class="n">visible</span><span class="o">=</span><span class="bp">True</span><span class="p">)[</span><span class="mi">0</span><span class="p">]</span>
+        <span class="k">except</span><span class="p">:</span>
+            <span class="n">x_value</span> <span class="o">=</span> <span class="p">[</span><span class="bp">self</span><span class="o">.</span><span class="n">sign</span> <span class="o">*</span> <span class="n">math</span><span class="o">.</span><span class="n">fabs</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_inner_mouse_x</span><span class="p">)]</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">inner_marker</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">axes</span><span class="o">.</span><span class="n">plot</span><span class="p">(</span><span class="n">x_value</span><span class="p">,</span> <span class="p">[</span><span class="mi">0</span><span class="p">],</span> <span class="n">linestyle</span><span class="o">=</span><span class="s">&#39;&#39;</span><span class="p">,</span>
+                                               <span class="n">marker</span><span class="o">=</span><span class="s">&#39;s&#39;</span><span class="p">,</span> <span class="n">markersize</span><span class="o">=</span><span class="mi">10</span><span class="p">,</span>
+                                               <span class="n">color</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">color</span><span class="p">,</span> <span class="n">alpha</span><span class="o">=</span><span class="mf">0.6</span><span class="p">,</span>
+                                               <span class="n">label</span><span class="o">=</span><span class="s">&quot;pick&quot;</span><span class="p">,</span>
+                                               <span class="n">visible</span><span class="o">=</span><span class="bp">True</span><span class="p">)[</span><span class="mi">0</span><span class="p">]</span>
+            <span class="n">message</span> <span class="o">=</span> <span class="s">&quot;</span><span class="se">\n</span><span class="s">THIS PROTOTYPE NEEDS THE LATEST&quot;</span>
+            <span class="n">message</span> <span class="o">+=</span> <span class="s">&quot; VERSION OF MATPLOTLIB</span><span class="se">\n</span><span class="s">&quot;</span>
+            <span class="n">message</span> <span class="o">+=</span> <span class="s">&quot;Get the SVN version that is at &quot;</span>
+            <span class="n">message</span> <span class="o">+=</span> <span class="s">&quot; least as recent as June 1, 2007&quot;</span>
+
+            <span class="n">owner</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">base</span><span class="o">.</span><span class="n">base</span><span class="o">.</span><span class="n">parent</span>
+            <span class="n">wx</span><span class="o">.</span><span class="n">PostEvent</span><span class="p">(</span><span class="n">owner</span><span class="p">,</span> <span class="n">StatusEvent</span><span class="p">(</span><span class="n">status</span><span class="o">=</span><span class="s">&quot;AnnulusSlicer: </span><span class="si">%s</span><span class="s">&quot;</span> <span class="o">%</span> <span class="n">message</span><span class="p">))</span>
+
+        <span class="c"># Draw a circle</span>
+        <span class="p">[</span><span class="bp">self</span><span class="o">.</span><span class="n">inner_circle</span><span class="p">]</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">axes</span><span class="o">.</span><span class="n">plot</span><span class="p">([],</span> <span class="p">[],</span> <span class="n">linestyle</span><span class="o">=</span><span class="s">&#39;-&#39;</span><span class="p">,</span> <span class="n">marker</span><span class="o">=</span><span class="s">&#39;&#39;</span><span class="p">,</span> <span class="n">color</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">color</span><span class="p">)</span>
+        <span class="c"># the number of points that make the ring line</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">npts</span> <span class="o">=</span> <span class="mi">40</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">connect_markers</span><span class="p">([</span><span class="bp">self</span><span class="o">.</span><span class="n">inner_marker</span><span class="p">])</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">update</span><span class="p">()</span>
+
+<div class="viewcode-block" id="RingInteractor.set_layer"><a class="viewcode-back" href="../../../../../dev/api/sas.guiframe.local_perspectives.plotting.html#sas.guiframe.local_perspectives.plotting.AnnulusSlicer.RingInteractor.set_layer">[docs]</a>    <span class="k">def</span> <span class="nf">set_layer</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">n</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Allow adding plot to the same panel</span>
+
+<span class="sd">        :param n: the number of layer</span>
+
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">layernum</span> <span class="o">=</span> <span class="n">n</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">update</span><span class="p">()</span>
+</div>
+<div class="viewcode-block" id="RingInteractor.clear"><a class="viewcode-back" href="../../../../../dev/api/sas.guiframe.local_perspectives.plotting.html#sas.guiframe.local_perspectives.plotting.AnnulusSlicer.RingInteractor.clear">[docs]</a>    <span class="k">def</span> <span class="nf">clear</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Clear the slicer and all connected events related to this slicer</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">clear_markers</span><span class="p">()</span>
+        <span class="k">try</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">inner_marker</span><span class="o">.</span><span class="n">remove</span><span class="p">()</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">inner_circle</span><span class="o">.</span><span class="n">remove</span><span class="p">()</span>
+        <span class="k">except</span><span class="p">:</span>
+            <span class="c"># Old version of matplotlib</span>
+            <span class="k">for</span> <span class="n">item</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">axes</span><span class="o">.</span><span class="n">lines</span><span class="p">)):</span>
+                <span class="k">del</span> <span class="bp">self</span><span class="o">.</span><span class="n">axes</span><span class="o">.</span><span class="n">lines</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
+</div>
+<div class="viewcode-block" id="RingInteractor.get_radius"><a class="viewcode-back" href="../../../../../dev/api/sas.guiframe.local_perspectives.plotting.html#sas.guiframe.local_perspectives.plotting.AnnulusSlicer.RingInteractor.get_radius">[docs]</a>    <span class="k">def</span> <span class="nf">get_radius</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        :return self._inner_mouse_x: the current radius of the ring</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_inner_mouse_x</span>
+</div>
+<div class="viewcode-block" id="RingInteractor.update"><a class="viewcode-back" href="../../../../../dev/api/sas.guiframe.local_perspectives.plotting.html#sas.guiframe.local_perspectives.plotting.AnnulusSlicer.RingInteractor.update">[docs]</a>    <span class="k">def</span> <span class="nf">update</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Draw the new roughness on the graph.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="c"># Plot inner circle</span>
+        <span class="n">x</span> <span class="o">=</span> <span class="p">[]</span>
+        <span class="n">y</span> <span class="o">=</span> <span class="p">[]</span>
+        <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">npts</span><span class="p">):</span>
+            <span class="n">phi</span> <span class="o">=</span> <span class="mf">2.0</span> <span class="o">*</span> <span class="n">math</span><span class="o">.</span><span class="n">pi</span> <span class="o">/</span> <span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">npts</span> <span class="o">-</span> <span class="mi">1</span><span class="p">)</span> <span class="o">*</span> <span class="n">i</span>
+
+            <span class="n">xval</span> <span class="o">=</span> <span class="mf">1.0</span> <span class="o">*</span> <span class="bp">self</span><span class="o">.</span><span class="n">_inner_mouse_x</span> <span class="o">*</span> <span class="n">math</span><span class="o">.</span><span class="n">cos</span><span class="p">(</span><span class="n">phi</span><span class="p">)</span>
+            <span class="n">yval</span> <span class="o">=</span> <span class="mf">1.0</span> <span class="o">*</span> <span class="bp">self</span><span class="o">.</span><span class="n">_inner_mouse_x</span> <span class="o">*</span> <span class="n">math</span><span class="o">.</span><span class="n">sin</span><span class="p">(</span><span class="n">phi</span><span class="p">)</span>
+
+            <span class="n">x</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">xval</span><span class="p">)</span>
+            <span class="n">y</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">yval</span><span class="p">)</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">inner_marker</span><span class="o">.</span><span class="n">set</span><span class="p">(</span><span class="n">xdata</span><span class="o">=</span><span class="p">[</span><span class="bp">self</span><span class="o">.</span><span class="n">sign</span> <span class="o">*</span> <span class="n">math</span><span class="o">.</span><span class="n">fabs</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_inner_mouse_x</span><span class="p">)],</span>
+                              <span class="n">ydata</span><span class="o">=</span><span class="p">[</span><span class="mi">0</span><span class="p">])</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">inner_circle</span><span class="o">.</span><span class="n">set_data</span><span class="p">(</span><span class="n">x</span><span class="p">,</span> <span class="n">y</span><span class="p">)</span>
+</div>
+<div class="viewcode-block" id="RingInteractor.save"><a class="viewcode-back" href="../../../../../dev/api/sas.guiframe.local_perspectives.plotting.html#sas.guiframe.local_perspectives.plotting.AnnulusSlicer.RingInteractor.save">[docs]</a>    <span class="k">def</span> <span class="nf">save</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">ev</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Remember the roughness for this layer and the next so that we</span>
+<span class="sd">        can restore on Esc.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_inner_save_x</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_inner_mouse_x</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_inner_save_y</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_inner_mouse_y</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">base</span><span class="o">.</span><span class="n">freeze_axes</span><span class="p">()</span>
+</div>
+<div class="viewcode-block" id="RingInteractor.moveend"><a class="viewcode-back" href="../../../../../dev/api/sas.guiframe.local_perspectives.plotting.html#sas.guiframe.local_perspectives.plotting.AnnulusSlicer.RingInteractor.moveend">[docs]</a>    <span class="k">def</span> <span class="nf">moveend</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">ev</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Called after a dragging motion</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">base</span><span class="o">.</span><span class="n">moveend</span><span class="p">(</span><span class="n">ev</span><span class="p">)</span>
+</div>
+<div class="viewcode-block" id="RingInteractor.restore"><a class="viewcode-back" href="../../../../../dev/api/sas.guiframe.local_perspectives.plotting.html#sas.guiframe.local_perspectives.plotting.AnnulusSlicer.RingInteractor.restore">[docs]</a>    <span class="k">def</span> <span class="nf">restore</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Restore the roughness for this layer.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_inner_mouse_x</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_inner_save_x</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_inner_mouse_y</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_inner_save_y</span>
+</div>
+<div class="viewcode-block" id="RingInteractor.move"><a class="viewcode-back" href="../../../../../dev/api/sas.guiframe.local_perspectives.plotting.html#sas.guiframe.local_perspectives.plotting.AnnulusSlicer.RingInteractor.move">[docs]</a>    <span class="k">def</span> <span class="nf">move</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">x</span><span class="p">,</span> <span class="n">y</span><span class="p">,</span> <span class="n">ev</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Process move to a new position, making sure that the move is allowed.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_inner_mouse_x</span> <span class="o">=</span> <span class="n">x</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_inner_mouse_y</span> <span class="o">=</span> <span class="n">y</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">base</span><span class="o">.</span><span class="n">base</span><span class="o">.</span><span class="n">update</span><span class="p">()</span>
+</div>
+<div class="viewcode-block" id="RingInteractor.set_cursor"><a class="viewcode-back" href="../../../../../dev/api/sas.guiframe.local_perspectives.plotting.html#sas.guiframe.local_perspectives.plotting.AnnulusSlicer.RingInteractor.set_cursor">[docs]</a>    <span class="k">def</span> <span class="nf">set_cursor</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">x</span><span class="p">,</span> <span class="n">y</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        draw the ring given x, y value</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">move</span><span class="p">(</span><span class="n">x</span><span class="p">,</span> <span class="n">y</span><span class="p">,</span> <span class="bp">None</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">update</span><span class="p">()</span>
+
+</div>
+<div class="viewcode-block" id="RingInteractor.get_params"><a class="viewcode-back" href="../../../../../dev/api/sas.guiframe.local_perspectives.plotting.html#sas.guiframe.local_perspectives.plotting.AnnulusSlicer.RingInteractor.get_params">[docs]</a>    <span class="k">def</span> <span class="nf">get_params</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Store a copy of values of parameters of the slicer into a dictionary.</span>
+
+<span class="sd">        :return params: the dictionary created</span>
+
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">params</span> <span class="o">=</span> <span class="p">{}</span>
+        <span class="n">params</span><span class="p">[</span><span class="s">&quot;radius&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">math</span><span class="o">.</span><span class="n">fabs</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_inner_mouse_x</span><span class="p">)</span>
+        <span class="k">return</span> <span class="n">params</span>
+</div>
+<div class="viewcode-block" id="RingInteractor.set_params"><a class="viewcode-back" href="../../../../../dev/api/sas.guiframe.local_perspectives.plotting.html#sas.guiframe.local_perspectives.plotting.AnnulusSlicer.RingInteractor.set_params">[docs]</a>    <span class="k">def</span> <span class="nf">set_params</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">params</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Receive a dictionary and reset the slicer with values contained</span>
+<span class="sd">        in the values of the dictionary.</span>
+
+<span class="sd">        :param params: a dictionary containing name of slicer parameters and</span>
+<span class="sd">            values the user assigned to the slicer.</span>
+
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">x</span> <span class="o">=</span> <span class="n">params</span><span class="p">[</span><span class="s">&quot;radius&quot;</span><span class="p">]</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">set_cursor</span><span class="p">(</span><span class="n">x</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">_inner_mouse_y</span><span class="p">)</span>
+</div></div>
+<div class="viewcode-block" id="CircularMask"><a class="viewcode-back" href="../../../../../dev/api/sas.guiframe.local_perspectives.plotting.html#sas.guiframe.local_perspectives.plotting.AnnulusSlicer.CircularMask">[docs]</a><span class="k">class</span> <span class="nc">CircularMask</span><span class="p">(</span><span class="n">_BaseInteractor</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">     Draw a ring Given a radius</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">base</span><span class="p">,</span> <span class="n">axes</span><span class="p">,</span> <span class="n">color</span><span class="o">=</span><span class="s">&#39;grey&#39;</span><span class="p">,</span> <span class="n">zorder</span><span class="o">=</span><span class="mi">3</span><span class="p">,</span> <span class="n">side</span><span class="o">=</span><span class="bp">None</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        :param: the color of the line that defined the ring</span>
+<span class="sd">        :param r: the radius of the ring</span>
+<span class="sd">        :param sign: the direction of motion the the marker</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">_BaseInteractor</span><span class="o">.</span><span class="n">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">base</span><span class="p">,</span> <span class="n">axes</span><span class="p">,</span> <span class="n">color</span><span class="o">=</span><span class="n">color</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">markers</span> <span class="o">=</span> <span class="p">[]</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">axes</span> <span class="o">=</span> <span class="n">axes</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">base</span> <span class="o">=</span> <span class="n">base</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">is_inside</span> <span class="o">=</span> <span class="n">side</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">qmax</span> <span class="o">=</span> <span class="nb">min</span><span class="p">(</span><span class="n">math</span><span class="o">.</span><span class="n">fabs</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">base</span><span class="o">.</span><span class="n">data</span><span class="o">.</span><span class="n">xmax</span><span class="p">),</span>
+                        <span class="n">math</span><span class="o">.</span><span class="n">fabs</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">base</span><span class="o">.</span><span class="n">data</span><span class="o">.</span><span class="n">xmin</span><span class="p">))</span>  <span class="c"># must be positive</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">connect</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">base</span><span class="o">.</span><span class="n">connect</span>
+
+        <span class="c"># Cursor position of Rings (Left(-1) or Right(1))</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">xmaxd</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">base</span><span class="o">.</span><span class="n">data</span><span class="o">.</span><span class="n">xmax</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">xmind</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">base</span><span class="o">.</span><span class="n">data</span><span class="o">.</span><span class="n">xmin</span>
+
+        <span class="k">if</span> <span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">xmaxd</span> <span class="o">+</span> <span class="bp">self</span><span class="o">.</span><span class="n">xmind</span><span class="p">)</span> <span class="o">&gt;</span> <span class="mi">0</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">sign</span> <span class="o">=</span> <span class="mi">1</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">sign</span> <span class="o">=</span> <span class="o">-</span><span class="mi">1</span>
+        <span class="c"># Inner circle</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">outer_circle</span> <span class="o">=</span> <span class="n">RingInteractor</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">base</span><span class="o">.</span><span class="n">subplot</span><span class="p">,</span> <span class="s">&#39;blue&#39;</span><span class="p">,</span>
+                                           <span class="n">zorder</span><span class="o">=</span><span class="n">zorder</span> <span class="o">+</span> <span class="mi">1</span><span class="p">,</span> <span class="n">r</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">qmax</span> <span class="o">/</span> <span class="mf">1.8</span><span class="p">,</span>
+                                           <span class="n">sign</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">sign</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">outer_circle</span><span class="o">.</span><span class="n">qmax</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">qmax</span> <span class="o">*</span> <span class="mf">1.2</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">update</span><span class="p">()</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_post_data</span><span class="p">()</span>
+
+        <span class="c"># Bind to slice parameter events</span>
+        <span class="c"># self.base.Bind(EVT_SLICER_PARS, self._onEVT_SLICER_PARS)</span>
+
+    <span class="k">def</span> <span class="nf">_onEVT_SLICER_PARS</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">event</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        receive an event containing parameters values to reset the slicer</span>
+
+<span class="sd">        :param event: event of type SlicerParameterEvent with params as</span>
+<span class="sd">            attribute</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">wx</span><span class="o">.</span><span class="n">PostEvent</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">base</span><span class="p">,</span>
+                     <span class="n">StatusEvent</span><span class="p">(</span><span class="n">status</span><span class="o">=</span><span class="s">&quot;AnnulusSlicer._onEVT_SLICER_PARS&quot;</span><span class="p">))</span>
+        <span class="n">event</span><span class="o">.</span><span class="n">Skip</span><span class="p">()</span>
+        <span class="k">if</span> <span class="n">event</span><span class="o">.</span><span class="n">type</span> <span class="o">==</span> <span class="bp">self</span><span class="o">.</span><span class="n">__class__</span><span class="o">.</span><span class="n">__name__</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">set_params</span><span class="p">(</span><span class="n">event</span><span class="o">.</span><span class="n">params</span><span class="p">)</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">base</span><span class="o">.</span><span class="n">update</span><span class="p">()</span>
+
+<div class="viewcode-block" id="CircularMask.set_layer"><a class="viewcode-back" href="../../../../../dev/api/sas.guiframe.local_perspectives.plotting.html#sas.guiframe.local_perspectives.plotting.AnnulusSlicer.CircularMask.set_layer">[docs]</a>    <span class="k">def</span> <span class="nf">set_layer</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">n</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Allow adding plot to the same panel</span>
+
+<span class="sd">        :param n: the number of layer</span>
+
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">layernum</span> <span class="o">=</span> <span class="n">n</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">update</span><span class="p">()</span>
+</div>
+<div class="viewcode-block" id="CircularMask.clear"><a class="viewcode-back" href="../../../../../dev/api/sas.guiframe.local_perspectives.plotting.html#sas.guiframe.local_perspectives.plotting.AnnulusSlicer.CircularMask.clear">[docs]</a>    <span class="k">def</span> <span class="nf">clear</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Clear the slicer and all connected events related to this slicer</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">clear_markers</span><span class="p">()</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">outer_circle</span><span class="o">.</span><span class="n">clear</span><span class="p">()</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">base</span><span class="o">.</span><span class="n">connect</span><span class="o">.</span><span class="n">clearall</span><span class="p">()</span>
+        <span class="c"># self.base.Unbind(EVT_SLICER_PARS)</span>
+</div>
+<div class="viewcode-block" id="CircularMask.update"><a class="viewcode-back" href="../../../../../dev/api/sas.guiframe.local_perspectives.plotting.html#sas.guiframe.local_perspectives.plotting.AnnulusSlicer.CircularMask.update">[docs]</a>    <span class="k">def</span> <span class="nf">update</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Respond to changes in the model by recalculating the profiles and</span>
+<span class="sd">        resetting the widgets.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="c"># Update locations</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">outer_circle</span><span class="o">.</span><span class="n">update</span><span class="p">()</span>
+        <span class="c"># if self.is_inside != None:</span>
+        <span class="n">out</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_post_data</span><span class="p">()</span>
+        <span class="k">return</span> <span class="n">out</span>
+</div>
+<div class="viewcode-block" id="CircularMask.save"><a class="viewcode-back" href="../../../../../dev/api/sas.guiframe.local_perspectives.plotting.html#sas.guiframe.local_perspectives.plotting.AnnulusSlicer.CircularMask.save">[docs]</a>    <span class="k">def</span> <span class="nf">save</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">ev</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Remember the roughness for this layer and the next so that we</span>
+<span class="sd">        can restore on Esc.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">base</span><span class="o">.</span><span class="n">freeze_axes</span><span class="p">()</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">outer_circle</span><span class="o">.</span><span class="n">save</span><span class="p">(</span><span class="n">ev</span><span class="p">)</span>
+</div>
+    <span class="k">def</span> <span class="nf">_post_data</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Uses annulus parameters to plot averaged data into 1D data.</span>
+
+<span class="sd">        :param nbins: the number of points to plot</span>
+
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="c"># Data to average</span>
+        <span class="n">data</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">base</span><span class="o">.</span><span class="n">data</span>
+
+        <span class="c"># If we have no data, just return</span>
+        <span class="k">if</span> <span class="n">data</span> <span class="o">==</span> <span class="bp">None</span><span class="p">:</span>
+            <span class="k">return</span>
+        <span class="n">mask</span> <span class="o">=</span> <span class="n">data</span><span class="o">.</span><span class="n">mask</span>
+        <span class="kn">from</span> <span class="nn">sas.dataloader.manipulations</span> <span class="kn">import</span> <span class="n">Ringcut</span>
+
+        <span class="n">rmin</span> <span class="o">=</span> <span class="mi">0</span>
+        <span class="n">rmax</span> <span class="o">=</span> <span class="n">math</span><span class="o">.</span><span class="n">fabs</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">outer_circle</span><span class="o">.</span><span class="n">get_radius</span><span class="p">())</span>
+
+        <span class="c"># # create the data1D Q average of data2D</span>
+        <span class="n">mask</span> <span class="o">=</span> <span class="n">Ringcut</span><span class="p">(</span><span class="n">r_min</span><span class="o">=</span><span class="n">rmin</span><span class="p">,</span> <span class="n">r_max</span><span class="o">=</span><span class="n">rmax</span><span class="p">)</span>
+
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">is_inside</span><span class="p">:</span>
+            <span class="n">out</span> <span class="o">=</span> <span class="p">(</span><span class="n">mask</span><span class="p">(</span><span class="n">data</span><span class="p">)</span> <span class="o">==</span> <span class="bp">False</span><span class="p">)</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">out</span> <span class="o">=</span> <span class="p">(</span><span class="n">mask</span><span class="p">(</span><span class="n">data</span><span class="p">))</span>
+        <span class="c"># self.base.data.mask=out</span>
+        <span class="k">return</span> <span class="n">out</span>
+
+
+<div class="viewcode-block" id="CircularMask.moveend"><a class="viewcode-back" href="../../../../../dev/api/sas.guiframe.local_perspectives.plotting.html#sas.guiframe.local_perspectives.plotting.AnnulusSlicer.CircularMask.moveend">[docs]</a>    <span class="k">def</span> <span class="nf">moveend</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">ev</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Called when any dragging motion ends.</span>
+<span class="sd">        Post an event (type =SlicerParameterEvent)</span>
+<span class="sd">        to plotter 2D with a copy  slicer parameters</span>
+<span class="sd">        Call  _post_data method</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">base</span><span class="o">.</span><span class="n">thaw_axes</span><span class="p">()</span>
+        <span class="c"># create a 1D data plot</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_post_data</span><span class="p">()</span>
+</div>
+<div class="viewcode-block" id="CircularMask.restore"><a class="viewcode-back" href="../../../../../dev/api/sas.guiframe.local_perspectives.plotting.html#sas.guiframe.local_perspectives.plotting.AnnulusSlicer.CircularMask.restore">[docs]</a>    <span class="k">def</span> <span class="nf">restore</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Restore the roughness for this layer.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">outer_circle</span><span class="o">.</span><span class="n">restore</span><span class="p">()</span>
+</div>
+<div class="viewcode-block" id="CircularMask.move"><a class="viewcode-back" href="../../../../../dev/api/sas.guiframe.local_perspectives.plotting.html#sas.guiframe.local_perspectives.plotting.AnnulusSlicer.CircularMask.move">[docs]</a>    <span class="k">def</span> <span class="nf">move</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">x</span><span class="p">,</span> <span class="n">y</span><span class="p">,</span> <span class="n">ev</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Process move to a new position, making sure that the move is allowed.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">pass</span>
+</div>
+<div class="viewcode-block" id="CircularMask.set_cursor"><a class="viewcode-back" href="../../../../../dev/api/sas.guiframe.local_perspectives.plotting.html#sas.guiframe.local_perspectives.plotting.AnnulusSlicer.CircularMask.set_cursor">[docs]</a>    <span class="k">def</span> <span class="nf">set_cursor</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">x</span><span class="p">,</span> <span class="n">y</span><span class="p">):</span>
+        <span class="k">pass</span>
+</div>
+<div class="viewcode-block" id="CircularMask.get_params"><a class="viewcode-back" href="../../../../../dev/api/sas.guiframe.local_perspectives.plotting.html#sas.guiframe.local_perspectives.plotting.AnnulusSlicer.CircularMask.get_params">[docs]</a>    <span class="k">def</span> <span class="nf">get_params</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Store a copy of values of parameters of the slicer into a dictionary.</span>
+
+<span class="sd">        :return params: the dictionary created</span>
+
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">params</span> <span class="o">=</span> <span class="p">{}</span>
+        <span class="n">params</span><span class="p">[</span><span class="s">&quot;outer_radius&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">math</span><span class="o">.</span><span class="n">fabs</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">outer_circle</span><span class="o">.</span><span class="n">_inner_mouse_x</span><span class="p">)</span>
+        <span class="k">return</span> <span class="n">params</span>
+</div>
+<div class="viewcode-block" id="CircularMask.set_params"><a class="viewcode-back" href="../../../../../dev/api/sas.guiframe.local_perspectives.plotting.html#sas.guiframe.local_perspectives.plotting.AnnulusSlicer.CircularMask.set_params">[docs]</a>    <span class="k">def</span> <span class="nf">set_params</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">params</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Receive a dictionary and reset the slicer with values contained</span>
+<span class="sd">        in the values of the dictionary.</span>
+
+<span class="sd">        :param params: a dictionary containing name of slicer parameters and</span>
+<span class="sd">            values the user assigned to the slicer.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">outer</span> <span class="o">=</span> <span class="n">math</span><span class="o">.</span><span class="n">fabs</span><span class="p">(</span><span class="n">params</span><span class="p">[</span><span class="s">&quot;outer_radius&quot;</span><span class="p">])</span>
+        <span class="c"># # Update the picture</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">outer_circle</span><span class="o">.</span><span class="n">set_cursor</span><span class="p">(</span><span class="n">outer</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">outer_circle</span><span class="o">.</span><span class="n">_inner_mouse_y</span><span class="p">)</span>
+        <span class="c"># # Post the data given the nbins entered by the user</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_post_data</span><span class="p">()</span>
+</div>
+<div class="viewcode-block" id="CircularMask.freeze_axes"><a class="viewcode-back" href="../../../../../dev/api/sas.guiframe.local_perspectives.plotting.html#sas.guiframe.local_perspectives.plotting.AnnulusSlicer.CircularMask.freeze_axes">[docs]</a>    <span class="k">def</span> <span class="nf">freeze_axes</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">base</span><span class="o">.</span><span class="n">freeze_axes</span><span class="p">()</span>
+</div>
+<div class="viewcode-block" id="CircularMask.thaw_axes"><a class="viewcode-back" href="../../../../../dev/api/sas.guiframe.local_perspectives.plotting.html#sas.guiframe.local_perspectives.plotting.AnnulusSlicer.CircularMask.thaw_axes">[docs]</a>    <span class="k">def</span> <span class="nf">thaw_axes</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">base</span><span class="o">.</span><span class="n">thaw_axes</span><span class="p">()</span>
+</div>
+<div class="viewcode-block" id="CircularMask.draw"><a class="viewcode-back" href="../../../../../dev/api/sas.guiframe.local_perspectives.plotting.html#sas.guiframe.local_perspectives.plotting.AnnulusSlicer.CircularMask.draw">[docs]</a>    <span class="k">def</span> <span class="nf">draw</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">base</span><span class="o">.</span><span class="n">update</span><span class="p">()</span>
+</pre></div></div></div>
+
+          </div>
+        </div>
+      </div>
+      <div class="sphinxsidebar" role="navigation" aria-label="main navigation">
+        <div class="sphinxsidebarwrapper">
+<div id="searchbox" style="display: none" role="search">
+  <h3>Quick search</h3>
+    <form class="search" action="../../../../../search.html" method="get">
+      <input type="text" name="q" />
+      <input type="submit" value="Go" />
+      <input type="hidden" name="check_keywords" value="yes" />
+      <input type="hidden" name="area" value="default" />
+    </form>
+    <p class="searchtip" style="font-size: 90%">
+    Enter search terms or a module, class or function name.
+    </p>
+</div>
+<script type="text/javascript">$('#searchbox').show(0);</script>
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="related" role="navigation" aria-label="related navigation">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="../../../../../genindex.html" title="General Index"
+             >index</a></li>
+        <li class="right" >
+          <a href="../../../../../py-modindex.html" title="Python Module Index"
+             >modules</a> |</li>
+        <li class="nav-item nav-item-0"><a href="../../../../../index.html">SasView 3.1.0 documentation</a> &raquo;</li>
+          <li class="nav-item nav-item-1"><a href="../../../../index.html" >Module code</a> &raquo;</li>
+          <li class="nav-item nav-item-2"><a href="../../../guiframe.html" >sas.guiframe</a> &raquo;</li> 
+      </ul>
+    </div>
+    <div class="footer" role="contentinfo">
+        &copy; Copyright 2015, The SasView Project.
+      Created using <a href="http://sphinx-doc.org/">Sphinx</a> 1.3.1.
+    </div>
+  </body>
+</html>

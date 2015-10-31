@@ -1,0 +1,341 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+  "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+    
+    <title>sas.models.FractalCoreShellModel &mdash; SasView 3.1.0 documentation</title>
+    
+    <link rel="stylesheet" href="../../../_static/classic.css" type="text/css" />
+    <link rel="stylesheet" href="../../../_static/pygments.css" type="text/css" />
+    
+    <script type="text/javascript">
+      var DOCUMENTATION_OPTIONS = {
+        URL_ROOT:    '../../../',
+        VERSION:     '3.1.0',
+        COLLAPSE_INDEX: false,
+        FILE_SUFFIX: '.html',
+        HAS_SOURCE:  true
+      };
+    </script>
+    <script type="text/javascript" src="../../../_static/jquery.js"></script>
+    <script type="text/javascript" src="../../../_static/underscore.js"></script>
+    <script type="text/javascript" src="../../../_static/doctools.js"></script>
+    <script type="text/javascript" src="https://cdn.mathjax.org/mathjax/latest/MathJax.js?config=TeX-AMS-MML_HTMLorMML"></script>
+    <link rel="top" title="SasView 3.1.0 documentation" href="../../../index.html" />
+    <link rel="up" title="sas.models" href="../models.html" /> 
+  </head>
+  <body role="document">
+    <div class="related" role="navigation" aria-label="related navigation">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="../../../genindex.html" title="General Index"
+             accesskey="I">index</a></li>
+        <li class="right" >
+          <a href="../../../py-modindex.html" title="Python Module Index"
+             >modules</a> |</li>
+        <li class="nav-item nav-item-0"><a href="../../../index.html">SasView 3.1.0 documentation</a> &raquo;</li>
+          <li class="nav-item nav-item-1"><a href="../../index.html" >Module code</a> &raquo;</li>
+          <li class="nav-item nav-item-2"><a href="../models.html" accesskey="U">sas.models</a> &raquo;</li> 
+      </ul>
+    </div>  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          <div class="body" role="main">
+            
+  <h1>Source code for sas.models.FractalCoreShellModel</h1><div class="highlight"><pre>
+<span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Fractal Core-Shell model</span>
+<span class="sd">&quot;&quot;&quot;</span>
+<span class="kn">from</span> <span class="nn">sas.models.BaseComponent</span> <span class="kn">import</span> <span class="n">BaseComponent</span>
+<span class="kn">from</span> <span class="nn">sas.models.CoreShellModel</span> <span class="kn">import</span> <span class="n">CoreShellModel</span>
+<span class="kn">from</span> <span class="nn">scipy.special</span> <span class="kn">import</span> <span class="n">gammaln</span>
+<span class="kn">import</span> <span class="nn">math</span>
+<span class="kn">from</span> <span class="nn">numpy</span> <span class="kn">import</span> <span class="n">power</span>
+<span class="kn">from</span> <span class="nn">copy</span> <span class="kn">import</span> <span class="n">deepcopy</span>
+
+<div class="viewcode-block" id="FractalCoreShellModel"><a class="viewcode-back" href="../../../dev/api/sas.models.html#sas.models.FractalCoreShellModel.FractalCoreShellModel">[docs]</a><span class="k">class</span> <span class="nc">FractalCoreShellModel</span><span class="p">(</span><span class="n">BaseComponent</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Class that evaluates a FractalCoreShellModel</span>
+<span class="sd">    List of default parameters:</span>
+<span class="sd">    volfraction     = 0.05</span>
+<span class="sd">    radius          = 20.0 [A]</span>
+<span class="sd">    thickness       = 5.0 [A]</span>
+<span class="sd">    frac_dim        = 2.0</span>
+<span class="sd">    cor_length      = 100 [A]</span>
+<span class="sd">    core_sld        = 3.5e-006 [1/A^(2)]</span>
+<span class="sd">    shell_sld       = 1.0e-006 [1/A^(2)]</span>
+<span class="sd">    solvent_sld     = 6.35e-006 [1/A^(2)]</span>
+<span class="sd">    background      = 0.0 [1/cm]</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="n">BaseComponent</span><span class="o">.</span><span class="n">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span>
+
+        <span class="c">## Setting  model name model description</span>
+        <span class="n">model</span> <span class="o">=</span> <span class="n">CoreShellModel</span><span class="p">()</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">description</span> <span class="o">=</span> <span class="n">model</span>
+        
+        <span class="bp">self</span><span class="o">.</span><span class="n">model</span> <span class="o">=</span> <span class="n">model</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">name</span> <span class="o">=</span> <span class="s">&quot;FractalCoreShell&quot;</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">description</span> <span class="o">=</span> <span class="s">&quot;&quot;&quot;Scattering  from a fractal structure </span>
+<span class="s">        with a primary building block of a spherical particle </span>
+<span class="s">        with particle with a core-shell structure.</span>
+<span class="s">        Note: Setting the (core) radius polydispersion with a Schulz </span>
+<span class="s">        distribution is equivalent to the FractalPolyCore function </span>
+<span class="s">        in NIST/Igor Package.</span>
+<span class="s">        List of parameters:</span>
+<span class="s">        volfraction: volume fraction of building block spheres</span>
+<span class="s">        radius: radius of building block</span>
+<span class="s">        thickness: shell thickness</span>
+<span class="s">        frac_dim:  fractal dimension</span>
+<span class="s">        cor_length: correlation length of fractal-like aggregates</span>
+<span class="s">        core_sld: SLD of building block</span>
+<span class="s">        shell_sld: SLD of shell</span>
+<span class="s">        solvent_sld: SLD of matrix or solution</span>
+<span class="s">        background: flat background&quot;&quot;&quot;</span>
+        
+        <span class="c">## Define parameters</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">params</span> <span class="o">=</span> <span class="p">{}</span>
+
+        <span class="c">## Parameter details [units, min, max]</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">details</span> <span class="o">=</span> <span class="p">{}</span>
+        
+        <span class="c"># non-fittable parameters</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">non_fittable</span> <span class="o">=</span> <span class="n">model</span><span class="o">.</span><span class="n">non_fittable</span>
+        
+        <span class="c">## dispersion</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_set_dispersion</span><span class="p">()</span>
+        <span class="c">## Define parameters</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_set_params</span><span class="p">()</span>
+        
+        <span class="c">## Parameter details [units, min, max]</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_set_details</span><span class="p">()</span>
+
+        <span class="c">## parameters with orientation:</span>
+        <span class="k">for</span> <span class="n">item</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">model</span><span class="o">.</span><span class="n">orientation_params</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">orientation_params</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">item</span><span class="p">)</span>
+                
+    <span class="k">def</span> <span class="nf">_fractalcore</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">x</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Define model function</span>
+<span class="sd">        </span>
+<span class="sd">        return S(q): Fractal Structure </span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="c"># set local variables</span>
+        <span class="n">Df</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">params</span><span class="p">[</span><span class="s">&#39;frac_dim&#39;</span><span class="p">]</span>
+        <span class="n">corr</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">params</span><span class="p">[</span><span class="s">&#39;cor_length&#39;</span><span class="p">]</span>
+        <span class="n">r0</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">params</span><span class="p">[</span><span class="s">&#39;radius&#39;</span><span class="p">]</span>
+        <span class="c">#calculate S(q)</span>
+        <span class="n">sq</span> <span class="o">=</span> <span class="n">Df</span><span class="o">*</span><span class="n">math</span><span class="o">.</span><span class="n">exp</span><span class="p">(</span><span class="n">gammaln</span><span class="p">(</span><span class="n">Df</span><span class="o">-</span><span class="mf">1.0</span><span class="p">))</span><span class="o">*</span><span class="n">math</span><span class="o">.</span><span class="n">sin</span><span class="p">((</span><span class="n">Df</span><span class="o">-</span><span class="mf">1.0</span><span class="p">)</span><span class="o">*</span><span class="n">math</span><span class="o">.</span><span class="n">atan</span><span class="p">(</span><span class="n">x</span><span class="o">*</span><span class="n">corr</span><span class="p">))</span>
+        <span class="n">sq</span> <span class="o">/=</span> <span class="n">power</span><span class="p">((</span><span class="n">x</span><span class="o">*</span><span class="n">r0</span><span class="p">),</span> <span class="n">Df</span><span class="p">)</span> <span class="o">*</span> <span class="n">power</span><span class="p">((</span><span class="mf">1.0</span> <span class="o">+</span> <span class="mf">1.0</span><span class="o">/</span><span class="p">(</span><span class="n">x</span><span class="o">*</span><span class="n">corr</span><span class="o">*</span><span class="n">x</span><span class="o">*</span><span class="n">corr</span><span class="p">)),</span> <span class="p">((</span><span class="n">Df</span><span class="o">-</span><span class="mi">1</span><span class="p">)</span><span class="o">/</span><span class="mi">2</span><span class="p">))</span>
+        <span class="n">sq</span> <span class="o">+=</span> <span class="mf">1.0</span>
+        <span class="k">return</span> <span class="n">sq</span>
+
+    <span class="k">def</span> <span class="nf">_clone</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">obj</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Internal utility function to copy the internal</span>
+<span class="sd">        data members to a fresh copy.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">obj</span><span class="o">.</span><span class="n">params</span>     <span class="o">=</span> <span class="n">deepcopy</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">params</span><span class="p">)</span>
+        <span class="n">obj</span><span class="o">.</span><span class="n">description</span>     <span class="o">=</span> <span class="n">deepcopy</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">description</span><span class="p">)</span>
+        <span class="n">obj</span><span class="o">.</span><span class="n">details</span>    <span class="o">=</span> <span class="n">deepcopy</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">details</span><span class="p">)</span>
+        <span class="n">obj</span><span class="o">.</span><span class="n">dispersion</span> <span class="o">=</span> <span class="n">deepcopy</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">dispersion</span><span class="p">)</span>
+        <span class="n">obj</span><span class="o">.</span><span class="n">model</span>  <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">model</span><span class="o">.</span><span class="n">clone</span><span class="p">()</span>
+
+        <span class="k">return</span> <span class="n">obj</span> 
+    
+    <span class="k">def</span> <span class="nf">_set_dispersion</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        model dispersions</span>
+<span class="sd">        &quot;&quot;&quot;</span> 
+        <span class="c">##set dispersion from model </span>
+        <span class="k">for</span> <span class="n">name</span> <span class="p">,</span> <span class="n">value</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">model</span><span class="o">.</span><span class="n">dispersion</span><span class="o">.</span><span class="n">iteritems</span><span class="p">():</span>      
+            <span class="bp">self</span><span class="o">.</span><span class="n">dispersion</span><span class="p">[</span><span class="n">name</span><span class="p">]</span> <span class="o">=</span> <span class="n">value</span>
+                              
+    <span class="k">def</span> <span class="nf">_set_params</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Concatenate the parameters of the model to create</span>
+<span class="sd">        this model parameters </span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="c"># rearrange the parameters for the given # of shells</span>
+        <span class="k">for</span> <span class="n">name</span> <span class="p">,</span> <span class="n">value</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">model</span><span class="o">.</span><span class="n">params</span><span class="o">.</span><span class="n">iteritems</span><span class="p">():</span>
+            <span class="k">if</span> <span class="n">name</span> <span class="o">==</span> <span class="s">&#39;scale&#39;</span><span class="p">:</span>
+                <span class="n">value</span> <span class="o">=</span> <span class="mf">0.05</span>   
+            <span class="k">elif</span> <span class="n">name</span> <span class="o">==</span> <span class="s">&#39;radius&#39;</span><span class="p">:</span>
+                <span class="n">value</span> <span class="o">=</span> <span class="mf">20.0</span>
+            <span class="k">elif</span> <span class="n">name</span> <span class="o">==</span> <span class="s">&#39;thickness&#39;</span><span class="p">:</span>
+                <span class="n">value</span> <span class="o">=</span> <span class="mf">5.0</span>
+            <span class="k">elif</span> <span class="n">name</span> <span class="o">==</span> <span class="s">&#39;core_sld&#39;</span><span class="p">:</span>
+                <span class="n">value</span> <span class="o">=</span> <span class="mf">3.5e-06</span>
+            <span class="k">elif</span> <span class="n">name</span> <span class="o">==</span> <span class="s">&#39;shell_sld&#39;</span><span class="p">:</span>
+                <span class="n">value</span> <span class="o">=</span> <span class="mf">1.0e-06</span>
+            <span class="k">elif</span> <span class="n">name</span> <span class="o">==</span> <span class="s">&#39;solvent_sld&#39;</span><span class="p">:</span>
+                <span class="n">value</span> <span class="o">=</span> <span class="mf">6.35e-06</span>
+            <span class="k">elif</span> <span class="n">name</span> <span class="o">==</span> <span class="s">&#39;background&#39;</span><span class="p">:</span>
+                <span class="n">value</span> <span class="o">=</span> <span class="mf">0.0</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">model</span><span class="o">.</span><span class="n">params</span><span class="p">[</span><span class="n">name</span><span class="p">]</span> <span class="o">=</span> <span class="n">value</span>
+            <span class="k">if</span> <span class="n">name</span>  <span class="o">==</span> <span class="s">&#39;scale&#39;</span><span class="p">:</span>
+                <span class="n">name</span> <span class="o">=</span> <span class="s">&#39;volfraction&#39;</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">params</span><span class="p">[</span><span class="n">name</span><span class="p">]</span> <span class="o">=</span> <span class="n">value</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">params</span><span class="p">[</span><span class="s">&#39;frac_dim&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="mf">2.0</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">params</span><span class="p">[</span><span class="s">&#39;cor_length&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="mf">100.0</span>  
+  
+    <span class="k">def</span> <span class="nf">_set_details</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Concatenate details of the original model to create</span>
+<span class="sd">        this model details </span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">for</span> <span class="n">name</span><span class="p">,</span> <span class="n">detail</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">model</span><span class="o">.</span><span class="n">details</span><span class="o">.</span><span class="n">iteritems</span><span class="p">():</span>
+            <span class="k">if</span> <span class="n">name</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">params</span><span class="o">.</span><span class="n">iterkeys</span><span class="p">():</span>
+                <span class="k">if</span> <span class="n">name</span> <span class="o">==</span> <span class="s">&#39;scale&#39;</span><span class="p">:</span>
+                    <span class="n">name</span> <span class="o">=</span> <span class="s">&#39;volfraction&#39;</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">details</span><span class="p">[</span><span class="n">name</span><span class="p">]</span> <span class="o">=</span> <span class="n">detail</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">details</span><span class="p">[</span><span class="s">&#39;frac_dim&#39;</span><span class="p">]</span>   <span class="o">=</span> <span class="p">[</span><span class="s">&#39;&#39;</span><span class="p">,</span> <span class="bp">None</span><span class="p">,</span> <span class="bp">None</span><span class="p">]</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">details</span><span class="p">[</span><span class="s">&#39;cor_length&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="p">[</span><span class="s">&#39;[A]&#39;</span><span class="p">,</span> <span class="bp">None</span><span class="p">,</span> <span class="bp">None</span><span class="p">]</span>  
+
+
+<div class="viewcode-block" id="FractalCoreShellModel.setParam"><a class="viewcode-back" href="../../../dev/api/sas.models.html#sas.models.FractalCoreShellModel.FractalCoreShellModel.setParam">[docs]</a>    <span class="k">def</span> <span class="nf">setParam</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">name</span><span class="p">,</span> <span class="n">value</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot; </span>
+<span class="sd">        Set the value of a model parameter</span>
+<span class="sd">    </span>
+<span class="sd">        : param name: name of the parameter</span>
+<span class="sd">        : param value: value of the parameter</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="c"># set param to new model</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_setParamHelper</span><span class="p">(</span><span class="n">name</span><span class="p">,</span> <span class="n">value</span><span class="p">)</span>
+
+        <span class="k">if</span> <span class="n">name</span> <span class="o">==</span> <span class="s">&#39;volfraction&#39;</span><span class="p">:</span>
+            <span class="n">name</span> <span class="o">=</span> <span class="s">&#39;scale&#39;</span>
+        <span class="c"># model.setParam except the two names below</span>
+        <span class="k">if</span> <span class="n">name</span> <span class="o">!=</span> <span class="s">&#39;frac_dim&#39;</span> <span class="ow">and</span> <span class="n">name</span> <span class="o">!=</span> <span class="s">&#39;cor_length&#39;</span><span class="p">:</span>
+            <span class="c"># background is always 0.0 in the coreshellmodel</span>
+            <span class="k">if</span> <span class="n">name</span> <span class="o">==</span> <span class="s">&#39;background&#39;</span><span class="p">:</span>
+                <span class="n">value</span> <span class="o">=</span> <span class="mf">0.0</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">model</span><span class="o">.</span><span class="n">setParam</span><span class="p">(</span><span class="n">name</span><span class="p">,</span> <span class="n">value</span><span class="p">)</span>
+</div>
+    <span class="k">def</span> <span class="nf">_setParamHelper</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">name</span><span class="p">,</span> <span class="n">value</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Helper function to setParam</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="c">#look for dispersion parameters</span>
+        <span class="n">toks</span> <span class="o">=</span> <span class="n">name</span><span class="o">.</span><span class="n">split</span><span class="p">(</span><span class="s">&#39;.&#39;</span><span class="p">)</span>
+        <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">toks</span><span class="p">)</span><span class="o">==</span><span class="mi">2</span><span class="p">:</span>
+            <span class="k">for</span> <span class="n">item</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">dispersion</span><span class="o">.</span><span class="n">keys</span><span class="p">():</span>
+                <span class="k">if</span> <span class="n">item</span><span class="o">.</span><span class="n">lower</span><span class="p">()</span><span class="o">==</span><span class="n">toks</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">lower</span><span class="p">():</span>
+                    <span class="k">for</span> <span class="n">par</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">dispersion</span><span class="p">[</span><span class="n">item</span><span class="p">]:</span>
+                        <span class="k">if</span> <span class="n">par</span><span class="o">.</span><span class="n">lower</span><span class="p">()</span> <span class="o">==</span> <span class="n">toks</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span><span class="o">.</span><span class="n">lower</span><span class="p">():</span>
+                            <span class="bp">self</span><span class="o">.</span><span class="n">dispersion</span><span class="p">[</span><span class="n">item</span><span class="p">][</span><span class="n">par</span><span class="p">]</span> <span class="o">=</span> <span class="n">value</span>
+                            <span class="k">return</span>
+        <span class="c"># Look for standard parameter</span>
+        <span class="k">for</span> <span class="n">item</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">params</span><span class="o">.</span><span class="n">keys</span><span class="p">():</span>
+            <span class="k">if</span> <span class="n">item</span><span class="o">.</span><span class="n">lower</span><span class="p">()</span><span class="o">==</span><span class="n">name</span><span class="o">.</span><span class="n">lower</span><span class="p">():</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">params</span><span class="p">[</span><span class="n">item</span><span class="p">]</span> <span class="o">=</span> <span class="n">value</span>
+                <span class="k">return</span>
+        
+        <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">,</span> <span class="s">&quot;Model does not contain parameter </span><span class="si">%s</span><span class="s">&quot;</span> <span class="o">%</span> <span class="n">name</span>
+             
+     
+                
+<div class="viewcode-block" id="FractalCoreShellModel.run"><a class="viewcode-back" href="../../../dev/api/sas.models.html#sas.models.FractalCoreShellModel.FractalCoreShellModel.run">[docs]</a>    <span class="k">def</span> <span class="nf">run</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">x</span> <span class="o">=</span> <span class="mf">0.0</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot; </span>
+<span class="sd">        Evaluate the model</span>
+<span class="sd">        </span>
+<span class="sd">        : param x: input q-value (float or [float, float] as [r, theta])</span>
+<span class="sd">        : return: (DAB value)</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">if</span> <span class="n">x</span><span class="o">.</span><span class="n">__class__</span><span class="o">.</span><span class="n">__name__</span> <span class="o">==</span> <span class="s">&#39;list&#39;</span><span class="p">:</span>
+            <span class="c"># Take absolute value of Q, since this model is really meant to</span>
+            <span class="c"># be defined in 1D for a given length of Q</span>
+            <span class="c">#qx = math.fabs(x[0]*math.cos(x[1]))</span>
+            <span class="c">#qy = math.fabs(x[0]*math.sin(x[1]))</span>
+            <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">params</span><span class="p">[</span><span class="s">&#39;background&#39;</span><span class="p">]</span>\
+                <span class="o">+</span><span class="bp">self</span><span class="o">.</span><span class="n">_fractalcore</span><span class="p">(</span><span class="n">x</span><span class="p">[</span><span class="mi">0</span><span class="p">])</span><span class="o">*</span><span class="bp">self</span><span class="o">.</span><span class="n">model</span><span class="o">.</span><span class="n">run</span><span class="p">(</span><span class="n">x</span><span class="p">)</span>
+        <span class="k">elif</span> <span class="n">x</span><span class="o">.</span><span class="n">__class__</span><span class="o">.</span><span class="n">__name__</span> <span class="o">==</span> <span class="s">&#39;tuple&#39;</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">,</span> <span class="s">&quot;Tuples are not allowed as input to models&quot;</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">params</span><span class="p">[</span><span class="s">&#39;background&#39;</span><span class="p">]</span>\
+                <span class="o">+</span><span class="bp">self</span><span class="o">.</span><span class="n">_fractalcore</span><span class="p">(</span><span class="n">x</span><span class="p">)</span><span class="o">*</span><span class="bp">self</span><span class="o">.</span><span class="n">model</span><span class="o">.</span><span class="n">run</span><span class="p">(</span><span class="n">x</span><span class="p">)</span>
+
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">params</span><span class="p">[</span><span class="s">&#39;background&#39;</span><span class="p">]</span><span class="o">+</span><span class="bp">self</span><span class="o">.</span><span class="n">_fractalcore</span><span class="p">(</span><span class="n">x</span><span class="p">)</span><span class="o">*</span><span class="bp">self</span><span class="o">.</span><span class="n">model</span><span class="o">.</span><span class="n">run</span><span class="p">(</span><span class="n">x</span><span class="p">)</span>
+</div>
+<div class="viewcode-block" id="FractalCoreShellModel.runXY"><a class="viewcode-back" href="../../../dev/api/sas.models.html#sas.models.FractalCoreShellModel.FractalCoreShellModel.runXY">[docs]</a>    <span class="k">def</span> <span class="nf">runXY</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">x</span> <span class="o">=</span> <span class="mf">0.0</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot; </span>
+<span class="sd">        Evaluate the model</span>
+<span class="sd">        </span>
+<span class="sd">        : param x: input q-value (float or [float, float] as [qx, qy])</span>
+<span class="sd">        : return: DAB value</span>
+<span class="sd">        &quot;&quot;&quot;</span>  
+        <span class="k">if</span> <span class="n">x</span><span class="o">.</span><span class="n">__class__</span><span class="o">.</span><span class="n">__name__</span> <span class="o">==</span> <span class="s">&#39;list&#39;</span><span class="p">:</span>
+            <span class="n">q</span> <span class="o">=</span> <span class="n">math</span><span class="o">.</span><span class="n">sqrt</span><span class="p">(</span><span class="n">x</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="o">**</span><span class="mi">2</span> <span class="o">+</span> <span class="n">x</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span><span class="o">**</span><span class="mi">2</span><span class="p">)</span>
+            <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">params</span><span class="p">[</span><span class="s">&#39;background&#39;</span><span class="p">]</span>\
+                <span class="o">+</span><span class="bp">self</span><span class="o">.</span><span class="n">_fractalcore</span><span class="p">(</span><span class="n">q</span><span class="p">)</span><span class="o">*</span><span class="bp">self</span><span class="o">.</span><span class="n">model</span><span class="o">.</span><span class="n">runXY</span><span class="p">(</span><span class="n">x</span><span class="p">)</span>
+        <span class="k">elif</span> <span class="n">x</span><span class="o">.</span><span class="n">__class__</span><span class="o">.</span><span class="n">__name__</span> <span class="o">==</span> <span class="s">&#39;tuple&#39;</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">,</span> <span class="s">&quot;Tuples are not allowed as input to models&quot;</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">params</span><span class="p">[</span><span class="s">&#39;background&#39;</span><span class="p">]</span>\
+                <span class="o">+</span><span class="bp">self</span><span class="o">.</span><span class="n">_fractalcore</span><span class="p">(</span><span class="n">x</span><span class="p">)</span><span class="o">*</span><span class="bp">self</span><span class="o">.</span><span class="n">model</span><span class="o">.</span><span class="n">runXY</span><span class="p">(</span><span class="n">x</span><span class="p">)</span>
+</div>
+<div class="viewcode-block" id="FractalCoreShellModel.set_dispersion"><a class="viewcode-back" href="../../../dev/api/sas.models.html#sas.models.FractalCoreShellModel.FractalCoreShellModel.set_dispersion">[docs]</a>    <span class="k">def</span> <span class="nf">set_dispersion</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">parameter</span><span class="p">,</span> <span class="n">dispersion</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Set the dispersion object for a model parameter</span>
+<span class="sd">        </span>
+<span class="sd">        : param parameter: name of the parameter [string]</span>
+<span class="sd">        :dispersion: dispersion object of type DispersionModel</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">value</span> <span class="o">=</span> <span class="bp">None</span>
+        <span class="k">try</span><span class="p">:</span>
+            <span class="k">if</span> <span class="n">parameter</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">model</span><span class="o">.</span><span class="n">dispersion</span><span class="o">.</span><span class="n">keys</span><span class="p">():</span>
+                <span class="n">value</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">model</span><span class="o">.</span><span class="n">set_dispersion</span><span class="p">(</span><span class="n">parameter</span><span class="p">,</span> <span class="n">dispersion</span><span class="p">)</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_set_dispersion</span><span class="p">()</span>
+            <span class="k">return</span> <span class="n">value</span>
+        <span class="k">except</span><span class="p">:</span>
+            <span class="k">raise</span> </div></div>
+</pre></div>
+
+          </div>
+        </div>
+      </div>
+      <div class="sphinxsidebar" role="navigation" aria-label="main navigation">
+        <div class="sphinxsidebarwrapper">
+<div id="searchbox" style="display: none" role="search">
+  <h3>Quick search</h3>
+    <form class="search" action="../../../search.html" method="get">
+      <input type="text" name="q" />
+      <input type="submit" value="Go" />
+      <input type="hidden" name="check_keywords" value="yes" />
+      <input type="hidden" name="area" value="default" />
+    </form>
+    <p class="searchtip" style="font-size: 90%">
+    Enter search terms or a module, class or function name.
+    </p>
+</div>
+<script type="text/javascript">$('#searchbox').show(0);</script>
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="related" role="navigation" aria-label="related navigation">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="../../../genindex.html" title="General Index"
+             >index</a></li>
+        <li class="right" >
+          <a href="../../../py-modindex.html" title="Python Module Index"
+             >modules</a> |</li>
+        <li class="nav-item nav-item-0"><a href="../../../index.html">SasView 3.1.0 documentation</a> &raquo;</li>
+          <li class="nav-item nav-item-1"><a href="../../index.html" >Module code</a> &raquo;</li>
+          <li class="nav-item nav-item-2"><a href="../models.html" >sas.models</a> &raquo;</li> 
+      </ul>
+    </div>
+    <div class="footer" role="contentinfo">
+        &copy; Copyright 2015, The SasView Project.
+      Created using <a href="http://sphinx-doc.org/">Sphinx</a> 1.3.1.
+    </div>
+  </body>
+</html>

@@ -1,0 +1,637 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+  "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+    
+    <title>sas.perspectives.invariant.invariant_details &mdash; SasView 3.1.0 documentation</title>
+    
+    <link rel="stylesheet" href="../../../../_static/classic.css" type="text/css" />
+    <link rel="stylesheet" href="../../../../_static/pygments.css" type="text/css" />
+    
+    <script type="text/javascript">
+      var DOCUMENTATION_OPTIONS = {
+        URL_ROOT:    '../../../../',
+        VERSION:     '3.1.0',
+        COLLAPSE_INDEX: false,
+        FILE_SUFFIX: '.html',
+        HAS_SOURCE:  true
+      };
+    </script>
+    <script type="text/javascript" src="../../../../_static/jquery.js"></script>
+    <script type="text/javascript" src="../../../../_static/underscore.js"></script>
+    <script type="text/javascript" src="../../../../_static/doctools.js"></script>
+    <script type="text/javascript" src="https://cdn.mathjax.org/mathjax/latest/MathJax.js?config=TeX-AMS-MML_HTMLorMML"></script>
+    <link rel="top" title="SasView 3.1.0 documentation" href="../../../../index.html" />
+    <link rel="up" title="sas.perspectives.invariant" href="../invariant.html" /> 
+  </head>
+  <body role="document">
+    <div class="related" role="navigation" aria-label="related navigation">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="../../../../genindex.html" title="General Index"
+             accesskey="I">index</a></li>
+        <li class="right" >
+          <a href="../../../../py-modindex.html" title="Python Module Index"
+             >modules</a> |</li>
+        <li class="nav-item nav-item-0"><a href="../../../../index.html">SasView 3.1.0 documentation</a> &raquo;</li>
+          <li class="nav-item nav-item-1"><a href="../../../index.html" >Module code</a> &raquo;</li>
+          <li class="nav-item nav-item-2"><a href="../invariant.html" accesskey="U">sas.perspectives.invariant</a> &raquo;</li> 
+      </ul>
+    </div>  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          <div class="body" role="main">
+            
+  <h1>Source code for sas.perspectives.invariant.invariant_details</h1><div class="highlight"><pre>
+<span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Invariant panel</span>
+<span class="sd">&quot;&quot;&quot;</span>
+<span class="kn">import</span> <span class="nn">wx</span>
+<span class="kn">import</span> <span class="nn">sys</span>
+
+<span class="kn">from</span> <span class="nn">sas.guiframe.utils</span> <span class="kn">import</span> <span class="n">format_number</span>
+<span class="kn">from</span> <span class="nn">invariant_widgets</span> <span class="kn">import</span> <span class="n">OutputTextCtrl</span>
+<span class="c"># Dimensions related to chart</span>
+<span class="n">RECTANGLE_WIDTH</span> <span class="o">=</span> <span class="mf">400.0</span>
+<span class="n">RECTANGLE_HEIGHT</span> <span class="o">=</span> <span class="mi">20</span>
+<span class="c"># Invariant panel size</span>
+<span class="n">_BOX_WIDTH</span> <span class="o">=</span> <span class="mi">76</span>
+
+<span class="c"># scale to use for a bar of value zero</span>
+<span class="n">RECTANGLE_SCALE</span> <span class="o">=</span> <span class="mf">0.0001</span>
+<span class="n">DEFAULT_QSTAR</span> <span class="o">=</span> <span class="mf">1.0</span>
+
+<span class="k">if</span> <span class="n">sys</span><span class="o">.</span><span class="n">platform</span><span class="o">.</span><span class="n">count</span><span class="p">(</span><span class="s">&quot;win32&quot;</span><span class="p">)</span> <span class="o">&gt;</span> <span class="mi">0</span><span class="p">:</span>
+    <span class="n">_STATICBOX_WIDTH</span> <span class="o">=</span> <span class="mi">450</span>
+    <span class="n">PANEL_WIDTH</span> <span class="o">=</span> <span class="mi">500</span>
+    <span class="n">PANEL_HEIGHT</span> <span class="o">=</span> <span class="mi">430</span>
+    <span class="n">FONT_VARIANT</span> <span class="o">=</span> <span class="mi">0</span>
+<span class="k">else</span><span class="p">:</span>
+    <span class="n">_STATICBOX_WIDTH</span> <span class="o">=</span> <span class="mi">480</span>
+    <span class="n">PANEL_WIDTH</span> <span class="o">=</span> <span class="mi">530</span>
+    <span class="n">PANEL_HEIGHT</span> <span class="o">=</span> <span class="mi">430</span>
+    <span class="n">FONT_VARIANT</span> <span class="o">=</span> <span class="mi">1</span>
+
+<span class="n">ERROR_COLOR</span> <span class="o">=</span> <span class="n">wx</span><span class="o">.</span><span class="n">Colour</span><span class="p">(</span><span class="mi">255</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="mi">128</span><span class="p">)</span>
+<span class="n">EXTRAPOLATION_COLOR</span> <span class="o">=</span> <span class="n">wx</span><span class="o">.</span><span class="n">Colour</span><span class="p">(</span><span class="mi">169</span><span class="p">,</span> <span class="mi">169</span><span class="p">,</span> <span class="mi">168</span><span class="p">,</span> <span class="mi">128</span><span class="p">)</span>
+<span class="n">INVARIANT_COLOR</span> <span class="o">=</span> <span class="n">wx</span><span class="o">.</span><span class="n">Colour</span><span class="p">(</span><span class="mi">67</span><span class="p">,</span> <span class="mi">208</span><span class="p">,</span> <span class="mi">128</span><span class="p">,</span> <span class="mi">128</span><span class="p">)</span>
+
+
+<div class="viewcode-block" id="InvariantContainer"><a class="viewcode-back" href="../../../../dev/api/sas.perspectives.invariant.html#sas.perspectives.invariant.invariant_details.InvariantContainer">[docs]</a><span class="k">class</span> <span class="nc">InvariantContainer</span><span class="p">(</span><span class="n">wx</span><span class="o">.</span><span class="n">Object</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    This class stores some values resulting resulting from invariant</span>
+<span class="sd">    calculations. Given the value of total invariant, this class can also</span>
+<span class="sd">    determine the percentage of invariants resulting from extrapolation.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="c"># invariant at low range</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">qstar_low</span> <span class="o">=</span> <span class="bp">None</span>
+        <span class="c"># invariant at low range error</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">qstar_low_err</span> <span class="o">=</span> <span class="bp">None</span>
+        <span class="c"># invariant</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">qstar</span> <span class="o">=</span> <span class="bp">None</span>
+        <span class="c"># invariant error</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">qstar_err</span> <span class="o">=</span> <span class="bp">None</span>
+        <span class="c"># invariant at high range</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">qstar_high</span> <span class="o">=</span> <span class="bp">None</span>
+        <span class="c"># invariant at high range error</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">qstar_high_err</span> <span class="o">=</span> <span class="bp">None</span>
+        <span class="c"># invariant total</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">qstar_total</span> <span class="o">=</span> <span class="bp">None</span>
+        <span class="c"># invariant error</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">qstar_total_err</span> <span class="o">=</span> <span class="bp">None</span>
+        <span class="c"># scale</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">qstar_low_percent</span> <span class="o">=</span> <span class="bp">None</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">qstar_high_percent</span> <span class="o">=</span> <span class="bp">None</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">qstar_percent</span> <span class="o">=</span> <span class="bp">None</span>
+        <span class="c"># warning message</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">existing_warning</span> <span class="o">=</span> <span class="bp">False</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">warning_msg</span> <span class="o">=</span> <span class="s">&quot;No Details on calculations available...</span><span class="se">\n</span><span class="s">&quot;</span>
+
+<div class="viewcode-block" id="InvariantContainer.compute_percentage"><a class="viewcode-back" href="../../../../dev/api/sas.perspectives.invariant.html#sas.perspectives.invariant.invariant_details.InvariantContainer.compute_percentage">[docs]</a>    <span class="k">def</span> <span class="nf">compute_percentage</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Compute percentage of each invariant</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">qstar_total</span> <span class="ow">is</span> <span class="bp">None</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">qstar_percent</span> <span class="o">=</span> <span class="bp">None</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">qstar_low</span> <span class="o">=</span> <span class="bp">None</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">qstar_high</span> <span class="o">=</span> <span class="bp">None</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">check_values</span><span class="p">()</span>
+            <span class="k">return</span>
+
+        <span class="c"># compute invariant percentage</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">qstar</span> <span class="ow">is</span> <span class="bp">None</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">qstar_percent</span> <span class="o">=</span> <span class="bp">None</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="k">try</span><span class="p">:</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">qstar_percent</span> <span class="o">=</span> <span class="nb">float</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">qstar</span><span class="p">)</span> <span class="o">/</span> <span class="nb">float</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">qstar_total</span><span class="p">)</span>
+            <span class="k">except</span><span class="p">:</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">qstar_percent</span> <span class="o">=</span> <span class="s">&#39;error&#39;</span>
+        <span class="c"># compute low q invariant percentage</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">qstar_low</span> <span class="ow">is</span> <span class="bp">None</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">qstar_low_percent</span> <span class="o">=</span> <span class="bp">None</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="k">try</span><span class="p">:</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">qstar_low_percent</span> <span class="o">=</span> <span class="nb">float</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">qstar_low</span><span class="p">)</span>\
+                                            <span class="o">/</span> <span class="nb">float</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">qstar_total</span><span class="p">)</span>
+            <span class="k">except</span><span class="p">:</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">qstar_low_percent</span> <span class="o">=</span> <span class="s">&#39;error&#39;</span>
+        <span class="c"># compute high q invariant percentage</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">qstar_high</span> <span class="ow">is</span> <span class="bp">None</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">qstar_high_percent</span> <span class="o">=</span> <span class="bp">None</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="k">try</span><span class="p">:</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">qstar_high_percent</span> <span class="o">=</span> <span class="nb">float</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">qstar_high</span><span class="p">)</span>\
+                                                <span class="o">/</span> <span class="nb">float</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">qstar_total</span><span class="p">)</span>
+            <span class="k">except</span><span class="p">:</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">qstar_high_percent</span> <span class="o">=</span> <span class="s">&#39;error&#39;</span>
+        <span class="n">wx</span><span class="o">.</span><span class="n">CallAfter</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">check_values</span><span class="p">)</span>
+</div>
+<div class="viewcode-block" id="InvariantContainer.check_values"><a class="viewcode-back" href="../../../../dev/api/sas.perspectives.invariant.html#sas.perspectives.invariant.invariant_details.InvariantContainer.check_values">[docs]</a>    <span class="k">def</span> <span class="nf">check_values</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        check the validity if invariant</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">qstar_total</span> <span class="ow">is</span> <span class="bp">None</span> <span class="ow">and</span> <span class="bp">self</span><span class="o">.</span><span class="n">qstar</span> <span class="ow">is</span> <span class="bp">None</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">warning_msg</span> <span class="o">=</span> <span class="s">&quot;Invariant not calculated.</span><span class="se">\n</span><span class="s">&quot;</span>
+            <span class="k">return</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">qstar_total</span> <span class="o">==</span> <span class="mi">0</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">existing_warning</span> <span class="o">=</span> <span class="bp">True</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">warning_msg</span> <span class="o">=</span> <span class="s">&quot;Invariant is zero. </span><span class="se">\n</span><span class="s">&quot;</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">warning_msg</span> <span class="o">+=</span> <span class="s">&quot;The calculations are likely &quot;</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">warning_msg</span> <span class="o">+=</span> <span class="s">&quot;to be unreliable!</span><span class="se">\n</span><span class="s">&quot;</span>
+            <span class="k">return</span>
+        <span class="c"># warning to the user when the extrapolated invariant is greater than %5</span>
+        <span class="n">msg</span> <span class="o">=</span> <span class="s">&#39;&#39;</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">qstar_percent</span> <span class="o">==</span> <span class="s">&#39;error&#39;</span><span class="p">:</span>
+            <span class="k">try</span><span class="p">:</span>
+                <span class="nb">float</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">qstar</span><span class="p">)</span>
+            <span class="k">except</span><span class="p">:</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">existing_warning</span> <span class="o">=</span> <span class="bp">True</span>
+                <span class="n">msg</span> <span class="o">+=</span> <span class="s">&#39;Error occurred when computing invariant from data.</span><span class="se">\n</span><span class="s"> &#39;</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">qstar_percent</span> <span class="o">&gt;</span> <span class="mi">1</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">existing_warning</span> <span class="o">=</span> <span class="bp">True</span>
+            <span class="n">msg</span> <span class="o">+=</span> <span class="s">&quot;Invariant Q  contribution is greater &quot;</span>
+            <span class="n">msg</span> <span class="o">+=</span> <span class="s">&quot;than 100% .</span><span class="se">\n</span><span class="s">&quot;</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">qstar_low_percent</span> <span class="o">==</span> <span class="s">&#39;error&#39;</span><span class="p">:</span>
+            <span class="k">try</span><span class="p">:</span>
+                <span class="nb">float</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">qstar_low</span><span class="p">)</span>
+            <span class="k">except</span><span class="p">:</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">existing_warning</span> <span class="o">=</span> <span class="bp">True</span>
+                <span class="n">msg</span> <span class="o">+=</span> <span class="s">&quot;Error occurred when computing extrapolated invariant&quot;</span>
+                <span class="n">msg</span> <span class="o">+=</span> <span class="s">&quot; at low-Q region.</span><span class="se">\n</span><span class="s">&quot;</span>
+        <span class="k">elif</span> <span class="bp">self</span><span class="o">.</span><span class="n">qstar_low_percent</span> <span class="ow">is</span> <span class="ow">not</span> <span class="bp">None</span><span class="p">:</span>
+            <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">qstar_low_percent</span> <span class="o">&gt;=</span> <span class="mf">0.05</span><span class="p">:</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">existing_warning</span> <span class="o">=</span> <span class="bp">True</span>
+                <span class="n">msg</span> <span class="o">+=</span> <span class="s">&quot;Extrapolated contribution at Low Q is higher &quot;</span>
+                <span class="n">msg</span> <span class="o">+=</span> <span class="s">&quot;than 5</span><span class="si">% o</span><span class="s">f the invariant.</span><span class="se">\n</span><span class="s">&quot;</span>
+            <span class="k">elif</span> <span class="bp">self</span><span class="o">.</span><span class="n">qstar_low_percent</span> <span class="o">&lt;</span> <span class="mi">0</span><span class="p">:</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">existing_warning</span> <span class="o">=</span> <span class="bp">True</span>
+                <span class="n">msg</span> <span class="o">+=</span> <span class="s">&quot;Extrapolated contribution at Low Q &lt; 0.</span><span class="se">\n</span><span class="s">&quot;</span>
+            <span class="k">elif</span> <span class="bp">self</span><span class="o">.</span><span class="n">qstar_low_percent</span> <span class="o">&gt;</span> <span class="mi">1</span><span class="p">:</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">existing_warning</span> <span class="o">=</span> <span class="bp">True</span>
+                <span class="n">msg</span> <span class="o">+=</span> <span class="s">&quot;Extrapolated contribution at Low Q is greater &quot;</span>
+                <span class="n">msg</span> <span class="o">+=</span> <span class="s">&quot;than 100% .</span><span class="se">\n</span><span class="s">&quot;</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">qstar_high_percent</span> <span class="o">==</span> <span class="s">&#39;error&#39;</span><span class="p">:</span>
+            <span class="k">try</span><span class="p">:</span>
+                <span class="nb">float</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">qstar_high</span><span class="p">)</span>
+            <span class="k">except</span><span class="p">:</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">existing_warning</span> <span class="o">=</span> <span class="bp">True</span>
+                <span class="n">msg</span> <span class="o">+=</span> <span class="s">&#39;Error occurred when computing extrapolated&#39;</span>
+                <span class="n">msg</span> <span class="o">+=</span> <span class="s">&#39; invariant at high-Q region.</span><span class="se">\n</span><span class="s">&#39;</span>
+        <span class="k">elif</span> <span class="bp">self</span><span class="o">.</span><span class="n">qstar_high_percent</span> <span class="ow">is</span> <span class="ow">not</span> <span class="bp">None</span><span class="p">:</span>
+            <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">qstar_high_percent</span> <span class="o">&gt;=</span> <span class="mf">0.05</span><span class="p">:</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">existing_warning</span> <span class="o">=</span> <span class="bp">True</span>
+                <span class="n">msg</span> <span class="o">+=</span> <span class="s">&quot;Extrapolated contribution at High Q is higher &quot;</span>
+                <span class="n">msg</span> <span class="o">+=</span> <span class="s">&quot;than 5</span><span class="si">% o</span><span class="s">f the invariant.</span><span class="se">\n</span><span class="s">&quot;</span>
+            <span class="k">elif</span> <span class="bp">self</span><span class="o">.</span><span class="n">qstar_high_percent</span> <span class="o">&lt;</span> <span class="mi">0</span><span class="p">:</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">existing_warning</span> <span class="o">=</span> <span class="bp">True</span>
+                <span class="n">msg</span> <span class="o">+=</span> <span class="s">&quot;Extrapolated contribution at High Q &lt; 0.</span><span class="se">\n</span><span class="s">&quot;</span>
+            <span class="k">elif</span> <span class="bp">self</span><span class="o">.</span><span class="n">qstar_high_percent</span> <span class="o">&gt;</span> <span class="mi">1</span><span class="p">:</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">existing_warning</span> <span class="o">=</span> <span class="bp">True</span>
+                <span class="n">msg</span> <span class="o">+=</span> <span class="s">&quot;Extrapolated contribution at High Q is greater &quot;</span>
+                <span class="n">msg</span> <span class="o">+=</span> <span class="s">&quot;than 100% .</span><span class="se">\n</span><span class="s">&quot;</span>
+        <span class="k">if</span> <span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">qstar_low_percent</span> <span class="ow">not</span> <span class="ow">in</span> <span class="p">[</span><span class="bp">None</span><span class="p">,</span> <span class="s">&quot;error&quot;</span><span class="p">])</span> <span class="ow">and</span> \
+            <span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">qstar_high_percent</span> <span class="ow">not</span> <span class="ow">in</span> <span class="p">[</span><span class="bp">None</span><span class="p">,</span> <span class="s">&quot;error&quot;</span><span class="p">])</span>\
+            <span class="ow">and</span> <span class="bp">self</span><span class="o">.</span><span class="n">qstar_low_percent</span> <span class="o">+</span> <span class="bp">self</span><span class="o">.</span><span class="n">qstar_high_percent</span> <span class="o">&gt;=</span> <span class="mf">0.05</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">existing_warning</span> <span class="o">=</span> <span class="bp">True</span>
+            <span class="n">msg</span> <span class="o">+=</span> <span class="s">&quot;The sum of all extrapolated contributions is higher &quot;</span>
+            <span class="n">msg</span> <span class="o">+=</span> <span class="s">&quot;than 5</span><span class="si">% o</span><span class="s">f the invariant.</span><span class="se">\n</span><span class="s">&quot;</span>
+
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">existing_warning</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">warning_msg</span> <span class="o">=</span> <span class="s">&#39;&#39;</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">warning_msg</span> <span class="o">+=</span> <span class="n">msg</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">warning_msg</span> <span class="o">+=</span> <span class="s">&quot;The calculations are likely to be&quot;</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">warning_msg</span> <span class="o">+=</span> <span class="s">&quot; unreliable!</span><span class="se">\n</span><span class="s">&quot;</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">warning_msg</span> <span class="o">=</span> <span class="s">&quot;No Details on calculations available...</span><span class="se">\n</span><span class="s">&quot;</span>
+</div></div>
+<div class="viewcode-block" id="InvariantDetailsPanel"><a class="viewcode-back" href="../../../../dev/api/sas.perspectives.invariant.html#sas.perspectives.invariant.invariant_details.InvariantDetailsPanel">[docs]</a><span class="k">class</span> <span class="nc">InvariantDetailsPanel</span><span class="p">(</span><span class="n">wx</span><span class="o">.</span><span class="n">Dialog</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    This panel describes proportion of invariants</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">parent</span><span class="o">=</span><span class="bp">None</span><span class="p">,</span> <span class="nb">id</span><span class="o">=-</span><span class="mi">1</span><span class="p">,</span> <span class="n">qstar_container</span><span class="o">=</span><span class="bp">None</span><span class="p">,</span>
+                 <span class="n">title</span><span class="o">=</span><span class="s">&quot;Invariant Details&quot;</span><span class="p">,</span>
+                 <span class="n">size</span><span class="o">=</span><span class="p">(</span><span class="n">PANEL_WIDTH</span><span class="p">,</span> <span class="n">PANEL_HEIGHT</span><span class="p">)):</span>
+        <span class="n">wx</span><span class="o">.</span><span class="n">Dialog</span><span class="o">.</span><span class="n">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">parent</span><span class="o">=</span><span class="n">parent</span><span class="p">,</span> <span class="nb">id</span><span class="o">=</span><span class="nb">id</span><span class="p">,</span> <span class="n">title</span><span class="o">=</span><span class="n">title</span><span class="p">,</span> <span class="n">size</span><span class="o">=</span><span class="n">size</span><span class="p">)</span>
+
+        <span class="c"># Font size</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">SetWindowVariant</span><span class="p">(</span><span class="n">variant</span><span class="o">=</span><span class="n">FONT_VARIANT</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">parent</span> <span class="o">=</span> <span class="n">parent</span>
+        <span class="c"># self.qstar_container</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">qstar_container</span> <span class="o">=</span> <span class="n">qstar_container</span>
+        <span class="c"># warning message</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">warning_msg</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">qstar_container</span><span class="o">.</span><span class="n">warning_msg</span>
+
+        <span class="c"># Define scale of each bar</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">low_inv_percent</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">qstar_container</span><span class="o">.</span><span class="n">qstar_low_percent</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">low_scale</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">get_scale</span><span class="p">(</span><span class="n">percentage</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">low_inv_percent</span><span class="p">,</span>
+                                        <span class="n">scale_name</span><span class="o">=</span><span class="s">&quot;Extrapolated at Low Q&quot;</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">inv_percent</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">qstar_container</span><span class="o">.</span><span class="n">qstar_percent</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">inv_scale</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">get_scale</span><span class="p">(</span><span class="n">percentage</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">inv_percent</span><span class="p">,</span>
+                                        <span class="n">scale_name</span><span class="o">=</span><span class="s">&quot;Inv in Q range&quot;</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">high_inv_percent</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">qstar_container</span><span class="o">.</span><span class="n">qstar_high_percent</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">high_scale</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">get_scale</span><span class="p">(</span><span class="n">percentage</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">high_inv_percent</span><span class="p">,</span>
+                                         <span class="n">scale_name</span><span class="o">=</span><span class="s">&quot;Extrapolated at High Q&quot;</span><span class="p">)</span>
+
+        <span class="c"># Default color the extrapolation bar is grey</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">extrapolation_color_low</span> <span class="o">=</span> <span class="n">EXTRAPOLATION_COLOR</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">extrapolation_color_high</span> <span class="o">=</span> <span class="n">EXTRAPOLATION_COLOR</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">invariant_color</span> <span class="o">=</span> <span class="n">INVARIANT_COLOR</span>
+        <span class="c"># change color of high and low bar when necessary</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">set_color_bar</span><span class="p">()</span>
+        <span class="c"># draw the panel itself</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_do_layout</span><span class="p">()</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">set_values</span><span class="p">()</span>
+
+    <span class="k">def</span> <span class="nf">_define_structure</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Define main sizers needed for this panel</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="c"># Box sizers must be defined first before defining buttons/textctrls</span>
+        <span class="c"># (MAC).</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">main_sizer</span> <span class="o">=</span> <span class="n">wx</span><span class="o">.</span><span class="n">BoxSizer</span><span class="p">(</span><span class="n">wx</span><span class="o">.</span><span class="n">VERTICAL</span><span class="p">)</span>
+        <span class="c"># Sizer related to chart</span>
+        <span class="n">chart_box</span> <span class="o">=</span> <span class="n">wx</span><span class="o">.</span><span class="n">StaticBox</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="o">-</span><span class="mi">1</span><span class="p">,</span> <span class="s">&quot;Invariant Chart&quot;</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">chart_sizer</span> <span class="o">=</span> <span class="n">wx</span><span class="o">.</span><span class="n">StaticBoxSizer</span><span class="p">(</span><span class="n">chart_box</span><span class="p">,</span> <span class="n">wx</span><span class="o">.</span><span class="n">VERTICAL</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">chart_sizer</span><span class="o">.</span><span class="n">SetMinSize</span><span class="p">((</span><span class="n">PANEL_WIDTH</span> <span class="o">-</span> <span class="mi">50</span><span class="p">,</span> <span class="mi">110</span><span class="p">))</span>
+        <span class="c"># Sizer related to invariant values</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">invariant_sizer</span> <span class="o">=</span> <span class="n">wx</span><span class="o">.</span><span class="n">GridBagSizer</span><span class="p">(</span><span class="mi">4</span><span class="p">,</span> <span class="mi">4</span><span class="p">)</span>
+        <span class="n">invariant_box</span> <span class="o">=</span> <span class="n">wx</span><span class="o">.</span><span class="n">StaticBox</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="o">-</span><span class="mi">1</span><span class="p">,</span> <span class="s">&quot;Numerical Values&quot;</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">invariant_box_sizer</span> <span class="o">=</span> <span class="n">wx</span><span class="o">.</span><span class="n">StaticBoxSizer</span><span class="p">(</span><span class="n">invariant_box</span><span class="p">,</span> <span class="n">wx</span><span class="o">.</span><span class="n">HORIZONTAL</span><span class="p">)</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">invariant_box_sizer</span><span class="o">.</span><span class="n">SetMinSize</span><span class="p">((</span><span class="n">PANEL_WIDTH</span> <span class="o">-</span> <span class="mi">50</span><span class="p">,</span> <span class="o">-</span><span class="mi">1</span><span class="p">))</span>
+        <span class="c"># Sizer related to warning message</span>
+        <span class="n">warning_box</span> <span class="o">=</span> <span class="n">wx</span><span class="o">.</span><span class="n">StaticBox</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="o">-</span><span class="mi">1</span><span class="p">,</span> <span class="s">&quot;Warning&quot;</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">warning_sizer</span> <span class="o">=</span> <span class="n">wx</span><span class="o">.</span><span class="n">StaticBoxSizer</span><span class="p">(</span><span class="n">warning_box</span><span class="p">,</span> <span class="n">wx</span><span class="o">.</span><span class="n">VERTICAL</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">warning_sizer</span><span class="o">.</span><span class="n">SetMinSize</span><span class="p">((</span><span class="n">PANEL_WIDTH</span> <span class="o">-</span> <span class="mi">50</span><span class="p">,</span> <span class="o">-</span><span class="mi">1</span><span class="p">))</span>
+        <span class="c"># Sizer related to button</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">button_sizer</span> <span class="o">=</span> <span class="n">wx</span><span class="o">.</span><span class="n">BoxSizer</span><span class="p">(</span><span class="n">wx</span><span class="o">.</span><span class="n">HORIZONTAL</span><span class="p">)</span>
+
+    <span class="k">def</span> <span class="nf">_layout_shart</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Draw widgets related to chart</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">panel_chart</span> <span class="o">=</span> <span class="n">wx</span><span class="o">.</span><span class="n">Panel</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">panel_chart</span><span class="o">.</span><span class="n">Bind</span><span class="p">(</span><span class="n">wx</span><span class="o">.</span><span class="n">EVT_PAINT</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">on_paint</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">chart_sizer</span><span class="o">.</span><span class="n">Add</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">panel_chart</span><span class="p">,</span> <span class="mi">1</span><span class="p">,</span> <span class="n">wx</span><span class="o">.</span><span class="n">EXPAND</span> <span class="o">|</span> <span class="n">wx</span><span class="o">.</span><span class="n">ALL</span><span class="p">,</span> <span class="mi">0</span><span class="p">)</span>
+
+    <span class="k">def</span> <span class="nf">_layout_invariant</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Draw widgets related to invariant</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">uncertainty</span> <span class="o">=</span> <span class="s">&quot;+/-&quot;</span>
+        <span class="n">unit_invariant</span> <span class="o">=</span> <span class="s">&#39;[1/(cm * A^3)]&#39;</span>
+
+        <span class="n">invariant_txt</span> <span class="o">=</span> <span class="n">wx</span><span class="o">.</span><span class="n">StaticText</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="o">-</span><span class="mi">1</span><span class="p">,</span> <span class="s">&#39;Q* from Data &#39;</span><span class="p">)</span>
+        <span class="n">invariant_txt</span><span class="o">.</span><span class="n">SetToolTipString</span><span class="p">(</span><span class="s">&quot;Invariant in the data set&#39;s Q range.&quot;</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">invariant_tcl</span> <span class="o">=</span> <span class="n">OutputTextCtrl</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="o">-</span><span class="mi">1</span><span class="p">,</span> <span class="n">size</span><span class="o">=</span><span class="p">(</span><span class="n">_BOX_WIDTH</span><span class="p">,</span> <span class="o">-</span><span class="mi">1</span><span class="p">))</span>
+        <span class="n">hint_msg</span> <span class="o">=</span> <span class="s">&quot;Invariant in the data set&#39;s Q range.&quot;</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">invariant_tcl</span><span class="o">.</span><span class="n">SetToolTipString</span><span class="p">(</span><span class="n">hint_msg</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">invariant_err_tcl</span> <span class="o">=</span> <span class="n">OutputTextCtrl</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="o">-</span><span class="mi">1</span><span class="p">,</span> <span class="n">size</span><span class="o">=</span><span class="p">(</span><span class="n">_BOX_WIDTH</span><span class="p">,</span> <span class="o">-</span><span class="mi">1</span><span class="p">))</span>
+        <span class="n">hint_msg</span> <span class="o">=</span> <span class="s">&quot;Uncertainty on the invariant from data&#39;s range.&quot;</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">invariant_err_tcl</span><span class="o">.</span><span class="n">SetToolTipString</span><span class="p">(</span><span class="n">hint_msg</span><span class="p">)</span>
+        <span class="n">invariant_units_txt</span> <span class="o">=</span> <span class="n">wx</span><span class="o">.</span><span class="n">StaticText</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="o">-</span><span class="mi">1</span><span class="p">,</span> <span class="n">unit_invariant</span><span class="p">)</span>
+        <span class="n">hint_msg</span> <span class="o">=</span> <span class="s">&quot;Unit of the invariant from data&#39;s Q range&quot;</span>
+        <span class="n">invariant_units_txt</span><span class="o">.</span><span class="n">SetToolTipString</span><span class="p">(</span><span class="n">hint_msg</span><span class="p">)</span>
+
+        <span class="n">invariant_low_txt</span> <span class="o">=</span> <span class="n">wx</span><span class="o">.</span><span class="n">StaticText</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="o">-</span><span class="mi">1</span><span class="p">,</span> <span class="s">&#39;Q* from Low-Q&#39;</span><span class="p">)</span>
+        <span class="n">hint_msg</span> <span class="o">=</span> <span class="s">&quot;Extrapolated invariant from low-Q range.&quot;</span>
+        <span class="n">invariant_low_txt</span><span class="o">.</span><span class="n">SetToolTipString</span><span class="p">(</span><span class="n">hint_msg</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">invariant_low_tcl</span> <span class="o">=</span> <span class="n">OutputTextCtrl</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="o">-</span><span class="mi">1</span><span class="p">,</span> <span class="n">size</span><span class="o">=</span><span class="p">(</span><span class="n">_BOX_WIDTH</span><span class="p">,</span> <span class="o">-</span><span class="mi">1</span><span class="p">))</span>
+        <span class="n">hint_msg</span> <span class="o">=</span> <span class="s">&quot;Extrapolated invariant from low-Q range.&quot;</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">invariant_low_tcl</span><span class="o">.</span><span class="n">SetToolTipString</span><span class="p">(</span><span class="n">hint_msg</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">invariant_low_err_tcl</span> <span class="o">=</span> <span class="n">OutputTextCtrl</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="o">-</span><span class="mi">1</span><span class="p">,</span>
+                                                    <span class="n">size</span><span class="o">=</span><span class="p">(</span><span class="n">_BOX_WIDTH</span><span class="p">,</span> <span class="o">-</span><span class="mi">1</span><span class="p">))</span>
+        <span class="n">hint_msg</span> <span class="o">=</span> <span class="s">&quot;Uncertainty on the invariant from low-Q range.&quot;</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">invariant_low_err_tcl</span><span class="o">.</span><span class="n">SetToolTipString</span><span class="p">(</span><span class="n">hint_msg</span><span class="p">)</span>
+        <span class="n">invariant_low_units_txt</span> <span class="o">=</span> <span class="n">wx</span><span class="o">.</span><span class="n">StaticText</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="o">-</span><span class="mi">1</span><span class="p">,</span> <span class="n">unit_invariant</span><span class="p">)</span>
+        <span class="n">hint_msg</span> <span class="o">=</span> <span class="s">&quot;Unit of the extrapolated invariant from  low-Q range&quot;</span>
+        <span class="n">invariant_low_units_txt</span><span class="o">.</span><span class="n">SetToolTipString</span><span class="p">(</span><span class="n">hint_msg</span><span class="p">)</span>
+
+        <span class="n">invariant_high_txt</span> <span class="o">=</span> <span class="n">wx</span><span class="o">.</span><span class="n">StaticText</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="o">-</span><span class="mi">1</span><span class="p">,</span> <span class="s">&#39;Q* from High-Q&#39;</span><span class="p">)</span>
+        <span class="n">hint_msg</span> <span class="o">=</span> <span class="s">&quot;Extrapolated invariant from  high-Q range&quot;</span>
+        <span class="n">invariant_high_txt</span><span class="o">.</span><span class="n">SetToolTipString</span><span class="p">(</span><span class="n">hint_msg</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">invariant_high_tcl</span> <span class="o">=</span> <span class="n">OutputTextCtrl</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="o">-</span><span class="mi">1</span><span class="p">,</span>
+                                                 <span class="n">size</span><span class="o">=</span><span class="p">(</span><span class="n">_BOX_WIDTH</span><span class="p">,</span> <span class="o">-</span><span class="mi">1</span><span class="p">))</span>
+        <span class="n">hint_msg</span> <span class="o">=</span> <span class="s">&quot;Extrapolated invariant from  high-Q range&quot;</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">invariant_high_tcl</span><span class="o">.</span><span class="n">SetToolTipString</span><span class="p">(</span><span class="n">hint_msg</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">invariant_high_err_tcl</span> <span class="o">=</span> <span class="n">OutputTextCtrl</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="o">-</span><span class="mi">1</span><span class="p">,</span>
+                                                     <span class="n">size</span><span class="o">=</span><span class="p">(</span><span class="n">_BOX_WIDTH</span><span class="p">,</span> <span class="o">-</span><span class="mi">1</span><span class="p">))</span>
+        <span class="n">hint_msg</span> <span class="o">=</span> <span class="s">&quot;Uncertainty on the invariant from high-Q range.&quot;</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">invariant_high_err_tcl</span><span class="o">.</span><span class="n">SetToolTipString</span><span class="p">(</span><span class="n">hint_msg</span><span class="p">)</span>
+        <span class="n">invariant_high_units_txt</span> <span class="o">=</span> <span class="n">wx</span><span class="o">.</span><span class="n">StaticText</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="o">-</span><span class="mi">1</span><span class="p">,</span> <span class="n">unit_invariant</span><span class="p">)</span>
+        <span class="n">hint_msg</span> <span class="o">=</span> <span class="s">&quot;Unit of the extrapolated invariant from  high-Q range&quot;</span>
+        <span class="n">invariant_high_units_txt</span><span class="o">.</span><span class="n">SetToolTipString</span><span class="p">(</span><span class="n">hint_msg</span><span class="p">)</span>
+
+        <span class="c"># Invariant low</span>
+        <span class="n">iy</span> <span class="o">=</span> <span class="mi">0</span>
+        <span class="n">ix</span> <span class="o">=</span> <span class="mi">0</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">invariant_sizer</span><span class="o">.</span><span class="n">Add</span><span class="p">(</span><span class="n">invariant_low_txt</span><span class="p">,</span> <span class="p">(</span><span class="n">iy</span><span class="p">,</span> <span class="n">ix</span><span class="p">),</span> <span class="p">(</span><span class="mi">1</span><span class="p">,</span> <span class="mi">1</span><span class="p">),</span>
+                                 <span class="n">wx</span><span class="o">.</span><span class="n">LEFT</span> <span class="o">|</span> <span class="n">wx</span><span class="o">.</span><span class="n">EXPAND</span> <span class="o">|</span> <span class="n">wx</span><span class="o">.</span><span class="n">ADJUST_MINSIZE</span><span class="p">,</span> <span class="mi">15</span><span class="p">)</span>
+        <span class="n">ix</span> <span class="o">+=</span> <span class="mi">1</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">invariant_sizer</span><span class="o">.</span><span class="n">Add</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">invariant_low_tcl</span><span class="p">,</span> <span class="p">(</span><span class="n">iy</span><span class="p">,</span> <span class="n">ix</span><span class="p">),</span> <span class="p">(</span><span class="mi">1</span><span class="p">,</span> <span class="mi">1</span><span class="p">),</span>
+                                 <span class="n">wx</span><span class="o">.</span><span class="n">EXPAND</span> <span class="o">|</span> <span class="n">wx</span><span class="o">.</span><span class="n">ADJUST_MINSIZE</span><span class="p">,</span> <span class="mi">0</span><span class="p">)</span>
+        <span class="n">ix</span> <span class="o">+=</span> <span class="mi">1</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">invariant_sizer</span><span class="o">.</span><span class="n">Add</span><span class="p">(</span><span class="n">wx</span><span class="o">.</span><span class="n">StaticText</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="o">-</span><span class="mi">1</span><span class="p">,</span> <span class="n">uncertainty</span><span class="p">),</span>
+                                 <span class="p">(</span><span class="n">iy</span><span class="p">,</span> <span class="n">ix</span><span class="p">),</span> <span class="p">(</span><span class="mi">1</span><span class="p">,</span> <span class="mi">1</span><span class="p">),</span> <span class="n">wx</span><span class="o">.</span><span class="n">EXPAND</span> <span class="o">|</span> <span class="n">wx</span><span class="o">.</span><span class="n">ADJUST_MINSIZE</span><span class="p">,</span> <span class="mi">0</span><span class="p">)</span>
+        <span class="n">ix</span> <span class="o">+=</span> <span class="mi">1</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">invariant_sizer</span><span class="o">.</span><span class="n">Add</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">invariant_low_err_tcl</span><span class="p">,</span> <span class="p">(</span><span class="n">iy</span><span class="p">,</span> <span class="n">ix</span><span class="p">),</span> <span class="p">(</span><span class="mi">1</span><span class="p">,</span> <span class="mi">1</span><span class="p">),</span>
+                                 <span class="n">wx</span><span class="o">.</span><span class="n">EXPAND</span> <span class="o">|</span> <span class="n">wx</span><span class="o">.</span><span class="n">ADJUST_MINSIZE</span><span class="p">,</span> <span class="mi">0</span><span class="p">)</span>
+        <span class="n">ix</span> <span class="o">+=</span> <span class="mi">1</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">invariant_sizer</span><span class="o">.</span><span class="n">Add</span><span class="p">(</span><span class="n">invariant_low_units_txt</span><span class="p">,</span>
+                                 <span class="p">(</span><span class="n">iy</span><span class="p">,</span> <span class="n">ix</span><span class="p">),</span> <span class="p">(</span><span class="mi">1</span><span class="p">,</span> <span class="mi">1</span><span class="p">),</span> <span class="n">wx</span><span class="o">.</span><span class="n">EXPAND</span> <span class="o">|</span> <span class="n">wx</span><span class="o">.</span><span class="n">ADJUST_MINSIZE</span><span class="p">,</span> <span class="mi">0</span><span class="p">)</span>
+        <span class="c"># Invariant</span>
+        <span class="n">iy</span> <span class="o">+=</span> <span class="mi">1</span>
+        <span class="n">ix</span> <span class="o">=</span> <span class="mi">0</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">invariant_sizer</span><span class="o">.</span><span class="n">Add</span><span class="p">(</span><span class="n">invariant_txt</span><span class="p">,</span> <span class="p">(</span><span class="n">iy</span><span class="p">,</span> <span class="n">ix</span><span class="p">),</span> <span class="p">(</span><span class="mi">1</span><span class="p">,</span> <span class="mi">1</span><span class="p">),</span>
+                                 <span class="n">wx</span><span class="o">.</span><span class="n">LEFT</span> <span class="o">|</span> <span class="n">wx</span><span class="o">.</span><span class="n">EXPAND</span> <span class="o">|</span> <span class="n">wx</span><span class="o">.</span><span class="n">ADJUST_MINSIZE</span><span class="p">,</span> <span class="mi">15</span><span class="p">)</span>
+        <span class="n">ix</span> <span class="o">+=</span> <span class="mi">1</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">invariant_sizer</span><span class="o">.</span><span class="n">Add</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">invariant_tcl</span><span class="p">,</span> <span class="p">(</span><span class="n">iy</span><span class="p">,</span> <span class="n">ix</span><span class="p">),</span> <span class="p">(</span><span class="mi">1</span><span class="p">,</span> <span class="mi">1</span><span class="p">),</span>
+                                 <span class="n">wx</span><span class="o">.</span><span class="n">EXPAND</span> <span class="o">|</span> <span class="n">wx</span><span class="o">.</span><span class="n">ADJUST_MINSIZE</span><span class="p">,</span> <span class="mi">0</span><span class="p">)</span>
+        <span class="n">ix</span> <span class="o">+=</span> <span class="mi">1</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">invariant_sizer</span><span class="o">.</span><span class="n">Add</span><span class="p">(</span><span class="n">wx</span><span class="o">.</span><span class="n">StaticText</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="o">-</span><span class="mi">1</span><span class="p">,</span> <span class="n">uncertainty</span><span class="p">),</span>
+                                 <span class="p">(</span><span class="n">iy</span><span class="p">,</span> <span class="n">ix</span><span class="p">),</span> <span class="p">(</span><span class="mi">1</span><span class="p">,</span> <span class="mi">1</span><span class="p">),</span> <span class="n">wx</span><span class="o">.</span><span class="n">EXPAND</span> <span class="o">|</span> <span class="n">wx</span><span class="o">.</span><span class="n">ADJUST_MINSIZE</span><span class="p">,</span> <span class="mi">0</span><span class="p">)</span>
+        <span class="n">ix</span> <span class="o">+=</span> <span class="mi">1</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">invariant_sizer</span><span class="o">.</span><span class="n">Add</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">invariant_err_tcl</span><span class="p">,</span> <span class="p">(</span><span class="n">iy</span><span class="p">,</span> <span class="n">ix</span><span class="p">),</span> <span class="p">(</span><span class="mi">1</span><span class="p">,</span> <span class="mi">1</span><span class="p">),</span>
+                                 <span class="n">wx</span><span class="o">.</span><span class="n">EXPAND</span> <span class="o">|</span> <span class="n">wx</span><span class="o">.</span><span class="n">ADJUST_MINSIZE</span><span class="p">,</span> <span class="mi">0</span><span class="p">)</span>
+        <span class="n">ix</span> <span class="o">+=</span> <span class="mi">1</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">invariant_sizer</span><span class="o">.</span><span class="n">Add</span><span class="p">(</span><span class="n">invariant_units_txt</span><span class="p">,</span>
+                                 <span class="p">(</span><span class="n">iy</span><span class="p">,</span> <span class="n">ix</span><span class="p">),</span> <span class="p">(</span><span class="mi">1</span><span class="p">,</span> <span class="mi">1</span><span class="p">),</span> <span class="n">wx</span><span class="o">.</span><span class="n">EXPAND</span> <span class="o">|</span> <span class="n">wx</span><span class="o">.</span><span class="n">ADJUST_MINSIZE</span><span class="p">,</span> <span class="mi">0</span><span class="p">)</span>
+        <span class="c"># Invariant high</span>
+        <span class="n">iy</span> <span class="o">+=</span> <span class="mi">1</span>
+        <span class="n">ix</span> <span class="o">=</span> <span class="mi">0</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">invariant_sizer</span><span class="o">.</span><span class="n">Add</span><span class="p">(</span><span class="n">invariant_high_txt</span><span class="p">,</span> <span class="p">(</span><span class="n">iy</span><span class="p">,</span> <span class="n">ix</span><span class="p">),</span> <span class="p">(</span><span class="mi">1</span><span class="p">,</span> <span class="mi">1</span><span class="p">),</span>
+                                 <span class="n">wx</span><span class="o">.</span><span class="n">LEFT</span> <span class="o">|</span> <span class="n">wx</span><span class="o">.</span><span class="n">EXPAND</span> <span class="o">|</span> <span class="n">wx</span><span class="o">.</span><span class="n">ADJUST_MINSIZE</span><span class="p">,</span> <span class="mi">15</span><span class="p">)</span>
+        <span class="n">ix</span> <span class="o">+=</span> <span class="mi">1</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">invariant_sizer</span><span class="o">.</span><span class="n">Add</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">invariant_high_tcl</span><span class="p">,</span> <span class="p">(</span><span class="n">iy</span><span class="p">,</span> <span class="n">ix</span><span class="p">),</span> <span class="p">(</span><span class="mi">1</span><span class="p">,</span> <span class="mi">1</span><span class="p">),</span>
+                                 <span class="n">wx</span><span class="o">.</span><span class="n">EXPAND</span> <span class="o">|</span> <span class="n">wx</span><span class="o">.</span><span class="n">ADJUST_MINSIZE</span><span class="p">,</span> <span class="mi">0</span><span class="p">)</span>
+        <span class="n">ix</span> <span class="o">+=</span> <span class="mi">1</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">invariant_sizer</span><span class="o">.</span><span class="n">Add</span><span class="p">(</span><span class="n">wx</span><span class="o">.</span><span class="n">StaticText</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="o">-</span><span class="mi">1</span><span class="p">,</span> <span class="n">uncertainty</span><span class="p">),</span>
+                                 <span class="p">(</span><span class="n">iy</span><span class="p">,</span> <span class="n">ix</span><span class="p">),</span> <span class="p">(</span><span class="mi">1</span><span class="p">,</span> <span class="mi">1</span><span class="p">),</span> <span class="n">wx</span><span class="o">.</span><span class="n">EXPAND</span> <span class="o">|</span> <span class="n">wx</span><span class="o">.</span><span class="n">ADJUST_MINSIZE</span><span class="p">,</span> <span class="mi">0</span><span class="p">)</span>
+        <span class="n">ix</span> <span class="o">+=</span> <span class="mi">1</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">invariant_sizer</span><span class="o">.</span><span class="n">Add</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">invariant_high_err_tcl</span><span class="p">,</span> <span class="p">(</span><span class="n">iy</span><span class="p">,</span> <span class="n">ix</span><span class="p">),</span> <span class="p">(</span><span class="mi">1</span><span class="p">,</span> <span class="mi">1</span><span class="p">),</span>
+                                 <span class="n">wx</span><span class="o">.</span><span class="n">EXPAND</span> <span class="o">|</span> <span class="n">wx</span><span class="o">.</span><span class="n">ADJUST_MINSIZE</span><span class="p">,</span> <span class="mi">0</span><span class="p">)</span>
+        <span class="n">ix</span> <span class="o">+=</span> <span class="mi">1</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">invariant_sizer</span><span class="o">.</span><span class="n">Add</span><span class="p">(</span><span class="n">invariant_high_units_txt</span><span class="p">,</span>
+                                 <span class="p">(</span><span class="n">iy</span><span class="p">,</span> <span class="n">ix</span><span class="p">),</span> <span class="p">(</span><span class="mi">1</span><span class="p">,</span> <span class="mi">1</span><span class="p">),</span> <span class="n">wx</span><span class="o">.</span><span class="n">EXPAND</span> <span class="o">|</span> <span class="n">wx</span><span class="o">.</span><span class="n">ADJUST_MINSIZE</span><span class="p">,</span> <span class="mi">0</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">invariant_box_sizer</span><span class="o">.</span><span class="n">Add</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">invariant_sizer</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="n">wx</span><span class="o">.</span><span class="n">TOP</span> <span class="o">|</span> <span class="n">wx</span><span class="o">.</span><span class="n">BOTTOM</span><span class="p">,</span> <span class="mi">10</span><span class="p">)</span>
+
+    <span class="k">def</span> <span class="nf">_layout_warning</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Draw widgets related to warning</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="c"># Warning [string]</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">warning_msg_txt</span> <span class="o">=</span> <span class="n">wx</span><span class="o">.</span><span class="n">StaticText</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="o">-</span><span class="mi">1</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">warning_msg</span><span class="p">)</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">qstar_container</span><span class="o">.</span><span class="n">existing_warning</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">warning_msg_txt</span><span class="o">.</span><span class="n">SetForegroundColour</span><span class="p">(</span><span class="s">&#39;red&#39;</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">warning_sizer</span><span class="o">.</span><span class="n">AddMany</span><span class="p">([(</span><span class="bp">self</span><span class="o">.</span><span class="n">warning_msg_txt</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span>
+                                     <span class="n">wx</span><span class="o">.</span><span class="n">LEFT</span> <span class="o">|</span> <span class="n">wx</span><span class="o">.</span><span class="n">EXPAND</span> <span class="o">|</span> <span class="n">wx</span><span class="o">.</span><span class="n">ADJUST_MINSIZE</span><span class="p">,</span> <span class="mi">10</span><span class="p">)])</span>
+
+    <span class="k">def</span> <span class="nf">_layout_button</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Draw widgets related to button</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="c"># Close button</span>
+        <span class="nb">id</span> <span class="o">=</span> <span class="n">wx</span><span class="o">.</span><span class="n">NewId</span><span class="p">()</span>
+        <span class="n">button_ok</span> <span class="o">=</span> <span class="n">wx</span><span class="o">.</span><span class="n">Button</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="nb">id</span><span class="p">,</span> <span class="s">&quot;Ok&quot;</span><span class="p">)</span>
+        <span class="n">button_ok</span><span class="o">.</span><span class="n">SetToolTipString</span><span class="p">(</span><span class="s">&quot;Give Details on Computation&quot;</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">Bind</span><span class="p">(</span><span class="n">wx</span><span class="o">.</span><span class="n">EVT_BUTTON</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">on_close</span><span class="p">,</span> <span class="nb">id</span><span class="o">=</span><span class="nb">id</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">button_sizer</span><span class="o">.</span><span class="n">AddMany</span><span class="p">([((</span><span class="mi">20</span><span class="p">,</span> <span class="mi">20</span><span class="p">),</span> <span class="mi">0</span><span class="p">,</span> <span class="n">wx</span><span class="o">.</span><span class="n">LEFT</span><span class="p">,</span> <span class="mi">350</span><span class="p">),</span>
+                                   <span class="p">(</span><span class="n">button_ok</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="n">wx</span><span class="o">.</span><span class="n">RIGHT</span><span class="p">,</span> <span class="mi">10</span><span class="p">)])</span>
+    <span class="k">def</span> <span class="nf">_do_layout</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Draw window content</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_define_structure</span><span class="p">()</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_layout_shart</span><span class="p">()</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_layout_invariant</span><span class="p">()</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_layout_warning</span><span class="p">()</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_layout_button</span><span class="p">()</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">main_sizer</span><span class="o">.</span><span class="n">AddMany</span><span class="p">([(</span><span class="bp">self</span><span class="o">.</span><span class="n">chart_sizer</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="n">wx</span><span class="o">.</span><span class="n">ALL</span><span class="p">,</span> <span class="mi">10</span><span class="p">),</span>
+                                 <span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">invariant_box_sizer</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="n">wx</span><span class="o">.</span><span class="n">ALL</span><span class="p">,</span> <span class="mi">10</span><span class="p">),</span>
+                                 <span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">warning_sizer</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="n">wx</span><span class="o">.</span><span class="n">ALL</span><span class="p">,</span> <span class="mi">10</span><span class="p">),</span>
+                                 <span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">button_sizer</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="n">wx</span><span class="o">.</span><span class="n">ALL</span><span class="p">,</span> <span class="mi">10</span><span class="p">)])</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">SetSizer</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">main_sizer</span><span class="p">)</span>
+
+
+<div class="viewcode-block" id="InvariantDetailsPanel.set_values"><a class="viewcode-back" href="../../../../dev/api/sas.perspectives.invariant.html#sas.perspectives.invariant.invariant_details.InvariantDetailsPanel.set_values">[docs]</a>    <span class="k">def</span> <span class="nf">set_values</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Set value of txtcrtl</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">value</span> <span class="o">=</span> <span class="n">format_number</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">qstar_container</span><span class="o">.</span><span class="n">qstar</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">invariant_tcl</span><span class="o">.</span><span class="n">SetValue</span><span class="p">(</span><span class="n">value</span><span class="p">)</span>
+        <span class="n">value</span> <span class="o">=</span> <span class="n">format_number</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">qstar_container</span><span class="o">.</span><span class="n">qstar_err</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">invariant_err_tcl</span><span class="o">.</span><span class="n">SetValue</span><span class="p">(</span><span class="n">value</span><span class="p">)</span>
+        <span class="n">value</span> <span class="o">=</span> <span class="n">format_number</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">qstar_container</span><span class="o">.</span><span class="n">qstar_low</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">invariant_low_tcl</span><span class="o">.</span><span class="n">SetValue</span><span class="p">(</span><span class="n">value</span><span class="p">)</span>
+        <span class="n">value</span> <span class="o">=</span> <span class="n">format_number</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">qstar_container</span><span class="o">.</span><span class="n">qstar_low_err</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">invariant_low_err_tcl</span><span class="o">.</span><span class="n">SetValue</span><span class="p">(</span><span class="n">value</span><span class="p">)</span>
+        <span class="n">value</span> <span class="o">=</span> <span class="n">format_number</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">qstar_container</span><span class="o">.</span><span class="n">qstar_high</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">invariant_high_tcl</span><span class="o">.</span><span class="n">SetValue</span><span class="p">(</span><span class="n">value</span><span class="p">)</span>
+        <span class="n">value</span> <span class="o">=</span> <span class="n">format_number</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">qstar_container</span><span class="o">.</span><span class="n">qstar_high_err</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">invariant_high_err_tcl</span><span class="o">.</span><span class="n">SetValue</span><span class="p">(</span><span class="n">value</span><span class="p">)</span>
+</div>
+<div class="viewcode-block" id="InvariantDetailsPanel.get_scale"><a class="viewcode-back" href="../../../../dev/api/sas.perspectives.invariant.html#sas.perspectives.invariant.invariant_details.InvariantDetailsPanel.get_scale">[docs]</a>    <span class="k">def</span> <span class="nf">get_scale</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">percentage</span><span class="p">,</span> <span class="n">scale_name</span><span class="o">=</span><span class="s">&#39;scale&#39;</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Check scale receive in this panel.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">scale</span> <span class="o">=</span> <span class="n">RECTANGLE_SCALE</span>
+        <span class="k">try</span><span class="p">:</span>
+            <span class="k">if</span> <span class="n">percentage</span> <span class="ow">in</span> <span class="p">[</span><span class="bp">None</span><span class="p">,</span> <span class="mf">0.0</span><span class="p">,</span> <span class="s">&quot;error&quot;</span><span class="p">]:</span>
+                <span class="n">scale</span> <span class="o">=</span> <span class="n">RECTANGLE_SCALE</span>
+                <span class="k">return</span> <span class="n">scale</span>
+            <span class="k">elif</span> <span class="n">percentage</span> <span class="o">&lt;</span> <span class="mi">0</span><span class="p">:</span>
+                <span class="n">scale</span> <span class="o">=</span> <span class="n">RECTANGLE_SCALE</span>
+                <span class="k">return</span> <span class="n">scale</span>
+            <span class="n">scale</span> <span class="o">=</span> <span class="nb">float</span><span class="p">(</span><span class="n">percentage</span><span class="p">)</span>
+        <span class="k">except</span><span class="p">:</span>
+            <span class="n">scale</span> <span class="o">=</span> <span class="n">RECTANGLE_SCALE</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">warning_msg</span> <span class="o">+=</span> <span class="s">&quot;Recieve an invalid scale for </span><span class="si">%s</span><span class="se">\n</span><span class="s">&quot;</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">warning_msg</span> <span class="o">+=</span> <span class="s">&quot;check this value : </span><span class="si">%s</span><span class="se">\n</span><span class="s">&quot;</span> <span class="o">%</span> <span class="nb">str</span><span class="p">(</span><span class="n">percentage</span><span class="p">)</span>
+        <span class="k">return</span>  <span class="n">scale</span>
+</div>
+<div class="viewcode-block" id="InvariantDetailsPanel.set_color_bar"><a class="viewcode-back" href="../../../../dev/api/sas.perspectives.invariant.html#sas.perspectives.invariant.invariant_details.InvariantDetailsPanel.set_color_bar">[docs]</a>    <span class="k">def</span> <span class="nf">set_color_bar</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Change the color for low and high bar when necessary</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">extrapolation_color_low</span> <span class="o">=</span> <span class="n">EXTRAPOLATION_COLOR</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">extrapolation_color_high</span> <span class="o">=</span> <span class="n">EXTRAPOLATION_COLOR</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">invariant_color</span> <span class="o">=</span> <span class="n">INVARIANT_COLOR</span>
+        <span class="c"># warning to the user when the extrapolated invariant is greater than %5</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">low_scale</span> <span class="o">&gt;=</span> <span class="mf">0.05</span> <span class="ow">or</span> <span class="bp">self</span><span class="o">.</span><span class="n">low_scale</span> <span class="o">&gt;</span> <span class="mi">1</span> <span class="ow">or</span> <span class="bp">self</span><span class="o">.</span><span class="n">low_scale</span> <span class="o">&lt;</span> <span class="mi">0</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">extrapolation_color_low</span> <span class="o">=</span> <span class="n">ERROR_COLOR</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">high_scale</span> <span class="o">&gt;=</span> <span class="mf">0.05</span> <span class="ow">or</span> <span class="bp">self</span><span class="o">.</span><span class="n">high_scale</span> <span class="o">&gt;</span> <span class="mi">1</span> <span class="ow">or</span> <span class="bp">self</span><span class="o">.</span><span class="n">high_scale</span> <span class="o">&lt;</span> <span class="mi">0</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">extrapolation_color_high</span> <span class="o">=</span> <span class="n">ERROR_COLOR</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">inv_scale</span> <span class="o">&gt;</span> <span class="mi">1</span> <span class="ow">or</span> <span class="bp">self</span><span class="o">.</span><span class="n">inv_scale</span> <span class="o">&lt;</span> <span class="mi">0</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">invariant_color</span> <span class="o">=</span> <span class="n">ERROR_COLOR</span>
+</div>
+<div class="viewcode-block" id="InvariantDetailsPanel.on_close"><a class="viewcode-back" href="../../../../dev/api/sas.perspectives.invariant.html#sas.perspectives.invariant.invariant_details.InvariantDetailsPanel.on_close">[docs]</a>    <span class="k">def</span> <span class="nf">on_close</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">event</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Close the current window</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">Close</span><span class="p">()</span>
+</div>
+<div class="viewcode-block" id="InvariantDetailsPanel.on_paint"><a class="viewcode-back" href="../../../../dev/api/sas.perspectives.invariant.html#sas.perspectives.invariant.invariant_details.InvariantDetailsPanel.on_paint">[docs]</a>    <span class="k">def</span> <span class="nf">on_paint</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">event</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Draw the chart</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">dc</span> <span class="o">=</span> <span class="n">wx</span><span class="o">.</span><span class="n">PaintDC</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">panel_chart</span><span class="p">)</span>
+        <span class="k">try</span><span class="p">:</span>
+            <span class="n">gc</span> <span class="o">=</span> <span class="n">wx</span><span class="o">.</span><span class="n">GraphicsContext</span><span class="o">.</span><span class="n">Create</span><span class="p">(</span><span class="n">dc</span><span class="p">)</span>
+        <span class="k">except</span> <span class="ne">NotImplementedError</span><span class="p">:</span>
+            <span class="n">msg</span> <span class="o">=</span> <span class="s">&quot;This build of wxPython does not support &quot;</span>
+            <span class="n">msg</span> <span class="o">+=</span> <span class="s">&quot;the wx.GraphicsContext family of classes.&quot;</span>
+            <span class="n">dc</span><span class="o">.</span><span class="n">DrawText</span><span class="p">(</span><span class="n">msg</span><span class="p">,</span> <span class="mi">25</span><span class="p">,</span> <span class="mi">25</span><span class="p">)</span>
+            <span class="k">return</span>
+        <span class="c"># Start the drawing</span>
+        <span class="n">font</span> <span class="o">=</span> <span class="n">wx</span><span class="o">.</span><span class="n">SystemSettings</span><span class="o">.</span><span class="n">GetFont</span><span class="p">(</span><span class="n">wx</span><span class="o">.</span><span class="n">SYS_DEFAULT_GUI_FONT</span><span class="p">)</span>
+        <span class="n">font</span><span class="o">.</span><span class="n">SetWeight</span><span class="p">(</span><span class="n">wx</span><span class="o">.</span><span class="n">BOLD</span><span class="p">)</span>
+        <span class="n">gc</span><span class="o">.</span><span class="n">SetFont</span><span class="p">(</span><span class="n">font</span><span class="p">)</span>
+        <span class="c"># Draw a rectangle</span>
+        <span class="n">path</span> <span class="o">=</span> <span class="n">gc</span><span class="o">.</span><span class="n">CreatePath</span><span class="p">()</span>
+        <span class="n">path</span><span class="o">.</span><span class="n">AddRectangle</span><span class="p">(</span><span class="o">-</span><span class="n">RECTANGLE_WIDTH</span> <span class="o">/</span> <span class="mi">2</span><span class="p">,</span> <span class="o">-</span><span class="n">RECTANGLE_HEIGHT</span> <span class="o">/</span> <span class="mi">2</span><span class="p">,</span>
+                          <span class="n">RECTANGLE_WIDTH</span> <span class="o">/</span> <span class="mi">2</span><span class="p">,</span> <span class="n">RECTANGLE_HEIGHT</span> <span class="o">/</span> <span class="mi">2</span><span class="p">)</span>
+        <span class="n">x_origine</span> <span class="o">=</span> <span class="mi">20</span>
+        <span class="n">y_origine</span> <span class="o">=</span> <span class="mi">15</span>
+        <span class="c"># Draw low rectangle</span>
+        <span class="n">gc</span><span class="o">.</span><span class="n">PushState</span><span class="p">()</span>
+        <span class="n">label</span> <span class="o">=</span> <span class="s">&quot;Q* from Low-Q &quot;</span>
+        <span class="n">PathFunc</span> <span class="o">=</span> <span class="n">gc</span><span class="o">.</span><span class="n">DrawPath</span>
+        <span class="n">w</span><span class="p">,</span> <span class="n">h</span> <span class="o">=</span> <span class="n">gc</span><span class="o">.</span><span class="n">GetTextExtent</span><span class="p">(</span><span class="n">label</span><span class="p">)</span>
+        <span class="n">gc</span><span class="o">.</span><span class="n">DrawText</span><span class="p">(</span><span class="n">label</span><span class="p">,</span> <span class="n">x_origine</span><span class="p">,</span> <span class="n">y_origine</span><span class="p">)</span>
+        <span class="c"># Translate the rectangle</span>
+        <span class="n">x_center</span> <span class="o">=</span> <span class="n">x_origine</span> <span class="o">+</span> <span class="n">RECTANGLE_WIDTH</span> <span class="o">*</span> <span class="bp">self</span><span class="o">.</span><span class="n">low_scale</span> <span class="o">/</span> <span class="mi">2</span> <span class="o">+</span> <span class="n">w</span> <span class="o">+</span> <span class="mi">10</span>
+        <span class="n">y_center</span> <span class="o">=</span> <span class="n">y_origine</span> <span class="o">+</span> <span class="n">h</span>
+        <span class="n">gc</span><span class="o">.</span><span class="n">Translate</span><span class="p">(</span><span class="n">x_center</span><span class="p">,</span> <span class="n">y_center</span><span class="p">)</span>
+        <span class="n">gc</span><span class="o">.</span><span class="n">SetPen</span><span class="p">(</span><span class="n">wx</span><span class="o">.</span><span class="n">Pen</span><span class="p">(</span><span class="s">&quot;black&quot;</span><span class="p">,</span> <span class="mi">1</span><span class="p">))</span>
+        <span class="n">gc</span><span class="o">.</span><span class="n">SetBrush</span><span class="p">(</span><span class="n">wx</span><span class="o">.</span><span class="n">Brush</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">extrapolation_color_low</span><span class="p">))</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">low_inv_percent</span> <span class="ow">is</span> <span class="bp">None</span><span class="p">:</span>
+            <span class="n">low_percent</span> <span class="o">=</span> <span class="s">&#39;Not Computed&#39;</span>
+        <span class="k">elif</span> <span class="bp">self</span><span class="o">.</span><span class="n">low_inv_percent</span> <span class="o">==</span> <span class="s">&#39;error&#39;</span><span class="p">:</span>
+            <span class="n">low_percent</span> <span class="o">=</span> <span class="s">&#39;Error&#39;</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">low_percent</span> <span class="o">=</span> <span class="n">format_number</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">low_inv_percent</span> <span class="o">*</span> <span class="mi">100</span><span class="p">)</span> <span class="o">+</span> <span class="s">&#39;%&#39;</span>
+        <span class="n">x_center</span> <span class="o">=</span> <span class="mi">20</span>
+        <span class="n">y_center</span> <span class="o">=</span> <span class="o">-</span><span class="n">h</span>
+        <span class="n">gc</span><span class="o">.</span><span class="n">DrawText</span><span class="p">(</span><span class="n">low_percent</span><span class="p">,</span> <span class="n">x_center</span><span class="p">,</span> <span class="n">y_center</span><span class="p">)</span>
+        <span class="c"># Increase width by self.low_scale</span>
+        <span class="n">gc</span><span class="o">.</span><span class="n">Scale</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">low_scale</span><span class="p">,</span> <span class="mf">1.0</span><span class="p">)</span>
+        <span class="n">PathFunc</span><span class="p">(</span><span class="n">path</span><span class="p">)</span>
+        <span class="n">gc</span><span class="o">.</span><span class="n">PopState</span><span class="p">()</span>
+        <span class="c"># Draw rectangle for invariant</span>
+        <span class="n">gc</span><span class="o">.</span><span class="n">PushState</span><span class="p">()</span>  <span class="c"># save it again</span>
+        <span class="n">y_origine</span> <span class="o">+=</span> <span class="mi">20</span>
+        <span class="n">gc</span><span class="o">.</span><span class="n">DrawText</span><span class="p">(</span><span class="s">&quot;Q* from Data &quot;</span><span class="p">,</span> <span class="n">x_origine</span><span class="p">,</span> <span class="n">y_origine</span><span class="p">)</span>
+        <span class="c"># offset to the lower part of the window</span>
+        <span class="n">x_center</span> <span class="o">=</span> <span class="n">x_origine</span> <span class="o">+</span> <span class="n">RECTANGLE_WIDTH</span> <span class="o">*</span> <span class="bp">self</span><span class="o">.</span><span class="n">inv_scale</span> <span class="o">/</span> <span class="mi">2</span> <span class="o">+</span> <span class="n">w</span> <span class="o">+</span> <span class="mi">10</span>
+        <span class="n">y_center</span> <span class="o">=</span> <span class="n">y_origine</span> <span class="o">+</span> <span class="n">h</span>
+        <span class="n">gc</span><span class="o">.</span><span class="n">Translate</span><span class="p">(</span><span class="n">x_center</span><span class="p">,</span> <span class="n">y_center</span><span class="p">)</span>
+        <span class="c"># 128 == half transparent</span>
+        <span class="n">gc</span><span class="o">.</span><span class="n">SetBrush</span><span class="p">(</span><span class="n">wx</span><span class="o">.</span><span class="n">Brush</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">invariant_color</span><span class="p">))</span>
+        <span class="c"># Increase width by self.inv_scale</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">inv_percent</span> <span class="ow">is</span> <span class="bp">None</span><span class="p">:</span>
+            <span class="n">inv_percent</span> <span class="o">=</span> <span class="s">&#39;Not Computed&#39;</span>
+        <span class="k">elif</span> <span class="bp">self</span><span class="o">.</span><span class="n">inv_percent</span> <span class="o">==</span> <span class="s">&#39;error&#39;</span><span class="p">:</span>
+            <span class="n">inv_percent</span> <span class="o">=</span> <span class="s">&#39;Error&#39;</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">inv_percent</span> <span class="o">=</span> <span class="n">format_number</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">inv_percent</span> <span class="o">*</span> <span class="mi">100</span><span class="p">)</span> <span class="o">+</span> <span class="s">&#39;%&#39;</span>
+        <span class="n">x_center</span> <span class="o">=</span> <span class="mi">20</span>
+        <span class="n">y_center</span> <span class="o">=</span> <span class="o">-</span><span class="n">h</span>
+        <span class="n">gc</span><span class="o">.</span><span class="n">DrawText</span><span class="p">(</span><span class="n">inv_percent</span><span class="p">,</span> <span class="n">x_center</span><span class="p">,</span> <span class="n">y_center</span><span class="p">)</span>
+        <span class="n">gc</span><span class="o">.</span><span class="n">Scale</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">inv_scale</span><span class="p">,</span> <span class="mf">1.0</span><span class="p">)</span>
+        <span class="n">gc</span><span class="o">.</span><span class="n">DrawPath</span><span class="p">(</span><span class="n">path</span><span class="p">)</span>
+        <span class="n">gc</span><span class="o">.</span><span class="n">PopState</span><span class="p">()</span>
+        <span class="c"># restore saved state</span>
+        <span class="c"># Draw rectangle for high invariant</span>
+        <span class="n">gc</span><span class="o">.</span><span class="n">PushState</span><span class="p">()</span>
+        <span class="n">y_origine</span> <span class="o">+=</span> <span class="mi">20</span>
+        <span class="n">gc</span><span class="o">.</span><span class="n">DrawText</span><span class="p">(</span><span class="s">&quot;Q* from High-Q &quot;</span><span class="p">,</span> <span class="n">x_origine</span><span class="p">,</span> <span class="n">y_origine</span><span class="p">)</span>
+        <span class="c"># define the position of the new rectangle</span>
+        <span class="n">x_center</span> <span class="o">=</span> <span class="n">x_origine</span> <span class="o">+</span> <span class="n">RECTANGLE_WIDTH</span> <span class="o">*</span> <span class="bp">self</span><span class="o">.</span><span class="n">high_scale</span> <span class="o">/</span> <span class="mi">2</span> <span class="o">+</span> <span class="n">w</span> <span class="o">+</span> <span class="mi">10</span>
+        <span class="n">y_center</span> <span class="o">=</span> <span class="n">y_origine</span> <span class="o">+</span> <span class="n">h</span>
+        <span class="n">gc</span><span class="o">.</span><span class="n">Translate</span><span class="p">(</span><span class="n">x_center</span><span class="p">,</span> <span class="n">y_center</span><span class="p">)</span>
+        <span class="n">gc</span><span class="o">.</span><span class="n">SetBrush</span><span class="p">(</span><span class="n">wx</span><span class="o">.</span><span class="n">Brush</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">extrapolation_color_high</span><span class="p">))</span>
+        <span class="c"># increase scale by self.high_scale</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">high_inv_percent</span> <span class="ow">is</span> <span class="bp">None</span><span class="p">:</span>
+            <span class="n">high_percent</span> <span class="o">=</span> <span class="s">&#39;Not Computed&#39;</span>
+        <span class="k">elif</span> <span class="bp">self</span><span class="o">.</span><span class="n">high_inv_percent</span> <span class="o">==</span> <span class="s">&#39;error&#39;</span><span class="p">:</span>
+            <span class="n">high_percent</span> <span class="o">=</span> <span class="s">&#39;Error&#39;</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">high_percent</span> <span class="o">=</span> <span class="n">format_number</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">high_inv_percent</span> <span class="o">*</span> <span class="mi">100</span><span class="p">)</span> <span class="o">+</span> <span class="s">&#39;%&#39;</span>
+        <span class="n">x_center</span> <span class="o">=</span> <span class="mi">20</span>
+        <span class="n">y_center</span> <span class="o">=</span> <span class="o">-</span><span class="n">h</span>
+        <span class="n">gc</span><span class="o">.</span><span class="n">DrawText</span><span class="p">(</span><span class="n">high_percent</span><span class="p">,</span> <span class="n">x_center</span><span class="p">,</span> <span class="n">y_center</span><span class="p">)</span>
+
+        <span class="n">gc</span><span class="o">.</span><span class="n">Scale</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">high_scale</span><span class="p">,</span> <span class="mf">1.0</span><span class="p">)</span>
+        <span class="n">gc</span><span class="o">.</span><span class="n">DrawPath</span><span class="p">(</span><span class="n">path</span><span class="p">)</span>
+        <span class="n">gc</span><span class="o">.</span><span class="n">PopState</span><span class="p">()</span></div></div>
+</pre></div>
+
+          </div>
+        </div>
+      </div>
+      <div class="sphinxsidebar" role="navigation" aria-label="main navigation">
+        <div class="sphinxsidebarwrapper">
+<div id="searchbox" style="display: none" role="search">
+  <h3>Quick search</h3>
+    <form class="search" action="../../../../search.html" method="get">
+      <input type="text" name="q" />
+      <input type="submit" value="Go" />
+      <input type="hidden" name="check_keywords" value="yes" />
+      <input type="hidden" name="area" value="default" />
+    </form>
+    <p class="searchtip" style="font-size: 90%">
+    Enter search terms or a module, class or function name.
+    </p>
+</div>
+<script type="text/javascript">$('#searchbox').show(0);</script>
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="related" role="navigation" aria-label="related navigation">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="../../../../genindex.html" title="General Index"
+             >index</a></li>
+        <li class="right" >
+          <a href="../../../../py-modindex.html" title="Python Module Index"
+             >modules</a> |</li>
+        <li class="nav-item nav-item-0"><a href="../../../../index.html">SasView 3.1.0 documentation</a> &raquo;</li>
+          <li class="nav-item nav-item-1"><a href="../../../index.html" >Module code</a> &raquo;</li>
+          <li class="nav-item nav-item-2"><a href="../invariant.html" >sas.perspectives.invariant</a> &raquo;</li> 
+      </ul>
+    </div>
+    <div class="footer" role="contentinfo">
+        &copy; Copyright 2015, The SasView Project.
+      Created using <a href="http://sphinx-doc.org/">Sphinx</a> 1.3.1.
+    </div>
+  </body>
+</html>

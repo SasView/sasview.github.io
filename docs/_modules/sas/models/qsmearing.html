@@ -1,0 +1,746 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+  "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+    
+    <title>sas.models.qsmearing &mdash; SasView 3.1.0 documentation</title>
+    
+    <link rel="stylesheet" href="../../../_static/classic.css" type="text/css" />
+    <link rel="stylesheet" href="../../../_static/pygments.css" type="text/css" />
+    
+    <script type="text/javascript">
+      var DOCUMENTATION_OPTIONS = {
+        URL_ROOT:    '../../../',
+        VERSION:     '3.1.0',
+        COLLAPSE_INDEX: false,
+        FILE_SUFFIX: '.html',
+        HAS_SOURCE:  true
+      };
+    </script>
+    <script type="text/javascript" src="../../../_static/jquery.js"></script>
+    <script type="text/javascript" src="../../../_static/underscore.js"></script>
+    <script type="text/javascript" src="../../../_static/doctools.js"></script>
+    <script type="text/javascript" src="https://cdn.mathjax.org/mathjax/latest/MathJax.js?config=TeX-AMS-MML_HTMLorMML"></script>
+    <link rel="top" title="SasView 3.1.0 documentation" href="../../../index.html" />
+    <link rel="up" title="sas.models" href="../models.html" /> 
+  </head>
+  <body role="document">
+    <div class="related" role="navigation" aria-label="related navigation">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="../../../genindex.html" title="General Index"
+             accesskey="I">index</a></li>
+        <li class="right" >
+          <a href="../../../py-modindex.html" title="Python Module Index"
+             >modules</a> |</li>
+        <li class="nav-item nav-item-0"><a href="../../../index.html">SasView 3.1.0 documentation</a> &raquo;</li>
+          <li class="nav-item nav-item-1"><a href="../../index.html" >Module code</a> &raquo;</li>
+          <li class="nav-item nav-item-2"><a href="../models.html" accesskey="U">sas.models</a> &raquo;</li> 
+      </ul>
+    </div>  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          <div class="body" role="main">
+            
+  <h1>Source code for sas.models.qsmearing</h1><div class="highlight"><pre>
+<span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Handle Q smearing</span>
+<span class="sd">&quot;&quot;&quot;</span>
+<span class="c">#####################################################################</span>
+<span class="c">#This software was developed by the University of Tennessee as part of the</span>
+<span class="c">#Distributed Data Analysis of Neutron Scattering Experiments (DANSE)</span>
+<span class="c">#project funded by the US National Science Foundation. </span>
+<span class="c">#See the license text in license.txt</span>
+<span class="c">#copyright 2008, University of Tennessee</span>
+<span class="c">######################################################################</span>
+<span class="kn">import</span> <span class="nn">numpy</span>
+<span class="kn">import</span> <span class="nn">math</span>
+<span class="kn">import</span> <span class="nn">logging</span>
+<span class="kn">import</span> <span class="nn">sys</span>
+<span class="kn">import</span> <span class="nn">sas.models.sas_extension.smearer</span> <span class="kn">as</span> <span class="nn">smearer</span>
+<span class="kn">from</span> <span class="nn">sas.models.smearing_2d</span> <span class="kn">import</span> <span class="n">Smearer2D</span>
+
+<div class="viewcode-block" id="smear_selection"><a class="viewcode-back" href="../../../dev/api/sas.models.html#sas.models.qsmearing.smear_selection">[docs]</a><span class="k">def</span> <span class="nf">smear_selection</span><span class="p">(</span><span class="n">data1D</span><span class="p">,</span> <span class="n">model</span> <span class="o">=</span> <span class="bp">None</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Creates the right type of smearer according </span>
+<span class="sd">    to the data.</span>
+
+<span class="sd">    The canSAS format has a rule that either</span>
+<span class="sd">    slit smearing data OR resolution smearing data</span>
+<span class="sd">    is available. </span>
+<span class="sd">    </span>
+<span class="sd">    For the present purpose, we choose the one that</span>
+<span class="sd">    has none-zero data. If both slit and resolution</span>
+<span class="sd">    smearing arrays are filled with good data </span>
+<span class="sd">    (which should not happen), then we choose the</span>
+<span class="sd">    resolution smearing data. </span>
+<span class="sd">    </span>
+<span class="sd">    :param data1D: Data1D object</span>
+<span class="sd">    :param model: sas.model instance</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="c"># Sanity check. If we are not dealing with a SAS Data1D</span>
+    <span class="c"># object, just return None</span>
+    <span class="k">if</span>  <span class="n">data1D</span><span class="o">.</span><span class="n">__class__</span><span class="o">.</span><span class="n">__name__</span> <span class="ow">not</span> <span class="ow">in</span> <span class="p">[</span><span class="s">&#39;Data1D&#39;</span><span class="p">,</span> <span class="s">&#39;Theory1D&#39;</span><span class="p">]:</span>
+        <span class="k">if</span> <span class="n">data1D</span> <span class="o">==</span> <span class="bp">None</span><span class="p">:</span>
+            <span class="k">return</span> <span class="bp">None</span>
+        <span class="k">elif</span> <span class="n">data1D</span><span class="o">.</span><span class="n">dqx_data</span> <span class="o">==</span> <span class="bp">None</span> <span class="ow">or</span> <span class="n">data1D</span><span class="o">.</span><span class="n">dqy_data</span> <span class="o">==</span> <span class="bp">None</span><span class="p">:</span>
+            <span class="k">return</span> <span class="bp">None</span>
+        <span class="k">return</span> <span class="n">Smearer2D</span><span class="p">(</span><span class="n">data1D</span><span class="p">)</span>
+    
+    <span class="k">if</span>  <span class="ow">not</span> <span class="nb">hasattr</span><span class="p">(</span><span class="n">data1D</span><span class="p">,</span> <span class="s">&quot;dx&quot;</span><span class="p">)</span> <span class="ow">and</span> <span class="ow">not</span> <span class="nb">hasattr</span><span class="p">(</span><span class="n">data1D</span><span class="p">,</span> <span class="s">&quot;dxl&quot;</span><span class="p">)</span>\
+         <span class="ow">and</span> <span class="ow">not</span> <span class="nb">hasattr</span><span class="p">(</span><span class="n">data1D</span><span class="p">,</span> <span class="s">&quot;dxw&quot;</span><span class="p">):</span>
+        <span class="k">return</span> <span class="bp">None</span>
+    
+    <span class="c"># Look for resolution smearing data</span>
+    <span class="n">_found_resolution</span> <span class="o">=</span> <span class="bp">False</span>
+    <span class="k">if</span> <span class="n">data1D</span><span class="o">.</span><span class="n">dx</span> <span class="ow">is</span> <span class="ow">not</span> <span class="bp">None</span> <span class="ow">and</span> <span class="nb">len</span><span class="p">(</span><span class="n">data1D</span><span class="o">.</span><span class="n">dx</span><span class="p">)</span> <span class="o">==</span> <span class="nb">len</span><span class="p">(</span><span class="n">data1D</span><span class="o">.</span><span class="n">x</span><span class="p">):</span>
+        
+        <span class="c"># Check that we have non-zero data</span>
+        <span class="k">if</span> <span class="n">data1D</span><span class="o">.</span><span class="n">dx</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="o">&gt;</span> <span class="mf">0.0</span><span class="p">:</span>
+            <span class="n">_found_resolution</span> <span class="o">=</span> <span class="bp">True</span>
+            <span class="c">#print &quot;_found_resolution&quot;,_found_resolution</span>
+            <span class="c">#print &quot;data1D.dx[0]&quot;,data1D.dx[0],data1D.dxl[0]</span>
+    <span class="c"># If we found resolution smearing data, return a QSmearer</span>
+    <span class="k">if</span> <span class="n">_found_resolution</span> <span class="o">==</span> <span class="bp">True</span><span class="p">:</span>
+        <span class="k">return</span> <span class="n">QSmearer</span><span class="p">(</span><span class="n">data1D</span><span class="p">,</span> <span class="n">model</span><span class="p">)</span>
+        <span class="c">#return pinhole_smear(data1D, model)</span>
+
+    <span class="c"># Look for slit smearing data</span>
+    <span class="n">_found_slit</span> <span class="o">=</span> <span class="bp">False</span>
+    <span class="k">if</span> <span class="n">data1D</span><span class="o">.</span><span class="n">dxl</span> <span class="ow">is</span> <span class="ow">not</span> <span class="bp">None</span> <span class="ow">and</span> <span class="nb">len</span><span class="p">(</span><span class="n">data1D</span><span class="o">.</span><span class="n">dxl</span><span class="p">)</span> <span class="o">==</span> <span class="nb">len</span><span class="p">(</span><span class="n">data1D</span><span class="o">.</span><span class="n">x</span><span class="p">)</span> \
+        <span class="ow">and</span> <span class="n">data1D</span><span class="o">.</span><span class="n">dxw</span> <span class="ow">is</span> <span class="ow">not</span> <span class="bp">None</span> <span class="ow">and</span> <span class="nb">len</span><span class="p">(</span><span class="n">data1D</span><span class="o">.</span><span class="n">dxw</span><span class="p">)</span> <span class="o">==</span> <span class="nb">len</span><span class="p">(</span><span class="n">data1D</span><span class="o">.</span><span class="n">x</span><span class="p">):</span>
+        
+        <span class="c"># Check that we have non-zero data</span>
+        <span class="k">if</span> <span class="n">data1D</span><span class="o">.</span><span class="n">dxl</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="o">&gt;</span> <span class="mf">0.0</span> <span class="ow">or</span> <span class="n">data1D</span><span class="o">.</span><span class="n">dxw</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="o">&gt;</span> <span class="mf">0.0</span><span class="p">:</span>
+            <span class="n">_found_slit</span> <span class="o">=</span> <span class="bp">True</span>
+        
+        <span class="c"># Sanity check: all data should be the same as a function of Q</span>
+        <span class="k">for</span> <span class="n">item</span> <span class="ow">in</span> <span class="n">data1D</span><span class="o">.</span><span class="n">dxl</span><span class="p">:</span>
+            <span class="k">if</span> <span class="n">data1D</span><span class="o">.</span><span class="n">dxl</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="o">!=</span> <span class="n">item</span><span class="p">:</span>
+                <span class="n">_found_resolution</span> <span class="o">=</span> <span class="bp">False</span>
+                <span class="k">break</span>
+            
+        <span class="k">for</span> <span class="n">item</span> <span class="ow">in</span> <span class="n">data1D</span><span class="o">.</span><span class="n">dxw</span><span class="p">:</span>
+            <span class="k">if</span> <span class="n">data1D</span><span class="o">.</span><span class="n">dxw</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="o">!=</span> <span class="n">item</span><span class="p">:</span>
+                <span class="n">_found_resolution</span> <span class="o">=</span> <span class="bp">False</span>
+                <span class="k">break</span>
+    <span class="c"># If we found slit smearing data, return a slit smearer</span>
+    <span class="k">if</span> <span class="n">_found_slit</span> <span class="o">==</span> <span class="bp">True</span><span class="p">:</span>
+        <span class="c">#return SlitSmearer(data1D, model)</span>
+        <span class="k">return</span> <span class="n">slit_smear</span><span class="p">(</span><span class="n">data1D</span><span class="p">,</span> <span class="n">model</span><span class="p">)</span>
+    <span class="k">return</span> <span class="bp">None</span>
+            
+</div>
+<span class="k">class</span> <span class="nc">_BaseSmearer</span><span class="p">(</span><span class="nb">object</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Base class for smearers</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">nbins</span> <span class="o">=</span> <span class="mi">0</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">nbins_low</span> <span class="o">=</span> <span class="mi">0</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">nbins_high</span> <span class="o">=</span> <span class="mi">0</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_weights</span> <span class="o">=</span> <span class="bp">None</span>
+        <span class="c">## Internal flag to keep track of C++ smearer initialization</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_init_complete</span> <span class="o">=</span> <span class="bp">False</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_smearer</span> <span class="o">=</span> <span class="bp">None</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">model</span> <span class="o">=</span> <span class="bp">None</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">min</span> <span class="o">=</span> <span class="bp">None</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">max</span> <span class="o">=</span> <span class="bp">None</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">qvalues</span> <span class="o">=</span> <span class="p">[]</span>
+        
+    <span class="k">def</span> <span class="nf">__deepcopy__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">memo</span><span class="o">=</span><span class="bp">None</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Return a valid copy of self.</span>
+<span class="sd">        Avoid copying the _smearer C object and force a matrix recompute</span>
+<span class="sd">        when the copy is used.  </span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">result</span> <span class="o">=</span> <span class="n">_BaseSmearer</span><span class="p">()</span>
+        <span class="n">result</span><span class="o">.</span><span class="n">nbins</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">nbins</span>
+        <span class="k">return</span> <span class="n">result</span>
+
+    <span class="k">def</span> <span class="nf">_compute_matrix</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">            Place holder for matrix computation </span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">return</span> <span class="bp">NotImplemented</span>
+
+    <span class="k">def</span> <span class="nf">get_unsmeared_range</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">q_min</span><span class="o">=</span><span class="bp">None</span><span class="p">,</span> <span class="n">q_max</span><span class="o">=</span><span class="bp">None</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">            Place holder for method returning unsmeared range</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">return</span> <span class="bp">NotImplemented</span>
+    
+    <span class="k">def</span> <span class="nf">get_bin_range</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">q_min</span><span class="o">=</span><span class="bp">None</span><span class="p">,</span> <span class="n">q_max</span><span class="o">=</span><span class="bp">None</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        </span>
+<span class="sd">        :param q_min: minimum q-value to smear</span>
+<span class="sd">        :param q_max: maximum q-value to smear</span>
+<span class="sd">         </span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="c"># If this is the first time we call for smearing,</span>
+        <span class="c"># initialize the C++ smearer object first</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="bp">self</span><span class="o">.</span><span class="n">_init_complete</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_initialize_smearer</span><span class="p">()</span>
+        <span class="k">if</span> <span class="n">q_min</span> <span class="o">==</span> <span class="bp">None</span><span class="p">:</span>
+            <span class="n">q_min</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">min</span>
+        <span class="k">if</span> <span class="n">q_max</span> <span class="o">==</span> <span class="bp">None</span><span class="p">:</span>
+            <span class="n">q_max</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">max</span>
+
+        <span class="n">_qmin_unsmeared</span><span class="p">,</span> <span class="n">_qmax_unsmeared</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">get_unsmeared_range</span><span class="p">(</span><span class="n">q_min</span><span class="p">,</span>
+                                                                     <span class="n">q_max</span><span class="p">)</span>
+        <span class="n">_first_bin</span> <span class="o">=</span> <span class="bp">None</span>
+        <span class="n">_last_bin</span>  <span class="o">=</span> <span class="bp">None</span>
+
+        <span class="c">#step = (self.max - self.min) / (self.nbins - 1.0)</span>
+        <span class="c"># Find the first and last bin number in all extrapolated and real data</span>
+        <span class="k">try</span><span class="p">:</span>
+            <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">nbins</span><span class="p">):</span>
+                <span class="n">q_i</span> <span class="o">=</span> <span class="n">smearer</span><span class="o">.</span><span class="n">get_q</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_smearer</span><span class="p">,</span> <span class="n">i</span><span class="p">)</span>
+                <span class="k">if</span> <span class="p">(</span><span class="n">q_i</span> <span class="o">&gt;=</span> <span class="n">_qmin_unsmeared</span><span class="p">)</span> <span class="ow">and</span> <span class="p">(</span><span class="n">q_i</span> <span class="o">&lt;=</span> <span class="n">_qmax_unsmeared</span><span class="p">):</span>
+                    <span class="c"># Identify first and last bin</span>
+                    <span class="k">if</span> <span class="n">_first_bin</span> <span class="ow">is</span> <span class="bp">None</span><span class="p">:</span>
+                        <span class="n">_first_bin</span> <span class="o">=</span> <span class="n">i</span>
+                    <span class="k">else</span><span class="p">:</span>
+                        <span class="n">_last_bin</span>  <span class="o">=</span> <span class="n">i</span>
+        <span class="k">except</span><span class="p">:</span>
+            <span class="n">msg</span> <span class="o">=</span> <span class="s">&quot;_BaseSmearer.get_bin_range: &quot;</span>
+            <span class="n">msg</span> <span class="o">+=</span> <span class="s">&quot; error getting range</span><span class="se">\n</span><span class="s">  </span><span class="si">%s</span><span class="s">&quot;</span> <span class="o">%</span> <span class="n">sys</span><span class="o">.</span><span class="n">exc_value</span>
+            <span class="k">raise</span> <span class="ne">RuntimeError</span><span class="p">,</span> <span class="n">msg</span>
+   
+        <span class="c">#  Find the first and last bin number only in the real data</span>
+        <span class="n">_first_bin</span><span class="p">,</span> <span class="n">_last_bin</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_get_unextrapolated_bin</span><span class="p">(</span> \
+                                        <span class="n">_first_bin</span><span class="p">,</span> <span class="n">_last_bin</span><span class="p">)</span>
+
+        <span class="k">return</span> <span class="n">_first_bin</span><span class="p">,</span> <span class="n">_last_bin</span>
+
+    <span class="k">def</span> <span class="nf">__call__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">iq_in</span><span class="p">,</span> <span class="n">first_bin</span> <span class="o">=</span> <span class="mi">0</span><span class="p">,</span> <span class="n">last_bin</span> <span class="o">=</span> <span class="bp">None</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Perform smearing</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="c"># If this is the first time we call for smearing,</span>
+        <span class="c"># initialize the C++ smearer object first</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="bp">self</span><span class="o">.</span><span class="n">_init_complete</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_initialize_smearer</span><span class="p">()</span>
+
+        <span class="k">if</span> <span class="n">last_bin</span> <span class="ow">is</span> <span class="bp">None</span> <span class="ow">or</span> <span class="n">last_bin</span> <span class="o">&gt;=</span> <span class="nb">len</span><span class="p">(</span><span class="n">iq_in</span><span class="p">):</span>
+            <span class="n">last_bin</span> <span class="o">=</span> <span class="nb">len</span><span class="p">(</span><span class="n">iq_in</span><span class="p">)</span> <span class="o">-</span> <span class="mi">1</span>
+        <span class="c"># Check that the first bin is positive</span>
+        <span class="k">if</span> <span class="n">first_bin</span> <span class="o">&lt;</span> <span class="mi">0</span><span class="p">:</span>
+            <span class="n">first_bin</span> <span class="o">=</span> <span class="mi">0</span>
+
+        <span class="c"># With a model given, compute I for the extrapolated points and append</span>
+        <span class="c"># to the iq_in</span>
+        <span class="n">iq_in_temp</span> <span class="o">=</span> <span class="n">iq_in</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">model</span> <span class="o">!=</span> <span class="bp">None</span><span class="p">:</span>
+            <span class="n">temp_first</span><span class="p">,</span> <span class="n">temp_last</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_get_extrapolated_bin</span><span class="p">(</span> \
+                                                        <span class="n">first_bin</span><span class="p">,</span> <span class="n">last_bin</span><span class="p">)</span>
+            <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">nbins_low</span> <span class="o">&gt;</span> <span class="mi">0</span><span class="p">:</span>
+                <span class="n">iq_in_low</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">model</span><span class="o">.</span><span class="n">evalDistribution</span><span class="p">(</span> \
+                                    <span class="n">numpy</span><span class="o">.</span><span class="n">fabs</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">qvalues</span><span class="p">[</span><span class="mi">0</span><span class="p">:</span><span class="bp">self</span><span class="o">.</span><span class="n">nbins_low</span><span class="p">]))</span>
+            <span class="n">iq_in_high</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">model</span><span class="o">.</span><span class="n">evalDistribution</span><span class="p">(</span> \
+                                            <span class="bp">self</span><span class="o">.</span><span class="n">qvalues</span><span class="p">[(</span><span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">qvalues</span><span class="p">)</span> <span class="o">-</span> \
+                                            <span class="bp">self</span><span class="o">.</span><span class="n">nbins_high</span> <span class="o">-</span> <span class="mi">1</span><span class="p">):])</span>
+            <span class="c"># Todo: find out who is sending iq[last_poin] = 0.</span>
+            <span class="k">if</span> <span class="n">iq_in</span><span class="p">[</span><span class="nb">len</span><span class="p">(</span><span class="n">iq_in</span><span class="p">)</span> <span class="o">-</span> <span class="mi">1</span><span class="p">]</span> <span class="o">==</span> <span class="mi">0</span><span class="p">:</span>
+                <span class="n">iq_in</span><span class="p">[</span><span class="nb">len</span><span class="p">(</span><span class="n">iq_in</span><span class="p">)</span> <span class="o">-</span> <span class="mi">1</span><span class="p">]</span> <span class="o">=</span> <span class="n">iq_in_high</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
+            <span class="c"># Append the extrapolated points to the data points</span>
+            <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">nbins_low</span> <span class="o">&gt;</span> <span class="mi">0</span><span class="p">:</span>
+                <span class="n">iq_in_temp</span> <span class="o">=</span> <span class="n">numpy</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">iq_in_low</span><span class="p">,</span> <span class="n">iq_in</span><span class="p">)</span>
+            <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">nbins_high</span> <span class="o">&gt;</span> <span class="mi">0</span><span class="p">:</span>
+                <span class="n">iq_in_temp</span> <span class="o">=</span> <span class="n">numpy</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">iq_in_temp</span><span class="p">,</span> <span class="n">iq_in_high</span><span class="p">[</span><span class="mi">1</span><span class="p">:])</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">temp_first</span> <span class="o">=</span> <span class="n">first_bin</span>
+            <span class="n">temp_last</span> <span class="o">=</span> <span class="n">last_bin</span>
+            <span class="c">#iq_in_temp = iq_in</span>
+
+        <span class="c"># Sanity check</span>
+        <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">iq_in_temp</span><span class="p">)</span> <span class="o">!=</span> <span class="bp">self</span><span class="o">.</span><span class="n">nbins</span><span class="p">:</span>
+            <span class="n">msg</span> <span class="o">=</span> <span class="s">&quot;Invalid I(q) vector: inconsistent array &quot;</span>
+            <span class="n">msg</span> <span class="o">+=</span> <span class="s">&quot; length </span><span class="si">%d</span><span class="s"> != </span><span class="si">%s</span><span class="s">&quot;</span> <span class="o">%</span> <span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">iq_in_temp</span><span class="p">),</span> <span class="nb">str</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">nbins</span><span class="p">))</span>
+            <span class="k">raise</span> <span class="ne">RuntimeError</span><span class="p">,</span> <span class="n">msg</span>
+
+        <span class="c"># Storage for smeared I(q)   </span>
+        <span class="n">iq_out</span> <span class="o">=</span> <span class="n">numpy</span><span class="o">.</span><span class="n">zeros</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">nbins</span><span class="p">)</span>
+
+        <span class="n">smear_output</span> <span class="o">=</span> <span class="n">smearer</span><span class="o">.</span><span class="n">smear</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_smearer</span><span class="p">,</span> <span class="n">iq_in_temp</span><span class="p">,</span> <span class="n">iq_out</span><span class="p">,</span>
+                                      <span class="c">#0, self.nbins - 1)</span>
+                                      <span class="n">temp_first</span><span class="p">,</span> <span class="n">temp_last</span><span class="p">)</span>
+                                      <span class="c">#first_bin, last_bin)</span>
+        <span class="k">if</span> <span class="n">smear_output</span> <span class="o">&lt;</span> <span class="mi">0</span><span class="p">:</span>
+            <span class="n">msg</span> <span class="o">=</span> <span class="s">&quot;_BaseSmearer: could not smear, code = </span><span class="si">%g</span><span class="s">&quot;</span> <span class="o">%</span> <span class="n">smear_output</span>
+            <span class="k">raise</span> <span class="ne">RuntimeError</span><span class="p">,</span> <span class="n">msg</span>
+
+        <span class="n">temp_first</span> <span class="o">=</span> <span class="n">first_bin</span> <span class="o">+</span> <span class="bp">self</span><span class="o">.</span><span class="n">nbins_low</span>
+        <span class="n">temp_last</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">nbins</span> <span class="o">-</span> <span class="bp">self</span><span class="o">.</span><span class="n">nbins_high</span>
+        <span class="n">out</span> <span class="o">=</span> <span class="n">iq_out</span><span class="p">[</span><span class="n">temp_first</span><span class="p">:</span> <span class="n">temp_last</span><span class="p">]</span>
+
+        <span class="k">return</span> <span class="n">out</span>
+    
+    <span class="k">def</span> <span class="nf">_initialize_smearer</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">            Place holder for initializing data smearer</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">return</span> <span class="bp">NotImplemented</span>
+            
+    
+    <span class="k">def</span> <span class="nf">_get_unextrapolated_bin</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">first_bin</span> <span class="o">=</span> <span class="mi">0</span><span class="p">,</span> <span class="n">last_bin</span> <span class="o">=</span> <span class="mi">0</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Get unextrapolated first bin and the last bin</span>
+<span class="sd">        </span>
+<span class="sd">        : param first_bin: extrapolated first_bin</span>
+<span class="sd">        : param last_bin: extrapolated last_bin</span>
+<span class="sd">        </span>
+<span class="sd">        : return fist_bin, last_bin: unextrapolated first and last bin</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="c">#  For first bin</span>
+        <span class="k">if</span> <span class="n">first_bin</span> <span class="o">&lt;=</span> <span class="bp">self</span><span class="o">.</span><span class="n">nbins_low</span><span class="p">:</span>
+            <span class="n">first_bin</span> <span class="o">=</span> <span class="mi">0</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">first_bin</span> <span class="o">=</span> <span class="n">first_bin</span> <span class="o">-</span> <span class="bp">self</span><span class="o">.</span><span class="n">nbins_low</span>
+        <span class="c"># For last bin</span>
+        <span class="k">if</span> <span class="n">last_bin</span> <span class="o">&gt;=</span> <span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">nbins</span> <span class="o">-</span> <span class="bp">self</span><span class="o">.</span><span class="n">nbins_high</span><span class="p">):</span>
+            <span class="n">last_bin</span>  <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">nbins</span> <span class="o">-</span> <span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">nbins_high</span> <span class="o">+</span> <span class="bp">self</span><span class="o">.</span><span class="n">nbins_low</span> <span class="o">+</span> <span class="mi">1</span><span class="p">)</span>
+        <span class="k">elif</span> <span class="n">last_bin</span> <span class="o">&gt;=</span> <span class="bp">self</span><span class="o">.</span><span class="n">nbins_low</span><span class="p">:</span>
+            <span class="n">last_bin</span> <span class="o">=</span> <span class="n">last_bin</span> <span class="o">-</span> <span class="bp">self</span><span class="o">.</span><span class="n">nbins_low</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">last_bin</span> <span class="o">=</span> <span class="mi">0</span>
+        <span class="k">return</span> <span class="n">first_bin</span><span class="p">,</span> <span class="n">last_bin</span>
+    
+    <span class="k">def</span> <span class="nf">_get_extrapolated_bin</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">first_bin</span> <span class="o">=</span> <span class="mi">0</span><span class="p">,</span> <span class="n">last_bin</span> <span class="o">=</span> <span class="mi">0</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Get extrapolated first bin and the last bin</span>
+<span class="sd">        </span>
+<span class="sd">        : param first_bin: unextrapolated first_bin</span>
+<span class="sd">        : param last_bin: unextrapolated last_bin</span>
+<span class="sd">        </span>
+<span class="sd">        : return first_bin, last_bin: extrapolated first and last bin</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="c">#  For the first bin</span>
+        <span class="c"># In the case that needs low extrapolation data</span>
+        <span class="n">first_bin</span> <span class="o">=</span> <span class="mi">0</span>
+        <span class="c"># For last bin</span>
+        <span class="k">if</span> <span class="n">last_bin</span> <span class="o">&gt;=</span> <span class="bp">self</span><span class="o">.</span><span class="n">nbins</span> <span class="o">-</span> <span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">nbins_high</span> <span class="o">+</span> <span class="bp">self</span><span class="o">.</span><span class="n">nbins_low</span> <span class="o">+</span> <span class="mi">1</span><span class="p">):</span>
+            <span class="c"># In the case that needs higher q extrapolation data </span>
+            <span class="n">last_bin</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">nbins</span> <span class="o">-</span> <span class="mi">1</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="c"># In the case that doesn&#39;t need higher q extrapolation data </span>
+            <span class="n">last_bin</span> <span class="o">+=</span> <span class="bp">self</span><span class="o">.</span><span class="n">nbins_low</span>
+
+        <span class="k">return</span> <span class="n">first_bin</span><span class="p">,</span> <span class="n">last_bin</span>
+        
+<span class="k">class</span> <span class="nc">_SlitSmearer</span><span class="p">(</span><span class="n">_BaseSmearer</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Slit smearing for I(q) array</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    
+    <span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">nbins</span><span class="o">=</span><span class="bp">None</span><span class="p">,</span> <span class="n">width</span><span class="o">=</span><span class="bp">None</span><span class="p">,</span> <span class="n">height</span><span class="o">=</span><span class="bp">None</span><span class="p">,</span> <span class="nb">min</span><span class="o">=</span><span class="bp">None</span><span class="p">,</span> <span class="nb">max</span><span class="o">=</span><span class="bp">None</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Initialization</span>
+<span class="sd">            </span>
+<span class="sd">        :param iq: I(q) array [cm-1]</span>
+<span class="sd">        :param width: slit width [A-1]</span>
+<span class="sd">        :param height: slit height [A-1]</span>
+<span class="sd">        :param min: Q_min [A-1]</span>
+<span class="sd">        :param max: Q_max [A-1]</span>
+<span class="sd">        </span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">_BaseSmearer</span><span class="o">.</span><span class="n">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span>
+        <span class="c">## Slit width in Q units</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">width</span>  <span class="o">=</span> <span class="n">width</span>
+        <span class="c">## Slit height in Q units</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">height</span> <span class="o">=</span> <span class="n">height</span>
+        <span class="c">## Q_min (Min Q-value for I(q))</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">min</span>    <span class="o">=</span> <span class="nb">min</span>
+        <span class="c">## Q_max (Max Q_value for I(q))</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">max</span>    <span class="o">=</span> <span class="nb">max</span>
+        <span class="c">## Number of Q bins </span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">nbins</span>  <span class="o">=</span> <span class="n">nbins</span>
+        <span class="c">## Number of points used in the smearing computation</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">npts</span>   <span class="o">=</span> <span class="mi">3000</span>
+        <span class="c">## Smearing matrix</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_weights</span> <span class="o">=</span> <span class="bp">None</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">qvalues</span>  <span class="o">=</span> <span class="bp">None</span>
+        
+    <span class="k">def</span> <span class="nf">_initialize_smearer</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Initialize the C++ smearer object.</span>
+<span class="sd">        This method HAS to be called before smearing</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="c">#self._smearer = smearer.new_slit_smearer(self.width,</span>
+        <span class="c"># self.height, self.min, self.max, self.nbins)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_smearer</span> <span class="o">=</span> <span class="n">smearer</span><span class="o">.</span><span class="n">new_slit_smearer_with_q</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">width</span><span class="p">,</span> 
+                                                    <span class="bp">self</span><span class="o">.</span><span class="n">height</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">qvalues</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_init_complete</span> <span class="o">=</span> <span class="bp">True</span>
+
+    <span class="k">def</span> <span class="nf">get_unsmeared_range</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">q_min</span><span class="p">,</span> <span class="n">q_max</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Determine the range needed in unsmeared-Q to cover</span>
+<span class="sd">        the smeared Q range</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="c"># Range used for input to smearing</span>
+        <span class="n">_qmin_unsmeared</span> <span class="o">=</span> <span class="n">q_min</span>
+        <span class="n">_qmax_unsmeared</span> <span class="o">=</span> <span class="n">q_max</span> 
+        <span class="k">try</span><span class="p">:</span>
+            <span class="n">_qmin_unsmeared</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">min</span>
+            <span class="n">_qmax_unsmeared</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">max</span>
+        <span class="k">except</span><span class="p">:</span>
+            <span class="n">logging</span><span class="o">.</span><span class="n">error</span><span class="p">(</span><span class="s">&quot;_SlitSmearer.get_bin_range: </span><span class="si">%s</span><span class="s">&quot;</span> <span class="o">%</span> <span class="n">sys</span><span class="o">.</span><span class="n">exc_value</span><span class="p">)</span>
+        <span class="k">return</span> <span class="n">_qmin_unsmeared</span><span class="p">,</span> <span class="n">_qmax_unsmeared</span>
+
+<div class="viewcode-block" id="SlitSmearer"><a class="viewcode-back" href="../../../dev/api/sas.models.html#sas.models.qsmearing.SlitSmearer">[docs]</a><span class="k">class</span> <span class="nc">SlitSmearer</span><span class="p">(</span><span class="n">_SlitSmearer</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Adaptor for slit smearing class and SAS data</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">data1D</span><span class="p">,</span> <span class="n">model</span> <span class="o">=</span> <span class="bp">None</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Assumption: equally spaced bins of increasing q-values.</span>
+<span class="sd">        </span>
+<span class="sd">        :param data1D: data used to set the smearing parameters</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="c"># Initialization from parent class</span>
+        <span class="nb">super</span><span class="p">(</span><span class="n">SlitSmearer</span><span class="p">,</span> <span class="bp">self</span><span class="p">)</span><span class="o">.</span><span class="n">__init__</span><span class="p">()</span>
+        
+        <span class="c">## Slit width</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">width</span> <span class="o">=</span> <span class="mi">0</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">nbins_low</span> <span class="o">=</span> <span class="mi">0</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">nbins_high</span> <span class="o">=</span> <span class="mi">0</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">model</span> <span class="o">=</span> <span class="n">model</span>
+        <span class="k">if</span> <span class="n">data1D</span><span class="o">.</span><span class="n">dxw</span> <span class="ow">is</span> <span class="ow">not</span> <span class="bp">None</span> <span class="ow">and</span> <span class="nb">len</span><span class="p">(</span><span class="n">data1D</span><span class="o">.</span><span class="n">dxw</span><span class="p">)</span> <span class="o">==</span> <span class="nb">len</span><span class="p">(</span><span class="n">data1D</span><span class="o">.</span><span class="n">x</span><span class="p">):</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">width</span> <span class="o">=</span> <span class="n">data1D</span><span class="o">.</span><span class="n">dxw</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
+            <span class="c"># Sanity check</span>
+            <span class="k">for</span> <span class="n">value</span> <span class="ow">in</span> <span class="n">data1D</span><span class="o">.</span><span class="n">dxw</span><span class="p">:</span>
+                <span class="k">if</span> <span class="n">value</span> <span class="o">!=</span> <span class="bp">self</span><span class="o">.</span><span class="n">width</span><span class="p">:</span>
+                    <span class="n">msg</span> <span class="o">=</span> <span class="s">&quot;Slit smearing parameters must &quot;</span>
+                    <span class="n">msg</span> <span class="o">+=</span> <span class="s">&quot; be the same for all data&quot;</span>
+                    <span class="k">raise</span> <span class="ne">RuntimeError</span><span class="p">,</span> <span class="n">msg</span>
+        <span class="c">## Slit height</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">height</span> <span class="o">=</span> <span class="mi">0</span>
+        <span class="k">if</span> <span class="n">data1D</span><span class="o">.</span><span class="n">dxl</span> <span class="ow">is</span> <span class="ow">not</span> <span class="bp">None</span> <span class="ow">and</span> <span class="nb">len</span><span class="p">(</span><span class="n">data1D</span><span class="o">.</span><span class="n">dxl</span><span class="p">)</span> <span class="o">==</span> <span class="nb">len</span><span class="p">(</span><span class="n">data1D</span><span class="o">.</span><span class="n">x</span><span class="p">):</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">height</span> <span class="o">=</span> <span class="n">data1D</span><span class="o">.</span><span class="n">dxl</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
+            <span class="c"># Sanity check</span>
+            <span class="k">for</span> <span class="n">value</span> <span class="ow">in</span> <span class="n">data1D</span><span class="o">.</span><span class="n">dxl</span><span class="p">:</span>
+                <span class="k">if</span> <span class="n">value</span> <span class="o">!=</span> <span class="bp">self</span><span class="o">.</span><span class="n">height</span><span class="p">:</span>
+                    <span class="n">msg</span> <span class="o">=</span> <span class="s">&quot;Slit smearing parameters must be&quot;</span>
+                    <span class="n">msg</span> <span class="o">+=</span> <span class="s">&quot; the same for all data&quot;</span>
+                    <span class="k">raise</span> <span class="ne">RuntimeError</span><span class="p">,</span> <span class="n">msg</span>
+        <span class="c"># If a model is given, get the q extrapolation</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">model</span> <span class="o">==</span> <span class="bp">None</span><span class="p">:</span>
+            <span class="n">data1d_x</span> <span class="o">=</span> <span class="n">data1D</span><span class="o">.</span><span class="n">x</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="c"># Take larger sigma</span>
+            <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">height</span> <span class="o">&gt;</span> <span class="bp">self</span><span class="o">.</span><span class="n">width</span><span class="p">:</span>
+                <span class="c"># The denominator (2.0) covers all the possible w^2 + h^2 range</span>
+                <span class="n">sigma_in</span> <span class="o">=</span> <span class="n">data1D</span><span class="o">.</span><span class="n">dxl</span> <span class="o">/</span> <span class="mf">2.0</span>
+            <span class="k">elif</span> <span class="bp">self</span><span class="o">.</span><span class="n">width</span> <span class="o">&gt;</span> <span class="mi">0</span><span class="p">:</span>
+                <span class="n">sigma_in</span> <span class="o">=</span> <span class="n">data1D</span><span class="o">.</span><span class="n">dxw</span> <span class="o">/</span> <span class="mf">2.0</span>
+            <span class="k">else</span><span class="p">:</span>
+                <span class="n">sigma_in</span> <span class="o">=</span> <span class="p">[]</span>
+
+            <span class="bp">self</span><span class="o">.</span><span class="n">nbins_low</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">nbins_high</span><span class="p">,</span> <span class="n">_</span><span class="p">,</span> <span class="n">data1d_x</span> <span class="o">=</span> \
+                                <span class="n">get_qextrapolate</span><span class="p">(</span><span class="n">sigma_in</span><span class="p">,</span> <span class="n">data1D</span><span class="o">.</span><span class="n">x</span><span class="p">)</span>
+
+        <span class="c">## Number of Q bins</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">nbins</span> <span class="o">=</span> <span class="nb">len</span><span class="p">(</span><span class="n">data1d_x</span><span class="p">)</span>
+        <span class="c">## Minimum Q </span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">min</span> <span class="o">=</span> <span class="nb">min</span><span class="p">(</span><span class="n">data1d_x</span><span class="p">)</span>
+        <span class="c">## Maximum</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">max</span> <span class="o">=</span> <span class="nb">max</span><span class="p">(</span><span class="n">data1d_x</span><span class="p">)</span>
+        <span class="c">## Q-values</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">qvalues</span> <span class="o">=</span> <span class="n">data1d_x</span>
+        
+</div>
+<span class="k">class</span> <span class="nc">_QSmearer</span><span class="p">(</span><span class="n">_BaseSmearer</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Perform Gaussian Q smearing</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+        
+    <span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">nbins</span><span class="o">=</span><span class="bp">None</span><span class="p">,</span> <span class="n">width</span><span class="o">=</span><span class="bp">None</span><span class="p">,</span> <span class="nb">min</span><span class="o">=</span><span class="bp">None</span><span class="p">,</span> <span class="nb">max</span><span class="o">=</span><span class="bp">None</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Initialization</span>
+<span class="sd">        </span>
+<span class="sd">        :param nbins: number of Q bins</span>
+<span class="sd">        :param width: array standard deviation in Q [A-1]</span>
+<span class="sd">        :param min: Q_min [A-1]</span>
+<span class="sd">        :param max: Q_max [A-1]</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">_BaseSmearer</span><span class="o">.</span><span class="n">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span>
+        <span class="c">## Standard deviation in Q [A-1]</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">width</span> <span class="o">=</span> <span class="n">width</span>
+        <span class="c">## Q_min (Min Q-value for I(q))</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">min</span> <span class="o">=</span> <span class="nb">min</span>
+        <span class="c">## Q_max (Max Q_value for I(q))</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">max</span> <span class="o">=</span> <span class="nb">max</span>
+        <span class="c">## Number of Q bins </span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">nbins</span> <span class="o">=</span> <span class="n">nbins</span>
+        <span class="c">## Smearing matrix</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_weights</span> <span class="o">=</span> <span class="bp">None</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">qvalues</span>  <span class="o">=</span> <span class="bp">None</span>
+        
+    <span class="k">def</span> <span class="nf">_initialize_smearer</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Initialize the C++ smearer object.</span>
+<span class="sd">        This method HAS to be called before smearing</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="c">#self._smearer = smearer.new_q_smearer(numpy.asarray(self.width),</span>
+        <span class="c"># self.min, self.max, self.nbins)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_smearer</span> <span class="o">=</span> <span class="n">smearer</span><span class="o">.</span><span class="n">new_q_smearer_with_q</span><span class="p">(</span><span class="n">numpy</span><span class="o">.</span><span class="n">asarray</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">width</span><span class="p">),</span>
+                                                      <span class="bp">self</span><span class="o">.</span><span class="n">qvalues</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_init_complete</span> <span class="o">=</span> <span class="bp">True</span>
+        
+    <span class="k">def</span> <span class="nf">get_unsmeared_range</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">q_min</span><span class="p">,</span> <span class="n">q_max</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Determine the range needed in unsmeared-Q to cover</span>
+<span class="sd">        the smeared Q range</span>
+<span class="sd">        Take 3 sigmas as the offset between smeared and unsmeared space</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="c"># Range used for input to smearing</span>
+        <span class="n">_qmin_unsmeared</span> <span class="o">=</span> <span class="n">q_min</span>
+        <span class="n">_qmax_unsmeared</span> <span class="o">=</span> <span class="n">q_max</span> 
+        <span class="k">try</span><span class="p">:</span>
+            <span class="n">offset</span> <span class="o">=</span> <span class="mf">3.0</span> <span class="o">*</span> <span class="nb">max</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">width</span><span class="p">)</span>
+            <span class="n">_qmin_unsmeared</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">min</span><span class="c">#max([self.min, q_min - offset])</span>
+            <span class="n">_qmax_unsmeared</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">max</span><span class="c">#min([self.max, q_max + offset])</span>
+        <span class="k">except</span><span class="p">:</span>
+            <span class="n">logging</span><span class="o">.</span><span class="n">error</span><span class="p">(</span><span class="s">&quot;_QSmearer.get_bin_range: </span><span class="si">%s</span><span class="s">&quot;</span> <span class="o">%</span> <span class="n">sys</span><span class="o">.</span><span class="n">exc_value</span><span class="p">)</span>
+        <span class="k">return</span> <span class="n">_qmin_unsmeared</span><span class="p">,</span> <span class="n">_qmax_unsmeared</span>
+        
+    
+<div class="viewcode-block" id="QSmearer"><a class="viewcode-back" href="../../../dev/api/sas.models.html#sas.models.qsmearing.QSmearer">[docs]</a><span class="k">class</span> <span class="nc">QSmearer</span><span class="p">(</span><span class="n">_QSmearer</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Adaptor for Gaussian Q smearing class and SAS data</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">data1D</span><span class="p">,</span> <span class="n">model</span> <span class="o">=</span> <span class="bp">None</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Assumption: equally spaced bins of increasing q-values.</span>
+<span class="sd">        </span>
+<span class="sd">        :param data1D: data used to set the smearing parameters</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="c"># Initialization from parent class</span>
+        <span class="nb">super</span><span class="p">(</span><span class="n">QSmearer</span><span class="p">,</span> <span class="bp">self</span><span class="p">)</span><span class="o">.</span><span class="n">__init__</span><span class="p">()</span>
+        <span class="n">data1d_x</span> <span class="o">=</span> <span class="p">[]</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">nbins_low</span> <span class="o">=</span> <span class="mi">0</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">nbins_high</span> <span class="o">=</span> <span class="mi">0</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">model</span> <span class="o">=</span> <span class="n">model</span>
+        <span class="c">## Resolution</span>
+        <span class="c">#self.width = numpy.zeros(len(data1D.x))</span>
+        <span class="k">if</span> <span class="n">data1D</span><span class="o">.</span><span class="n">dx</span> <span class="ow">is</span> <span class="ow">not</span> <span class="bp">None</span> <span class="ow">and</span> <span class="nb">len</span><span class="p">(</span><span class="n">data1D</span><span class="o">.</span><span class="n">dx</span><span class="p">)</span> <span class="o">==</span> <span class="nb">len</span><span class="p">(</span><span class="n">data1D</span><span class="o">.</span><span class="n">x</span><span class="p">):</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">width</span> <span class="o">=</span> <span class="n">data1D</span><span class="o">.</span><span class="n">dx</span>
+        
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">model</span> <span class="o">==</span> <span class="bp">None</span><span class="p">:</span>
+            <span class="n">data1d_x</span> <span class="o">=</span> <span class="n">data1D</span><span class="o">.</span><span class="n">x</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">nbins_low</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">nbins_high</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">width</span><span class="p">,</span> <span class="n">data1d_x</span> <span class="o">=</span> \
+                                <span class="n">get_qextrapolate</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">width</span><span class="p">,</span> <span class="n">data1D</span><span class="o">.</span><span class="n">x</span><span class="p">)</span>
+
+        <span class="c">## Number of Q bins</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">nbins</span> <span class="o">=</span> <span class="nb">len</span><span class="p">(</span><span class="n">data1d_x</span><span class="p">)</span>
+        <span class="c">## Minimum Q </span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">min</span> <span class="o">=</span> <span class="nb">min</span><span class="p">(</span><span class="n">data1d_x</span><span class="p">)</span>
+        <span class="c">## Maximum</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">max</span> <span class="o">=</span> <span class="nb">max</span><span class="p">(</span><span class="n">data1d_x</span><span class="p">)</span>
+        <span class="c">## Q-values</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">qvalues</span> <span class="o">=</span> <span class="n">data1d_x</span>
+
+        </div>
+<div class="viewcode-block" id="get_qextrapolate"><a class="viewcode-back" href="../../../dev/api/sas.models.html#sas.models.qsmearing.get_qextrapolate">[docs]</a><span class="k">def</span> <span class="nf">get_qextrapolate</span><span class="p">(</span><span class="n">width</span><span class="p">,</span> <span class="n">data_x</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Make fake data_x points extrapolated outside of the data_x points</span>
+<span class="sd">    </span>
+<span class="sd">    :param width: array of std of q resolution</span>
+<span class="sd">    :param Data1D.x: Data1D.x array</span>
+<span class="sd">    </span>
+<span class="sd">    :return new_width, data_x_ext: extrapolated width array and x array</span>
+<span class="sd">    </span>
+<span class="sd">    :assumption1: data_x is ordered from lower q to higher q</span>
+<span class="sd">    :assumption2: len(data) = len(width)</span>
+<span class="sd">    :assumption3: the distance between the data points is more compact than the size of width </span>
+<span class="sd">    :Todo1: Make sure that the assumptions are correct for Data1D</span>
+<span class="sd">    :Todo2: This fixes the edge problem in Qsmearer but still needs to make smearer interface </span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="c"># Length of the width</span>
+    <span class="n">length</span> <span class="o">=</span> <span class="nb">len</span><span class="p">(</span><span class="n">width</span><span class="p">)</span>
+    <span class="n">width_low</span> <span class="o">=</span> <span class="n">math</span><span class="o">.</span><span class="n">fabs</span><span class="p">(</span><span class="n">width</span><span class="p">[</span><span class="mi">0</span><span class="p">])</span>   
+    <span class="n">width_high</span> <span class="o">=</span> <span class="n">math</span><span class="o">.</span><span class="n">fabs</span><span class="p">(</span><span class="n">width</span><span class="p">[</span><span class="n">length</span> <span class="o">-</span><span class="mi">1</span><span class="p">])</span>
+    <span class="n">nbins_low</span> <span class="o">=</span> <span class="mf">0.0</span> 
+    <span class="n">nbins_high</span> <span class="o">=</span> <span class="mf">0.0</span>
+    <span class="c"># Compare width(dQ) to the data bin size and take smaller one as the bin </span>
+    <span class="c"># size of the extrapolation; this will correct some weird behavior </span>
+    <span class="c"># at the edge: This method was out (commented) </span>
+    <span class="c"># because it becomes very expansive when</span>
+    <span class="c"># bin size is very small comparing to the width.</span>
+    <span class="c"># Now on, we will just give the bin size of the extrapolated points </span>
+    <span class="c"># based on the width.</span>
+    <span class="c"># Find bin sizes</span>
+    <span class="c">#bin_size_low = math.fabs(data_x[1] - data_x[0])</span>
+    <span class="c">#bin_size_high = math.fabs(data_x[length - 1] - data_x[length - 2])</span>
+    <span class="c"># Let&#39;s set the bin size 1/3 of the width(sigma), it is good as long as</span>
+    <span class="c"># the scattering is monotonous.</span>
+    <span class="c">#if width_low &lt; (bin_size_low):</span>
+    <span class="n">bin_size_low</span> <span class="o">=</span> <span class="n">width_low</span> <span class="o">/</span> <span class="mf">10.0</span>
+    <span class="c">#if width_high &lt; (bin_size_high):</span>
+    <span class="n">bin_size_high</span> <span class="o">=</span> <span class="n">width_high</span> <span class="o">/</span> <span class="mf">10.0</span>
+        
+    <span class="c"># Number of q points required below the 1st data point in order to extend</span>
+    <span class="c"># them 3 times of the width (std)</span>
+    <span class="k">if</span> <span class="n">width_low</span> <span class="o">&gt;</span> <span class="mf">0.0</span><span class="p">:</span>
+        <span class="n">nbins_low</span> <span class="o">=</span> <span class="n">math</span><span class="o">.</span><span class="n">ceil</span><span class="p">(</span><span class="mf">3.0</span> <span class="o">*</span> <span class="n">width_low</span> <span class="o">/</span> <span class="n">bin_size_low</span><span class="p">)</span>
+    <span class="c"># Number of q points required above the last data point</span>
+    <span class="k">if</span> <span class="n">width_high</span> <span class="o">&gt;</span> <span class="mf">0.0</span><span class="p">:</span>
+        <span class="n">nbins_high</span> <span class="o">=</span> <span class="n">math</span><span class="o">.</span><span class="n">ceil</span><span class="p">(</span><span class="mf">3.0</span> <span class="o">*</span> <span class="n">width_high</span> <span class="o">/</span> <span class="n">bin_size_high</span><span class="p">)</span>
+    <span class="c"># Make null q points        </span>
+    <span class="n">extra_low</span> <span class="o">=</span> <span class="n">numpy</span><span class="o">.</span><span class="n">zeros</span><span class="p">(</span><span class="n">nbins_low</span><span class="p">)</span>
+    <span class="n">extra_high</span> <span class="o">=</span> <span class="n">numpy</span><span class="o">.</span><span class="n">zeros</span><span class="p">(</span><span class="n">nbins_high</span><span class="p">)</span>
+    <span class="c"># Give extrapolated values</span>
+    <span class="n">ind</span> <span class="o">=</span> <span class="mi">0</span>
+    <span class="n">qvalue</span> <span class="o">=</span> <span class="n">data_x</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="o">-</span> <span class="n">bin_size_low</span>
+    <span class="c">#if qvalue &gt; 0:</span>
+    <span class="k">while</span><span class="p">(</span><span class="n">ind</span> <span class="o">&lt;</span> <span class="n">nbins_low</span><span class="p">):</span>
+        <span class="n">extra_low</span><span class="p">[</span><span class="n">nbins_low</span> <span class="o">-</span> <span class="p">(</span><span class="n">ind</span> <span class="o">+</span> <span class="mi">1</span><span class="p">)]</span> <span class="o">=</span> <span class="n">qvalue</span>
+        <span class="n">qvalue</span> <span class="o">-=</span> <span class="n">bin_size_low</span>
+        <span class="n">ind</span> <span class="o">+=</span> <span class="mi">1</span>
+        <span class="c">#if qvalue &lt;= 0:</span>
+        <span class="c">#    break</span>
+    <span class="c"># Redefine nbins_low</span>
+    <span class="n">nbins_low</span> <span class="o">=</span> <span class="n">ind</span>
+    <span class="c"># Reset ind for another extrapolation</span>
+    <span class="n">ind</span> <span class="o">=</span> <span class="mi">0</span>
+    <span class="n">qvalue</span> <span class="o">=</span> <span class="n">data_x</span><span class="p">[</span><span class="n">length</span> <span class="o">-</span><span class="mi">1</span><span class="p">]</span> <span class="o">+</span> <span class="n">bin_size_high</span>
+    <span class="k">while</span><span class="p">(</span><span class="n">ind</span> <span class="o">&lt;</span> <span class="n">nbins_high</span><span class="p">):</span>
+        <span class="n">extra_high</span><span class="p">[</span><span class="n">ind</span><span class="p">]</span> <span class="o">=</span> <span class="n">qvalue</span>
+        <span class="n">qvalue</span> <span class="o">+=</span> <span class="n">bin_size_high</span>
+        <span class="n">ind</span> <span class="o">+=</span> <span class="mi">1</span>
+    <span class="c"># Make a new qx array</span>
+    <span class="k">if</span> <span class="n">nbins_low</span> <span class="o">&gt;</span> <span class="mi">0</span><span class="p">:</span>  
+        <span class="n">data_x_ext</span> <span class="o">=</span> <span class="n">numpy</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">extra_low</span><span class="p">,</span> <span class="n">data_x</span><span class="p">)</span>
+    <span class="k">else</span><span class="p">:</span>
+        <span class="n">data_x_ext</span> <span class="o">=</span> <span class="n">data_x</span>
+    <span class="n">data_x_ext</span> <span class="o">=</span> <span class="n">numpy</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">data_x_ext</span><span class="p">,</span> <span class="n">extra_high</span><span class="p">)</span>
+    
+    <span class="c"># Redefine extra_low and high based on corrected nbins  </span>
+    <span class="c"># And note that it is not necessary for extra_width to be a non-zero </span>
+    <span class="k">if</span> <span class="n">nbins_low</span> <span class="o">&gt;</span> <span class="mi">0</span><span class="p">:</span>     
+        <span class="n">extra_low</span> <span class="o">=</span> <span class="n">numpy</span><span class="o">.</span><span class="n">zeros</span><span class="p">(</span><span class="n">nbins_low</span><span class="p">)</span>
+    <span class="n">extra_high</span> <span class="o">=</span> <span class="n">numpy</span><span class="o">.</span><span class="n">zeros</span><span class="p">(</span><span class="n">nbins_high</span><span class="p">)</span> 
+    <span class="c"># Make new width array</span>
+    <span class="n">new_width</span> <span class="o">=</span> <span class="n">numpy</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">extra_low</span><span class="p">,</span> <span class="n">width</span><span class="p">)</span>
+    <span class="n">new_width</span> <span class="o">=</span> <span class="n">numpy</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">new_width</span><span class="p">,</span> <span class="n">extra_high</span><span class="p">)</span>
+    
+    <span class="c"># nbins corrections due to the negative q value</span>
+    <span class="n">nbins_low</span> <span class="o">=</span> <span class="n">nbins_low</span> <span class="o">-</span> <span class="nb">len</span><span class="p">(</span><span class="n">data_x_ext</span><span class="p">[</span><span class="n">data_x_ext</span> <span class="o">&lt;=</span> <span class="mi">0</span><span class="p">])</span>
+    <span class="k">return</span> <span class="n">nbins_low</span><span class="p">,</span> <span class="n">nbins_high</span><span class="p">,</span> \
+             <span class="n">new_width</span><span class="p">[</span><span class="n">data_x_ext</span> <span class="o">&gt;</span> <span class="mi">0</span><span class="p">],</span> <span class="n">data_x_ext</span><span class="p">[</span><span class="n">data_x_ext</span> <span class="o">&gt;</span> <span class="mi">0</span><span class="p">]</span>
+
+
+</div>
+<span class="kn">from</span> <span class="nn">.resolution</span> <span class="kn">import</span> <span class="n">Slit1D</span><span class="p">,</span> <span class="n">Pinhole1D</span>
+<div class="viewcode-block" id="PySmear"><a class="viewcode-back" href="../../../dev/api/sas.models.html#sas.models.qsmearing.PySmear">[docs]</a><span class="k">class</span> <span class="nc">PySmear</span><span class="p">(</span><span class="nb">object</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Wrapper for pure python sasmodels resolution functions.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">resolution</span><span class="p">,</span> <span class="n">model</span><span class="p">):</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">model</span> <span class="o">=</span> <span class="n">model</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">resolution</span> <span class="o">=</span> <span class="n">resolution</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">offset</span> <span class="o">=</span> <span class="n">numpy</span><span class="o">.</span><span class="n">searchsorted</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">resolution</span><span class="o">.</span><span class="n">q_calc</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">resolution</span><span class="o">.</span><span class="n">q</span><span class="p">[</span><span class="mi">0</span><span class="p">])</span>
+
+<div class="viewcode-block" id="PySmear.apply"><a class="viewcode-back" href="../../../dev/api/sas.models.html#sas.models.qsmearing.PySmear.apply">[docs]</a>    <span class="k">def</span> <span class="nf">apply</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">iq_in</span><span class="p">,</span> <span class="n">first_bin</span><span class="o">=</span><span class="mi">0</span><span class="p">,</span> <span class="n">last_bin</span><span class="o">=</span><span class="bp">None</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Apply the resolution function to the data.</span>
+
+<span class="sd">        Note that this is called with iq_in matching data.x, but with</span>
+<span class="sd">        iq_in[first_bin:last_bin] set to theory values for these bins,</span>
+<span class="sd">        and the remainder left undefined.  The first_bin, last_bin values</span>
+<span class="sd">        should be those returned from get_bin_range.</span>
+
+<span class="sd">        The returned value is of the same length as iq_in, with the range</span>
+<span class="sd">        first_bin:last_bin set to the resolution smeared values.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">if</span> <span class="n">last_bin</span> <span class="ow">is</span> <span class="bp">None</span><span class="p">:</span> <span class="n">last_bin</span> <span class="o">=</span> <span class="nb">len</span><span class="p">(</span><span class="n">iq_in</span><span class="p">)</span>
+        <span class="n">start</span><span class="p">,</span> <span class="n">end</span> <span class="o">=</span> <span class="n">first_bin</span> <span class="o">+</span> <span class="bp">self</span><span class="o">.</span><span class="n">offset</span><span class="p">,</span> <span class="n">last_bin</span> <span class="o">+</span> <span class="bp">self</span><span class="o">.</span><span class="n">offset</span>
+        <span class="n">q_calc</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">resolution</span><span class="o">.</span><span class="n">q_calc</span>
+        <span class="n">iq_calc</span> <span class="o">=</span> <span class="n">numpy</span><span class="o">.</span><span class="n">empty_like</span><span class="p">(</span><span class="n">q_calc</span><span class="p">)</span>
+        <span class="k">if</span> <span class="n">start</span> <span class="o">&gt;</span> <span class="mi">0</span><span class="p">:</span>
+            <span class="n">iq_calc</span><span class="p">[:</span><span class="n">start</span><span class="p">]</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">model</span><span class="o">.</span><span class="n">evalDistribution</span><span class="p">(</span><span class="n">q_calc</span><span class="p">[:</span><span class="n">start</span><span class="p">])</span>
+        <span class="k">if</span> <span class="n">end</span><span class="o">+</span><span class="mi">1</span> <span class="o">&lt;</span> <span class="nb">len</span><span class="p">(</span><span class="n">q_calc</span><span class="p">):</span>
+            <span class="n">iq_calc</span><span class="p">[</span><span class="n">end</span><span class="o">+</span><span class="mi">1</span><span class="p">:]</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">model</span><span class="o">.</span><span class="n">evalDistribution</span><span class="p">(</span><span class="n">q_calc</span><span class="p">[</span><span class="n">end</span><span class="o">+</span><span class="mi">1</span><span class="p">:])</span>
+        <span class="n">iq_calc</span><span class="p">[</span><span class="n">start</span><span class="p">:</span><span class="n">end</span><span class="o">+</span><span class="mi">1</span><span class="p">]</span> <span class="o">=</span> <span class="n">iq_in</span><span class="p">[</span><span class="n">first_bin</span><span class="p">:</span><span class="n">last_bin</span><span class="o">+</span><span class="mi">1</span><span class="p">]</span>
+        <span class="n">smeared</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">resolution</span><span class="o">.</span><span class="n">apply</span><span class="p">(</span><span class="n">iq_calc</span><span class="p">)</span>
+        <span class="k">return</span> <span class="n">smeared</span></div>
+    <span class="n">__call__</span> <span class="o">=</span> <span class="nb">apply</span>
+
+<div class="viewcode-block" id="PySmear.get_bin_range"><a class="viewcode-back" href="../../../dev/api/sas.models.html#sas.models.qsmearing.PySmear.get_bin_range">[docs]</a>    <span class="k">def</span> <span class="nf">get_bin_range</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">q_min</span><span class="o">=</span><span class="bp">None</span><span class="p">,</span> <span class="n">q_max</span><span class="o">=</span><span class="bp">None</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        For a given q_min, q_max, find the corresponding indices in the data.</span>
+
+<span class="sd">        Returns first, last.</span>
+
+<span class="sd">        Note that these are indexes into q from the data, not the q_calc</span>
+<span class="sd">        needed by the resolution function.  Note also that these are the</span>
+<span class="sd">        indices, not the range limits.  That is, the complete range will be</span>
+<span class="sd">        q[first:last+1].</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">q</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">resolution</span><span class="o">.</span><span class="n">q</span>
+        <span class="n">first</span> <span class="o">=</span> <span class="n">numpy</span><span class="o">.</span><span class="n">searchsorted</span><span class="p">(</span><span class="n">q</span><span class="p">,</span> <span class="n">q_min</span><span class="p">)</span>
+        <span class="n">last</span> <span class="o">=</span> <span class="n">numpy</span><span class="o">.</span><span class="n">searchsorted</span><span class="p">(</span><span class="n">q</span><span class="p">,</span> <span class="n">q_max</span><span class="p">)</span>
+        <span class="k">return</span> <span class="n">first</span><span class="p">,</span> <span class="nb">min</span><span class="p">(</span><span class="n">last</span><span class="p">,</span><span class="nb">len</span><span class="p">(</span><span class="n">q</span><span class="p">)</span><span class="o">-</span><span class="mi">1</span><span class="p">)</span>
+</div></div>
+<div class="viewcode-block" id="slit_smear"><a class="viewcode-back" href="../../../dev/api/sas.models.html#sas.models.qsmearing.slit_smear">[docs]</a><span class="k">def</span> <span class="nf">slit_smear</span><span class="p">(</span><span class="n">data</span><span class="p">,</span> <span class="n">model</span><span class="o">=</span><span class="bp">None</span><span class="p">):</span>
+    <span class="n">q</span> <span class="o">=</span> <span class="n">data</span><span class="o">.</span><span class="n">x</span>
+    <span class="n">width</span> <span class="o">=</span> <span class="n">data</span><span class="o">.</span><span class="n">dxw</span> <span class="k">if</span> <span class="n">data</span><span class="o">.</span><span class="n">dxw</span> <span class="ow">is</span> <span class="ow">not</span> <span class="bp">None</span> <span class="k">else</span> <span class="mi">0</span>
+    <span class="n">height</span> <span class="o">=</span> <span class="n">data</span><span class="o">.</span><span class="n">dxl</span> <span class="k">if</span> <span class="n">data</span><span class="o">.</span><span class="n">dxl</span> <span class="ow">is</span> <span class="ow">not</span> <span class="bp">None</span> <span class="k">else</span> <span class="mi">0</span>
+    <span class="c"># TODO: width and height seem to be reversed</span>
+    <span class="k">return</span> <span class="n">PySmear</span><span class="p">(</span><span class="n">Slit1D</span><span class="p">(</span><span class="n">q</span><span class="p">,</span> <span class="n">height</span><span class="p">,</span> <span class="n">width</span><span class="p">),</span> <span class="n">model</span><span class="p">)</span>
+</div>
+<div class="viewcode-block" id="pinhole_smear"><a class="viewcode-back" href="../../../dev/api/sas.models.html#sas.models.qsmearing.pinhole_smear">[docs]</a><span class="k">def</span> <span class="nf">pinhole_smear</span><span class="p">(</span><span class="n">data</span><span class="p">,</span> <span class="n">model</span><span class="o">=</span><span class="bp">None</span><span class="p">):</span>
+    <span class="n">q</span> <span class="o">=</span> <span class="n">data</span><span class="o">.</span><span class="n">x</span>
+    <span class="n">width</span> <span class="o">=</span> <span class="n">data</span><span class="o">.</span><span class="n">dx</span> <span class="k">if</span> <span class="n">data</span><span class="o">.</span><span class="n">dx</span> <span class="ow">is</span> <span class="ow">not</span> <span class="bp">None</span> <span class="k">else</span> <span class="mi">0</span>
+    <span class="k">return</span> <span class="n">PySmear</span><span class="p">(</span><span class="n">Pinhole1D</span><span class="p">(</span><span class="n">q</span><span class="p">,</span> <span class="n">width</span><span class="p">),</span> <span class="n">model</span><span class="p">)</span></div>
+</pre></div>
+
+          </div>
+        </div>
+      </div>
+      <div class="sphinxsidebar" role="navigation" aria-label="main navigation">
+        <div class="sphinxsidebarwrapper">
+<div id="searchbox" style="display: none" role="search">
+  <h3>Quick search</h3>
+    <form class="search" action="../../../search.html" method="get">
+      <input type="text" name="q" />
+      <input type="submit" value="Go" />
+      <input type="hidden" name="check_keywords" value="yes" />
+      <input type="hidden" name="area" value="default" />
+    </form>
+    <p class="searchtip" style="font-size: 90%">
+    Enter search terms or a module, class or function name.
+    </p>
+</div>
+<script type="text/javascript">$('#searchbox').show(0);</script>
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="related" role="navigation" aria-label="related navigation">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="../../../genindex.html" title="General Index"
+             >index</a></li>
+        <li class="right" >
+          <a href="../../../py-modindex.html" title="Python Module Index"
+             >modules</a> |</li>
+        <li class="nav-item nav-item-0"><a href="../../../index.html">SasView 3.1.0 documentation</a> &raquo;</li>
+          <li class="nav-item nav-item-1"><a href="../../index.html" >Module code</a> &raquo;</li>
+          <li class="nav-item nav-item-2"><a href="../models.html" >sas.models</a> &raquo;</li> 
+      </ul>
+    </div>
+    <div class="footer" role="contentinfo">
+        &copy; Copyright 2015, The SasView Project.
+      Created using <a href="http://sphinx-doc.org/">Sphinx</a> 1.3.1.
+    </div>
+  </body>
+</html>

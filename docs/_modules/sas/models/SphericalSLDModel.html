@@ -1,0 +1,463 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+  "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+    
+    <title>sas.models.SphericalSLDModel &mdash; SasView 3.1.0 documentation</title>
+    
+    <link rel="stylesheet" href="../../../_static/classic.css" type="text/css" />
+    <link rel="stylesheet" href="../../../_static/pygments.css" type="text/css" />
+    
+    <script type="text/javascript">
+      var DOCUMENTATION_OPTIONS = {
+        URL_ROOT:    '../../../',
+        VERSION:     '3.1.0',
+        COLLAPSE_INDEX: false,
+        FILE_SUFFIX: '.html',
+        HAS_SOURCE:  true
+      };
+    </script>
+    <script type="text/javascript" src="../../../_static/jquery.js"></script>
+    <script type="text/javascript" src="../../../_static/underscore.js"></script>
+    <script type="text/javascript" src="../../../_static/doctools.js"></script>
+    <script type="text/javascript" src="https://cdn.mathjax.org/mathjax/latest/MathJax.js?config=TeX-AMS-MML_HTMLorMML"></script>
+    <link rel="top" title="SasView 3.1.0 documentation" href="../../../index.html" />
+    <link rel="up" title="sas.models" href="../models.html" /> 
+  </head>
+  <body role="document">
+    <div class="related" role="navigation" aria-label="related navigation">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="../../../genindex.html" title="General Index"
+             accesskey="I">index</a></li>
+        <li class="right" >
+          <a href="../../../py-modindex.html" title="Python Module Index"
+             >modules</a> |</li>
+        <li class="nav-item nav-item-0"><a href="../../../index.html">SasView 3.1.0 documentation</a> &raquo;</li>
+          <li class="nav-item nav-item-1"><a href="../../index.html" >Module code</a> &raquo;</li>
+          <li class="nav-item nav-item-2"><a href="../models.html" accesskey="U">sas.models</a> &raquo;</li> 
+      </ul>
+    </div>  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          <div class="body" role="main">
+            
+  <h1>Source code for sas.models.SphericalSLDModel</h1><div class="highlight"><pre>
+<span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Spherical SLD model</span>
+<span class="sd">&quot;&quot;&quot;</span>
+<span class="kn">from</span> <span class="nn">sas.models.BaseComponent</span> <span class="kn">import</span> <span class="n">BaseComponent</span>
+<span class="kn">from</span> <span class="nn">sas.models.SphereSLDModel</span> <span class="kn">import</span> <span class="n">SphereSLDModel</span>
+<span class="kn">from</span> <span class="nn">copy</span> <span class="kn">import</span> <span class="n">deepcopy</span>
+<span class="n">func_list</span> <span class="o">=</span> <span class="p">{</span><span class="s">&#39;Erf(|nu|*z)&#39;</span><span class="p">:</span><span class="mi">0</span><span class="p">,</span> <span class="s">&#39;RPower(z^|nu|)&#39;</span><span class="p">:</span><span class="mi">1</span><span class="p">,</span> <span class="s">&#39;LPower(z^|nu|)&#39;</span><span class="p">:</span><span class="mi">2</span><span class="p">,</span> \
+                     <span class="s">&#39;RExp(-|nu|*z)&#39;</span><span class="p">:</span><span class="mi">3</span><span class="p">,</span> <span class="s">&#39;LExp(-|nu|*z)&#39;</span><span class="p">:</span><span class="mi">4</span><span class="p">}</span>
+<span class="n">max_nshells</span> <span class="o">=</span> <span class="mi">10</span>
+
+<div class="viewcode-block" id="SphericalSLDModel"><a class="viewcode-back" href="../../../dev/api/sas.models.html#sas.models.SphericalSLDModel.SphericalSLDModel">[docs]</a><span class="k">class</span> <span class="nc">SphericalSLDModel</span><span class="p">(</span><span class="n">BaseComponent</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    This multi-model is based on Parratt formalism and provides the capability</span>
+<span class="sd">    of changing the number of layers between 0 and 10.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">multfactor</span><span class="o">=</span><span class="mi">1</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">            :param multfactor: number of layers in the model, </span>
+<span class="sd">            assumes 0&lt;= n_shells &lt;=10.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">BaseComponent</span><span class="o">.</span><span class="n">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span>
+
+        <span class="c">## Setting  model name model description</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">description</span> <span class="o">=</span> <span class="s">&quot;&quot;</span>
+        <span class="n">model</span> <span class="o">=</span> <span class="n">SphereSLDModel</span><span class="p">()</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">model</span> <span class="o">=</span> <span class="n">model</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">name</span> <span class="o">=</span> <span class="s">&quot;SphericalSLDModel&quot;</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">description</span> <span class="o">=</span> <span class="n">model</span><span class="o">.</span><span class="n">description</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">n_shells</span> <span class="o">=</span> <span class="n">multfactor</span>
+        <span class="c">## Define parameters</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">params</span> <span class="o">=</span> <span class="p">{}</span>
+        
+        <span class="c">## Parameter details [units, min, max]</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">details</span> <span class="o">=</span> <span class="p">{}</span>
+        
+        <span class="c"># non-fittable parameters</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">non_fittable</span> <span class="o">=</span> <span class="n">model</span><span class="o">.</span><span class="n">non_fittable</span>
+        
+        <span class="c"># list of function in order of the function number </span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">fun_list</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_get_func_list</span><span class="p">()</span>
+        <span class="c">## dispersion</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_set_dispersion</span><span class="p">()</span>
+        <span class="c">## Define parameters</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_set_params</span><span class="p">()</span>
+        
+        <span class="c">## Parameter details [units, min, max]</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_set_details</span><span class="p">()</span>
+        
+        <span class="c">#list of parameter that can be fitted</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_set_fixed_params</span><span class="p">()</span>  
+        <span class="bp">self</span><span class="o">.</span><span class="n">model</span><span class="o">.</span><span class="n">params</span><span class="p">[</span><span class="s">&#39;n_shells&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">n_shells</span>
+        
+        <span class="c">## functional multiplicity info of the model</span>
+        <span class="c"># [int(maximum no. of functionality),&quot;str(Titl),</span>
+        <span class="c"># [str(name of function0),...], [str(x-asix name of sld),...]]</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">multiplicity_info</span> <span class="o">=</span> <span class="p">[</span><span class="n">max_nshells</span><span class="p">,</span> <span class="s">&quot;No. of Shells:&quot;</span><span class="p">,</span> <span class="p">[],</span> <span class="p">[</span><span class="s">&#39;Radius&#39;</span><span class="p">]]</span>
+        
+    
+    <span class="k">def</span> <span class="nf">_clone</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">obj</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Internal utility function to copy the internal</span>
+<span class="sd">        data members to a fresh copy.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">obj</span><span class="o">.</span><span class="n">params</span>     <span class="o">=</span> <span class="n">deepcopy</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">params</span><span class="p">)</span>
+        <span class="n">obj</span><span class="o">.</span><span class="n">non_fittable</span>     <span class="o">=</span> <span class="n">deepcopy</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">non_fittable</span><span class="p">)</span>
+        <span class="n">obj</span><span class="o">.</span><span class="n">description</span>     <span class="o">=</span> <span class="n">deepcopy</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">description</span><span class="p">)</span>
+        <span class="n">obj</span><span class="o">.</span><span class="n">details</span>    <span class="o">=</span> <span class="n">deepcopy</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">details</span><span class="p">)</span>
+        <span class="n">obj</span><span class="o">.</span><span class="n">dispersion</span> <span class="o">=</span> <span class="n">deepcopy</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">dispersion</span><span class="p">)</span>
+        <span class="n">obj</span><span class="o">.</span><span class="n">model</span>  <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">model</span><span class="o">.</span><span class="n">clone</span><span class="p">()</span>
+
+        <span class="k">return</span> <span class="n">obj</span>
+    
+    
+    <span class="k">def</span> <span class="nf">_set_dispersion</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        model dispersions</span>
+<span class="sd">        &quot;&quot;&quot;</span> 
+        <span class="c">##set dispersion from model </span>
+        <span class="k">for</span> <span class="n">name</span> <span class="p">,</span> <span class="n">value</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">model</span><span class="o">.</span><span class="n">dispersion</span><span class="o">.</span><span class="n">iteritems</span><span class="p">():</span>   
+              
+            <span class="n">nshell</span> <span class="o">=</span> <span class="o">-</span><span class="mi">1</span>
+            <span class="k">if</span> <span class="n">name</span><span class="o">.</span><span class="n">split</span><span class="p">(</span><span class="s">&#39;_&#39;</span><span class="p">)[</span><span class="mi">0</span><span class="p">]</span> <span class="o">==</span> <span class="s">&#39;thick&#39;</span><span class="p">:</span>
+                <span class="k">while</span> <span class="n">nshell</span> <span class="o">&lt;</span> <span class="mi">1</span><span class="p">:</span>
+                    <span class="n">nshell</span> <span class="o">+=</span> <span class="mi">1</span>
+                    <span class="k">if</span> <span class="n">name</span><span class="o">.</span><span class="n">split</span><span class="p">(</span><span class="s">&#39;_&#39;</span><span class="p">)[</span><span class="mi">1</span><span class="p">]</span> <span class="o">==</span> <span class="s">&#39;inter</span><span class="si">%s</span><span class="s">&#39;</span> <span class="o">%</span> <span class="nb">str</span><span class="p">(</span><span class="n">nshell</span><span class="p">):</span>
+                        <span class="bp">self</span><span class="o">.</span><span class="n">dispersion</span><span class="p">[</span><span class="n">name</span><span class="p">]</span> <span class="o">=</span> <span class="n">value</span>
+                    <span class="k">else</span><span class="p">:</span> 
+                        <span class="k">continue</span>
+            <span class="k">else</span><span class="p">:</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">dispersion</span><span class="p">[</span><span class="n">name</span><span class="p">]</span> <span class="o">=</span> <span class="n">value</span>
+
+    <span class="k">def</span> <span class="nf">_set_params</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Concatenate the parameters of the model to create</span>
+<span class="sd">        this model parameters </span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="c"># rearrange the parameters for the given # of shells</span>
+        <span class="k">for</span> <span class="n">name</span> <span class="p">,</span> <span class="n">value</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">model</span><span class="o">.</span><span class="n">params</span><span class="o">.</span><span class="n">iteritems</span><span class="p">():</span>
+            <span class="n">n</span> <span class="o">=</span> <span class="mi">0</span>
+            <span class="n">pos</span> <span class="o">=</span> <span class="nb">len</span><span class="p">(</span><span class="n">name</span><span class="o">.</span><span class="n">split</span><span class="p">(</span><span class="s">&#39;_&#39;</span><span class="p">))</span><span class="o">-</span><span class="mi">1</span>
+            <span class="n">first_name</span> <span class="o">=</span> <span class="n">name</span><span class="o">.</span><span class="n">split</span><span class="p">(</span><span class="s">&#39;_&#39;</span><span class="p">)[</span><span class="mi">0</span><span class="p">]</span>
+            <span class="n">last_name</span> <span class="o">=</span> <span class="n">name</span><span class="o">.</span><span class="n">split</span><span class="p">(</span><span class="s">&#39;_&#39;</span><span class="p">)[</span><span class="n">pos</span><span class="p">]</span>
+            <span class="k">if</span> <span class="n">first_name</span> <span class="o">==</span> <span class="s">&#39;npts&#39;</span><span class="p">:</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">params</span><span class="p">[</span><span class="n">name</span><span class="p">]</span> <span class="o">=</span> <span class="n">value</span>
+                <span class="k">continue</span>
+            <span class="k">elif</span> <span class="n">first_name</span> <span class="o">==</span> <span class="s">&#39;func&#39;</span><span class="p">:</span>
+                <span class="n">n</span> <span class="o">=</span> <span class="o">-</span><span class="mi">1</span>
+                <span class="k">while</span> <span class="n">n</span> <span class="o">&lt;</span> <span class="bp">self</span><span class="o">.</span><span class="n">n_shells</span><span class="p">:</span>
+                    <span class="n">n</span> <span class="o">+=</span> <span class="mi">1</span>
+                    <span class="k">if</span> <span class="n">last_name</span> <span class="o">==</span> <span class="s">&#39;inter</span><span class="si">%s</span><span class="s">&#39;</span> <span class="o">%</span> <span class="nb">str</span><span class="p">(</span><span class="n">n</span><span class="p">):</span> 
+                        <span class="bp">self</span><span class="o">.</span><span class="n">params</span><span class="p">[</span><span class="n">name</span><span class="p">]</span> <span class="o">=</span> <span class="n">value</span>
+                        <span class="k">continue</span>
+            <span class="k">elif</span> <span class="n">last_name</span><span class="p">[</span><span class="mi">0</span><span class="p">:</span><span class="mi">5</span><span class="p">]</span> <span class="o">==</span> <span class="s">&#39;inter&#39;</span><span class="p">:</span>
+                <span class="n">n</span> <span class="o">=</span> <span class="o">-</span><span class="mi">1</span>
+                <span class="k">while</span> <span class="n">n</span> <span class="o">&lt;</span> <span class="bp">self</span><span class="o">.</span><span class="n">n_shells</span><span class="p">:</span>
+                    <span class="n">n</span> <span class="o">+=</span> <span class="mi">1</span>
+                    <span class="k">if</span> <span class="n">last_name</span> <span class="o">==</span> <span class="s">&#39;inter</span><span class="si">%s</span><span class="s">&#39;</span> <span class="o">%</span> <span class="nb">str</span><span class="p">(</span><span class="n">n</span><span class="p">):</span>
+                        <span class="bp">self</span><span class="o">.</span><span class="n">params</span><span class="p">[</span><span class="n">name</span><span class="p">]</span> <span class="o">=</span> <span class="n">value</span>
+                        <span class="k">continue</span>
+            <span class="k">elif</span> <span class="n">last_name</span><span class="p">[</span><span class="mi">0</span><span class="p">:</span><span class="mi">4</span><span class="p">]</span> <span class="o">==</span> <span class="s">&#39;flat&#39;</span><span class="p">:</span>
+                <span class="k">while</span> <span class="n">n</span> <span class="o">&lt;</span> <span class="bp">self</span><span class="o">.</span><span class="n">n_shells</span><span class="p">:</span>
+                    <span class="n">n</span> <span class="o">+=</span> <span class="mi">1</span>
+                    <span class="k">if</span> <span class="n">last_name</span> <span class="o">==</span> <span class="s">&#39;flat</span><span class="si">%s</span><span class="s">&#39;</span> <span class="o">%</span> <span class="nb">str</span><span class="p">(</span><span class="n">n</span><span class="p">):</span>
+                        <span class="bp">self</span><span class="o">.</span><span class="n">params</span><span class="p">[</span><span class="n">name</span><span class="p">]</span> <span class="o">=</span> <span class="n">value</span>
+                        <span class="k">continue</span>
+            <span class="k">elif</span> <span class="n">name</span> <span class="o">==</span> <span class="s">&#39;n_shells&#39;</span><span class="p">:</span>
+                <span class="k">continue</span>
+            <span class="k">else</span><span class="p">:</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">params</span><span class="p">[</span><span class="n">name</span><span class="p">]</span> <span class="o">=</span> <span class="n">value</span>
+  
+        <span class="bp">self</span><span class="o">.</span><span class="n">model</span><span class="o">.</span><span class="n">params</span><span class="p">[</span><span class="s">&#39;n_shells&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">n_shells</span>    
+  
+        <span class="c"># set constrained values for the original model params</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_set_xtra_model_param</span><span class="p">()</span>       
+
+    <span class="k">def</span> <span class="nf">_set_details</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Concatenate details of the original model to create</span>
+<span class="sd">        this model details </span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">for</span> <span class="n">name</span><span class="p">,</span> <span class="n">detail</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">model</span><span class="o">.</span><span class="n">details</span><span class="o">.</span><span class="n">iteritems</span><span class="p">():</span>
+            <span class="k">if</span> <span class="n">name</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">params</span><span class="o">.</span><span class="n">iterkeys</span><span class="p">():</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">details</span><span class="p">[</span><span class="n">name</span><span class="p">]</span> <span class="o">=</span> <span class="n">detail</span>
+            
+    
+    <span class="k">def</span> <span class="nf">_set_xtra_model_param</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Set params of original model that are hidden from this model</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="c"># look for the model parameters that are not in param list</span>
+        <span class="k">for</span> <span class="n">key</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">model</span><span class="o">.</span><span class="n">params</span><span class="o">.</span><span class="n">iterkeys</span><span class="p">():</span>
+            <span class="k">if</span> <span class="n">key</span> <span class="ow">not</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">params</span><span class="o">.</span><span class="n">keys</span><span class="p">():</span>
+                <span class="k">if</span> <span class="n">key</span><span class="o">.</span><span class="n">split</span><span class="p">(</span><span class="s">&#39;_&#39;</span><span class="p">)[</span><span class="mi">0</span><span class="p">]</span> <span class="o">==</span> <span class="s">&#39;thick&#39;</span><span class="p">:</span>
+                    <span class="bp">self</span><span class="o">.</span><span class="n">model</span><span class="o">.</span><span class="n">setParam</span><span class="p">(</span><span class="n">key</span><span class="p">,</span> <span class="mi">0</span><span class="p">)</span>
+                    <span class="k">continue</span>
+                <span class="k">if</span> <span class="n">key</span><span class="o">.</span><span class="n">split</span><span class="p">(</span><span class="s">&#39;_&#39;</span><span class="p">)[</span><span class="mi">0</span><span class="p">]</span> <span class="o">==</span> <span class="s">&#39;func&#39;</span><span class="p">:</span> 
+                    <span class="bp">self</span><span class="o">.</span><span class="n">model</span><span class="o">.</span><span class="n">setParam</span><span class="p">(</span><span class="n">key</span><span class="p">,</span> <span class="mi">0</span><span class="p">)</span>
+                    <span class="k">continue</span>
+
+                <span class="k">for</span> <span class="n">nshell</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">n_shells</span><span class="p">,</span> <span class="n">max_nshells</span><span class="p">):</span>
+                    <span class="k">if</span> <span class="n">key</span><span class="o">.</span><span class="n">split</span><span class="p">(</span><span class="s">&#39;_&#39;</span><span class="p">)[</span><span class="mi">1</span><span class="p">]</span> <span class="o">==</span> <span class="s">&#39;flat</span><span class="si">%s</span><span class="s">&#39;</span> <span class="o">%</span> <span class="nb">str</span><span class="p">(</span><span class="n">nshell</span><span class="o">+</span><span class="mi">1</span><span class="p">):</span>
+                        <span class="k">try</span><span class="p">:</span>
+                            <span class="k">if</span> <span class="n">key</span><span class="o">.</span><span class="n">split</span><span class="p">(</span><span class="s">&#39;_&#39;</span><span class="p">)[</span><span class="mi">0</span><span class="p">]</span> <span class="o">==</span> <span class="s">&#39;sld&#39;</span><span class="p">:</span>
+                                <span class="n">value</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">model</span><span class="o">.</span><span class="n">params</span><span class="p">[</span><span class="s">&#39;sld_solv&#39;</span><span class="p">]</span>
+                            <span class="bp">self</span><span class="o">.</span><span class="n">model</span><span class="o">.</span><span class="n">setParam</span><span class="p">(</span><span class="n">key</span><span class="p">,</span> <span class="n">value</span><span class="p">)</span>
+                        <span class="k">except</span><span class="p">:</span>
+                            <span class="k">raise</span> <span class="ne">RuntimeError</span><span class="p">,</span> <span class="s">&quot;SphericalSLD model problem&quot;</span>
+    
+    <span class="k">def</span> <span class="nf">_get_func_list</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Get the list of functions in each layer (shell) </span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">return</span> <span class="n">func_list</span>
+        
+<div class="viewcode-block" id="SphericalSLDModel.getProfile"><a class="viewcode-back" href="../../../dev/api/sas.models.html#sas.models.SphericalSLDModel.SphericalSLDModel.getProfile">[docs]</a>    <span class="k">def</span> <span class="nf">getProfile</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Get SLD profile </span>
+<span class="sd">        </span>
+<span class="sd">        : return: (z, beta) where z is a list of depth of the transition points</span>
+<span class="sd">                beta is a list of the corresponding SLD values </span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="c"># max_pts for each layers</span>
+        <span class="n">n_sub</span> <span class="o">=</span> <span class="nb">int</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">params</span><span class="p">[</span><span class="s">&#39;npts_inter&#39;</span><span class="p">])</span>
+        <span class="n">z</span> <span class="o">=</span> <span class="p">[]</span>
+        <span class="n">beta</span> <span class="o">=</span> <span class="p">[]</span>
+        <span class="n">z0</span> <span class="o">=</span> <span class="mi">0</span>
+        <span class="c"># two sld points for core</span>
+        <span class="n">z</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="mi">0</span><span class="p">)</span>
+        <span class="n">beta</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">params</span><span class="p">[</span><span class="s">&#39;sld_core0&#39;</span><span class="p">])</span> 
+        <span class="n">z</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">params</span><span class="p">[</span><span class="s">&#39;rad_core0&#39;</span><span class="p">])</span> 
+        <span class="n">beta</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">params</span><span class="p">[</span><span class="s">&#39;sld_core0&#39;</span><span class="p">])</span> 
+        <span class="n">z0</span> <span class="o">+=</span> <span class="bp">self</span><span class="o">.</span><span class="n">params</span><span class="p">[</span><span class="s">&#39;rad_core0&#39;</span><span class="p">]</span>
+        <span class="c"># for layers from the core</span>
+        <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="mi">1</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">n_shells</span><span class="o">+</span><span class="mi">2</span><span class="p">):</span>
+            <span class="n">dz</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">params</span><span class="p">[</span><span class="s">&#39;thick_inter</span><span class="si">%s</span><span class="s">&#39;</span> <span class="o">%</span> <span class="nb">str</span><span class="p">(</span><span class="n">i</span><span class="o">-</span><span class="mi">1</span><span class="p">)]</span><span class="o">/</span><span class="n">n_sub</span>
+            <span class="c"># j=0 for interface, j=1 for flat layer </span>
+            <span class="k">for</span> <span class="n">j</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="mi">2</span><span class="p">):</span>
+                <span class="c"># interation for sub-layers</span>
+                <span class="k">for</span> <span class="n">n_s</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="n">n_sub</span><span class="o">+</span><span class="mi">1</span><span class="p">):</span>
+                    <span class="k">if</span> <span class="n">j</span> <span class="o">==</span> <span class="mi">1</span><span class="p">:</span>
+                        <span class="k">if</span> <span class="n">i</span> <span class="o">==</span> <span class="bp">self</span><span class="o">.</span><span class="n">n_shells</span><span class="o">+</span><span class="mi">1</span><span class="p">:</span>
+                            <span class="k">break</span>
+                        <span class="c"># shift half sub thickness for the first point</span>
+                        <span class="n">z0</span> <span class="o">-=</span> <span class="n">dz</span><span class="c">#/2.0</span>
+                        <span class="n">z</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">z0</span><span class="p">)</span>
+                        <span class="c">#z0 -= dz/2.0</span>
+                        <span class="n">z0</span> <span class="o">+=</span> <span class="bp">self</span><span class="o">.</span><span class="n">params</span><span class="p">[</span><span class="s">&#39;thick_flat</span><span class="si">%s</span><span class="s">&#39;</span> <span class="o">%</span> <span class="nb">str</span><span class="p">(</span><span class="n">i</span><span class="p">)]</span>
+                        
+                        <span class="n">sld_i</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">params</span><span class="p">[</span><span class="s">&#39;sld_flat</span><span class="si">%s</span><span class="s">&#39;</span> <span class="o">%</span> <span class="nb">str</span><span class="p">(</span><span class="n">i</span><span class="p">)]</span>
+                        <span class="n">beta</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">params</span><span class="p">[</span><span class="s">&#39;sld_flat</span><span class="si">%s</span><span class="s">&#39;</span> <span class="o">%</span> <span class="nb">str</span><span class="p">(</span><span class="n">i</span><span class="p">)])</span>
+                        <span class="n">dz</span> <span class="o">=</span> <span class="mi">0</span>
+                    <span class="k">else</span><span class="p">:</span>
+                        <span class="n">nu</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">params</span><span class="p">[</span><span class="s">&#39;nu_inter</span><span class="si">%s</span><span class="s">&#39;</span> <span class="o">%</span> <span class="nb">str</span><span class="p">(</span><span class="n">i</span><span class="o">-</span><span class="mi">1</span><span class="p">)]</span>
+                        <span class="c"># decide which sld is which, sld_r or sld_l</span>
+                        <span class="k">if</span> <span class="n">i</span> <span class="o">==</span> <span class="mi">1</span><span class="p">:</span>
+                            <span class="n">sld_l</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">params</span><span class="p">[</span><span class="s">&#39;sld_core0&#39;</span><span class="p">]</span>
+                        <span class="k">else</span><span class="p">:</span>
+                            <span class="n">sld_l</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">params</span><span class="p">[</span><span class="s">&#39;sld_flat</span><span class="si">%s</span><span class="s">&#39;</span> <span class="o">%</span> <span class="nb">str</span><span class="p">(</span><span class="n">i</span><span class="o">-</span><span class="mi">1</span><span class="p">)]</span>
+                        <span class="k">if</span> <span class="n">i</span> <span class="o">==</span> <span class="bp">self</span><span class="o">.</span><span class="n">n_shells</span><span class="o">+</span><span class="mi">1</span><span class="p">:</span>
+                            <span class="n">sld_r</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">params</span><span class="p">[</span><span class="s">&#39;sld_solv&#39;</span><span class="p">]</span>
+                        <span class="k">else</span><span class="p">:</span>
+                            <span class="n">sld_r</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">params</span><span class="p">[</span><span class="s">&#39;sld_flat</span><span class="si">%s</span><span class="s">&#39;</span> <span class="o">%</span> <span class="nb">str</span><span class="p">(</span><span class="n">i</span><span class="p">)]</span>
+                        <span class="c"># get function type</span>
+                        <span class="n">func_idx</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">params</span><span class="p">[</span><span class="s">&#39;func_inter</span><span class="si">%s</span><span class="s">&#39;</span> <span class="o">%</span> <span class="nb">str</span><span class="p">(</span><span class="n">i</span><span class="o">-</span><span class="mi">1</span><span class="p">)]</span>
+                        <span class="c"># calculate the sld</span>
+                        <span class="n">sld_i</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_get_sld</span><span class="p">(</span><span class="n">func_idx</span><span class="p">,</span> <span class="n">n_sub</span><span class="p">,</span> <span class="n">n_s</span><span class="p">,</span> <span class="n">nu</span><span class="p">,</span>
+                                              <span class="n">sld_l</span><span class="p">,</span> <span class="n">sld_r</span><span class="p">)</span>
+                    <span class="c"># append to the list</span>
+                    <span class="n">z</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">z0</span><span class="p">)</span>
+                    <span class="n">beta</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">sld_i</span><span class="p">)</span>
+                    <span class="n">z0</span> <span class="o">+=</span> <span class="n">dz</span>
+                    <span class="k">if</span> <span class="n">j</span> <span class="o">==</span> <span class="mi">1</span><span class="p">:</span>
+                        <span class="k">break</span>
+        <span class="c"># put sld of solvent</span>
+        <span class="n">z</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">z0</span><span class="p">)</span>
+        <span class="n">beta</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">params</span><span class="p">[</span><span class="s">&#39;sld_solv&#39;</span><span class="p">])</span>  
+        <span class="n">z_ext</span> <span class="o">=</span> <span class="n">z0</span><span class="o">/</span><span class="mf">5.0</span>
+        <span class="n">z</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">z0</span><span class="o">+</span><span class="n">z_ext</span><span class="p">)</span>
+        <span class="n">beta</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">params</span><span class="p">[</span><span class="s">&#39;sld_solv&#39;</span><span class="p">])</span> 
+        <span class="c"># return sld profile (r, beta)</span>
+        <span class="k">return</span> <span class="n">z</span><span class="p">,</span> <span class="n">beta</span>
+    </div>
+    <span class="k">def</span> <span class="nf">_get_sld</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">func_idx</span><span class="p">,</span> <span class="n">n_sub</span><span class="p">,</span> <span class="n">n_s</span><span class="p">,</span> <span class="n">nu</span><span class="p">,</span> <span class="n">sld_l</span><span class="p">,</span> <span class="n">sld_r</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Get the function asked to build sld profile</span>
+<span class="sd">        : param func_idx: func type number</span>
+<span class="sd">        : param n_sub: total number of sub_layer</span>
+<span class="sd">        : param n_s: index of sub_layer</span>
+<span class="sd">        : param nu: coefficient of the function</span>
+<span class="sd">        : param sld_l: sld on the left side</span>
+<span class="sd">        : param sld_r: sld on the right side</span>
+<span class="sd">        : return: sld value, float</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="kn">from</span> <span class="nn">sas.models.SLDCalFunc</span> <span class="kn">import</span> <span class="n">SLDCalFunc</span>
+        <span class="c"># sld_cal init</span>
+        <span class="n">sld_cal</span> <span class="o">=</span> <span class="n">SLDCalFunc</span><span class="p">()</span>
+        <span class="c"># set params</span>
+        <span class="n">sld_cal</span><span class="o">.</span><span class="n">setParam</span><span class="p">(</span><span class="s">&#39;fun_type&#39;</span><span class="p">,</span> <span class="n">func_idx</span><span class="p">)</span>
+        <span class="n">sld_cal</span><span class="o">.</span><span class="n">setParam</span><span class="p">(</span><span class="s">&#39;npts_inter&#39;</span><span class="p">,</span> <span class="n">n_sub</span><span class="p">)</span>
+        <span class="n">sld_cal</span><span class="o">.</span><span class="n">setParam</span><span class="p">(</span><span class="s">&#39;shell_num&#39;</span><span class="p">,</span> <span class="n">n_s</span><span class="p">)</span>
+        <span class="n">sld_cal</span><span class="o">.</span><span class="n">setParam</span><span class="p">(</span><span class="s">&#39;nu_inter&#39;</span><span class="p">,</span> <span class="n">nu</span><span class="p">)</span>
+        <span class="n">sld_cal</span><span class="o">.</span><span class="n">setParam</span><span class="p">(</span><span class="s">&#39;sld_left&#39;</span><span class="p">,</span> <span class="n">sld_l</span><span class="p">)</span>
+        <span class="n">sld_cal</span><span class="o">.</span><span class="n">setParam</span><span class="p">(</span><span class="s">&#39;sld_right&#39;</span><span class="p">,</span> <span class="n">sld_r</span><span class="p">)</span>
+        <span class="c"># return sld value</span>
+        <span class="k">return</span> <span class="n">sld_cal</span><span class="o">.</span><span class="n">run</span><span class="p">()</span>
+    
+<div class="viewcode-block" id="SphericalSLDModel.setParam"><a class="viewcode-back" href="../../../dev/api/sas.models.html#sas.models.SphericalSLDModel.SphericalSLDModel.setParam">[docs]</a>    <span class="k">def</span> <span class="nf">setParam</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">name</span><span class="p">,</span> <span class="n">value</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot; </span>
+<span class="sd">        Set the value of a model parameter</span>
+<span class="sd">    </span>
+<span class="sd">        : param name: name of the parameter</span>
+<span class="sd">        : param value: value of the parameter</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="c"># set param to new model</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_setParamHelper</span><span class="p">(</span><span class="n">name</span><span class="p">,</span> <span class="n">value</span><span class="p">)</span>
+        
+        <span class="c">## setParam to model </span>
+        <span class="k">if</span> <span class="n">name</span> <span class="o">==</span> <span class="s">&#39;sld_solv&#39;</span><span class="p">:</span>
+            <span class="c"># the sld_*** model.params not in params must set to </span>
+            <span class="c"># value of sld_solv</span>
+            <span class="k">for</span> <span class="n">key</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">model</span><span class="o">.</span><span class="n">params</span><span class="o">.</span><span class="n">iterkeys</span><span class="p">():</span>
+                <span class="k">if</span> <span class="n">key</span> <span class="ow">not</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">params</span><span class="o">.</span><span class="n">keys</span><span class="p">()</span> <span class="ow">and</span> <span class="n">key</span><span class="o">.</span><span class="n">split</span><span class="p">(</span><span class="s">&#39;_&#39;</span><span class="p">)[</span><span class="mi">0</span><span class="p">]</span> <span class="o">==</span> <span class="s">&#39;sld&#39;</span><span class="p">:</span>
+                    <span class="bp">self</span><span class="o">.</span><span class="n">model</span><span class="o">.</span><span class="n">setParam</span><span class="p">(</span><span class="n">key</span><span class="p">,</span> <span class="n">value</span><span class="p">)</span>
+            
+        <span class="bp">self</span><span class="o">.</span><span class="n">model</span><span class="o">.</span><span class="n">setParam</span><span class="p">(</span><span class="n">name</span><span class="p">,</span> <span class="n">value</span><span class="p">)</span>
+</div>
+    <span class="k">def</span> <span class="nf">_setParamHelper</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">name</span><span class="p">,</span> <span class="n">value</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Helper function to setParam</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">toks</span> <span class="o">=</span> <span class="n">name</span><span class="o">.</span><span class="n">split</span><span class="p">(</span><span class="s">&#39;.&#39;</span><span class="p">)</span>
+        <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">toks</span><span class="p">)</span> <span class="o">==</span> <span class="mi">2</span><span class="p">:</span>
+            <span class="k">for</span> <span class="n">item</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">dispersion</span><span class="o">.</span><span class="n">keys</span><span class="p">():</span>
+                <span class="k">if</span> <span class="n">item</span><span class="o">.</span><span class="n">lower</span><span class="p">()</span> <span class="o">==</span> <span class="n">toks</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">lower</span><span class="p">():</span>
+                    <span class="k">for</span> <span class="n">par</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">dispersion</span><span class="p">[</span><span class="n">item</span><span class="p">]:</span>
+                        <span class="k">if</span> <span class="n">par</span><span class="o">.</span><span class="n">lower</span><span class="p">()</span> <span class="o">==</span> <span class="n">toks</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span><span class="o">.</span><span class="n">lower</span><span class="p">():</span>
+                            <span class="bp">self</span><span class="o">.</span><span class="n">dispersion</span><span class="p">[</span><span class="n">item</span><span class="p">][</span><span class="n">par</span><span class="p">]</span> <span class="o">=</span> <span class="n">value</span>
+                            <span class="k">return</span>
+        <span class="c"># Look for standard parameter</span>
+        <span class="k">for</span> <span class="n">item</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">params</span><span class="o">.</span><span class="n">keys</span><span class="p">():</span>
+            <span class="k">if</span> <span class="n">item</span><span class="o">.</span><span class="n">lower</span><span class="p">()</span> <span class="o">==</span> <span class="n">name</span><span class="o">.</span><span class="n">lower</span><span class="p">():</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">params</span><span class="p">[</span><span class="n">item</span><span class="p">]</span> <span class="o">=</span> <span class="n">value</span>
+                <span class="k">return</span>
+        
+        <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">,</span> <span class="s">&quot;Model does not contain parameter </span><span class="si">%s</span><span class="s">&quot;</span> <span class="o">%</span> <span class="n">name</span>
+             
+   
+    <span class="k">def</span> <span class="nf">_set_fixed_params</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Fill the self.fixed list with the model fixed list</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">for</span> <span class="n">item</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">model</span><span class="o">.</span><span class="n">fixed</span><span class="p">:</span>
+            <span class="k">if</span> <span class="n">item</span><span class="o">.</span><span class="n">split</span><span class="p">(</span><span class="s">&#39;.&#39;</span><span class="p">)[</span><span class="mi">0</span><span class="p">]</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">params</span><span class="o">.</span><span class="n">keys</span><span class="p">():</span> 
+                <span class="bp">self</span><span class="o">.</span><span class="n">fixed</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">item</span><span class="p">)</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">fixed</span><span class="o">.</span><span class="n">sort</span><span class="p">()</span>
+
+<div class="viewcode-block" id="SphericalSLDModel.run"><a class="viewcode-back" href="../../../dev/api/sas.models.html#sas.models.SphericalSLDModel.SphericalSLDModel.run">[docs]</a>    <span class="k">def</span> <span class="nf">run</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">x</span> <span class="o">=</span> <span class="mf">0.0</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot; </span>
+<span class="sd">        Evaluate the model</span>
+<span class="sd">        </span>
+<span class="sd">        :param x: input q, or [q,phi]</span>
+<span class="sd">        </span>
+<span class="sd">        :return: scattering function P(q)</span>
+<span class="sd">        </span>
+<span class="sd">        &quot;&quot;&quot;</span>
+
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">model</span><span class="o">.</span><span class="n">run</span><span class="p">(</span><span class="n">x</span><span class="p">)</span>
+</div>
+<div class="viewcode-block" id="SphericalSLDModel.runXY"><a class="viewcode-back" href="../../../dev/api/sas.models.html#sas.models.SphericalSLDModel.SphericalSLDModel.runXY">[docs]</a>    <span class="k">def</span> <span class="nf">runXY</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">x</span> <span class="o">=</span> <span class="mf">0.0</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot; </span>
+<span class="sd">        Evaluate the model</span>
+<span class="sd">        </span>
+<span class="sd">        : param x: input q-value (float or [float, float] as [qx, qy])</span>
+<span class="sd">        : return: scattering function value</span>
+<span class="sd">        &quot;&quot;&quot;</span>  
+
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">model</span><span class="o">.</span><span class="n">runXY</span><span class="p">(</span><span class="n">x</span><span class="p">)</span>
+    
+    <span class="c">## Now (May27,10) directly uses the model eval function </span>
+    <span class="c">## instead of the for-loop in Base Component.</span></div>
+<div class="viewcode-block" id="SphericalSLDModel.evalDistribution"><a class="viewcode-back" href="../../../dev/api/sas.models.html#sas.models.SphericalSLDModel.SphericalSLDModel.evalDistribution">[docs]</a>    <span class="k">def</span> <span class="nf">evalDistribution</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">x</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot; </span>
+<span class="sd">        Evaluate the model in cartesian coordinates</span>
+<span class="sd">        </span>
+<span class="sd">        : param x: input q[], or [qx[], qy[]]</span>
+<span class="sd">        : return: scattering function P(q[])</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="c"># set effective radius and scaling factor before run</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">model</span><span class="o">.</span><span class="n">evalDistribution</span><span class="p">(</span><span class="n">x</span><span class="p">)</span>
+    </div>
+<div class="viewcode-block" id="SphericalSLDModel.calculate_ER"><a class="viewcode-back" href="../../../dev/api/sas.models.html#sas.models.SphericalSLDModel.SphericalSLDModel.calculate_ER">[docs]</a>    <span class="k">def</span> <span class="nf">calculate_ER</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">model</span><span class="o">.</span><span class="n">calculate_ER</span><span class="p">()</span>
+    </div>
+<div class="viewcode-block" id="SphericalSLDModel.set_dispersion"><a class="viewcode-back" href="../../../dev/api/sas.models.html#sas.models.SphericalSLDModel.SphericalSLDModel.set_dispersion">[docs]</a>    <span class="k">def</span> <span class="nf">set_dispersion</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">parameter</span><span class="p">,</span> <span class="n">dispersion</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Set the dispersion object for a model parameter</span>
+<span class="sd">        </span>
+<span class="sd">        : param parameter: name of the parameter [string]</span>
+<span class="sd">        :dispersion: dispersion object of type DispersionModel</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">value</span> <span class="o">=</span> <span class="bp">None</span>
+        <span class="k">if</span> <span class="n">parameter</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">model</span><span class="o">.</span><span class="n">dispersion</span><span class="o">.</span><span class="n">keys</span><span class="p">():</span>
+            <span class="n">value</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">model</span><span class="o">.</span><span class="n">set_dispersion</span><span class="p">(</span><span class="n">parameter</span><span class="p">,</span> <span class="n">dispersion</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_set_dispersion</span><span class="p">()</span>
+        <span class="k">return</span> <span class="n">value</span></div></div>
+</pre></div>
+
+          </div>
+        </div>
+      </div>
+      <div class="sphinxsidebar" role="navigation" aria-label="main navigation">
+        <div class="sphinxsidebarwrapper">
+<div id="searchbox" style="display: none" role="search">
+  <h3>Quick search</h3>
+    <form class="search" action="../../../search.html" method="get">
+      <input type="text" name="q" />
+      <input type="submit" value="Go" />
+      <input type="hidden" name="check_keywords" value="yes" />
+      <input type="hidden" name="area" value="default" />
+    </form>
+    <p class="searchtip" style="font-size: 90%">
+    Enter search terms or a module, class or function name.
+    </p>
+</div>
+<script type="text/javascript">$('#searchbox').show(0);</script>
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="related" role="navigation" aria-label="related navigation">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="../../../genindex.html" title="General Index"
+             >index</a></li>
+        <li class="right" >
+          <a href="../../../py-modindex.html" title="Python Module Index"
+             >modules</a> |</li>
+        <li class="nav-item nav-item-0"><a href="../../../index.html">SasView 3.1.0 documentation</a> &raquo;</li>
+          <li class="nav-item nav-item-1"><a href="../../index.html" >Module code</a> &raquo;</li>
+          <li class="nav-item nav-item-2"><a href="../models.html" >sas.models</a> &raquo;</li> 
+      </ul>
+    </div>
+    <div class="footer" role="contentinfo">
+        &copy; Copyright 2015, The SasView Project.
+      Created using <a href="http://sphinx-doc.org/">Sphinx</a> 1.3.1.
+    </div>
+  </body>
+</html>

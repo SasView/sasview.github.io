@@ -1,0 +1,624 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+  "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+    
+    <title>sas.perspectives.pr.inversion_state &mdash; SasView 3.1.0 documentation</title>
+    
+    <link rel="stylesheet" href="../../../../_static/classic.css" type="text/css" />
+    <link rel="stylesheet" href="../../../../_static/pygments.css" type="text/css" />
+    
+    <script type="text/javascript">
+      var DOCUMENTATION_OPTIONS = {
+        URL_ROOT:    '../../../../',
+        VERSION:     '3.1.0',
+        COLLAPSE_INDEX: false,
+        FILE_SUFFIX: '.html',
+        HAS_SOURCE:  true
+      };
+    </script>
+    <script type="text/javascript" src="../../../../_static/jquery.js"></script>
+    <script type="text/javascript" src="../../../../_static/underscore.js"></script>
+    <script type="text/javascript" src="../../../../_static/doctools.js"></script>
+    <script type="text/javascript" src="https://cdn.mathjax.org/mathjax/latest/MathJax.js?config=TeX-AMS-MML_HTMLorMML"></script>
+    <link rel="top" title="SasView 3.1.0 documentation" href="../../../../index.html" />
+    <link rel="up" title="Module code" href="../../../index.html" /> 
+  </head>
+  <body role="document">
+    <div class="related" role="navigation" aria-label="related navigation">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="../../../../genindex.html" title="General Index"
+             accesskey="I">index</a></li>
+        <li class="right" >
+          <a href="../../../../py-modindex.html" title="Python Module Index"
+             >modules</a> |</li>
+        <li class="nav-item nav-item-0"><a href="../../../../index.html">SasView 3.1.0 documentation</a> &raquo;</li>
+          <li class="nav-item nav-item-1"><a href="../../../index.html" accesskey="U">Module code</a> &raquo;</li> 
+      </ul>
+    </div>  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          <div class="body" role="main">
+            
+  <h1>Source code for sas.perspectives.pr.inversion_state</h1><div class="highlight"><pre>
+<span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Handling of P(r) inversion states</span>
+<span class="sd">&quot;&quot;&quot;</span>
+<span class="c">################################################################################</span>
+<span class="c">#This software was developed by the University of Tennessee as part of the</span>
+<span class="c">#Distributed Data Analysis of Neutron Scattering Experiments (DANSE)</span>
+<span class="c">#project funded by the US National Science Foundation.</span>
+<span class="c">#</span>
+<span class="c">#See the license text in license.txt</span>
+<span class="c">#</span>
+<span class="c">#copyright 2009, University of Tennessee</span>
+<span class="c">################################################################################</span>
+
+
+<span class="kn">import</span> <span class="nn">time</span>
+<span class="kn">import</span> <span class="nn">os</span>
+<span class="kn">import</span> <span class="nn">sys</span>
+<span class="kn">import</span> <span class="nn">logging</span>
+<span class="kn">from</span> <span class="nn">lxml</span> <span class="kn">import</span> <span class="n">etree</span>
+<span class="kn">from</span> <span class="nn">sas.guiframe.dataFitting</span> <span class="kn">import</span> <span class="n">Data1D</span>
+<span class="kn">from</span> <span class="nn">sas.dataloader.readers.cansas_reader</span> <span class="kn">import</span> <span class="n">Reader</span> <span class="k">as</span> <span class="n">CansasReader</span>
+<span class="kn">from</span> <span class="nn">sas.dataloader.readers.cansas_reader</span> <span class="kn">import</span> <span class="n">get_content</span>
+
+<span class="n">PRNODE_NAME</span> <span class="o">=</span> <span class="s">&#39;pr_inversion&#39;</span>
+<span class="n">CANSAS_NS</span> <span class="o">=</span> <span class="s">&quot;cansas1d/1.0&quot;</span>
+
+<span class="c"># Translation of names between stored and object data</span>
+<span class="c">## List of P(r) inversion inputs</span>
+<span class="n">in_list</span> <span class="o">=</span> <span class="p">[[</span><span class="s">&quot;nterms&quot;</span><span class="p">,</span> <span class="s">&quot;nfunc&quot;</span><span class="p">],</span>
+           <span class="p">[</span><span class="s">&quot;d_max&quot;</span><span class="p">,</span> <span class="s">&quot;d_max&quot;</span><span class="p">],</span>
+           <span class="p">[</span><span class="s">&quot;alpha&quot;</span><span class="p">,</span> <span class="s">&quot;alpha&quot;</span><span class="p">],</span>
+           <span class="p">[</span><span class="s">&quot;slit_width&quot;</span><span class="p">,</span> <span class="s">&quot;width&quot;</span><span class="p">],</span>
+           <span class="p">[</span><span class="s">&quot;slit_height&quot;</span><span class="p">,</span> <span class="s">&quot;height&quot;</span><span class="p">],</span>
+           <span class="p">[</span><span class="s">&quot;qmin&quot;</span><span class="p">,</span> <span class="s">&quot;qmin&quot;</span><span class="p">],</span>
+           <span class="p">[</span><span class="s">&quot;qmax&quot;</span><span class="p">,</span> <span class="s">&quot;qmax&quot;</span><span class="p">],</span>
+           <span class="p">[</span><span class="s">&quot;estimate_bck&quot;</span><span class="p">,</span> <span class="s">&quot;estimate_bck&quot;</span><span class="p">]]</span>
+
+<span class="c">## List of P(r) inversion outputs</span>
+<span class="n">out_list</span> <span class="o">=</span> <span class="p">[[</span><span class="s">&quot;elapsed&quot;</span><span class="p">,</span> <span class="s">&quot;elapsed&quot;</span><span class="p">],</span>
+            <span class="p">[</span><span class="s">&quot;rg&quot;</span><span class="p">,</span> <span class="s">&quot;rg&quot;</span><span class="p">],</span>
+            <span class="p">[</span><span class="s">&quot;iq0&quot;</span><span class="p">,</span> <span class="s">&quot;iq0&quot;</span><span class="p">],</span>
+            <span class="p">[</span><span class="s">&quot;bck&quot;</span><span class="p">,</span> <span class="s">&quot;bck&quot;</span><span class="p">],</span>
+            <span class="p">[</span><span class="s">&quot;chi2&quot;</span><span class="p">,</span> <span class="s">&quot;chi2&quot;</span><span class="p">],</span>
+            <span class="p">[</span><span class="s">&quot;osc&quot;</span><span class="p">,</span> <span class="s">&quot;osc&quot;</span><span class="p">],</span>
+            <span class="p">[</span><span class="s">&quot;pos&quot;</span><span class="p">,</span> <span class="s">&quot;pos&quot;</span><span class="p">],</span>
+            <span class="p">[</span><span class="s">&quot;pos_err&quot;</span><span class="p">,</span> <span class="s">&quot;pos_err&quot;</span><span class="p">],</span>
+            <span class="p">[</span><span class="s">&quot;alpha_estimate&quot;</span><span class="p">,</span> <span class="s">&quot;alpha_estimate&quot;</span><span class="p">],</span>
+            <span class="p">[</span><span class="s">&quot;nterms_estimate&quot;</span><span class="p">,</span> <span class="s">&quot;nterms_estimate&quot;</span><span class="p">]]</span>
+
+<div class="viewcode-block" id="InversionState"><a class="viewcode-back" href="../../../../dev/api/sas.perspectives.pr.html#sas.perspectives.pr.inversion_state.InversionState">[docs]</a><span class="k">class</span> <span class="nc">InversionState</span><span class="p">(</span><span class="nb">object</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Class to hold the state information of the InversionControl panel.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Default values</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="c"># Input</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">file</span> <span class="o">=</span> <span class="bp">None</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">estimate_bck</span> <span class="o">=</span> <span class="bp">False</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">timestamp</span> <span class="o">=</span> <span class="n">time</span><span class="o">.</span><span class="n">time</span><span class="p">()</span>
+
+        <span class="c"># Inversion parameters</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">nfunc</span> <span class="o">=</span> <span class="bp">None</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">d_max</span> <span class="o">=</span> <span class="bp">None</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">alpha</span> <span class="o">=</span> <span class="bp">None</span>
+
+        <span class="c"># Slit parameters</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">height</span> <span class="o">=</span> <span class="bp">None</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">width</span> <span class="o">=</span> <span class="bp">None</span>
+
+        <span class="c"># Q range</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">qmin</span> <span class="o">=</span> <span class="bp">None</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">qmax</span> <span class="o">=</span> <span class="bp">None</span>
+
+        <span class="c"># Outputs</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">elapsed</span> <span class="o">=</span> <span class="bp">None</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">rg</span> <span class="o">=</span> <span class="bp">None</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">iq0</span> <span class="o">=</span> <span class="bp">None</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">bck</span> <span class="o">=</span> <span class="bp">None</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">chi2</span> <span class="o">=</span> <span class="bp">None</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">osc</span> <span class="o">=</span> <span class="bp">None</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">pos</span> <span class="o">=</span> <span class="bp">None</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">pos_err</span> <span class="o">=</span> <span class="bp">None</span>
+
+        <span class="c"># Estimates</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">alpha_estimate</span> <span class="o">=</span> <span class="bp">None</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">nterms_estimate</span> <span class="o">=</span> <span class="bp">None</span>
+
+        <span class="c"># Data</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">q</span> <span class="o">=</span> <span class="bp">None</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">iq_obs</span> <span class="o">=</span> <span class="bp">None</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">iq_calc</span> <span class="o">=</span> <span class="bp">None</span>
+
+        <span class="c"># Coefficients</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">coefficients</span> <span class="o">=</span> <span class="bp">None</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">covariance</span> <span class="o">=</span> <span class="bp">None</span>
+
+    <span class="k">def</span> <span class="nf">__str__</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Pretty print</span>
+
+<span class="sd">        :return: string representing the state</span>
+
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">state</span> <span class="o">=</span> <span class="s">&quot;File:         </span><span class="si">%s</span><span class="se">\n</span><span class="s">&quot;</span> <span class="o">%</span> <span class="bp">self</span><span class="o">.</span><span class="n">file</span>
+        <span class="n">state</span> <span class="o">+=</span> <span class="s">&quot;Timestamp:    </span><span class="si">%s</span><span class="se">\n</span><span class="s">&quot;</span> <span class="o">%</span> <span class="bp">self</span><span class="o">.</span><span class="n">timestamp</span>
+        <span class="n">state</span> <span class="o">+=</span> <span class="s">&quot;Estimate bck: </span><span class="si">%s</span><span class="se">\n</span><span class="s">&quot;</span> <span class="o">%</span> <span class="nb">str</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">estimate_bck</span><span class="p">)</span>
+        <span class="n">state</span> <span class="o">+=</span> <span class="s">&quot;No. terms:    </span><span class="si">%s</span><span class="se">\n</span><span class="s">&quot;</span> <span class="o">%</span> <span class="nb">str</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">nfunc</span><span class="p">)</span>
+        <span class="n">state</span> <span class="o">+=</span> <span class="s">&quot;D_max:        </span><span class="si">%s</span><span class="se">\n</span><span class="s">&quot;</span> <span class="o">%</span> <span class="nb">str</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">d_max</span><span class="p">)</span>
+        <span class="n">state</span> <span class="o">+=</span> <span class="s">&quot;Alpha:        </span><span class="si">%s</span><span class="se">\n</span><span class="s">&quot;</span> <span class="o">%</span> <span class="nb">str</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">alpha</span><span class="p">)</span>
+
+        <span class="n">state</span> <span class="o">+=</span> <span class="s">&quot;Slit height:  </span><span class="si">%s</span><span class="se">\n</span><span class="s">&quot;</span> <span class="o">%</span> <span class="nb">str</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">height</span><span class="p">)</span>
+        <span class="n">state</span> <span class="o">+=</span> <span class="s">&quot;Slit width:   </span><span class="si">%s</span><span class="se">\n</span><span class="s">&quot;</span> <span class="o">%</span> <span class="nb">str</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">width</span><span class="p">)</span>
+
+        <span class="n">state</span> <span class="o">+=</span> <span class="s">&quot;Qmin:         </span><span class="si">%s</span><span class="se">\n</span><span class="s">&quot;</span> <span class="o">%</span> <span class="nb">str</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">qmin</span><span class="p">)</span>
+        <span class="n">state</span> <span class="o">+=</span> <span class="s">&quot;Qmax:         </span><span class="si">%s</span><span class="se">\n</span><span class="s">&quot;</span> <span class="o">%</span> <span class="nb">str</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">qmax</span><span class="p">)</span>
+
+        <span class="n">state</span> <span class="o">+=</span> <span class="s">&quot;</span><span class="se">\n</span><span class="s">Estimates:</span><span class="se">\n</span><span class="s">&quot;</span>
+        <span class="n">state</span> <span class="o">+=</span> <span class="s">&quot;  Alpha:      </span><span class="si">%s</span><span class="se">\n</span><span class="s">&quot;</span> <span class="o">%</span> <span class="nb">str</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">alpha_estimate</span><span class="p">)</span>
+        <span class="n">state</span> <span class="o">+=</span> <span class="s">&quot;  Nterms:     </span><span class="si">%s</span><span class="se">\n</span><span class="s">&quot;</span> <span class="o">%</span> <span class="nb">str</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">nterms_estimate</span><span class="p">)</span>
+
+        <span class="n">state</span> <span class="o">+=</span> <span class="s">&quot;</span><span class="se">\n</span><span class="s">Outputs:</span><span class="se">\n</span><span class="s">&quot;</span>
+        <span class="n">state</span> <span class="o">+=</span> <span class="s">&quot;  Elapsed:    </span><span class="si">%s</span><span class="se">\n</span><span class="s">&quot;</span> <span class="o">%</span> <span class="nb">str</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">elapsed</span><span class="p">)</span>
+        <span class="n">state</span> <span class="o">+=</span> <span class="s">&quot;  Rg:         </span><span class="si">%s</span><span class="se">\n</span><span class="s">&quot;</span> <span class="o">%</span> <span class="nb">str</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">rg</span><span class="p">)</span>
+        <span class="n">state</span> <span class="o">+=</span> <span class="s">&quot;  I(q=0):     </span><span class="si">%s</span><span class="se">\n</span><span class="s">&quot;</span> <span class="o">%</span> <span class="nb">str</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">iq0</span><span class="p">)</span>
+        <span class="n">state</span> <span class="o">+=</span> <span class="s">&quot;  Bck:        </span><span class="si">%s</span><span class="se">\n</span><span class="s">&quot;</span> <span class="o">%</span> <span class="nb">str</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">bck</span><span class="p">)</span>
+        <span class="n">state</span> <span class="o">+=</span> <span class="s">&quot;  Chi^2:      </span><span class="si">%s</span><span class="se">\n</span><span class="s">&quot;</span> <span class="o">%</span> <span class="nb">str</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">chi2</span><span class="p">)</span>
+        <span class="n">state</span> <span class="o">+=</span> <span class="s">&quot;  Oscillation:</span><span class="si">%s</span><span class="se">\n</span><span class="s">&quot;</span> <span class="o">%</span> <span class="nb">str</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">osc</span><span class="p">)</span>
+        <span class="n">state</span> <span class="o">+=</span> <span class="s">&quot;  Positive:   </span><span class="si">%s</span><span class="se">\n</span><span class="s">&quot;</span> <span class="o">%</span> <span class="nb">str</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">pos</span><span class="p">)</span>
+        <span class="n">state</span> <span class="o">+=</span> <span class="s">&quot;  1-sigma pos:</span><span class="si">%s</span><span class="se">\n</span><span class="s">&quot;</span> <span class="o">%</span> <span class="nb">str</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">pos_err</span><span class="p">)</span>
+
+        <span class="k">return</span> <span class="n">state</span>
+
+<div class="viewcode-block" id="InversionState.toXML"><a class="viewcode-back" href="../../../../dev/api/sas.perspectives.pr.html#sas.perspectives.pr.inversion_state.InversionState.toXML">[docs]</a>    <span class="k">def</span> <span class="nf">toXML</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="nb">file</span><span class="o">=</span><span class="s">&quot;pr_state.prv&quot;</span><span class="p">,</span> <span class="n">doc</span><span class="o">=</span><span class="bp">None</span><span class="p">,</span> <span class="n">entry_node</span><span class="o">=</span><span class="bp">None</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Writes the state of the InversionControl panel to file, as XML.</span>
+
+<span class="sd">        Compatible with standalone writing, or appending to an</span>
+<span class="sd">        already existing XML document. In that case, the XML document</span>
+<span class="sd">        is required. An optional entry node in the XML document</span>
+<span class="sd">        may also be given.</span>
+
+<span class="sd">        :param file: file to write to</span>
+<span class="sd">        :param doc: XML document object [optional]</span>
+<span class="sd">        :param entry_node: XML node within the XML document at which</span>
+<span class="sd">            we will append the data [optional]</span>
+
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="c">#TODO: Get this to work</span>
+        <span class="kn">from</span> <span class="nn">xml.dom.minidom</span> <span class="kn">import</span> <span class="n">getDOMImplementation</span>
+
+        <span class="c"># Check whether we have to write a standalone XML file</span>
+        <span class="k">if</span> <span class="n">doc</span> <span class="ow">is</span> <span class="bp">None</span><span class="p">:</span>
+            <span class="n">impl</span> <span class="o">=</span> <span class="n">getDOMImplementation</span><span class="p">()</span>
+
+            <span class="n">doc_type</span> <span class="o">=</span> <span class="n">impl</span><span class="o">.</span><span class="n">createDocumentType</span><span class="p">(</span><span class="n">PRNODE_NAME</span><span class="p">,</span> <span class="s">&quot;1.0&quot;</span><span class="p">,</span> <span class="s">&quot;1.0&quot;</span><span class="p">)</span>
+
+            <span class="n">newdoc</span> <span class="o">=</span> <span class="n">impl</span><span class="o">.</span><span class="n">createDocument</span><span class="p">(</span><span class="bp">None</span><span class="p">,</span> <span class="n">PRNODE_NAME</span><span class="p">,</span> <span class="n">doc_type</span><span class="p">)</span>
+            <span class="n">top_element</span> <span class="o">=</span> <span class="n">newdoc</span><span class="o">.</span><span class="n">documentElement</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="c"># We are appending to an existing document</span>
+            <span class="n">newdoc</span> <span class="o">=</span> <span class="n">doc</span>
+            <span class="n">top_element</span> <span class="o">=</span> <span class="n">newdoc</span><span class="o">.</span><span class="n">createElement</span><span class="p">(</span><span class="n">PRNODE_NAME</span><span class="p">)</span>
+            <span class="k">if</span> <span class="n">entry_node</span> <span class="ow">is</span> <span class="bp">None</span><span class="p">:</span>
+                <span class="n">newdoc</span><span class="o">.</span><span class="n">documentElement</span><span class="o">.</span><span class="n">appendChild</span><span class="p">(</span><span class="n">top_element</span><span class="p">)</span>
+            <span class="k">else</span><span class="p">:</span>
+                <span class="n">entry_node</span><span class="o">.</span><span class="n">appendChild</span><span class="p">(</span><span class="n">top_element</span><span class="p">)</span>
+
+        <span class="n">attr</span> <span class="o">=</span> <span class="n">newdoc</span><span class="o">.</span><span class="n">createAttribute</span><span class="p">(</span><span class="s">&quot;version&quot;</span><span class="p">)</span>
+        <span class="n">attr</span><span class="o">.</span><span class="n">nodeValue</span> <span class="o">=</span> <span class="s">&#39;1.0&#39;</span>
+        <span class="n">top_element</span><span class="o">.</span><span class="n">setAttributeNode</span><span class="p">(</span><span class="n">attr</span><span class="p">)</span>
+
+        <span class="c"># File name</span>
+        <span class="n">element</span> <span class="o">=</span> <span class="n">newdoc</span><span class="o">.</span><span class="n">createElement</span><span class="p">(</span><span class="s">&quot;filename&quot;</span><span class="p">)</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">file</span> <span class="ow">is</span> <span class="ow">not</span> <span class="bp">None</span><span class="p">:</span>
+            <span class="n">element</span><span class="o">.</span><span class="n">appendChild</span><span class="p">(</span><span class="n">newdoc</span><span class="o">.</span><span class="n">createTextNode</span><span class="p">(</span><span class="nb">str</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">file</span><span class="p">)))</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">element</span><span class="o">.</span><span class="n">appendChild</span><span class="p">(</span><span class="n">newdoc</span><span class="o">.</span><span class="n">createTextNode</span><span class="p">(</span><span class="nb">str</span><span class="p">(</span><span class="nb">file</span><span class="p">)))</span>
+        <span class="n">top_element</span><span class="o">.</span><span class="n">appendChild</span><span class="p">(</span><span class="n">element</span><span class="p">)</span>
+
+        <span class="n">element</span> <span class="o">=</span> <span class="n">newdoc</span><span class="o">.</span><span class="n">createElement</span><span class="p">(</span><span class="s">&quot;timestamp&quot;</span><span class="p">)</span>
+        <span class="n">element</span><span class="o">.</span><span class="n">appendChild</span><span class="p">(</span><span class="n">newdoc</span><span class="o">.</span><span class="n">createTextNode</span><span class="p">(</span><span class="n">time</span><span class="o">.</span><span class="n">ctime</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">timestamp</span><span class="p">)))</span>
+        <span class="n">attr</span> <span class="o">=</span> <span class="n">newdoc</span><span class="o">.</span><span class="n">createAttribute</span><span class="p">(</span><span class="s">&quot;epoch&quot;</span><span class="p">)</span>
+        <span class="n">attr</span><span class="o">.</span><span class="n">nodeValue</span> <span class="o">=</span> <span class="nb">str</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">timestamp</span><span class="p">)</span>
+        <span class="n">element</span><span class="o">.</span><span class="n">setAttributeNode</span><span class="p">(</span><span class="n">attr</span><span class="p">)</span>
+        <span class="n">top_element</span><span class="o">.</span><span class="n">appendChild</span><span class="p">(</span><span class="n">element</span><span class="p">)</span>
+
+        <span class="c"># Inputs</span>
+        <span class="n">inputs</span> <span class="o">=</span> <span class="n">newdoc</span><span class="o">.</span><span class="n">createElement</span><span class="p">(</span><span class="s">&quot;inputs&quot;</span><span class="p">)</span>
+        <span class="n">top_element</span><span class="o">.</span><span class="n">appendChild</span><span class="p">(</span><span class="n">inputs</span><span class="p">)</span>
+
+        <span class="k">for</span> <span class="n">item</span> <span class="ow">in</span> <span class="n">in_list</span><span class="p">:</span>
+            <span class="n">element</span> <span class="o">=</span> <span class="n">newdoc</span><span class="o">.</span><span class="n">createElement</span><span class="p">(</span><span class="n">item</span><span class="p">[</span><span class="mi">0</span><span class="p">])</span>
+            <span class="n">element</span><span class="o">.</span><span class="n">appendChild</span><span class="p">(</span><span class="n">newdoc</span><span class="o">.</span><span class="n">createTextNode</span><span class="p">(</span><span class="nb">str</span><span class="p">(</span><span class="nb">getattr</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">item</span><span class="p">[</span><span class="mi">1</span><span class="p">]))))</span>
+            <span class="n">inputs</span><span class="o">.</span><span class="n">appendChild</span><span class="p">(</span><span class="n">element</span><span class="p">)</span>
+
+        <span class="c"># Outputs</span>
+        <span class="n">outputs</span> <span class="o">=</span> <span class="n">newdoc</span><span class="o">.</span><span class="n">createElement</span><span class="p">(</span><span class="s">&quot;outputs&quot;</span><span class="p">)</span>
+        <span class="n">top_element</span><span class="o">.</span><span class="n">appendChild</span><span class="p">(</span><span class="n">outputs</span><span class="p">)</span>
+
+        <span class="k">for</span> <span class="n">item</span> <span class="ow">in</span> <span class="n">out_list</span><span class="p">:</span>
+            <span class="n">element</span> <span class="o">=</span> <span class="n">newdoc</span><span class="o">.</span><span class="n">createElement</span><span class="p">(</span><span class="n">item</span><span class="p">[</span><span class="mi">0</span><span class="p">])</span>
+            <span class="n">element</span><span class="o">.</span><span class="n">appendChild</span><span class="p">(</span><span class="n">newdoc</span><span class="o">.</span><span class="n">createTextNode</span><span class="p">(</span><span class="nb">str</span><span class="p">(</span><span class="nb">getattr</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">item</span><span class="p">[</span><span class="mi">1</span><span class="p">]))))</span>
+            <span class="n">outputs</span><span class="o">.</span><span class="n">appendChild</span><span class="p">(</span><span class="n">element</span><span class="p">)</span>
+
+        <span class="c"># Save output coefficients and its covariance matrix</span>
+        <span class="n">element</span> <span class="o">=</span> <span class="n">newdoc</span><span class="o">.</span><span class="n">createElement</span><span class="p">(</span><span class="s">&quot;coefficients&quot;</span><span class="p">)</span>
+        <span class="n">element</span><span class="o">.</span><span class="n">appendChild</span><span class="p">(</span><span class="n">newdoc</span><span class="o">.</span><span class="n">createTextNode</span><span class="p">(</span><span class="nb">str</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">coefficients</span><span class="p">)))</span>
+        <span class="n">outputs</span><span class="o">.</span><span class="n">appendChild</span><span class="p">(</span><span class="n">element</span><span class="p">)</span>
+        <span class="n">element</span> <span class="o">=</span> <span class="n">newdoc</span><span class="o">.</span><span class="n">createElement</span><span class="p">(</span><span class="s">&quot;covariance&quot;</span><span class="p">)</span>
+        <span class="n">element</span><span class="o">.</span><span class="n">appendChild</span><span class="p">(</span><span class="n">newdoc</span><span class="o">.</span><span class="n">createTextNode</span><span class="p">(</span><span class="nb">str</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">covariance</span><span class="p">)))</span>
+        <span class="n">outputs</span><span class="o">.</span><span class="n">appendChild</span><span class="p">(</span><span class="n">element</span><span class="p">)</span>
+
+        <span class="c"># Save the file</span>
+        <span class="k">if</span> <span class="n">doc</span> <span class="ow">is</span> <span class="bp">None</span><span class="p">:</span>
+            <span class="n">fd</span> <span class="o">=</span> <span class="nb">open</span><span class="p">(</span><span class="nb">file</span><span class="p">,</span> <span class="s">&#39;w&#39;</span><span class="p">)</span>
+            <span class="n">fd</span><span class="o">.</span><span class="n">write</span><span class="p">(</span><span class="n">newdoc</span><span class="o">.</span><span class="n">toprettyxml</span><span class="p">())</span>
+            <span class="n">fd</span><span class="o">.</span><span class="n">close</span><span class="p">()</span>
+            <span class="k">return</span> <span class="bp">None</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="k">return</span> <span class="n">newdoc</span>
+</div>
+<div class="viewcode-block" id="InversionState.fromXML"><a class="viewcode-back" href="../../../../dev/api/sas.perspectives.pr.html#sas.perspectives.pr.inversion_state.InversionState.fromXML">[docs]</a>    <span class="k">def</span> <span class="nf">fromXML</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="nb">file</span><span class="o">=</span><span class="bp">None</span><span class="p">,</span> <span class="n">node</span><span class="o">=</span><span class="bp">None</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Load a P(r) inversion state from a file</span>
+
+<span class="sd">        :param file: .prv file</span>
+<span class="sd">        :param node: node of a XML document to read from</span>
+
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">if</span> <span class="nb">file</span> <span class="ow">is</span> <span class="ow">not</span> <span class="bp">None</span><span class="p">:</span>
+            <span class="n">msg</span> <span class="o">=</span> <span class="s">&quot;InversionState no longer supports non-CanSAS&quot;</span>
+            <span class="n">msg</span> <span class="o">+=</span> <span class="s">&quot; format for P(r) files&quot;</span>
+            <span class="k">raise</span> <span class="ne">RuntimeError</span><span class="p">,</span> <span class="n">msg</span>
+
+        <span class="k">if</span> <span class="n">node</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s">&#39;version&#39;</span><span class="p">)</span> <span class="ow">and</span> <span class="n">node</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s">&#39;version&#39;</span><span class="p">)</span> <span class="o">==</span> <span class="s">&#39;1.0&#39;</span><span class="p">:</span>
+
+            <span class="c"># Get file name</span>
+            <span class="n">entry</span> <span class="o">=</span> <span class="n">get_content</span><span class="p">(</span><span class="s">&#39;ns:filename&#39;</span><span class="p">,</span> <span class="n">node</span><span class="p">)</span>
+            <span class="k">if</span> <span class="n">entry</span> <span class="ow">is</span> <span class="ow">not</span> <span class="bp">None</span><span class="p">:</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">file</span> <span class="o">=</span> <span class="n">entry</span><span class="o">.</span><span class="n">text</span><span class="o">.</span><span class="n">strip</span><span class="p">()</span>
+
+            <span class="c"># Get time stamp</span>
+            <span class="n">entry</span> <span class="o">=</span> <span class="n">get_content</span><span class="p">(</span><span class="s">&#39;ns:timestamp&#39;</span><span class="p">,</span> <span class="n">node</span><span class="p">)</span>
+            <span class="k">if</span> <span class="n">entry</span> <span class="ow">is</span> <span class="ow">not</span> <span class="bp">None</span> <span class="ow">and</span> <span class="n">entry</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s">&#39;epoch&#39;</span><span class="p">):</span>
+                <span class="k">try</span><span class="p">:</span>
+                    <span class="bp">self</span><span class="o">.</span><span class="n">timestamp</span> <span class="o">=</span> <span class="nb">float</span><span class="p">(</span><span class="n">entry</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s">&#39;epoch&#39;</span><span class="p">))</span>
+                <span class="k">except</span><span class="p">:</span>
+                    <span class="n">msg</span> <span class="o">=</span> <span class="s">&quot;InversionState.fromXML: Could not read &quot;</span>
+                    <span class="n">msg</span> <span class="o">+=</span> <span class="s">&quot;timestamp</span><span class="se">\n</span><span class="s"> </span><span class="si">%s</span><span class="s">&quot;</span> <span class="o">%</span> <span class="n">sys</span><span class="o">.</span><span class="n">exc_value</span>
+                    <span class="n">logging</span><span class="o">.</span><span class="n">error</span><span class="p">(</span><span class="n">msg</span><span class="p">)</span>
+
+            <span class="c"># Parse inversion inputs</span>
+            <span class="n">entry</span> <span class="o">=</span> <span class="n">get_content</span><span class="p">(</span><span class="s">&#39;ns:inputs&#39;</span><span class="p">,</span> <span class="n">node</span><span class="p">)</span>
+            <span class="k">if</span> <span class="n">entry</span> <span class="ow">is</span> <span class="ow">not</span> <span class="bp">None</span><span class="p">:</span>
+                <span class="k">for</span> <span class="n">item</span> <span class="ow">in</span> <span class="n">in_list</span><span class="p">:</span>
+                    <span class="n">input_field</span> <span class="o">=</span> <span class="n">get_content</span><span class="p">(</span><span class="s">&#39;ns:</span><span class="si">%s</span><span class="s">&#39;</span> <span class="o">%</span> <span class="n">item</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span> <span class="n">entry</span><span class="p">)</span>
+                    <span class="k">if</span> <span class="n">input_field</span> <span class="ow">is</span> <span class="ow">not</span> <span class="bp">None</span><span class="p">:</span>
+                        <span class="k">try</span><span class="p">:</span>
+                            <span class="nb">setattr</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">item</span><span class="p">[</span><span class="mi">1</span><span class="p">],</span> <span class="nb">float</span><span class="p">(</span><span class="n">input_field</span><span class="o">.</span><span class="n">text</span><span class="o">.</span><span class="n">strip</span><span class="p">()))</span>
+                        <span class="k">except</span><span class="p">:</span>
+                            <span class="nb">setattr</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">item</span><span class="p">[</span><span class="mi">1</span><span class="p">],</span> <span class="bp">None</span><span class="p">)</span>
+                <span class="n">input_field</span> <span class="o">=</span> <span class="n">get_content</span><span class="p">(</span><span class="s">&#39;ns:estimate_bck&#39;</span><span class="p">,</span> <span class="n">entry</span><span class="p">)</span>
+                <span class="k">if</span> <span class="n">input_field</span> <span class="ow">is</span> <span class="ow">not</span> <span class="bp">None</span><span class="p">:</span>
+                    <span class="k">try</span><span class="p">:</span>
+                        <span class="bp">self</span><span class="o">.</span><span class="n">estimate_bck</span> <span class="o">=</span> <span class="n">input_field</span><span class="o">.</span><span class="n">text</span><span class="o">.</span><span class="n">strip</span><span class="p">()</span> <span class="o">==</span> <span class="s">&#39;True&#39;</span>
+                    <span class="k">except</span><span class="p">:</span>
+                        <span class="bp">self</span><span class="o">.</span><span class="n">estimate_bck</span> <span class="o">=</span> <span class="bp">False</span>
+
+            <span class="c"># Parse inversion outputs</span>
+            <span class="n">entry</span> <span class="o">=</span> <span class="n">get_content</span><span class="p">(</span><span class="s">&#39;ns:outputs&#39;</span><span class="p">,</span> <span class="n">node</span><span class="p">)</span>
+            <span class="k">if</span> <span class="n">entry</span> <span class="ow">is</span> <span class="ow">not</span> <span class="bp">None</span><span class="p">:</span>
+                <span class="c"># Output parameters (scalars)</span>
+                <span class="k">for</span> <span class="n">item</span> <span class="ow">in</span> <span class="n">out_list</span><span class="p">:</span>
+                    <span class="n">input_field</span> <span class="o">=</span> <span class="n">get_content</span><span class="p">(</span><span class="s">&#39;ns:</span><span class="si">%s</span><span class="s">&#39;</span> <span class="o">%</span> <span class="n">item</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span> <span class="n">entry</span><span class="p">)</span>
+                    <span class="k">if</span> <span class="n">input_field</span> <span class="ow">is</span> <span class="ow">not</span> <span class="bp">None</span><span class="p">:</span>
+                        <span class="k">try</span><span class="p">:</span>
+                            <span class="nb">setattr</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">item</span><span class="p">[</span><span class="mi">1</span><span class="p">],</span> <span class="nb">float</span><span class="p">(</span><span class="n">input_field</span><span class="o">.</span><span class="n">text</span><span class="o">.</span><span class="n">strip</span><span class="p">()))</span>
+                        <span class="k">except</span><span class="p">:</span>
+                            <span class="nb">setattr</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">item</span><span class="p">[</span><span class="mi">1</span><span class="p">],</span> <span class="bp">None</span><span class="p">)</span>
+
+                <span class="c"># Look for coefficients</span>
+                <span class="c"># Format is [value, value, value, value]</span>
+                <span class="n">coeff</span> <span class="o">=</span> <span class="n">get_content</span><span class="p">(</span><span class="s">&#39;ns:coefficients&#39;</span><span class="p">,</span> <span class="n">entry</span><span class="p">)</span>
+                <span class="k">if</span> <span class="n">coeff</span> <span class="ow">is</span> <span class="ow">not</span> <span class="bp">None</span><span class="p">:</span>
+                    <span class="c"># Remove brackets</span>
+                    <span class="n">c_values</span> <span class="o">=</span> <span class="n">coeff</span><span class="o">.</span><span class="n">text</span><span class="o">.</span><span class="n">strip</span><span class="p">()</span><span class="o">.</span><span class="n">replace</span><span class="p">(</span><span class="s">&#39;[&#39;</span><span class="p">,</span> <span class="s">&#39;&#39;</span><span class="p">)</span>
+                    <span class="n">c_values</span> <span class="o">=</span> <span class="n">c_values</span><span class="o">.</span><span class="n">replace</span><span class="p">(</span><span class="s">&#39;]&#39;</span><span class="p">,</span> <span class="s">&#39;&#39;</span><span class="p">)</span>
+                    <span class="n">toks</span> <span class="o">=</span> <span class="n">c_values</span><span class="o">.</span><span class="n">split</span><span class="p">()</span>
+                    <span class="bp">self</span><span class="o">.</span><span class="n">coefficients</span> <span class="o">=</span> <span class="p">[]</span>
+                    <span class="k">for</span> <span class="n">c</span> <span class="ow">in</span> <span class="n">toks</span><span class="p">:</span>
+                        <span class="k">try</span><span class="p">:</span>
+                            <span class="bp">self</span><span class="o">.</span><span class="n">coefficients</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="nb">float</span><span class="p">(</span><span class="n">c</span><span class="p">))</span>
+                        <span class="k">except</span><span class="p">:</span>
+                            <span class="c"># Bad data, skip. We will count the number of </span>
+                            <span class="c"># coefficients at the very end and deal with </span>
+                            <span class="c"># inconsistencies then.</span>
+                            <span class="k">pass</span>
+                    <span class="c"># Sanity check</span>
+                    <span class="k">if</span> <span class="ow">not</span> <span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">coefficients</span><span class="p">)</span> <span class="o">==</span> <span class="bp">self</span><span class="o">.</span><span class="n">nfunc</span><span class="p">:</span>
+                        <span class="c"># Inconsistent number of coefficients.</span>
+                        <span class="c"># Don&#39;t keep the data.</span>
+                        <span class="n">err_msg</span> <span class="o">=</span> <span class="s">&quot;InversionState.fromXML: inconsistant &quot;</span>
+                        <span class="n">err_msg</span> <span class="o">+=</span> <span class="s">&quot;number of coefficients: &quot;</span>
+                        <span class="n">err_msg</span> <span class="o">+=</span> <span class="s">&quot;</span><span class="si">%d</span><span class="s"> </span><span class="si">%d</span><span class="s">&quot;</span> <span class="o">%</span> <span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">coefficients</span><span class="p">),</span>
+                                              <span class="bp">self</span><span class="o">.</span><span class="n">nfunc</span><span class="p">)</span>
+                        <span class="n">logging</span><span class="o">.</span><span class="n">error</span><span class="p">(</span><span class="n">err_msg</span><span class="p">)</span>
+                        <span class="bp">self</span><span class="o">.</span><span class="n">coefficients</span> <span class="o">=</span> <span class="bp">None</span>
+
+                <span class="c"># Look for covariance matrix</span>
+                <span class="c"># Format is [ [value, value], [value, value] ]</span>
+                <span class="n">coeff</span> <span class="o">=</span> <span class="n">get_content</span><span class="p">(</span><span class="s">&#39;ns:covariance&#39;</span><span class="p">,</span> <span class="n">entry</span><span class="p">)</span>
+                <span class="k">if</span> <span class="n">coeff</span> <span class="ow">is</span> <span class="ow">not</span> <span class="bp">None</span><span class="p">:</span>
+                    <span class="c"># Parse rows</span>
+                    <span class="n">rows</span> <span class="o">=</span> <span class="n">coeff</span><span class="o">.</span><span class="n">text</span><span class="o">.</span><span class="n">strip</span><span class="p">()</span><span class="o">.</span><span class="n">split</span><span class="p">(</span><span class="s">&#39;[&#39;</span><span class="p">)</span>
+                    <span class="bp">self</span><span class="o">.</span><span class="n">covariance</span> <span class="o">=</span> <span class="p">[]</span>
+                    <span class="k">for</span> <span class="n">row</span> <span class="ow">in</span> <span class="n">rows</span><span class="p">:</span>
+                        <span class="n">row</span> <span class="o">=</span> <span class="n">row</span><span class="o">.</span><span class="n">strip</span><span class="p">()</span>
+                        <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">row</span><span class="p">)</span> <span class="o">==</span> <span class="mi">0</span><span class="p">:</span> <span class="k">continue</span>
+                        <span class="c"># Remove end bracket</span>
+                        <span class="n">row</span> <span class="o">=</span> <span class="n">row</span><span class="o">.</span><span class="n">replace</span><span class="p">(</span><span class="s">&#39;]&#39;</span><span class="p">,</span> <span class="s">&#39;&#39;</span><span class="p">)</span>
+                        <span class="n">c_values</span> <span class="o">=</span> <span class="n">row</span><span class="o">.</span><span class="n">split</span><span class="p">()</span>
+                        <span class="n">cov_row</span> <span class="o">=</span> <span class="p">[]</span>
+                        <span class="k">for</span> <span class="n">c</span> <span class="ow">in</span> <span class="n">c_values</span><span class="p">:</span>
+                            <span class="k">try</span><span class="p">:</span>
+                                <span class="n">cov_row</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="nb">float</span><span class="p">(</span><span class="n">c</span><span class="p">))</span>
+                            <span class="k">except</span><span class="p">:</span>
+                                <span class="c"># Bad data, skip. We will count the number of </span>
+                                <span class="c"># coefficients at the very end and deal with </span>
+                                <span class="c"># inconsistencies then.</span>
+                                <span class="k">pass</span>
+                        <span class="c"># Sanity check: check the number of entries in the row</span>
+                        <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">cov_row</span><span class="p">)</span> <span class="o">==</span> <span class="bp">self</span><span class="o">.</span><span class="n">nfunc</span><span class="p">:</span>
+                            <span class="bp">self</span><span class="o">.</span><span class="n">covariance</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">cov_row</span><span class="p">)</span>
+                    <span class="c"># Sanity check: check the number of rows in the covariance</span>
+                    <span class="c"># matrix</span>
+                    <span class="k">if</span> <span class="ow">not</span> <span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">covariance</span><span class="p">)</span> <span class="o">==</span> <span class="bp">self</span><span class="o">.</span><span class="n">nfunc</span><span class="p">:</span>
+                        <span class="c"># Inconsistent dimensions of the covariance matrix.</span>
+                        <span class="c"># Don&#39;t keep the data.</span>
+                        <span class="n">err_msg</span> <span class="o">=</span> <span class="s">&quot;InversionState.fromXML: &quot;</span>
+                        <span class="n">err_msg</span> <span class="o">+=</span> <span class="s">&quot;inconsistant dimensions of the &quot;</span>
+                        <span class="n">err_msg</span> <span class="o">+=</span> <span class="s">&quot; covariance matrix: &quot;</span>
+                        <span class="n">err_msg</span> <span class="o">+=</span> <span class="s">&quot;</span><span class="si">%d</span><span class="s"> </span><span class="si">%d</span><span class="s">&quot;</span> <span class="o">%</span> <span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">covariance</span><span class="p">),</span> <span class="bp">self</span><span class="o">.</span><span class="n">nfunc</span><span class="p">)</span>
+                        <span class="n">logging</span><span class="o">.</span><span class="n">error</span><span class="p">(</span><span class="n">err_msg</span><span class="p">)</span>
+                        <span class="bp">self</span><span class="o">.</span><span class="n">covariance</span> <span class="o">=</span> <span class="bp">None</span>
+</div></div>
+<div class="viewcode-block" id="Reader"><a class="viewcode-back" href="../../../../dev/api/sas.perspectives.pr.html#sas.perspectives.pr.inversion_state.Reader">[docs]</a><span class="k">class</span> <span class="nc">Reader</span><span class="p">(</span><span class="n">CansasReader</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Class to load a .prv P(r) inversion file</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="c">## File type</span>
+    <span class="n">type_name</span> <span class="o">=</span> <span class="s">&quot;P(r)&quot;</span>
+
+    <span class="c">## Wildcards</span>
+    <span class="nb">type</span> <span class="o">=</span> <span class="p">[</span><span class="s">&quot;P(r) files (*.prv)|*.prv&quot;</span><span class="p">,</span>
+            <span class="s">&quot;SASView files (*.svs)|*.svs&quot;</span><span class="p">]</span>
+    <span class="c">## List of allowed extensions</span>
+    <span class="n">ext</span> <span class="o">=</span> <span class="p">[</span><span class="s">&#39;.prv&#39;</span><span class="p">,</span> <span class="s">&#39;.PRV&#39;</span><span class="p">,</span> <span class="s">&#39;.svs&#39;</span><span class="p">,</span> <span class="s">&#39;.SVS&#39;</span><span class="p">]</span>
+
+    <span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">call_back</span><span class="p">,</span> <span class="n">cansas</span><span class="o">=</span><span class="bp">True</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Initialize the call-back method to be called</span>
+<span class="sd">        after we load a file</span>
+
+<span class="sd">        :param call_back: call-back method</span>
+<span class="sd">        :param cansas:  True = files will be written/read in CanSAS format</span>
+<span class="sd">                        False = write CanSAS format</span>
+
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="c">## Call back method to be executed after a file is read</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">call_back</span> <span class="o">=</span> <span class="n">call_back</span>
+        <span class="c">## CanSAS format flag</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">cansas</span> <span class="o">=</span> <span class="n">cansas</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">state</span> <span class="o">=</span> <span class="bp">None</span>
+
+<div class="viewcode-block" id="Reader.read"><a class="viewcode-back" href="../../../../dev/api/sas.perspectives.pr.html#sas.perspectives.pr.inversion_state.Reader.read">[docs]</a>    <span class="k">def</span> <span class="nf">read</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">path</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Load a new P(r) inversion state from file</span>
+
+<span class="sd">        :param path: file path</span>
+
+<span class="sd">        :return: None</span>
+
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">cansas</span> <span class="o">==</span> <span class="bp">True</span><span class="p">:</span>
+            <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_read_cansas</span><span class="p">(</span><span class="n">path</span><span class="p">)</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_read_standalone</span><span class="p">(</span><span class="n">path</span><span class="p">)</span>
+</div>
+    <span class="k">def</span> <span class="nf">_read_standalone</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">path</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Load a new P(r) inversion state from file.</span>
+<span class="sd">        The P(r) node is assumed to be the top element.</span>
+
+<span class="sd">        :param path: file path</span>
+
+<span class="sd">        :return: None</span>
+
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="c"># Read the new state from file</span>
+        <span class="n">state</span> <span class="o">=</span> <span class="n">InversionState</span><span class="p">()</span>
+        <span class="n">state</span><span class="o">.</span><span class="n">fromXML</span><span class="p">(</span><span class="nb">file</span><span class="o">=</span><span class="n">path</span><span class="p">)</span>
+
+        <span class="c"># Call back to post the new state</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">state</span> <span class="o">=</span> <span class="n">state</span>
+        <span class="c">#self.call_back(state)</span>
+        <span class="k">return</span> <span class="bp">None</span>
+
+    <span class="k">def</span> <span class="nf">_parse_prstate</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">entry</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Read a p(r) inversion result from an XML node</span>
+
+<span class="sd">        :param entry: XML node to read from</span>
+
+<span class="sd">        :return: InversionState object</span>
+
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">state</span> <span class="o">=</span> <span class="bp">None</span>
+
+        <span class="c"># Locate the P(r) node</span>
+        <span class="k">try</span><span class="p">:</span>
+            <span class="n">nodes</span> <span class="o">=</span> <span class="n">entry</span><span class="o">.</span><span class="n">xpath</span><span class="p">(</span><span class="s">&#39;ns:</span><span class="si">%s</span><span class="s">&#39;</span> <span class="o">%</span> <span class="n">PRNODE_NAME</span><span class="p">,</span>
+                                <span class="n">namespaces</span><span class="o">=</span><span class="p">{</span><span class="s">&#39;ns&#39;</span><span class="p">:</span> <span class="n">CANSAS_NS</span><span class="p">})</span>
+            <span class="k">if</span> <span class="n">nodes</span> <span class="o">!=</span> <span class="p">[]:</span>
+                <span class="c"># Create an empty state</span>
+                <span class="n">state</span> <span class="o">=</span> <span class="n">InversionState</span><span class="p">()</span>
+                <span class="n">state</span><span class="o">.</span><span class="n">fromXML</span><span class="p">(</span><span class="n">node</span><span class="o">=</span><span class="n">nodes</span><span class="p">[</span><span class="mi">0</span><span class="p">])</span>
+        <span class="k">except</span><span class="p">:</span>
+            <span class="n">msg</span> <span class="o">=</span> <span class="s">&quot;XML document does not contain P(r) &quot;</span>
+            <span class="n">msg</span> <span class="o">+=</span> <span class="s">&quot;information.</span><span class="se">\n</span><span class="s"> </span><span class="si">%s</span><span class="s">&quot;</span> <span class="o">%</span> <span class="n">sys</span><span class="o">.</span><span class="n">exc_value</span>
+            <span class="n">logging</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="n">msg</span><span class="p">)</span>
+
+        <span class="k">return</span> <span class="n">state</span>
+
+    <span class="k">def</span> <span class="nf">_read_cansas</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">path</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Load data and P(r) information from a CanSAS XML file.</span>
+
+<span class="sd">        :param path: file path</span>
+
+<span class="sd">        :return: Data1D object if a single SASentry was found,</span>
+<span class="sd">                    or a list of Data1D objects if multiple entries were found,</span>
+<span class="sd">                    or None of nothing was found</span>
+
+<span class="sd">        :raise RuntimeError: when the file can&#39;t be opened</span>
+<span class="sd">        :raise ValueError: when the length of the data vectors are inconsistent</span>
+
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">output</span> <span class="o">=</span> <span class="p">[]</span>
+
+        <span class="k">if</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">isfile</span><span class="p">(</span><span class="n">path</span><span class="p">):</span>
+            <span class="n">basename</span> <span class="o">=</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">basename</span><span class="p">(</span><span class="n">path</span><span class="p">)</span>
+            <span class="n">root</span><span class="p">,</span> <span class="n">extension</span> <span class="o">=</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">splitext</span><span class="p">(</span><span class="n">basename</span><span class="p">)</span>
+            <span class="c">#TODO: eventually remove the check for .xml once</span>
+            <span class="c"># the P(r) writer/reader is truly complete.</span>
+            <span class="k">if</span>  <span class="n">extension</span><span class="o">.</span><span class="n">lower</span><span class="p">()</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">ext</span> <span class="ow">or</span> <span class="n">extension</span><span class="o">.</span><span class="n">lower</span><span class="p">()</span> <span class="o">==</span> <span class="s">&#39;.xml&#39;</span><span class="p">:</span>
+
+                <span class="n">tree</span> <span class="o">=</span> <span class="n">etree</span><span class="o">.</span><span class="n">parse</span><span class="p">(</span><span class="n">path</span><span class="p">,</span> <span class="n">parser</span><span class="o">=</span><span class="n">etree</span><span class="o">.</span><span class="n">ETCompatXMLParser</span><span class="p">())</span>
+                <span class="c"># Check the format version number</span>
+                <span class="c"># Specifying the namespace will take care of the file </span>
+                <span class="c">#format version </span>
+                <span class="n">root</span> <span class="o">=</span> <span class="n">tree</span><span class="o">.</span><span class="n">getroot</span><span class="p">()</span>
+
+                <span class="n">entry_list</span> <span class="o">=</span> <span class="n">root</span><span class="o">.</span><span class="n">xpath</span><span class="p">(</span><span class="s">&#39;/ns:SASroot/ns:SASentry&#39;</span><span class="p">,</span>
+                                        <span class="n">namespaces</span><span class="o">=</span><span class="p">{</span><span class="s">&#39;ns&#39;</span><span class="p">:</span> <span class="n">CANSAS_NS</span><span class="p">})</span>
+
+                <span class="k">for</span> <span class="n">entry</span> <span class="ow">in</span> <span class="n">entry_list</span><span class="p">:</span>
+                    <span class="n">sas_entry</span><span class="p">,</span> <span class="n">_</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_parse_entry</span><span class="p">(</span><span class="n">entry</span><span class="p">)</span>
+                    <span class="n">prstate</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_parse_prstate</span><span class="p">(</span><span class="n">entry</span><span class="p">)</span>
+                    <span class="c">#prstate could be None when .svs file is loaded</span>
+                    <span class="c">#in this case, skip appending to output</span>
+                    <span class="k">if</span> <span class="n">prstate</span> <span class="o">!=</span> <span class="bp">None</span><span class="p">:</span>
+                        <span class="n">sas_entry</span><span class="o">.</span><span class="n">meta_data</span><span class="p">[</span><span class="s">&#39;prstate&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="n">prstate</span>
+                        <span class="n">sas_entry</span><span class="o">.</span><span class="n">filename</span> <span class="o">=</span> <span class="n">prstate</span><span class="o">.</span><span class="n">file</span>
+                        <span class="n">output</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">sas_entry</span><span class="p">)</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="ne">RuntimeError</span><span class="p">,</span> <span class="s">&quot;</span><span class="si">%s</span><span class="s"> is not a file&quot;</span> <span class="o">%</span> <span class="n">path</span>
+
+        <span class="c"># Return output consistent with the loader&#39;s api</span>
+        <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">output</span><span class="p">)</span> <span class="o">==</span> <span class="mi">0</span><span class="p">:</span>
+            <span class="k">return</span> <span class="bp">None</span>
+        <span class="k">elif</span> <span class="nb">len</span><span class="p">(</span><span class="n">output</span><span class="p">)</span> <span class="o">==</span> <span class="mi">1</span><span class="p">:</span>
+            <span class="c"># Call back to post the new state</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">call_back</span><span class="p">(</span><span class="n">output</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">meta_data</span><span class="p">[</span><span class="s">&#39;prstate&#39;</span><span class="p">],</span> <span class="n">datainfo</span><span class="o">=</span><span class="n">output</span><span class="p">[</span><span class="mi">0</span><span class="p">])</span>
+            <span class="c">#self.state = output[0].meta_data[&#39;prstate&#39;]</span>
+            <span class="k">return</span> <span class="n">output</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="k">return</span> <span class="n">output</span>
+
+
+<div class="viewcode-block" id="Reader.write"><a class="viewcode-back" href="../../../../dev/api/sas.perspectives.pr.html#sas.perspectives.pr.inversion_state.Reader.write">[docs]</a>    <span class="k">def</span> <span class="nf">write</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">filename</span><span class="p">,</span> <span class="n">datainfo</span><span class="o">=</span><span class="bp">None</span><span class="p">,</span> <span class="n">prstate</span><span class="o">=</span><span class="bp">None</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Write the content of a Data1D as a CanSAS XML file</span>
+
+<span class="sd">        :param filename: name of the file to write</span>
+<span class="sd">        :param datainfo: Data1D object</span>
+<span class="sd">        :param prstate: InversionState object</span>
+
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="c"># Sanity check</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">cansas</span> <span class="o">==</span> <span class="bp">True</span><span class="p">:</span>
+            <span class="n">doc</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">write_toXML</span><span class="p">(</span><span class="n">datainfo</span><span class="p">,</span> <span class="n">prstate</span><span class="p">)</span>
+            <span class="c"># Write the XML document</span>
+            <span class="n">fd</span> <span class="o">=</span> <span class="nb">open</span><span class="p">(</span><span class="n">filename</span><span class="p">,</span> <span class="s">&#39;w&#39;</span><span class="p">)</span>
+            <span class="n">fd</span><span class="o">.</span><span class="n">write</span><span class="p">(</span><span class="n">doc</span><span class="o">.</span><span class="n">toprettyxml</span><span class="p">())</span>
+            <span class="n">fd</span><span class="o">.</span><span class="n">close</span><span class="p">()</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">prstate</span><span class="o">.</span><span class="n">toXML</span><span class="p">(</span><span class="nb">file</span><span class="o">=</span><span class="n">filename</span><span class="p">)</span>
+</div>
+<div class="viewcode-block" id="Reader.write_toXML"><a class="viewcode-back" href="../../../../dev/api/sas.perspectives.pr.html#sas.perspectives.pr.inversion_state.Reader.write_toXML">[docs]</a>    <span class="k">def</span> <span class="nf">write_toXML</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">datainfo</span><span class="o">=</span><span class="bp">None</span><span class="p">,</span> <span class="n">state</span><span class="o">=</span><span class="bp">None</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Write toXML, a helper for write()</span>
+
+<span class="sd">        : return: xml doc</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">if</span> <span class="n">datainfo</span> <span class="ow">is</span> <span class="bp">None</span><span class="p">:</span>
+            <span class="n">datainfo</span> <span class="o">=</span> <span class="n">Data1D</span><span class="p">(</span><span class="n">x</span><span class="o">=</span><span class="p">[],</span> <span class="n">y</span><span class="o">=</span><span class="p">[])</span>
+        <span class="k">elif</span> <span class="ow">not</span> <span class="nb">issubclass</span><span class="p">(</span><span class="n">datainfo</span><span class="o">.</span><span class="n">__class__</span><span class="p">,</span> <span class="n">Data1D</span><span class="p">):</span>
+            <span class="n">msg</span> <span class="o">=</span> <span class="s">&quot;The cansas writer expects a Data1D &quot;</span>
+            <span class="n">msg</span> <span class="o">+=</span> <span class="s">&quot;instance: </span><span class="si">%s</span><span class="s">&quot;</span> <span class="o">%</span> <span class="nb">str</span><span class="p">(</span><span class="n">datainfo</span><span class="o">.</span><span class="n">__class__</span><span class="o">.</span><span class="n">__name__</span><span class="p">)</span>
+            <span class="k">raise</span> <span class="ne">RuntimeError</span><span class="p">,</span> <span class="n">msg</span>
+
+        <span class="c"># Create basic XML document</span>
+        <span class="n">doc</span><span class="p">,</span> <span class="n">sasentry</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_to_xml_doc</span><span class="p">(</span><span class="n">datainfo</span><span class="p">)</span>
+
+        <span class="c"># Add the invariant information to the XML document</span>
+        <span class="k">if</span> <span class="n">state</span> <span class="ow">is</span> <span class="ow">not</span> <span class="bp">None</span><span class="p">:</span>
+            <span class="n">doc</span> <span class="o">=</span> <span class="n">state</span><span class="o">.</span><span class="n">toXML</span><span class="p">(</span><span class="n">doc</span><span class="o">=</span><span class="n">doc</span><span class="p">,</span> <span class="n">entry_node</span><span class="o">=</span><span class="n">sasentry</span><span class="p">)</span>
+
+        <span class="k">return</span> <span class="n">doc</span></div></div>
+</pre></div>
+
+          </div>
+        </div>
+      </div>
+      <div class="sphinxsidebar" role="navigation" aria-label="main navigation">
+        <div class="sphinxsidebarwrapper">
+<div id="searchbox" style="display: none" role="search">
+  <h3>Quick search</h3>
+    <form class="search" action="../../../../search.html" method="get">
+      <input type="text" name="q" />
+      <input type="submit" value="Go" />
+      <input type="hidden" name="check_keywords" value="yes" />
+      <input type="hidden" name="area" value="default" />
+    </form>
+    <p class="searchtip" style="font-size: 90%">
+    Enter search terms or a module, class or function name.
+    </p>
+</div>
+<script type="text/javascript">$('#searchbox').show(0);</script>
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="related" role="navigation" aria-label="related navigation">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="../../../../genindex.html" title="General Index"
+             >index</a></li>
+        <li class="right" >
+          <a href="../../../../py-modindex.html" title="Python Module Index"
+             >modules</a> |</li>
+        <li class="nav-item nav-item-0"><a href="../../../../index.html">SasView 3.1.0 documentation</a> &raquo;</li>
+          <li class="nav-item nav-item-1"><a href="../../../index.html" >Module code</a> &raquo;</li> 
+      </ul>
+    </div>
+    <div class="footer" role="contentinfo">
+        &copy; Copyright 2015, The SasView Project.
+      Created using <a href="http://sphinx-doc.org/">Sphinx</a> 1.3.1.
+    </div>
+  </body>
+</html>

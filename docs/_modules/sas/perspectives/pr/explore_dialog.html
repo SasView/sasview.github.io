@@ -1,0 +1,517 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+  "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+    
+    <title>sas.perspectives.pr.explore_dialog &mdash; SasView 3.1.0 documentation</title>
+    
+    <link rel="stylesheet" href="../../../../_static/classic.css" type="text/css" />
+    <link rel="stylesheet" href="../../../../_static/pygments.css" type="text/css" />
+    
+    <script type="text/javascript">
+      var DOCUMENTATION_OPTIONS = {
+        URL_ROOT:    '../../../../',
+        VERSION:     '3.1.0',
+        COLLAPSE_INDEX: false,
+        FILE_SUFFIX: '.html',
+        HAS_SOURCE:  true
+      };
+    </script>
+    <script type="text/javascript" src="../../../../_static/jquery.js"></script>
+    <script type="text/javascript" src="../../../../_static/underscore.js"></script>
+    <script type="text/javascript" src="../../../../_static/doctools.js"></script>
+    <script type="text/javascript" src="https://cdn.mathjax.org/mathjax/latest/MathJax.js?config=TeX-AMS-MML_HTMLorMML"></script>
+    <link rel="top" title="SasView 3.1.0 documentation" href="../../../../index.html" />
+    <link rel="up" title="Module code" href="../../../index.html" /> 
+  </head>
+  <body role="document">
+    <div class="related" role="navigation" aria-label="related navigation">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="../../../../genindex.html" title="General Index"
+             accesskey="I">index</a></li>
+        <li class="right" >
+          <a href="../../../../py-modindex.html" title="Python Module Index"
+             >modules</a> |</li>
+        <li class="nav-item nav-item-0"><a href="../../../../index.html">SasView 3.1.0 documentation</a> &raquo;</li>
+          <li class="nav-item nav-item-1"><a href="../../../index.html" accesskey="U">Module code</a> &raquo;</li> 
+      </ul>
+    </div>  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          <div class="body" role="main">
+            
+  <h1>Source code for sas.perspectives.pr.explore_dialog</h1><div class="highlight"><pre>
+<span class="c">################################################################################</span>
+<span class="c">#This software was developed by the University of Tennessee as part of the</span>
+<span class="c">#Distributed Data Analysis of Neutron Scattering Experiments (DANSE)</span>
+<span class="c">#project funded by the US National Science Foundation.</span>
+<span class="c">#</span>
+<span class="c">#See the license text in license.txt</span>
+<span class="c">#</span>
+<span class="c">#copyright 2009, University of Tennessee</span>
+<span class="c">################################################################################</span>
+
+<span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">Dialog panel to explore the P(r) inversion results for a range</span>
+<span class="sd">of D_max value. User picks a number of points and a range of</span>
+<span class="sd">distances, then can toggle between inversion outputs and see</span>
+<span class="sd">their distribution as a function of D_max.</span>
+<span class="sd">&quot;&quot;&quot;</span>
+
+
+<span class="kn">import</span> <span class="nn">wx</span>
+<span class="kn">import</span> <span class="nn">numpy</span>
+<span class="kn">import</span> <span class="nn">logging</span>
+<span class="kn">import</span> <span class="nn">sys</span>
+
+<span class="c"># Avoid Matplotlib complaining about the lack of legend on the plot</span>
+<span class="kn">import</span> <span class="nn">warnings</span>
+<span class="n">warnings</span><span class="o">.</span><span class="n">simplefilter</span><span class="p">(</span><span class="s">&quot;ignore&quot;</span><span class="p">)</span>
+
+<span class="c"># Import plotting classes</span>
+<span class="kn">from</span> <span class="nn">sas.plottools.PlotPanel</span> <span class="kn">import</span> <span class="n">PlotPanel</span>
+<span class="kn">from</span> <span class="nn">sas.plottools</span> <span class="kn">import</span> <span class="n">Data1D</span> <span class="k">as</span> <span class="n">Model1D</span>
+<span class="kn">from</span> <span class="nn">sas.guiframe.gui_style</span> <span class="kn">import</span> <span class="n">GUIFRAME_ID</span>
+<span class="kn">from</span> <span class="nn">sas.plottools.plottables</span> <span class="kn">import</span> <span class="n">Graph</span>
+
+<span class="kn">from</span> <span class="nn">pr_widgets</span> <span class="kn">import</span> <span class="n">PrTextCtrl</span>
+
+<span class="c"># Default number of points on the output plot</span>
+<span class="n">DEFAULT_NPTS</span> <span class="o">=</span> <span class="mi">10</span>
+<span class="c"># Default output parameter to plot</span>
+<span class="n">DEFAULT_OUTPUT</span> <span class="o">=</span> <span class="s">&#39;Chi2/dof&#39;</span>
+
+<span class="k">class</span> <span class="nc">OutputPlot</span><span class="p">(</span><span class="n">PlotPanel</span><span class="p">):</span>
+<div class="viewcode-block" id="OutputPlot"><a class="viewcode-back" href="../../../../dev/api/sas.perspectives.pr.html#sas.perspectives.pr.explore_dialog.OutputPlot">[docs]</a>    <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Plot panel used to show the selected results as a function</span>
+<span class="sd">    of D_max</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="c">## Title for plottools</span>
+    <span class="n">window_caption</span> <span class="o">=</span> <span class="s">&quot;D Explorer&quot;</span>
+
+    <span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">d_min</span><span class="p">,</span> <span class="n">d_max</span><span class="p">,</span> <span class="n">parent</span><span class="p">,</span> <span class="nb">id</span><span class="o">=</span> <span class="o">-</span><span class="mi">1</span><span class="p">,</span> <span class="n">color</span><span class="o">=</span><span class="bp">None</span><span class="p">,</span> \
+                 <span class="n">dpi</span><span class="o">=</span><span class="bp">None</span><span class="p">,</span> <span class="n">style</span><span class="o">=</span><span class="n">wx</span><span class="o">.</span><span class="n">NO_FULL_REPAINT_ON_RESIZE</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Initialization. The parameters added to PlotPanel are:</span>
+
+<span class="sd">        :param d_min: Minimum value of D_max to explore</span>
+<span class="sd">        :param d_max: Maximum value of D_max to explore</span>
+
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">PlotPanel</span><span class="o">.</span><span class="n">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">parent</span><span class="p">,</span> <span class="nb">id</span><span class="o">=</span><span class="nb">id</span><span class="p">,</span> <span class="n">style</span><span class="o">=</span><span class="n">style</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">)</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">parent</span> <span class="o">=</span> <span class="n">parent</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">min</span> <span class="o">=</span> <span class="n">d_min</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">max</span> <span class="o">=</span> <span class="n">d_max</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">npts</span> <span class="o">=</span> <span class="n">DEFAULT_NPTS</span>
+
+        <span class="n">step</span> <span class="o">=</span> <span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">max</span> <span class="o">-</span> <span class="bp">self</span><span class="o">.</span><span class="n">min</span><span class="p">)</span> <span class="o">/</span> <span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">npts</span> <span class="o">-</span> <span class="mi">1</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">x</span> <span class="o">=</span> <span class="n">numpy</span><span class="o">.</span><span class="n">arange</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">min</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">max</span> <span class="o">+</span> <span class="n">step</span> <span class="o">*</span> <span class="mf">0.01</span><span class="p">,</span> <span class="n">step</span><span class="p">)</span>
+        <span class="n">dx</span> <span class="o">=</span> <span class="n">numpy</span><span class="o">.</span><span class="n">zeros</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">x</span><span class="p">))</span>
+        <span class="n">y</span> <span class="o">=</span> <span class="n">numpy</span><span class="o">.</span><span class="n">ones</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">x</span><span class="p">))</span>
+        <span class="n">dy</span> <span class="o">=</span> <span class="n">numpy</span><span class="o">.</span><span class="n">zeros</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">x</span><span class="p">))</span>
+
+        <span class="c"># Plot area</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">plot</span> <span class="o">=</span> <span class="n">Model1D</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">x</span><span class="p">,</span> <span class="n">y</span><span class="o">=</span><span class="n">y</span><span class="p">,</span> <span class="n">dy</span><span class="o">=</span><span class="n">dy</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">plot</span><span class="o">.</span><span class="n">name</span> <span class="o">=</span> <span class="n">DEFAULT_OUTPUT</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">plot</span><span class="o">.</span><span class="n">symbol</span> <span class="o">=</span> <span class="n">GUIFRAME_ID</span><span class="o">.</span><span class="n">CURVE_SYMBOL_NUM</span>
+
+        <span class="c"># Graph        </span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">graph</span> <span class="o">=</span> <span class="n">Graph</span><span class="p">()</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">graph</span><span class="o">.</span><span class="n">xaxis</span><span class="p">(</span><span class="s">&quot;</span><span class="se">\\</span><span class="s">rm{D_{max}}&quot;</span><span class="p">,</span> <span class="s">&#39;A&#39;</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">graph</span><span class="o">.</span><span class="n">yaxis</span><span class="p">(</span><span class="s">&quot;</span><span class="se">\\</span><span class="s">rm{</span><span class="si">%s</span><span class="s">}&quot;</span> <span class="o">%</span> <span class="n">DEFAULT_OUTPUT</span><span class="p">,</span> <span class="s">&quot;&quot;</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">graph</span><span class="o">.</span><span class="n">add</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">plot</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">graph</span><span class="o">.</span><span class="n">render</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">toolbar</span><span class="o">.</span><span class="n">DeleteToolByPos</span><span class="p">(</span><span class="mi">0</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">toolbar</span><span class="o">.</span><span class="n">DeleteToolByPos</span><span class="p">(</span><span class="mi">8</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">toolbar</span><span class="o">.</span><span class="n">Realize</span><span class="p">()</span>
+
+    <span class="k">def</span> <span class="nf">onContextMenu</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">event</span><span class="p">):</span>
+<div class="viewcode-block" id="OutputPlot.onContextMenu"><a class="viewcode-back" href="../../../../dev/api/sas.perspectives.pr.html#sas.perspectives.pr.explore_dialog.OutputPlot.onContextMenu">[docs]</a>        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Default context menu for the plot panel</span>
+
+<span class="sd">        :TODO: Would be nice to add printing and log/linear scales.</span>
+<span class="sd">            The current verison of plottools no longer plays well with</span>
+<span class="sd">            plots outside of guiframe. Guiframe team needs to fix this.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="c"># Slicer plot popup menu</span>
+        <span class="n">wx_id</span> <span class="o">=</span> <span class="n">wx</span><span class="o">.</span><span class="n">NewId</span><span class="p">()</span>
+        <span class="n">slicerpop</span> <span class="o">=</span> <span class="n">wx</span><span class="o">.</span><span class="n">Menu</span><span class="p">()</span>
+        <span class="n">slicerpop</span><span class="o">.</span><span class="n">Append</span><span class="p">(</span><span class="n">wx_id</span><span class="p">,</span> <span class="s">&#39;&amp;Save image&#39;</span><span class="p">,</span> <span class="s">&#39;Save image as PNG&#39;</span><span class="p">)</span>
+        <span class="n">wx</span><span class="o">.</span><span class="n">EVT_MENU</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">wx_id</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">onSaveImage</span><span class="p">)</span>
+
+        <span class="n">wx_id</span> <span class="o">=</span> <span class="n">wx</span><span class="o">.</span><span class="n">NewId</span><span class="p">()</span>
+        <span class="n">slicerpop</span><span class="o">.</span><span class="n">AppendSeparator</span><span class="p">()</span>
+        <span class="n">slicerpop</span><span class="o">.</span><span class="n">Append</span><span class="p">(</span><span class="n">wx_id</span><span class="p">,</span> <span class="s">&#39;&amp;Reset Graph&#39;</span><span class="p">)</span>
+        <span class="n">wx</span><span class="o">.</span><span class="n">EVT_MENU</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">wx_id</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">onResetGraph</span><span class="p">)</span>
+
+        <span class="n">pos</span> <span class="o">=</span> <span class="n">event</span><span class="o">.</span><span class="n">GetPosition</span><span class="p">()</span>
+        <span class="n">pos</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">ScreenToClient</span><span class="p">(</span><span class="n">pos</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">PopupMenu</span><span class="p">(</span><span class="n">slicerpop</span><span class="p">,</span> <span class="n">pos</span><span class="p">)</span>
+
+<span class="k">class</span> <span class="nc">Results</span><span class="p">(</span><span class="nb">object</span><span class="p">):</span></div></div>
+<div class="viewcode-block" id="Results"><a class="viewcode-back" href="../../../../dev/api/sas.perspectives.pr.html#sas.perspectives.pr.explore_dialog.Results">[docs]</a>    <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Class to hold the inversion output parameters</span>
+<span class="sd">    as a function of D_max</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Initialization. Create empty arrays</span>
+<span class="sd">        and dictionary of labels.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="c"># Array of output for each inversion</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">chi2</span> <span class="o">=</span> <span class="p">[]</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">osc</span> <span class="o">=</span> <span class="p">[]</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">pos</span> <span class="o">=</span> <span class="p">[]</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">pos_err</span> <span class="o">=</span> <span class="p">[]</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">rg</span> <span class="o">=</span> <span class="p">[]</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">iq0</span> <span class="o">=</span> <span class="p">[]</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">bck</span> <span class="o">=</span> <span class="p">[]</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">d_max</span> <span class="o">=</span> <span class="p">[]</span>
+
+        <span class="c"># Dictionary of outputs</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">outputs</span> <span class="o">=</span> <span class="p">{}</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">outputs</span><span class="p">[</span><span class="s">&#39;Chi2/dof&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="p">[</span><span class="s">&quot;\chi^2/dof&quot;</span><span class="p">,</span> <span class="s">&quot;a.u.&quot;</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">chi2</span><span class="p">]</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">outputs</span><span class="p">[</span><span class="s">&#39;Oscillation parameter&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="p">[</span><span class="s">&quot;Osc&quot;</span><span class="p">,</span> <span class="s">&quot;a.u.&quot;</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">osc</span><span class="p">]</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">outputs</span><span class="p">[</span><span class="s">&#39;Positive fraction&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="p">[</span><span class="s">&quot;P^+&quot;</span><span class="p">,</span> <span class="s">&quot;a.u.&quot;</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">pos</span><span class="p">]</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">outputs</span><span class="p">[</span><span class="s">&#39;1-sigma positive fraction&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="p">[</span><span class="s">&quot;P^+_{1\ \sigma}&quot;</span><span class="p">,</span>
+                                                     <span class="s">&quot;a.u.&quot;</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">pos_err</span><span class="p">]</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">outputs</span><span class="p">[</span><span class="s">&#39;Rg&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="p">[</span><span class="s">&quot;R_g&quot;</span><span class="p">,</span> <span class="s">&quot;A&quot;</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">rg</span><span class="p">]</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">outputs</span><span class="p">[</span><span class="s">&#39;I(q=0)&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="p">[</span><span class="s">&quot;I(q=0)&quot;</span><span class="p">,</span> <span class="s">&quot;1/A&quot;</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">iq0</span><span class="p">]</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">outputs</span><span class="p">[</span><span class="s">&#39;Background&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="p">[</span><span class="s">&quot;Bck&quot;</span><span class="p">,</span> <span class="s">&quot;1/A&quot;</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">bck</span><span class="p">]</span>
+
+<span class="k">class</span> <span class="nc">ExploreDialog</span><span class="p">(</span><span class="n">wx</span><span class="o">.</span><span class="n">Dialog</span><span class="p">):</span></div>
+<div class="viewcode-block" id="ExploreDialog"><a class="viewcode-back" href="../../../../dev/api/sas.perspectives.pr.html#sas.perspectives.pr.explore_dialog.ExploreDialog">[docs]</a>    <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    The explorer dialog box. This dialog is meant to be</span>
+<span class="sd">    invoked by the InversionControl class.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+
+    <span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">pr_state</span><span class="p">,</span> <span class="n">nfunc</span><span class="p">,</span> <span class="o">*</span><span class="n">args</span><span class="p">,</span> <span class="o">**</span><span class="n">kwds</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Initialization. The parameters added to Dialog are:</span>
+
+<span class="sd">        :param pr_state: sas.pr.invertor.Invertor object</span>
+<span class="sd">        :param nfunc: Number of terms in the expansion</span>
+
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">kwds</span><span class="p">[</span><span class="s">&quot;style&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">wx</span><span class="o">.</span><span class="n">RESIZE_BORDER</span> <span class="o">|</span> <span class="n">wx</span><span class="o">.</span><span class="n">DEFAULT_DIALOG_STYLE</span>
+        <span class="n">wx</span><span class="o">.</span><span class="n">Dialog</span><span class="o">.</span><span class="n">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="o">*</span><span class="n">args</span><span class="p">,</span> <span class="o">**</span><span class="n">kwds</span><span class="p">)</span>
+
+        <span class="c"># Initialize Results object</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">results</span> <span class="o">=</span> <span class="n">Results</span><span class="p">()</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">pr_state</span> <span class="o">=</span> <span class="n">pr_state</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_default_min</span> <span class="o">=</span> <span class="mf">0.9</span> <span class="o">*</span> <span class="bp">self</span><span class="o">.</span><span class="n">pr_state</span><span class="o">.</span><span class="n">d_max</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_default_max</span> <span class="o">=</span> <span class="mf">1.1</span> <span class="o">*</span> <span class="bp">self</span><span class="o">.</span><span class="n">pr_state</span><span class="o">.</span><span class="n">d_max</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">nfunc</span> <span class="o">=</span> <span class="n">nfunc</span>
+
+        <span class="c"># Control for number of points</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">npts_ctl</span> <span class="o">=</span> <span class="n">PrTextCtrl</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="o">-</span><span class="mi">1</span><span class="p">,</span> <span class="n">style</span><span class="o">=</span><span class="n">wx</span><span class="o">.</span><span class="n">TE_PROCESS_ENTER</span><span class="p">,</span>
+                                   <span class="n">size</span><span class="o">=</span><span class="p">(</span><span class="mi">60</span><span class="p">,</span> <span class="mi">20</span><span class="p">))</span>
+        <span class="c"># Control for the minimum value of D_max</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">dmin_ctl</span> <span class="o">=</span> <span class="n">PrTextCtrl</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="o">-</span><span class="mi">1</span><span class="p">,</span> <span class="n">style</span><span class="o">=</span><span class="n">wx</span><span class="o">.</span><span class="n">TE_PROCESS_ENTER</span><span class="p">,</span>
+                                   <span class="n">size</span><span class="o">=</span><span class="p">(</span><span class="mi">60</span><span class="p">,</span> <span class="mi">20</span><span class="p">))</span>
+        <span class="c"># Control for the maximum value of D_max</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">dmax_ctl</span> <span class="o">=</span> <span class="n">PrTextCtrl</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="o">-</span><span class="mi">1</span><span class="p">,</span> <span class="n">style</span><span class="o">=</span><span class="n">wx</span><span class="o">.</span><span class="n">TE_PROCESS_ENTER</span><span class="p">,</span>
+                                   <span class="n">size</span><span class="o">=</span><span class="p">(</span><span class="mi">60</span><span class="p">,</span> <span class="mi">20</span><span class="p">))</span>
+
+        <span class="c"># Output selection box for the y axis</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">output_box</span> <span class="o">=</span> <span class="bp">None</span>
+
+        <span class="c"># Create the plot object</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">plotpanel</span> <span class="o">=</span> <span class="n">OutputPlot</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_default_min</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">_default_max</span><span class="p">,</span>
+                                    <span class="bp">self</span><span class="p">,</span> <span class="o">-</span><span class="mi">1</span><span class="p">,</span> <span class="n">style</span><span class="o">=</span><span class="n">wx</span><span class="o">.</span><span class="n">RAISED_BORDER</span><span class="p">)</span>
+
+        <span class="c"># Create the layout of the dialog</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">__do_layout</span><span class="p">()</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">Fit</span><span class="p">()</span>
+
+        <span class="c"># Calculate exploration results</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_recalc</span><span class="p">()</span>
+        <span class="c"># Graph the default output curve</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_plot_output</span><span class="p">()</span>
+
+    <span class="k">class</span> <span class="nc">Event</span><span class="p">(</span><span class="nb">object</span><span class="p">):</span>
+<div class="viewcode-block" id="ExploreDialog.Event"><a class="viewcode-back" href="../../../../dev/api/sas.perspectives.pr.html#sas.perspectives.pr.explore_dialog.ExploreDialog.Event">[docs]</a>        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Class that holds the content of the form</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="c">## Number of points to be plotted</span>
+        <span class="n">npts</span> <span class="o">=</span> <span class="mi">0</span>
+        <span class="c">## Minimum value of D_max</span>
+        <span class="n">dmin</span> <span class="o">=</span> <span class="mi">0</span>
+        <span class="c">## Maximum value of D_max</span>
+        <span class="n">dmax</span> <span class="o">=</span> <span class="mi">0</span>
+
+    <span class="k">def</span> <span class="nf">_get_values</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">event</span><span class="o">=</span><span class="bp">None</span><span class="p">):</span></div>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Invoked when the user changes a value of the form.</span>
+<span class="sd">        Check that the values are of the right type.</span>
+
+<span class="sd">        :return: ExploreDialog.Event object if the content is good,</span>
+<span class="sd">            None otherwise</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="c"># Flag to make sure that all values are good</span>
+        <span class="n">flag</span> <span class="o">=</span> <span class="bp">True</span>
+
+        <span class="c"># Empty ExploreDialog.Event content</span>
+        <span class="n">content_event</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">Event</span><span class="p">()</span>
+
+        <span class="c"># Read each text control and make sure the type is valid</span>
+        <span class="c"># Let the user know if a type is invalid by changing the</span>
+        <span class="c"># background color of the control.</span>
+        <span class="k">try</span><span class="p">:</span>
+            <span class="n">content_event</span><span class="o">.</span><span class="n">npts</span> <span class="o">=</span> <span class="nb">int</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">npts_ctl</span><span class="o">.</span><span class="n">GetValue</span><span class="p">())</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">npts_ctl</span><span class="o">.</span><span class="n">SetBackgroundColour</span><span class="p">(</span><span class="n">wx</span><span class="o">.</span><span class="n">WHITE</span><span class="p">)</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">npts_ctl</span><span class="o">.</span><span class="n">Refresh</span><span class="p">()</span>
+        <span class="k">except</span><span class="p">:</span>
+            <span class="n">flag</span> <span class="o">=</span> <span class="bp">False</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">npts_ctl</span><span class="o">.</span><span class="n">SetBackgroundColour</span><span class="p">(</span><span class="s">&quot;pink&quot;</span><span class="p">)</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">npts_ctl</span><span class="o">.</span><span class="n">Refresh</span><span class="p">()</span>
+
+        <span class="k">try</span><span class="p">:</span>
+            <span class="n">content_event</span><span class="o">.</span><span class="n">dmin</span> <span class="o">=</span> <span class="nb">float</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">dmin_ctl</span><span class="o">.</span><span class="n">GetValue</span><span class="p">())</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">dmin_ctl</span><span class="o">.</span><span class="n">SetBackgroundColour</span><span class="p">(</span><span class="n">wx</span><span class="o">.</span><span class="n">WHITE</span><span class="p">)</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">dmin_ctl</span><span class="o">.</span><span class="n">Refresh</span><span class="p">()</span>
+        <span class="k">except</span><span class="p">:</span>
+            <span class="n">flag</span> <span class="o">=</span> <span class="bp">False</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">dmin_ctl</span><span class="o">.</span><span class="n">SetBackgroundColour</span><span class="p">(</span><span class="s">&quot;pink&quot;</span><span class="p">)</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">dmin_ctl</span><span class="o">.</span><span class="n">Refresh</span><span class="p">()</span>
+
+        <span class="k">try</span><span class="p">:</span>
+            <span class="n">content_event</span><span class="o">.</span><span class="n">dmax</span> <span class="o">=</span> <span class="nb">float</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">dmax_ctl</span><span class="o">.</span><span class="n">GetValue</span><span class="p">())</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">dmax_ctl</span><span class="o">.</span><span class="n">SetBackgroundColour</span><span class="p">(</span><span class="n">wx</span><span class="o">.</span><span class="n">WHITE</span><span class="p">)</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">dmax_ctl</span><span class="o">.</span><span class="n">Refresh</span><span class="p">()</span>
+        <span class="k">except</span><span class="p">:</span>
+            <span class="n">flag</span> <span class="o">=</span> <span class="bp">False</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">dmax_ctl</span><span class="o">.</span><span class="n">SetBackgroundColour</span><span class="p">(</span><span class="s">&quot;pink&quot;</span><span class="p">)</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">dmax_ctl</span><span class="o">.</span><span class="n">Refresh</span><span class="p">()</span>
+
+        <span class="c"># If the content of the form is valid, return the content,</span>
+        <span class="c"># otherwise return None</span>
+        <span class="k">if</span> <span class="n">flag</span><span class="p">:</span>
+            <span class="k">if</span> <span class="n">event</span> <span class="ow">is</span> <span class="ow">not</span> <span class="bp">None</span><span class="p">:</span>
+                <span class="n">event</span><span class="o">.</span><span class="n">Skip</span><span class="p">(</span><span class="bp">True</span><span class="p">)</span>
+            <span class="k">return</span> <span class="n">content_event</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="k">return</span> <span class="bp">None</span>
+
+    <span class="k">def</span> <span class="nf">_plot_output</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">event</span><span class="o">=</span><span class="bp">None</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Invoked when a new output type is selected for plotting,</span>
+<span class="sd">        or when a new computation is finished.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="c"># Get the output type selection</span>
+        <span class="n">output_type</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">output_box</span><span class="o">.</span><span class="n">GetString</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">output_box</span><span class="o">.</span><span class="n">GetSelection</span><span class="p">())</span>
+
+        <span class="c"># If the selected output type is part of the results ojbect,</span>
+        <span class="c"># display the results.</span>
+        <span class="c"># Note: by design, the output type should always be part of the</span>
+        <span class="c">#       results object.</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">results</span><span class="o">.</span><span class="n">outputs</span><span class="o">.</span><span class="n">has_key</span><span class="p">(</span><span class="n">output_type</span><span class="p">):</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">plotpanel</span><span class="o">.</span><span class="n">plot</span><span class="o">.</span><span class="n">x</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">results</span><span class="o">.</span><span class="n">d_max</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">plotpanel</span><span class="o">.</span><span class="n">plot</span><span class="o">.</span><span class="n">y</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">results</span><span class="o">.</span><span class="n">outputs</span><span class="p">[</span><span class="n">output_type</span><span class="p">][</span><span class="mi">2</span><span class="p">]</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">plotpanel</span><span class="o">.</span><span class="n">plot</span><span class="o">.</span><span class="n">name</span> <span class="o">=</span> <span class="s">&#39;_nolegend_&#39;</span>
+            <span class="n">y_label</span> <span class="o">=</span> <span class="s">&quot;</span><span class="se">\\</span><span class="s">rm{</span><span class="si">%s</span><span class="s">}&quot;</span> <span class="o">%</span> <span class="bp">self</span><span class="o">.</span><span class="n">results</span><span class="o">.</span><span class="n">outputs</span><span class="p">[</span><span class="n">output_type</span><span class="p">][</span><span class="mi">0</span><span class="p">]</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">plotpanel</span><span class="o">.</span><span class="n">graph</span><span class="o">.</span><span class="n">yaxis</span><span class="p">(</span><span class="n">y_label</span><span class="p">,</span>
+                                       <span class="bp">self</span><span class="o">.</span><span class="n">results</span><span class="o">.</span><span class="n">outputs</span><span class="p">[</span><span class="n">output_type</span><span class="p">][</span><span class="mi">1</span><span class="p">])</span>
+
+            <span class="c"># Redraw</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">plotpanel</span><span class="o">.</span><span class="n">graph</span><span class="o">.</span><span class="n">render</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">plotpanel</span><span class="p">)</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">plotpanel</span><span class="o">.</span><span class="n">subplot</span><span class="o">.</span><span class="n">figure</span><span class="o">.</span><span class="n">canvas</span><span class="o">.</span><span class="n">draw_idle</span><span class="p">()</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">msg</span> <span class="o">=</span> <span class="s">&quot;ExploreDialog: the Results object&#39;s dictionary &quot;</span>
+            <span class="n">msg</span> <span class="o">+=</span> <span class="s">&quot;does not contain &quot;</span>
+            <span class="n">msg</span> <span class="o">+=</span> <span class="s">&quot;the [</span><span class="si">%s</span><span class="s">] output type. This must be indicative of &quot;</span>
+            <span class="n">msg</span> <span class="o">+=</span> <span class="s">&quot;a change in the &quot;</span> <span class="o">%</span> <span class="nb">str</span><span class="p">(</span><span class="n">output_type</span><span class="p">)</span>
+            <span class="n">msg</span> <span class="o">+=</span> <span class="s">&quot;ExploreDialog code.&quot;</span>
+            <span class="n">logging</span><span class="o">.</span><span class="n">error</span><span class="p">(</span><span class="n">msg</span><span class="p">)</span>
+
+    <span class="k">def</span> <span class="nf">__do_layout</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Do the layout of the dialog</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="c"># Dialog box properties</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">SetTitle</span><span class="p">(</span><span class="s">&quot;D_max Explorer&quot;</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">SetSize</span><span class="p">((</span><span class="mi">600</span><span class="p">,</span> <span class="mi">595</span><span class="p">))</span>
+
+        <span class="n">sizer_main</span> <span class="o">=</span> <span class="n">wx</span><span class="o">.</span><span class="n">BoxSizer</span><span class="p">(</span><span class="n">wx</span><span class="o">.</span><span class="n">VERTICAL</span><span class="p">)</span>
+        <span class="n">sizer_button</span> <span class="o">=</span> <span class="n">wx</span><span class="o">.</span><span class="n">BoxSizer</span><span class="p">(</span><span class="n">wx</span><span class="o">.</span><span class="n">HORIZONTAL</span><span class="p">)</span>
+        <span class="n">sizer_params</span> <span class="o">=</span> <span class="n">wx</span><span class="o">.</span><span class="n">GridBagSizer</span><span class="p">(</span><span class="mi">5</span><span class="p">,</span> <span class="mi">5</span><span class="p">)</span>
+
+        <span class="n">iy</span> <span class="o">=</span> <span class="mi">0</span>
+        <span class="n">ix</span> <span class="o">=</span> <span class="mi">0</span>
+        <span class="n">label_npts</span> <span class="o">=</span> <span class="n">wx</span><span class="o">.</span><span class="n">StaticText</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="o">-</span><span class="mi">1</span><span class="p">,</span> <span class="s">&quot;Npts&quot;</span><span class="p">)</span>
+        <span class="n">sizer_params</span><span class="o">.</span><span class="n">Add</span><span class="p">(</span><span class="n">label_npts</span><span class="p">,</span> <span class="p">(</span><span class="n">iy</span><span class="p">,</span> <span class="n">ix</span><span class="p">),</span> <span class="p">(</span><span class="mi">1</span><span class="p">,</span> <span class="mi">1</span><span class="p">),</span>
+                         <span class="n">wx</span><span class="o">.</span><span class="n">LEFT</span> <span class="o">|</span> <span class="n">wx</span><span class="o">.</span><span class="n">EXPAND</span> <span class="o">|</span> <span class="n">wx</span><span class="o">.</span><span class="n">ADJUST_MINSIZE</span><span class="p">,</span> <span class="mi">15</span><span class="p">)</span>
+        <span class="n">ix</span> <span class="o">+=</span> <span class="mi">1</span>
+        <span class="n">sizer_params</span><span class="o">.</span><span class="n">Add</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">npts_ctl</span><span class="p">,</span> <span class="p">(</span><span class="n">iy</span><span class="p">,</span> <span class="n">ix</span><span class="p">),</span> <span class="p">(</span><span class="mi">1</span><span class="p">,</span> <span class="mi">1</span><span class="p">),</span>
+                         <span class="n">wx</span><span class="o">.</span><span class="n">EXPAND</span> <span class="o">|</span> <span class="n">wx</span><span class="o">.</span><span class="n">ADJUST_MINSIZE</span><span class="p">,</span> <span class="mi">0</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">npts_ctl</span><span class="o">.</span><span class="n">SetValue</span><span class="p">(</span><span class="s">&quot;</span><span class="si">%g</span><span class="s">&quot;</span> <span class="o">%</span> <span class="n">DEFAULT_NPTS</span><span class="p">)</span>
+
+        <span class="n">ix</span> <span class="o">+=</span> <span class="mi">1</span>
+        <span class="n">label_dmin</span> <span class="o">=</span> <span class="n">wx</span><span class="o">.</span><span class="n">StaticText</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="o">-</span><span class="mi">1</span><span class="p">,</span> <span class="s">&quot;Min Distance [A]&quot;</span><span class="p">)</span>
+        <span class="n">sizer_params</span><span class="o">.</span><span class="n">Add</span><span class="p">(</span><span class="n">label_dmin</span><span class="p">,</span> <span class="p">(</span><span class="n">iy</span><span class="p">,</span> <span class="n">ix</span><span class="p">),</span> <span class="p">(</span><span class="mi">1</span><span class="p">,</span> <span class="mi">1</span><span class="p">),</span>
+                         <span class="n">wx</span><span class="o">.</span><span class="n">LEFT</span> <span class="o">|</span> <span class="n">wx</span><span class="o">.</span><span class="n">EXPAND</span> <span class="o">|</span> <span class="n">wx</span><span class="o">.</span><span class="n">ADJUST_MINSIZE</span><span class="p">,</span> <span class="mi">15</span><span class="p">)</span>
+        <span class="n">ix</span> <span class="o">+=</span> <span class="mi">1</span>
+        <span class="n">sizer_params</span><span class="o">.</span><span class="n">Add</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">dmin_ctl</span><span class="p">,</span> <span class="p">(</span><span class="n">iy</span><span class="p">,</span> <span class="n">ix</span><span class="p">),</span> <span class="p">(</span><span class="mi">1</span><span class="p">,</span> <span class="mi">1</span><span class="p">),</span>
+                         <span class="n">wx</span><span class="o">.</span><span class="n">EXPAND</span> <span class="o">|</span> <span class="n">wx</span><span class="o">.</span><span class="n">ADJUST_MINSIZE</span><span class="p">,</span> <span class="mi">0</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">dmin_ctl</span><span class="o">.</span><span class="n">SetValue</span><span class="p">(</span><span class="nb">str</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_default_min</span><span class="p">))</span>
+
+        <span class="n">ix</span> <span class="o">+=</span> <span class="mi">1</span>
+        <span class="n">label_dmax</span> <span class="o">=</span> <span class="n">wx</span><span class="o">.</span><span class="n">StaticText</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="o">-</span><span class="mi">1</span><span class="p">,</span> <span class="s">&quot;Max Distance [A]&quot;</span><span class="p">)</span>
+        <span class="n">sizer_params</span><span class="o">.</span><span class="n">Add</span><span class="p">(</span><span class="n">label_dmax</span><span class="p">,</span> <span class="p">(</span><span class="n">iy</span><span class="p">,</span> <span class="n">ix</span><span class="p">),</span> <span class="p">(</span><span class="mi">1</span><span class="p">,</span> <span class="mi">1</span><span class="p">),</span>
+                         <span class="n">wx</span><span class="o">.</span><span class="n">LEFT</span> <span class="o">|</span> <span class="n">wx</span><span class="o">.</span><span class="n">EXPAND</span> <span class="o">|</span> <span class="n">wx</span><span class="o">.</span><span class="n">ADJUST_MINSIZE</span><span class="p">,</span> <span class="mi">15</span><span class="p">)</span>
+        <span class="n">ix</span> <span class="o">+=</span> <span class="mi">1</span>
+        <span class="n">sizer_params</span><span class="o">.</span><span class="n">Add</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">dmax_ctl</span><span class="p">,</span> <span class="p">(</span><span class="n">iy</span><span class="p">,</span> <span class="n">ix</span><span class="p">),</span> <span class="p">(</span><span class="mi">1</span><span class="p">,</span> <span class="mi">1</span><span class="p">),</span>
+                         <span class="n">wx</span><span class="o">.</span><span class="n">EXPAND</span> <span class="o">|</span> <span class="n">wx</span><span class="o">.</span><span class="n">ADJUST_MINSIZE</span><span class="p">,</span> <span class="mi">0</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">dmax_ctl</span><span class="o">.</span><span class="n">SetValue</span><span class="p">(</span><span class="nb">str</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_default_max</span><span class="p">))</span>
+
+        <span class="c"># Ouput selection box</span>
+        <span class="n">selection_msg</span> <span class="o">=</span> <span class="n">wx</span><span class="o">.</span><span class="n">StaticText</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="o">-</span><span class="mi">1</span><span class="p">,</span> <span class="s">&quot;Select a dependent variable:&quot;</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">output_box</span> <span class="o">=</span> <span class="n">wx</span><span class="o">.</span><span class="n">ComboBox</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="o">-</span><span class="mi">1</span><span class="p">,</span> <span class="n">style</span><span class="o">=</span><span class="n">wx</span><span class="o">.</span><span class="n">CB_READONLY</span><span class="p">)</span>
+        <span class="k">for</span> <span class="n">item</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">results</span><span class="o">.</span><span class="n">outputs</span><span class="o">.</span><span class="n">keys</span><span class="p">():</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">output_box</span><span class="o">.</span><span class="n">Append</span><span class="p">(</span><span class="n">item</span><span class="p">,</span> <span class="s">&quot;&quot;</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">output_box</span><span class="o">.</span><span class="n">SetStringSelection</span><span class="p">(</span><span class="n">DEFAULT_OUTPUT</span><span class="p">)</span>
+
+        <span class="n">output_sizer</span> <span class="o">=</span> <span class="n">wx</span><span class="o">.</span><span class="n">GridBagSizer</span><span class="p">(</span><span class="mi">5</span><span class="p">,</span> <span class="mi">5</span><span class="p">)</span>
+        <span class="n">output_sizer</span><span class="o">.</span><span class="n">Add</span><span class="p">(</span><span class="n">selection_msg</span><span class="p">,</span> <span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">),</span> <span class="p">(</span><span class="mi">1</span><span class="p">,</span> <span class="mi">1</span><span class="p">),</span>
+                         <span class="n">wx</span><span class="o">.</span><span class="n">LEFT</span> <span class="o">|</span> <span class="n">wx</span><span class="o">.</span><span class="n">EXPAND</span> <span class="o">|</span> <span class="n">wx</span><span class="o">.</span><span class="n">ADJUST_MINSIZE</span><span class="p">,</span> <span class="mi">10</span><span class="p">)</span>
+        <span class="n">output_sizer</span><span class="o">.</span><span class="n">Add</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">output_box</span><span class="p">,</span> <span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="mi">1</span><span class="p">),</span> <span class="p">(</span><span class="mi">1</span><span class="p">,</span> <span class="mi">2</span><span class="p">),</span>
+                         <span class="n">wx</span><span class="o">.</span><span class="n">LEFT</span> <span class="o">|</span> <span class="n">wx</span><span class="o">.</span><span class="n">EXPAND</span> <span class="o">|</span> <span class="n">wx</span><span class="o">.</span><span class="n">ADJUST_MINSIZE</span><span class="p">,</span> <span class="mi">10</span><span class="p">)</span>
+
+        <span class="n">wx</span><span class="o">.</span><span class="n">EVT_COMBOBOX</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">output_box</span><span class="p">,</span> <span class="o">-</span><span class="mi">1</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">_plot_output</span><span class="p">)</span>
+        <span class="n">sizer_main</span><span class="o">.</span><span class="n">Add</span><span class="p">(</span><span class="n">output_sizer</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="n">wx</span><span class="o">.</span><span class="n">EXPAND</span> <span class="o">|</span> <span class="n">wx</span><span class="o">.</span><span class="n">ALL</span><span class="p">,</span> <span class="mi">10</span><span class="p">)</span>
+
+        <span class="n">sizer_main</span><span class="o">.</span><span class="n">Add</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">plotpanel</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="n">wx</span><span class="o">.</span><span class="n">EXPAND</span> <span class="o">|</span> <span class="n">wx</span><span class="o">.</span><span class="n">ALL</span><span class="p">,</span> <span class="mi">10</span><span class="p">)</span>
+        <span class="n">sizer_main</span><span class="o">.</span><span class="n">SetItemMinSize</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">plotpanel</span><span class="p">,</span> <span class="mi">400</span><span class="p">,</span> <span class="mi">400</span><span class="p">)</span>
+
+        <span class="n">sizer_main</span><span class="o">.</span><span class="n">Add</span><span class="p">(</span><span class="n">sizer_params</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="n">wx</span><span class="o">.</span><span class="n">EXPAND</span> <span class="o">|</span> <span class="n">wx</span><span class="o">.</span><span class="n">ALL</span><span class="p">,</span> <span class="mi">10</span><span class="p">)</span>
+        <span class="n">static_line_3</span> <span class="o">=</span> <span class="n">wx</span><span class="o">.</span><span class="n">StaticLine</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="o">-</span><span class="mi">1</span><span class="p">)</span>
+        <span class="n">sizer_main</span><span class="o">.</span><span class="n">Add</span><span class="p">(</span><span class="n">static_line_3</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="n">wx</span><span class="o">.</span><span class="n">EXPAND</span><span class="p">,</span> <span class="mi">0</span><span class="p">)</span>
+
+        <span class="c"># Bottom area with the close button</span>
+        <span class="n">sizer_button</span><span class="o">.</span><span class="n">Add</span><span class="p">((</span><span class="mi">20</span><span class="p">,</span> <span class="mi">20</span><span class="p">),</span> <span class="mi">1</span><span class="p">,</span> <span class="n">wx</span><span class="o">.</span><span class="n">EXPAND</span> <span class="o">|</span> <span class="n">wx</span><span class="o">.</span><span class="n">ADJUST_MINSIZE</span><span class="p">,</span> <span class="mi">0</span><span class="p">)</span>
+        <span class="n">button_OK</span> <span class="o">=</span> <span class="n">wx</span><span class="o">.</span><span class="n">Button</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">wx</span><span class="o">.</span><span class="n">ID_OK</span><span class="p">,</span> <span class="s">&quot;Close&quot;</span><span class="p">)</span>
+        <span class="n">sizer_button</span><span class="o">.</span><span class="n">Add</span><span class="p">(</span><span class="n">button_OK</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="n">wx</span><span class="o">.</span><span class="n">LEFT</span> <span class="o">|</span> <span class="n">wx</span><span class="o">.</span><span class="n">RIGHT</span> <span class="o">|</span> <span class="n">wx</span><span class="o">.</span><span class="n">ADJUST_MINSIZE</span><span class="p">,</span> <span class="mi">10</span><span class="p">)</span>
+
+        <span class="n">sizer_main</span><span class="o">.</span><span class="n">Add</span><span class="p">(</span><span class="n">sizer_button</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="n">wx</span><span class="o">.</span><span class="n">EXPAND</span> <span class="o">|</span> <span class="n">wx</span><span class="o">.</span><span class="n">BOTTOM</span> <span class="o">|</span> <span class="n">wx</span><span class="o">.</span><span class="n">TOP</span><span class="p">,</span> <span class="mi">10</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">SetAutoLayout</span><span class="p">(</span><span class="bp">True</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">SetSizer</span><span class="p">(</span><span class="n">sizer_main</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">Layout</span><span class="p">()</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">Centre</span><span class="p">()</span>
+
+        <span class="c"># Bind the Enter key to recalculation</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">Bind</span><span class="p">(</span><span class="n">wx</span><span class="o">.</span><span class="n">EVT_TEXT_ENTER</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">_recalc</span><span class="p">)</span>
+
+    <span class="k">def</span> <span class="nf">set_plot_unfocus</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+<div class="viewcode-block" id="ExploreDialog.set_plot_unfocus"><a class="viewcode-back" href="../../../../dev/api/sas.perspectives.pr.html#sas.perspectives.pr.explore_dialog.ExploreDialog.set_plot_unfocus">[docs]</a>        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Not implemented</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">pass</span>
+
+    <span class="k">def</span> <span class="nf">send_focus_to_datapanel</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">name</span><span class="p">):</span></div>
+<div class="viewcode-block" id="ExploreDialog.send_focus_to_datapanel"><a class="viewcode-back" href="../../../../dev/api/sas.perspectives.pr.html#sas.perspectives.pr.explore_dialog.ExploreDialog.send_focus_to_datapanel">[docs]</a>        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">            The GUI manager sometimes calls this method</span>
+<span class="sd">            TODO: refactor this</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">pass</span>
+
+    <span class="k">def</span> <span class="nf">_recalc</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">event</span><span class="o">=</span><span class="bp">None</span><span class="p">):</span></div>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Invoked when the user changed a value on the form.</span>
+<span class="sd">        Process the form and compute the output to be plottted.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="c"># Get the content of the form</span>
+        <span class="n">content</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_get_values</span><span class="p">()</span>
+        <span class="c"># If the content of the form is invalid, return and do nothing</span>
+        <span class="k">if</span> <span class="n">content</span> <span class="ow">is</span> <span class="bp">None</span><span class="p">:</span>
+            <span class="k">return</span>
+
+        <span class="c"># Results object to store the computation outputs.</span>
+        <span class="n">results</span> <span class="o">=</span> <span class="n">Results</span><span class="p">()</span>
+
+        <span class="c"># Loop over d_max values</span>
+        <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">content</span><span class="o">.</span><span class="n">npts</span><span class="p">):</span>
+            <span class="n">temp</span> <span class="o">=</span> <span class="p">(</span><span class="n">content</span><span class="o">.</span><span class="n">dmax</span> <span class="o">-</span> <span class="n">content</span><span class="o">.</span><span class="n">dmin</span><span class="p">)</span> <span class="o">/</span> <span class="p">(</span><span class="n">content</span><span class="o">.</span><span class="n">npts</span> <span class="o">-</span> <span class="mf">1.0</span><span class="p">)</span>
+            <span class="n">d</span> <span class="o">=</span> <span class="n">content</span><span class="o">.</span><span class="n">dmin</span> <span class="o">+</span> <span class="n">i</span> <span class="o">*</span> <span class="n">temp</span>
+
+            <span class="bp">self</span><span class="o">.</span><span class="n">pr_state</span><span class="o">.</span><span class="n">d_max</span> <span class="o">=</span> <span class="n">d</span>
+            <span class="k">try</span><span class="p">:</span>
+                <span class="n">out</span><span class="p">,</span> <span class="n">cov</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">pr_state</span><span class="o">.</span><span class="n">invert</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">nfunc</span><span class="p">)</span>
+
+                <span class="c"># Store results</span>
+                <span class="n">iq0</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">pr_state</span><span class="o">.</span><span class="n">iq0</span><span class="p">(</span><span class="n">out</span><span class="p">)</span>
+                <span class="n">rg</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">pr_state</span><span class="o">.</span><span class="n">rg</span><span class="p">(</span><span class="n">out</span><span class="p">)</span>
+                <span class="n">pos</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">pr_state</span><span class="o">.</span><span class="n">get_positive</span><span class="p">(</span><span class="n">out</span><span class="p">)</span>
+                <span class="n">pos_err</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">pr_state</span><span class="o">.</span><span class="n">get_pos_err</span><span class="p">(</span><span class="n">out</span><span class="p">,</span> <span class="n">cov</span><span class="p">)</span>
+                <span class="n">osc</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">pr_state</span><span class="o">.</span><span class="n">oscillations</span><span class="p">(</span><span class="n">out</span><span class="p">)</span>
+
+                <span class="n">results</span><span class="o">.</span><span class="n">d_max</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">pr_state</span><span class="o">.</span><span class="n">d_max</span><span class="p">)</span>
+                <span class="n">results</span><span class="o">.</span><span class="n">bck</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">pr_state</span><span class="o">.</span><span class="n">background</span><span class="p">)</span>
+                <span class="n">results</span><span class="o">.</span><span class="n">chi2</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">pr_state</span><span class="o">.</span><span class="n">chi2</span><span class="p">)</span>
+                <span class="n">results</span><span class="o">.</span><span class="n">iq0</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">iq0</span><span class="p">)</span>
+                <span class="n">results</span><span class="o">.</span><span class="n">rg</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">rg</span><span class="p">)</span>
+                <span class="n">results</span><span class="o">.</span><span class="n">pos</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">pos</span><span class="p">)</span>
+                <span class="n">results</span><span class="o">.</span><span class="n">pos_err</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">pos_err</span><span class="p">)</span>
+                <span class="n">results</span><span class="o">.</span><span class="n">osc</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">osc</span><span class="p">)</span>
+            <span class="k">except</span><span class="p">:</span>
+                <span class="c"># This inversion failed, skip this D_max value</span>
+                <span class="n">msg</span> <span class="o">=</span> <span class="s">&quot;ExploreDialog: inversion failed &quot;</span>
+                <span class="n">msg</span> <span class="o">+=</span> <span class="s">&quot;for D_max=</span><span class="si">%s</span><span class="se">\n</span><span class="si">%s</span><span class="s">&quot;</span> <span class="o">%</span> <span class="p">(</span><span class="nb">str</span><span class="p">(</span><span class="n">d</span><span class="p">),</span> <span class="n">sys</span><span class="o">.</span><span class="n">exc_value</span><span class="p">)</span>
+                <span class="n">logging</span><span class="o">.</span><span class="n">error</span><span class="p">(</span><span class="n">msg</span><span class="p">)</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">results</span> <span class="o">=</span> <span class="n">results</span>
+
+        <span class="c"># Plot the selected output</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_plot_output</span><span class="p">()</span>
+</pre></div></div>
+
+          </div>
+        </div>
+      </div>
+      <div class="sphinxsidebar" role="navigation" aria-label="main navigation">
+        <div class="sphinxsidebarwrapper">
+<div id="searchbox" style="display: none" role="search">
+  <h3>Quick search</h3>
+    <form class="search" action="../../../../search.html" method="get">
+      <input type="text" name="q" />
+      <input type="submit" value="Go" />
+      <input type="hidden" name="check_keywords" value="yes" />
+      <input type="hidden" name="area" value="default" />
+    </form>
+    <p class="searchtip" style="font-size: 90%">
+    Enter search terms or a module, class or function name.
+    </p>
+</div>
+<script type="text/javascript">$('#searchbox').show(0);</script>
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="related" role="navigation" aria-label="related navigation">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="../../../../genindex.html" title="General Index"
+             >index</a></li>
+        <li class="right" >
+          <a href="../../../../py-modindex.html" title="Python Module Index"
+             >modules</a> |</li>
+        <li class="nav-item nav-item-0"><a href="../../../../index.html">SasView 3.1.0 documentation</a> &raquo;</li>
+          <li class="nav-item nav-item-1"><a href="../../../index.html" >Module code</a> &raquo;</li> 
+      </ul>
+    </div>
+    <div class="footer" role="contentinfo">
+        &copy; Copyright 2015, The SasView Project.
+      Created using <a href="http://sphinx-doc.org/">Sphinx</a> 1.3.1.
+    </div>
+  </body>
+</html>

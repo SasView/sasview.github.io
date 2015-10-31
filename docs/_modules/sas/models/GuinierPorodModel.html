@@ -1,0 +1,198 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+  "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+    
+    <title>sas.models.GuinierPorodModel &mdash; SasView 3.1.0 documentation</title>
+    
+    <link rel="stylesheet" href="../../../_static/classic.css" type="text/css" />
+    <link rel="stylesheet" href="../../../_static/pygments.css" type="text/css" />
+    
+    <script type="text/javascript">
+      var DOCUMENTATION_OPTIONS = {
+        URL_ROOT:    '../../../',
+        VERSION:     '3.1.0',
+        COLLAPSE_INDEX: false,
+        FILE_SUFFIX: '.html',
+        HAS_SOURCE:  true
+      };
+    </script>
+    <script type="text/javascript" src="../../../_static/jquery.js"></script>
+    <script type="text/javascript" src="../../../_static/underscore.js"></script>
+    <script type="text/javascript" src="../../../_static/doctools.js"></script>
+    <script type="text/javascript" src="https://cdn.mathjax.org/mathjax/latest/MathJax.js?config=TeX-AMS-MML_HTMLorMML"></script>
+    <link rel="top" title="SasView 3.1.0 documentation" href="../../../index.html" />
+    <link rel="up" title="sas.models" href="../models.html" /> 
+  </head>
+  <body role="document">
+    <div class="related" role="navigation" aria-label="related navigation">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="../../../genindex.html" title="General Index"
+             accesskey="I">index</a></li>
+        <li class="right" >
+          <a href="../../../py-modindex.html" title="Python Module Index"
+             >modules</a> |</li>
+        <li class="nav-item nav-item-0"><a href="../../../index.html">SasView 3.1.0 documentation</a> &raquo;</li>
+          <li class="nav-item nav-item-1"><a href="../../index.html" >Module code</a> &raquo;</li>
+          <li class="nav-item nav-item-2"><a href="../models.html" accesskey="U">sas.models</a> &raquo;</li> 
+      </ul>
+    </div>  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          <div class="body" role="main">
+            
+  <h1>Source code for sas.models.GuinierPorodModel</h1><div class="highlight"><pre>
+<span class="sd">&quot;&quot;&quot; </span>
+<span class="sd">Guinier function as a BaseComponent model</span>
+<span class="sd">&quot;&quot;&quot;</span>
+<span class="kn">from</span> <span class="nn">sas.models.BaseComponent</span> <span class="kn">import</span> <span class="n">BaseComponent</span>
+<span class="kn">from</span> <span class="nn">math</span> <span class="kn">import</span> <span class="n">sqrt</span><span class="p">,</span><span class="n">exp</span>
+
+<div class="viewcode-block" id="GuinierPorodModel"><a class="viewcode-back" href="../../../dev/api/sas.models.html#sas.models.GuinierPorodModel.GuinierPorodModel">[docs]</a><span class="k">class</span> <span class="nc">GuinierPorodModel</span><span class="p">(</span><span class="n">BaseComponent</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot; </span>
+<span class="sd">    Class that evaluates a GuinierPorod model.</span>
+
+<span class="sd">    Calculate::</span>
+
+<span class="sd">        I(q) = scale/q^s exp(-q^2 Rg^2 / (3-s) ) for q&lt;= ql</span>
+<span class="sd">        I(q) = scale/q^m exp(-ql^2 Rg^2 / (3-s)) ql^(m-s) for q&gt;=ql</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot; Initialization &quot;&quot;&quot;</span>
+        
+        <span class="c"># Initialize BaseComponent first, then sphere</span>
+        <span class="n">BaseComponent</span><span class="o">.</span><span class="n">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span>
+        
+        <span class="c">## Name of the model</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">name</span> <span class="o">=</span> <span class="s">&quot;GuinierPorod&quot;</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">description</span> <span class="o">=</span> <span class="s">&quot;&quot;&quot;</span>
+<span class="s">         I(q) = scale/q^s* exp ( - R_g^2 q^2 / (3-s) ) for q&lt;= ql</span>
+<span class="s">         = scale/q^m*exp((-ql^2*Rg^2)/(3-s))*ql^(m-s) for q&gt;=ql</span>
+<span class="s">                        where ql = sqrt((m-s)(3-s)/2)/Rg.</span>
+<span class="s">                        List of parameters:</span>
+<span class="s">                        scale = Guinier Scale</span>
+<span class="s">                        s = Dimension Variable</span>
+<span class="s">                        Rg = Radius of Gyration [A] </span>
+<span class="s">                        m = Porod Exponent</span>
+<span class="s">                        background  = Background [1/cm]&quot;&quot;&quot;</span>
+        <span class="c">## Define parameters</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">params</span> <span class="o">=</span> <span class="p">{}</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">params</span><span class="p">[</span><span class="s">&#39;scale&#39;</span><span class="p">]</span>  <span class="o">=</span> <span class="mf">1.0</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">params</span><span class="p">[</span><span class="s">&#39;dim&#39;</span><span class="p">]</span>  <span class="o">=</span> <span class="mf">1.0</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">params</span><span class="p">[</span><span class="s">&#39;rg&#39;</span><span class="p">]</span>     <span class="o">=</span> <span class="mf">100.0</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">params</span><span class="p">[</span><span class="s">&#39;m&#39;</span><span class="p">]</span>     <span class="o">=</span> <span class="mf">3.0</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">params</span><span class="p">[</span><span class="s">&#39;background&#39;</span><span class="p">]</span>     <span class="o">=</span> <span class="mf">0.1</span>
+        <span class="c">## Parameter details [units, min, max]</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">details</span> <span class="o">=</span> <span class="p">{}</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">details</span><span class="p">[</span><span class="s">&#39;scale&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="p">[</span><span class="s">&#39;&#39;</span><span class="p">,</span> <span class="bp">None</span><span class="p">,</span> <span class="bp">None</span><span class="p">]</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">details</span><span class="p">[</span><span class="s">&#39;dim&#39;</span><span class="p">]</span>  <span class="o">=</span> <span class="p">[</span><span class="s">&#39;&#39;</span><span class="p">,</span> <span class="bp">None</span><span class="p">,</span> <span class="bp">None</span><span class="p">]</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">details</span><span class="p">[</span><span class="s">&#39;rg&#39;</span><span class="p">]</span>    <span class="o">=</span> <span class="p">[</span><span class="s">&#39;[A]&#39;</span><span class="p">,</span> <span class="bp">None</span><span class="p">,</span> <span class="bp">None</span><span class="p">]</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">details</span><span class="p">[</span><span class="s">&#39;m&#39;</span><span class="p">]</span>     <span class="o">=</span> <span class="p">[</span><span class="s">&#39;&#39;</span><span class="p">,</span> <span class="bp">None</span><span class="p">,</span> <span class="bp">None</span><span class="p">]</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">details</span><span class="p">[</span><span class="s">&#39;background&#39;</span><span class="p">]</span>     <span class="o">=</span> <span class="p">[</span><span class="s">&#39;[1/cm]&#39;</span><span class="p">,</span> <span class="bp">None</span><span class="p">,</span> <span class="bp">None</span><span class="p">]</span>
+
+        <span class="c">#list of parameter that cannot be fitted</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">fixed</span> <span class="o">=</span> <span class="p">[]</span>  
+        
+    <span class="k">def</span> <span class="nf">_guinier_porod</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">x</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Guinier-Porod Model</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="c"># parameters</span>
+        <span class="n">G</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">params</span><span class="p">[</span><span class="s">&#39;scale&#39;</span><span class="p">]</span>
+        <span class="n">s</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">params</span><span class="p">[</span><span class="s">&#39;dim&#39;</span><span class="p">]</span>
+        <span class="n">Rg</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">params</span><span class="p">[</span><span class="s">&#39;rg&#39;</span><span class="p">]</span>
+        <span class="n">m</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">params</span><span class="p">[</span><span class="s">&#39;m&#39;</span><span class="p">]</span>
+        <span class="n">bgd</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">params</span><span class="p">[</span><span class="s">&#39;background&#39;</span><span class="p">]</span>
+        <span class="n">n</span> <span class="o">=</span> <span class="mf">3.0</span> <span class="o">-</span> <span class="n">s</span>
+        <span class="n">qval</span> <span class="o">=</span> <span class="n">x</span>
+        <span class="c"># take care of the singular points</span>
+        <span class="k">if</span> <span class="n">Rg</span> <span class="o">&lt;=</span> <span class="mf">0.0</span><span class="p">:</span>
+            <span class="k">return</span> <span class="n">bgd</span>
+        <span class="k">if</span> <span class="p">(</span><span class="n">n</span><span class="o">-</span><span class="mf">3.0</span><span class="o">+</span><span class="n">m</span><span class="p">)</span> <span class="o">&lt;=</span> <span class="mf">0.0</span><span class="p">:</span>
+            <span class="k">return</span> <span class="n">bgd</span>
+        <span class="c">#do the calculation and return the function value</span>
+        <span class="n">q1</span> <span class="o">=</span> <span class="n">sqrt</span><span class="p">((</span><span class="n">n</span><span class="o">-</span><span class="mf">3.0</span><span class="o">+</span><span class="n">m</span><span class="p">)</span><span class="o">*</span><span class="n">n</span><span class="o">/</span><span class="mf">2.0</span><span class="p">)</span><span class="o">/</span><span class="n">Rg</span>
+        <span class="k">if</span> <span class="n">qval</span> <span class="o">&lt;</span> <span class="n">q1</span><span class="p">:</span>
+            <span class="n">F</span> <span class="o">=</span> <span class="p">(</span><span class="n">G</span><span class="o">/</span><span class="nb">pow</span><span class="p">(</span><span class="n">qval</span><span class="p">,(</span><span class="mf">3.0</span><span class="o">-</span><span class="n">n</span><span class="p">)))</span><span class="o">*</span><span class="n">exp</span><span class="p">((</span><span class="o">-</span><span class="n">qval</span><span class="o">*</span><span class="n">qval</span><span class="o">*</span><span class="n">Rg</span><span class="o">*</span><span class="n">Rg</span><span class="p">)</span><span class="o">/</span><span class="n">n</span><span class="p">)</span> 
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">F</span> <span class="o">=</span> <span class="p">(</span><span class="n">G</span><span class="o">/</span><span class="nb">pow</span><span class="p">(</span><span class="n">qval</span><span class="p">,</span> <span class="n">m</span><span class="p">))</span><span class="o">*</span><span class="n">exp</span><span class="p">(</span><span class="o">-</span><span class="p">(</span><span class="n">n</span><span class="o">-</span><span class="mf">3.0</span><span class="o">+</span><span class="n">m</span><span class="p">)</span><span class="o">/</span><span class="mf">2.0</span><span class="p">)</span><span class="o">*</span><span class="nb">pow</span><span class="p">(((</span><span class="n">n</span><span class="o">-</span><span class="mf">3.0</span><span class="o">+</span><span class="n">m</span><span class="p">)</span><span class="o">*</span><span class="n">n</span><span class="o">/</span><span class="mf">2.0</span><span class="p">),</span>
+                                        <span class="p">((</span><span class="n">n</span><span class="o">-</span><span class="mf">3.0</span><span class="o">+</span><span class="n">m</span><span class="p">)</span><span class="o">/</span><span class="mf">2.0</span><span class="p">))</span><span class="o">/</span><span class="nb">pow</span><span class="p">(</span><span class="n">Rg</span><span class="p">,(</span><span class="n">n</span><span class="o">-</span><span class="mf">3.0</span><span class="o">+</span><span class="n">m</span><span class="p">))</span>
+        <span class="n">inten</span> <span class="o">=</span> <span class="n">F</span> <span class="o">+</span> <span class="n">bgd</span>
+    
+        <span class="k">return</span> <span class="n">inten</span>
+   
+<div class="viewcode-block" id="GuinierPorodModel.run"><a class="viewcode-back" href="../../../dev/api/sas.models.html#sas.models.GuinierPorodModel.GuinierPorodModel.run">[docs]</a>    <span class="k">def</span> <span class="nf">run</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">x</span> <span class="o">=</span> <span class="mf">0.0</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot; Evaluate the model</span>
+<span class="sd">            @param x: input q-value (float or [float, float] as [r, theta])</span>
+<span class="sd">            @return: (guinier value)</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">if</span> <span class="n">x</span><span class="o">.</span><span class="n">__class__</span><span class="o">.</span><span class="n">__name__</span> <span class="o">==</span> <span class="s">&#39;list&#39;</span><span class="p">:</span>
+            <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_guinier_porod</span><span class="p">(</span><span class="n">x</span><span class="p">[</span><span class="mi">0</span><span class="p">])</span>
+        <span class="k">elif</span> <span class="n">x</span><span class="o">.</span><span class="n">__class__</span><span class="o">.</span><span class="n">__name__</span> <span class="o">==</span> <span class="s">&#39;tuple&#39;</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">,</span> <span class="s">&quot;Tuples are not allowed as input to models&quot;</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_guinier_porod</span><span class="p">(</span><span class="n">x</span><span class="p">)</span>
+   </div>
+<div class="viewcode-block" id="GuinierPorodModel.runXY"><a class="viewcode-back" href="../../../dev/api/sas.models.html#sas.models.GuinierPorodModel.GuinierPorodModel.runXY">[docs]</a>    <span class="k">def</span> <span class="nf">runXY</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">x</span> <span class="o">=</span> <span class="mf">0.0</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot; Evaluate the model</span>
+<span class="sd">            @param x: input q-value (float or [float, float] as [qx, qy])</span>
+<span class="sd">            @return: guinier value</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">if</span> <span class="n">x</span><span class="o">.</span><span class="n">__class__</span><span class="o">.</span><span class="n">__name__</span> <span class="o">==</span> <span class="s">&#39;list&#39;</span><span class="p">:</span>
+            <span class="n">q</span> <span class="o">=</span> <span class="n">sqrt</span><span class="p">(</span><span class="n">x</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="o">**</span><span class="mi">2</span> <span class="o">+</span> <span class="n">x</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span><span class="o">**</span><span class="mi">2</span><span class="p">)</span>
+            <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_guinier_porod</span><span class="p">(</span><span class="n">q</span><span class="p">)</span>
+        <span class="k">elif</span> <span class="n">x</span><span class="o">.</span><span class="n">__class__</span><span class="o">.</span><span class="n">__name__</span> <span class="o">==</span> <span class="s">&#39;tuple&#39;</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">,</span> <span class="s">&quot;Tuples are not allowed as input to models&quot;</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_guinier_porod</span><span class="p">(</span><span class="n">x</span><span class="p">)</span></div></div>
+</pre></div>
+
+          </div>
+        </div>
+      </div>
+      <div class="sphinxsidebar" role="navigation" aria-label="main navigation">
+        <div class="sphinxsidebarwrapper">
+<div id="searchbox" style="display: none" role="search">
+  <h3>Quick search</h3>
+    <form class="search" action="../../../search.html" method="get">
+      <input type="text" name="q" />
+      <input type="submit" value="Go" />
+      <input type="hidden" name="check_keywords" value="yes" />
+      <input type="hidden" name="area" value="default" />
+    </form>
+    <p class="searchtip" style="font-size: 90%">
+    Enter search terms or a module, class or function name.
+    </p>
+</div>
+<script type="text/javascript">$('#searchbox').show(0);</script>
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="related" role="navigation" aria-label="related navigation">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="../../../genindex.html" title="General Index"
+             >index</a></li>
+        <li class="right" >
+          <a href="../../../py-modindex.html" title="Python Module Index"
+             >modules</a> |</li>
+        <li class="nav-item nav-item-0"><a href="../../../index.html">SasView 3.1.0 documentation</a> &raquo;</li>
+          <li class="nav-item nav-item-1"><a href="../../index.html" >Module code</a> &raquo;</li>
+          <li class="nav-item nav-item-2"><a href="../models.html" >sas.models</a> &raquo;</li> 
+      </ul>
+    </div>
+    <div class="footer" role="contentinfo">
+        &copy; Copyright 2015, The SasView Project.
+      Created using <a href="http://sphinx-doc.org/">Sphinx</a> 1.3.1.
+    </div>
+  </body>
+</html>
