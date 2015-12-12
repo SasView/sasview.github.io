@@ -6,7 +6,7 @@
   <head>
     <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
     
-    <title>sas.fit.BumpsFitting &mdash; SasView 3.1.0 documentation</title>
+    <title>sas.fit.BumpsFitting &mdash; SasView 3.1.2 documentation</title>
     
     <link rel="stylesheet" href="../../../_static/classic.css" type="text/css" />
     <link rel="stylesheet" href="../../../_static/pygments.css" type="text/css" />
@@ -14,7 +14,7 @@
     <script type="text/javascript">
       var DOCUMENTATION_OPTIONS = {
         URL_ROOT:    '../../../',
-        VERSION:     '3.1.0',
+        VERSION:     '3.1.2',
         COLLAPSE_INDEX: false,
         FILE_SUFFIX: '.html',
         HAS_SOURCE:  true
@@ -24,7 +24,7 @@
     <script type="text/javascript" src="../../../_static/underscore.js"></script>
     <script type="text/javascript" src="../../../_static/doctools.js"></script>
     <script type="text/javascript" src="https://cdn.mathjax.org/mathjax/latest/MathJax.js?config=TeX-AMS-MML_HTMLorMML"></script>
-    <link rel="top" title="SasView 3.1.0 documentation" href="../../../index.html" />
+    <link rel="top" title="SasView 3.1.2 documentation" href="../../../index.html" />
     <link rel="up" title="Module code" href="../../index.html" /> 
   </head>
   <body role="document">
@@ -37,7 +37,7 @@
         <li class="right" >
           <a href="../../../py-modindex.html" title="Python Module Index"
              >modules</a> |</li>
-        <li class="nav-item nav-item-0"><a href="../../../index.html">SasView 3.1.0 documentation</a> &raquo;</li>
+        <li class="nav-item nav-item-0"><a href="../../../index.html">SasView 3.1.2 documentation</a> &raquo;</li>
           <li class="nav-item nav-item-1"><a href="../../index.html" accesskey="U">Module code</a> &raquo;</li> 
       </ul>
     </div>  
@@ -57,13 +57,25 @@
 <span class="kn">import</span> <span class="nn">numpy</span>
 
 <span class="kn">from</span> <span class="nn">bumps</span> <span class="kn">import</span> <span class="n">fitters</span>
+<span class="k">try</span><span class="p">:</span>
+    <span class="kn">from</span> <span class="nn">bumps.options</span> <span class="kn">import</span> <span class="n">FIT_CONFIG</span>
+    <span class="c"># Default bumps to use the Levenberg-Marquardt optimizer</span>
+    <span class="n">FIT_CONFIG</span><span class="o">.</span><span class="n">selected_id</span> <span class="o">=</span> <span class="n">fitters</span><span class="o">.</span><span class="n">LevenbergMarquardtFit</span><span class="o">.</span><span class="n">id</span>
+    <span class="k">def</span> <span class="nf">get_fitter</span><span class="p">():</span>
+        <span class="k">return</span> <span class="n">FIT_CONFIG</span><span class="o">.</span><span class="n">selected_fitter</span><span class="p">,</span> <span class="n">FIT_CONFIG</span><span class="o">.</span><span class="n">selected_values</span>
+<span class="k">except</span><span class="p">:</span>
+    <span class="c"># CRUFT: Bumps changed its handling of fit options around 0.7.5.6</span>
+    <span class="c"># Default bumps to use the Levenberg-Marquardt optimizer</span>
+    <span class="n">fitters</span><span class="o">.</span><span class="n">FIT_DEFAULT</span> <span class="o">=</span> <span class="s">&#39;lm&#39;</span>
+<div class="viewcode-block" id="get_fitter"><a class="viewcode-back" href="../../../dev/api/sas.fit.html#sas.fit.BumpsFitting.get_fitter">[docs]</a>    <span class="k">def</span> <span class="nf">get_fitter</span><span class="p">():</span>
+        <span class="n">fitopts</span> <span class="o">=</span> <span class="n">fitters</span><span class="o">.</span><span class="n">FIT_OPTIONS</span><span class="p">[</span><span class="n">fitters</span><span class="o">.</span><span class="n">FIT_DEFAULT</span><span class="p">]</span>
+        <span class="k">return</span> <span class="n">fitopts</span><span class="o">.</span><span class="n">fitclass</span><span class="p">,</span> <span class="n">fitopts</span><span class="o">.</span><span class="n">options</span><span class="o">.</span><span class="n">copy</span><span class="p">()</span>
+
+</div>
 <span class="kn">from</span> <span class="nn">bumps.mapper</span> <span class="kn">import</span> <span class="n">SerialMapper</span><span class="p">,</span> <span class="n">MPMapper</span>
 <span class="kn">from</span> <span class="nn">bumps</span> <span class="kn">import</span> <span class="n">parameter</span>
-
-<span class="c"># TODO: remove globals from interface to bumps options!</span>
-<span class="c"># Default bumps to use the levenberg-marquardt optimizer</span>
 <span class="kn">from</span> <span class="nn">bumps.fitproblem</span> <span class="kn">import</span> <span class="n">FitProblem</span>
-<span class="n">fitters</span><span class="o">.</span><span class="n">FIT_DEFAULT</span> <span class="o">=</span> <span class="s">&#39;lm&#39;</span>
+
 
 <span class="kn">from</span> <span class="nn">sas.fit.AbstractFitEngine</span> <span class="kn">import</span> <span class="n">FitEngine</span>
 <span class="kn">from</span> <span class="nn">sas.fit.AbstractFitEngine</span> <span class="kn">import</span> <span class="n">FResult</span>
@@ -360,10 +372,13 @@
             <span class="k">return</span> <span class="bp">True</span>
         <span class="k">return</span> <span class="bp">False</span>
 
-    <span class="n">fitopts</span> <span class="o">=</span> <span class="n">fitters</span><span class="o">.</span><span class="n">FIT_OPTIONS</span><span class="p">[</span><span class="n">fitters</span><span class="o">.</span><span class="n">FIT_DEFAULT</span><span class="p">]</span>
-    <span class="n">fitclass</span> <span class="o">=</span> <span class="n">fitopts</span><span class="o">.</span><span class="n">fitclass</span>
-    <span class="n">options</span> <span class="o">=</span> <span class="n">fitopts</span><span class="o">.</span><span class="n">options</span><span class="o">.</span><span class="n">copy</span><span class="p">()</span>
-    <span class="n">max_step</span> <span class="o">=</span> <span class="n">fitopts</span><span class="o">.</span><span class="n">options</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s">&#39;steps&#39;</span><span class="p">,</span> <span class="mi">0</span><span class="p">)</span> <span class="o">+</span> <span class="n">fitopts</span><span class="o">.</span><span class="n">options</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s">&#39;burn&#39;</span><span class="p">,</span> <span class="mi">0</span><span class="p">)</span>
+    <span class="n">fitclass</span><span class="p">,</span> <span class="n">options</span> <span class="o">=</span> <span class="n">get_fitter</span><span class="p">()</span>
+    <span class="n">steps</span> <span class="o">=</span> <span class="n">options</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s">&#39;steps&#39;</span><span class="p">,</span> <span class="mi">0</span><span class="p">)</span>
+    <span class="k">if</span> <span class="n">steps</span> <span class="o">==</span> <span class="mi">0</span><span class="p">:</span>
+        <span class="n">pop</span> <span class="o">=</span> <span class="n">options</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s">&#39;pop&#39;</span><span class="p">,</span><span class="mi">0</span><span class="p">)</span><span class="o">*</span><span class="nb">len</span><span class="p">(</span><span class="n">problem</span><span class="o">.</span><span class="n">_parameters</span><span class="p">)</span>
+        <span class="n">samples</span> <span class="o">=</span> <span class="n">options</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s">&#39;samples&#39;</span><span class="p">,</span> <span class="mi">0</span><span class="p">)</span>
+        <span class="n">steps</span> <span class="o">=</span> <span class="p">(</span><span class="n">samples</span><span class="o">+</span><span class="n">pop</span><span class="o">-</span><span class="mi">1</span><span class="p">)</span><span class="o">/</span><span class="n">pop</span> <span class="k">if</span> <span class="n">pop</span> <span class="o">!=</span> <span class="mi">0</span> <span class="k">else</span> <span class="n">samples</span>
+    <span class="n">max_step</span> <span class="o">=</span> <span class="n">steps</span> <span class="o">+</span> <span class="n">options</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s">&#39;burn&#39;</span><span class="p">,</span> <span class="mi">0</span><span class="p">)</span>
     <span class="n">pars</span> <span class="o">=</span> <span class="p">[</span><span class="n">p</span><span class="o">.</span><span class="n">name</span> <span class="k">for</span> <span class="n">p</span> <span class="ow">in</span> <span class="n">problem</span><span class="o">.</span><span class="n">_parameters</span><span class="p">]</span>
     <span class="c">#x0 = numpy.asarray([p.value for p in problem._parameters])</span>
     <span class="n">options</span><span class="p">[</span><span class="s">&#39;monitors&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="p">[</span>
@@ -430,7 +445,7 @@
         <li class="right" >
           <a href="../../../py-modindex.html" title="Python Module Index"
              >modules</a> |</li>
-        <li class="nav-item nav-item-0"><a href="../../../index.html">SasView 3.1.0 documentation</a> &raquo;</li>
+        <li class="nav-item nav-item-0"><a href="../../../index.html">SasView 3.1.2 documentation</a> &raquo;</li>
           <li class="nav-item nav-item-1"><a href="../../index.html" >Module code</a> &raquo;</li> 
       </ul>
     </div>

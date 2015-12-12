@@ -6,7 +6,7 @@
   <head>
     <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
     
-    <title>sas.models.resolution &mdash; SasView 3.1.0 documentation</title>
+    <title>sas.models.resolution &mdash; SasView 3.1.2 documentation</title>
     
     <link rel="stylesheet" href="../../../_static/classic.css" type="text/css" />
     <link rel="stylesheet" href="../../../_static/pygments.css" type="text/css" />
@@ -14,7 +14,7 @@
     <script type="text/javascript">
       var DOCUMENTATION_OPTIONS = {
         URL_ROOT:    '../../../',
-        VERSION:     '3.1.0',
+        VERSION:     '3.1.2',
         COLLAPSE_INDEX: false,
         FILE_SUFFIX: '.html',
         HAS_SOURCE:  true
@@ -24,7 +24,7 @@
     <script type="text/javascript" src="../../../_static/underscore.js"></script>
     <script type="text/javascript" src="../../../_static/doctools.js"></script>
     <script type="text/javascript" src="https://cdn.mathjax.org/mathjax/latest/MathJax.js?config=TeX-AMS-MML_HTMLorMML"></script>
-    <link rel="top" title="SasView 3.1.0 documentation" href="../../../index.html" />
+    <link rel="top" title="SasView 3.1.2 documentation" href="../../../index.html" />
     <link rel="up" title="sas.models" href="../models.html" /> 
   </head>
   <body role="document">
@@ -37,7 +37,7 @@
         <li class="right" >
           <a href="../../../py-modindex.html" title="Python Module Index"
              >modules</a> |</li>
-        <li class="nav-item nav-item-0"><a href="../../../index.html">SasView 3.1.0 documentation</a> &raquo;</li>
+        <li class="nav-item nav-item-0"><a href="../../../index.html">SasView 3.1.2 documentation</a> &raquo;</li>
           <li class="nav-item nav-item-1"><a href="../../index.html" >Module code</a> &raquo;</li>
           <li class="nav-item nav-item-2"><a href="../models.html" accesskey="U">sas.models</a> &raquo;</li> 
       </ul>
@@ -61,7 +61,12 @@
 
 <span class="n">MINIMUM_RESOLUTION</span> <span class="o">=</span> <span class="mf">1e-8</span>
 
-<div class="viewcode-block" id="Resolution1D"><a class="viewcode-back" href="../../../dev/api/sas.models.html#sas.models.resolution.Resolution1D">[docs]</a><span class="k">class</span> <span class="nc">Resolution1D</span><span class="p">(</span><span class="nb">object</span><span class="p">):</span>
+
+<span class="c"># When extrapolating to -q, what is the minimum positive q relative to q_min</span>
+<span class="c"># that we wish to calculate?</span>
+<span class="n">MIN_Q_SCALE_FOR_NEGATIVE_Q_EXTRAPOLATION</span> <span class="o">=</span> <span class="mf">0.01</span>
+
+<div class="viewcode-block" id="Resolution"><a class="viewcode-back" href="../../../dev/api/sas.models.html#sas.models.resolution.Resolution">[docs]</a><span class="k">class</span> <span class="nc">Resolution</span><span class="p">(</span><span class="nb">object</span><span class="p">):</span>
     <span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">    Abstract base class defining a 1D resolution function.</span>
 
@@ -75,14 +80,14 @@
 <span class="sd">    &quot;&quot;&quot;</span>
     <span class="n">q</span> <span class="o">=</span> <span class="bp">None</span>
     <span class="n">q_calc</span> <span class="o">=</span> <span class="bp">None</span>
-<div class="viewcode-block" id="Resolution1D.apply"><a class="viewcode-back" href="../../../dev/api/sas.models.html#sas.models.resolution.Resolution1D.apply">[docs]</a>    <span class="k">def</span> <span class="nf">apply</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">theory</span><span class="p">):</span>
+<div class="viewcode-block" id="Resolution.apply"><a class="viewcode-back" href="../../../dev/api/sas.models.html#sas.models.resolution.Resolution.apply">[docs]</a>    <span class="k">def</span> <span class="nf">apply</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">theory</span><span class="p">):</span>
         <span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">        Smear *theory* by the resolution function, returning *Iq*.</span>
 <span class="sd">        &quot;&quot;&quot;</span>
         <span class="k">raise</span> <span class="ne">NotImplementedError</span><span class="p">(</span><span class="s">&quot;Subclass does not define the apply function&quot;</span><span class="p">)</span>
 
 </div></div>
-<div class="viewcode-block" id="Perfect1D"><a class="viewcode-back" href="../../../dev/api/sas.models.html#sas.models.resolution.Perfect1D">[docs]</a><span class="k">class</span> <span class="nc">Perfect1D</span><span class="p">(</span><span class="n">Resolution1D</span><span class="p">):</span>
+<div class="viewcode-block" id="Perfect1D"><a class="viewcode-back" href="../../../dev/api/sas.models.html#sas.models.resolution.Perfect1D">[docs]</a><span class="k">class</span> <span class="nc">Perfect1D</span><span class="p">(</span><span class="n">Resolution</span><span class="p">):</span>
     <span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">    Resolution function to use when there is no actual resolution smearing</span>
 <span class="sd">    to be applied.  It has the same interface as the other resolution</span>
@@ -95,7 +100,7 @@
         <span class="k">return</span> <span class="n">theory</span>
 
 </div></div>
-<div class="viewcode-block" id="Pinhole1D"><a class="viewcode-back" href="../../../dev/api/sas.models.html#sas.models.resolution.Pinhole1D">[docs]</a><span class="k">class</span> <span class="nc">Pinhole1D</span><span class="p">(</span><span class="n">Resolution1D</span><span class="p">):</span>
+<div class="viewcode-block" id="Pinhole1D"><a class="viewcode-back" href="../../../dev/api/sas.models.html#sas.models.resolution.Pinhole1D">[docs]</a><span class="k">class</span> <span class="nc">Pinhole1D</span><span class="p">(</span><span class="n">Resolution</span><span class="p">):</span>
     <span class="sd">r&quot;&quot;&quot;</span>
 <span class="sd">    Pinhole aperture with q-dependent gaussian resolution.</span>
 
@@ -127,7 +132,7 @@
         <span class="k">return</span> <span class="n">apply_resolution_matrix</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">weight_matrix</span><span class="p">,</span> <span class="n">theory</span><span class="p">)</span>
 
 </div></div>
-<div class="viewcode-block" id="Slit1D"><a class="viewcode-back" href="../../../dev/api/sas.models.html#sas.models.resolution.Slit1D">[docs]</a><span class="k">class</span> <span class="nc">Slit1D</span><span class="p">(</span><span class="n">Resolution1D</span><span class="p">):</span>
+<div class="viewcode-block" id="Slit1D"><a class="viewcode-back" href="../../../dev/api/sas.models.html#sas.models.resolution.Slit1D">[docs]</a><span class="k">class</span> <span class="nc">Slit1D</span><span class="p">(</span><span class="n">Resolution</span><span class="p">):</span>
     <span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">    Slit aperture with a complicated resolution function.</span>
 
@@ -142,20 +147,21 @@
 
 <span class="sd">    The *weight_matrix* is computed by :func:`slit1d_resolution`</span>
 <span class="sd">    &quot;&quot;&quot;</span>
-    <span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">q</span><span class="p">,</span> <span class="n">width</span><span class="p">,</span> <span class="n">height</span><span class="p">,</span> <span class="n">q_calc</span><span class="o">=</span><span class="bp">None</span><span class="p">):</span>
-        <span class="c"># TODO: maybe issue warnings rather than raising errors</span>
-        <span class="k">if</span> <span class="ow">not</span> <span class="n">np</span><span class="o">.</span><span class="n">isscalar</span><span class="p">(</span><span class="n">width</span><span class="p">):</span>
-            <span class="k">if</span> <span class="n">np</span><span class="o">.</span><span class="n">any</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">diff</span><span class="p">(</span><span class="n">width</span><span class="p">)</span> <span class="o">&gt;</span> <span class="mf">0.0</span><span class="p">):</span>
-                <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s">&quot;Slit resolution requires fixed width slits&quot;</span><span class="p">)</span>
-            <span class="n">width</span> <span class="o">=</span> <span class="n">width</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
-        <span class="k">if</span> <span class="ow">not</span> <span class="n">np</span><span class="o">.</span><span class="n">isscalar</span><span class="p">(</span><span class="n">height</span><span class="p">):</span>
-            <span class="k">if</span> <span class="n">np</span><span class="o">.</span><span class="n">any</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">diff</span><span class="p">(</span><span class="n">height</span><span class="p">)</span> <span class="o">&gt;</span> <span class="mf">0.0</span><span class="p">):</span>
-                <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s">&quot;Slit resolution requires fixed height slits&quot;</span><span class="p">)</span>
-            <span class="n">height</span> <span class="o">=</span> <span class="n">height</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
-
+    <span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">q</span><span class="p">,</span> <span class="n">width</span><span class="p">,</span> <span class="n">height</span><span class="o">=</span><span class="mf">0.</span><span class="p">,</span> <span class="n">q_calc</span><span class="o">=</span><span class="bp">None</span><span class="p">):</span>
         <span class="c"># Remember what width/height was used even though we won&#39;t need them</span>
         <span class="c"># after the weight matrix is constructed</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">width</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">height</span> <span class="o">=</span> <span class="n">width</span><span class="p">,</span> <span class="n">height</span>
+
+        <span class="c"># Allow independent resolution on each point even though it is not</span>
+        <span class="c"># needed in practice.</span>
+        <span class="k">if</span> <span class="n">np</span><span class="o">.</span><span class="n">isscalar</span><span class="p">(</span><span class="n">width</span><span class="p">):</span>
+            <span class="n">width</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">ones</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">q</span><span class="p">))</span><span class="o">*</span><span class="n">width</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">width</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">asarray</span><span class="p">(</span><span class="n">width</span><span class="p">)</span>
+        <span class="k">if</span> <span class="n">np</span><span class="o">.</span><span class="n">isscalar</span><span class="p">(</span><span class="n">height</span><span class="p">):</span>
+            <span class="n">height</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">ones</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">q</span><span class="p">))</span><span class="o">*</span><span class="n">height</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">height</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">asarray</span><span class="p">(</span><span class="n">height</span><span class="p">)</span>
 
         <span class="bp">self</span><span class="o">.</span><span class="n">q</span> <span class="o">=</span> <span class="n">q</span><span class="o">.</span><span class="n">flatten</span><span class="p">()</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">q_calc</span> <span class="o">=</span> <span class="n">slit_extend_q</span><span class="p">(</span><span class="n">q</span><span class="p">,</span> <span class="n">width</span><span class="p">,</span> <span class="n">height</span><span class="p">)</span> \
@@ -197,55 +203,173 @@
     <span class="k">return</span> <span class="n">weights</span>
 
 </div>
-<div class="viewcode-block" id="slit_resolution"><a class="viewcode-back" href="../../../dev/api/sas.models.html#sas.models.resolution.slit_resolution">[docs]</a><span class="k">def</span> <span class="nf">slit_resolution</span><span class="p">(</span><span class="n">q_calc</span><span class="p">,</span> <span class="n">q</span><span class="p">,</span> <span class="n">width</span><span class="p">,</span> <span class="n">height</span><span class="p">):</span>
+<div class="viewcode-block" id="slit_resolution"><a class="viewcode-back" href="../../../dev/api/sas.models.html#sas.models.resolution.slit_resolution">[docs]</a><span class="k">def</span> <span class="nf">slit_resolution</span><span class="p">(</span><span class="n">q_calc</span><span class="p">,</span> <span class="n">q</span><span class="p">,</span> <span class="n">width</span><span class="p">,</span> <span class="n">height</span><span class="p">,</span> <span class="n">n_height</span><span class="o">=</span><span class="mi">30</span><span class="p">):</span>
     <span class="sd">r&quot;&quot;&quot;</span>
 <span class="sd">    Build a weight matrix to compute *I_s(q)* from *I(q_calc)*, given</span>
-<span class="sd">    $q_v$ = *width* and $q_h$ = *height*.</span>
+<span class="sd">    $q_\perp$ = *width* and $q_\parallel$ = *height*.  *n_height* is</span>
+<span class="sd">    is the number of steps to use in the integration over $q_\parallel$</span>
+<span class="sd">    when both $q_\perp$ and $q_\parallel$ are non-zero.</span>
 
-<span class="sd">    *width* and *height* are scalars since current instruments use the</span>
-<span class="sd">    same slit settings for all measurement points.</span>
+<span class="sd">    Each $q$ can have an independent width and height value even though</span>
+<span class="sd">    current instruments use the same slit setting for all measured points.</span>
 
 <span class="sd">    If slit height is large relative to width, use:</span>
 
 <span class="sd">    .. math::</span>
 
-<span class="sd">        I_s(q_o) = \frac{1}{\Delta q_v}</span>
-<span class="sd">            \int_0^{\Delta q_v} I(\sqrt{q_o^2 + u^2} du</span>
+<span class="sd">        I_s(q_i) = \frac{1}{\Delta q_\perp}</span>
+<span class="sd">            \int_0^{\Delta q_\perp} I(\sqrt{q_i^2 + q_\perp^2} dq_\perp</span>
 
 <span class="sd">    If slit width is large relative to height, use:</span>
 
 <span class="sd">    .. math::</span>
 
-<span class="sd">        I_s(q_o) = \frac{1}{2 \Delta q_v}</span>
-<span class="sd">            \int_{-\Delta q_v}^{\Delta q_v} I(u) du</span>
-<span class="sd">    &quot;&quot;&quot;</span>
-    <span class="k">if</span> <span class="n">width</span> <span class="o">==</span> <span class="mf">0.0</span> <span class="ow">and</span> <span class="n">height</span> <span class="o">==</span> <span class="mf">0.0</span><span class="p">:</span>
-        <span class="c">#print &quot;condition zero&quot;</span>
-        <span class="k">return</span> <span class="mi">1</span>
+<span class="sd">        I_s(q_i) = \frac{1}{2 \Delta q_\parallel}</span>
+<span class="sd">            \int_{-\Delta q_\parallel}^{\Delta q_\parallel}</span>
+<span class="sd">                I(|q_i + q_\parallel|) dq_\parallel</span>
 
+<span class="sd">    For a mixture of slit width and height use:</span>
+
+<span class="sd">    .. math::</span>
+
+<span class="sd">        I_s(q_i) = \frac{1}{2 \Delta q_\parallel \Delta q_\perp}</span>
+<span class="sd">            \int_{-\Delta q_\parallel)^{\Delta q_parallel}</span>
+<span class="sd">            \int_0^[\Delta q_\perp}</span>
+<span class="sd">                I(\sqrt{(q_i + q_\parallel)^2 + q_\perp^2})</span>
+<span class="sd">                dq_\perp dq_\parallel</span>
+
+
+<span class="sd">    Algorithm</span>
+<span class="sd">    ---------</span>
+
+<span class="sd">    We are using the mid-point integration rule to assign weights to each</span>
+<span class="sd">    element of a weight matrix $W$ so that</span>
+
+<span class="sd">    .. math::</span>
+
+<span class="sd">        I_s(q) = W I(q_\text{calc})</span>
+
+<span class="sd">    If *q_calc* is at the mid-point, we can infer the bin edges from the</span>
+<span class="sd">    pairwise averages of *q_calc*, adding the missing edges before</span>
+<span class="sd">    *q_calc[0]* and after *q_calc[-1]*.</span>
+
+<span class="sd">    For $q_\parallel = 0$, the smeared value can be computed numerically</span>
+<span class="sd">    using the $u$ substitution</span>
+
+<span class="sd">    .. math::</span>
+
+<span class="sd">        u_j = \sqrt{q_j^2 - q^2}</span>
+
+<span class="sd">    This gives</span>
+
+<span class="sd">    .. math::</span>
+
+<span class="sd">        I_s(q) \approx \sum_j I(u_j) \Delta u_j</span>
+
+<span class="sd">    where $I(u_j)$ is the value at the mid-point, and $\Delta u_j$ is the</span>
+<span class="sd">    difference between consecutive edges which have been first converted</span>
+<span class="sd">    to $u$.  Only $u_j \in [0, \Delta q_\perp]$ are used, which corresponds</span>
+<span class="sd">    to $q_j \in [q, \sqrt{q^2 + \Delta q_\perp}]$, so</span>
+
+<span class="sd">    .. math::</span>
+
+<span class="sd">        W_{ij} = \frac{1}{\Delta q_\perp} \Delta u_j</span>
+<span class="sd">               = \frac{1}{\Delta q_\perp}</span>
+<span class="sd">                    \sqrt{q_{j+1}^2 - q_i^2} - \sqrt{q_j^2 - q_i^2}</span>
+<span class="sd">            \text{if} q_j \in [q_i, \sqrt{q_i^2 + q_\perp^2}]</span>
+
+<span class="sd">    where $I_s(q_i)$ is the theory function being computed and $q_j$ are the</span>
+<span class="sd">    mid-points between the calculated values in *q_calc*.  We tweak the</span>
+<span class="sd">    edges of the initial and final intervals so that they lie on integration</span>
+<span class="sd">    limits.</span>
+
+<span class="sd">    (To be precise, the transformed midpoint $u(q_j)$ is not necessarily the</span>
+<span class="sd">    midpoint of the edges $u((q_{j-1}+q_j)/2)$ and $u((q_j + q_{j+1})/2)$,</span>
+<span class="sd">    but it is at least in the interval, so the approximation is going to be</span>
+<span class="sd">    a little better than the left or right Riemann sum, and should be</span>
+<span class="sd">    good enough for our purposes.)</span>
+
+<span class="sd">    For $q_\perp = 0$, the $u$ substitution is simpler:</span>
+
+<span class="sd">    .. math::</span>
+
+<span class="sd">        u_j = |q_j - q|</span>
+
+<span class="sd">    so</span>
+
+<span class="sd">    .. math::</span>
+
+<span class="sd">        W_ij = \frac{1}{2 \Delta q_\parallel} \Delta u_j</span>
+<span class="sd">            = \frac{1}{2 \Delta q_\parallel} (q_{j+1} - q_j)</span>
+<span class="sd">            \text{if} q_j \in [q-\Delta q_\parallel, q+\Delta q_\parallel]</span>
+
+<span class="sd">    However, we need to support cases were $u_j &lt; 0$, which means using</span>
+<span class="sd">    $2 (q_{j+1} - q_j)$ when $q_j \in [0, q_\parallel-q_i]$.  This is not</span>
+<span class="sd">    an issue for $q_i &gt; q_\parallel$.</span>
+
+<span class="sd">    For bot $q_\perp &gt; 0$ and $q_\parallel &gt; 0$ we perform a 2 dimensional</span>
+<span class="sd">    integration with</span>
+
+<span class="sd">    .. math::</span>
+
+<span class="sd">        u_jk = \sqrt{q_j^2 - (q + (k\Delta q_\parallel/L))^2}</span>
+<span class="sd">            \text{for} k = -L \ldots L</span>
+
+<span class="sd">    for $L$ = *n_height*.  This gives</span>
+
+<span class="sd">    .. math::</span>
+
+<span class="sd">        W_{ij} = \frac{1}{2 \Delta q_\perp q_\parallel}</span>
+<span class="sd">            \sum_{k=-L}^L \Delta u_jk (\frac{\Delta q_\parallel}{2 L + 1}</span>
+
+
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="c">#np.set_printoptions(precision=6, linewidth=10000)</span>
+
+    <span class="c"># The current algorithm is a midpoint rectangle rule.</span>
     <span class="n">q_edges</span> <span class="o">=</span> <span class="n">bin_edges</span><span class="p">(</span><span class="n">q_calc</span><span class="p">)</span> <span class="c"># Note: requires q &gt; 0</span>
     <span class="n">q_edges</span><span class="p">[</span><span class="n">q_edges</span><span class="o">&lt;</span><span class="mf">0.0</span><span class="p">]</span> <span class="o">=</span> <span class="mf">0.0</span> <span class="c"># clip edges below zero</span>
+    <span class="n">weights</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">zeros</span><span class="p">((</span><span class="nb">len</span><span class="p">(</span><span class="n">q</span><span class="p">),</span> <span class="nb">len</span><span class="p">(</span><span class="n">q_calc</span><span class="p">)),</span> <span class="s">&#39;d&#39;</span><span class="p">)</span>
 
-    <span class="c">#np.set_printoptions(linewidth=10000)</span>
-    <span class="k">if</span> <span class="n">width</span> <span class="o">&lt;=</span> <span class="mf">100.0</span> <span class="o">*</span> <span class="n">height</span> <span class="ow">or</span> <span class="n">height</span> <span class="o">==</span> <span class="mi">0</span><span class="p">:</span>
-        <span class="c"># The current algorithm is a midpoint rectangle rule.  In the test case,</span>
-        <span class="c"># neither trapezoid nor Simpson&#39;s rule improved the accuracy.</span>
-        <span class="c">#print &quot;condition h&quot;, q_edges.shape, q.shape, q_calc.shape</span>
-        <span class="n">weights</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">zeros</span><span class="p">((</span><span class="nb">len</span><span class="p">(</span><span class="n">q</span><span class="p">),</span> <span class="nb">len</span><span class="p">(</span><span class="n">q_calc</span><span class="p">)),</span> <span class="s">&#39;d&#39;</span><span class="p">)</span>
-        <span class="k">for</span> <span class="n">i</span><span class="p">,</span> <span class="n">qi</span> <span class="ow">in</span> <span class="nb">enumerate</span><span class="p">(</span><span class="n">q</span><span class="p">):</span>
-            <span class="n">weights</span><span class="p">[</span><span class="n">i</span><span class="p">,</span> <span class="p">:]</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">diff</span><span class="p">(</span><span class="n">q_to_u</span><span class="p">(</span><span class="n">q_edges</span><span class="p">,</span> <span class="n">qi</span><span class="p">))</span>
-        <span class="n">weights</span> <span class="o">/=</span> <span class="n">width</span>
-        <span class="n">weights</span> <span class="o">=</span> <span class="n">weights</span><span class="o">.</span><span class="n">T</span>
-    <span class="k">else</span><span class="p">:</span>
-        <span class="c">#print &quot;condition w&quot;</span>
-        <span class="c"># Make q_calc into a row vector, and q into a column vector</span>
-        <span class="n">q</span><span class="p">,</span> <span class="n">q_calc</span> <span class="o">=</span> <span class="n">q</span><span class="p">[</span><span class="bp">None</span><span class="p">,:],</span> <span class="n">q_calc</span><span class="p">[:,</span><span class="bp">None</span><span class="p">]</span>
-        <span class="n">in_x</span> <span class="o">=</span> <span class="p">(</span><span class="n">q_calc</span> <span class="o">&gt;=</span> <span class="n">q</span><span class="o">-</span><span class="n">width</span><span class="p">)</span> <span class="o">*</span> <span class="p">(</span><span class="n">q_calc</span> <span class="o">&lt;=</span> <span class="n">q</span><span class="o">+</span><span class="n">width</span><span class="p">)</span>
-        <span class="n">weights</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">diff</span><span class="p">(</span><span class="n">q_edges</span><span class="p">)[:,</span><span class="bp">None</span><span class="p">]</span> <span class="o">*</span> <span class="n">in_x</span>
+    <span class="c">#print q_calc</span>
+    <span class="k">for</span> <span class="n">i</span><span class="p">,</span> <span class="p">(</span><span class="n">qi</span><span class="p">,</span> <span class="n">w</span><span class="p">,</span> <span class="n">h</span><span class="p">)</span> <span class="ow">in</span> <span class="nb">enumerate</span><span class="p">(</span><span class="nb">zip</span><span class="p">(</span><span class="n">q</span><span class="p">,</span> <span class="n">width</span><span class="p">,</span> <span class="n">height</span><span class="p">)):</span>
+        <span class="k">if</span> <span class="n">w</span> <span class="o">==</span> <span class="mf">0.</span> <span class="ow">and</span> <span class="n">h</span> <span class="o">==</span> <span class="mf">0.</span><span class="p">:</span>
+            <span class="c"># Perfect resolution, so return the theory value directly.</span>
+            <span class="c"># Note: assumes that q is a subset of q_calc.  If qi need not be</span>
+            <span class="c"># in q_calc, then we can do a weighted interpolation by looking</span>
+            <span class="c"># up qi in q_calc, then weighting the result by the relative</span>
+            <span class="c"># distance to the neighbouring points.</span>
+            <span class="n">weights</span><span class="p">[</span><span class="n">i</span><span class="p">,</span> <span class="p">:]</span> <span class="o">=</span> <span class="p">(</span><span class="n">q_calc</span> <span class="o">==</span> <span class="n">qi</span><span class="p">)</span>
+        <span class="k">elif</span> <span class="n">h</span> <span class="o">==</span> <span class="mi">0</span><span class="p">:</span>
+            <span class="n">weights</span><span class="p">[</span><span class="n">i</span><span class="p">,</span> <span class="p">:]</span> <span class="o">=</span> <span class="n">_q_perp_weights</span><span class="p">(</span><span class="n">q_edges</span><span class="p">,</span> <span class="n">qi</span><span class="p">,</span> <span class="n">w</span><span class="p">)</span>
+        <span class="k">elif</span> <span class="n">w</span> <span class="o">==</span> <span class="mi">0</span><span class="p">:</span>
+            <span class="n">in_x</span> <span class="o">=</span> <span class="mf">1.0</span> <span class="o">*</span> <span class="p">((</span><span class="n">q_calc</span> <span class="o">&gt;=</span> <span class="n">qi</span><span class="o">-</span><span class="n">h</span><span class="p">)</span> <span class="o">&amp;</span> <span class="p">(</span><span class="n">q_calc</span> <span class="o">&lt;=</span> <span class="n">qi</span><span class="o">+</span><span class="n">h</span><span class="p">))</span>
+            <span class="n">abs_x</span> <span class="o">=</span> <span class="mf">1.0</span><span class="o">*</span><span class="p">(</span><span class="n">q_calc</span> <span class="o">&lt;</span> <span class="nb">abs</span><span class="p">(</span><span class="n">qi</span> <span class="o">-</span> <span class="n">h</span><span class="p">))</span> <span class="k">if</span> <span class="n">qi</span> <span class="o">&lt;</span> <span class="n">h</span> <span class="k">else</span> <span class="mf">0.</span>
+            <span class="c">#print qi - h, qi + h</span>
+            <span class="c">#print in_x + abs_x</span>
+            <span class="n">weights</span><span class="p">[</span><span class="n">i</span><span class="p">,:]</span> <span class="o">=</span> <span class="p">(</span><span class="n">in_x</span> <span class="o">+</span> <span class="n">abs_x</span><span class="p">)</span> <span class="o">*</span> <span class="n">np</span><span class="o">.</span><span class="n">diff</span><span class="p">(</span><span class="n">q_edges</span><span class="p">)</span> <span class="o">/</span> <span class="p">(</span><span class="mi">2</span><span class="o">*</span><span class="n">h</span><span class="p">)</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">L</span> <span class="o">=</span> <span class="n">n_height</span>
+            <span class="k">for</span> <span class="n">k</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="o">-</span><span class="n">L</span><span class="p">,</span> <span class="n">L</span><span class="o">+</span><span class="mi">1</span><span class="p">):</span>
+                <span class="n">weights</span><span class="p">[</span><span class="n">i</span><span class="p">,:]</span> <span class="o">+=</span> <span class="n">_q_perp_weights</span><span class="p">(</span><span class="n">q_edges</span><span class="p">,</span> <span class="n">qi</span><span class="o">+</span><span class="n">k</span><span class="o">*</span><span class="n">h</span><span class="o">/</span><span class="n">L</span><span class="p">,</span> <span class="n">w</span><span class="p">)</span>
+            <span class="n">weights</span><span class="p">[</span><span class="n">i</span><span class="p">,:]</span> <span class="o">/=</span> <span class="mi">2</span><span class="o">*</span><span class="n">L</span> <span class="o">+</span> <span class="mi">1</span>
 
-    <span class="k">return</span> <span class="n">weights</span>
+    <span class="k">return</span> <span class="n">weights</span><span class="o">.</span><span class="n">T</span>
 
 </div>
+<span class="k">def</span> <span class="nf">_q_perp_weights</span><span class="p">(</span><span class="n">q_edges</span><span class="p">,</span> <span class="n">qi</span><span class="p">,</span> <span class="n">w</span><span class="p">):</span>
+    <span class="c"># Convert bin edges from q to u</span>
+    <span class="n">u_limit</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">sqrt</span><span class="p">(</span><span class="n">qi</span><span class="o">**</span><span class="mi">2</span> <span class="o">+</span> <span class="n">w</span><span class="o">**</span><span class="mi">2</span><span class="p">)</span>
+    <span class="n">u_edges</span> <span class="o">=</span> <span class="n">q_edges</span><span class="o">**</span><span class="mi">2</span> <span class="o">-</span> <span class="n">qi</span><span class="o">**</span><span class="mi">2</span>
+    <span class="n">u_edges</span><span class="p">[</span><span class="n">q_edges</span> <span class="o">&lt;</span> <span class="nb">abs</span><span class="p">(</span><span class="n">qi</span><span class="p">)]</span> <span class="o">=</span> <span class="mf">0.</span>
+    <span class="n">u_edges</span><span class="p">[</span><span class="n">q_edges</span> <span class="o">&gt;</span> <span class="n">u_limit</span><span class="p">]</span> <span class="o">=</span> <span class="n">u_limit</span><span class="o">**</span><span class="mi">2</span> <span class="o">-</span> <span class="n">qi</span><span class="o">**</span><span class="mi">2</span>
+    <span class="n">weights</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">diff</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">sqrt</span><span class="p">(</span><span class="n">u_edges</span><span class="p">))</span><span class="o">/</span><span class="n">w</span>
+    <span class="c">#print &quot;i, qi&quot;,i,qi,qi+width</span>
+    <span class="c">#print q_calc</span>
+    <span class="c">#print weights</span>
+    <span class="k">return</span> <span class="n">weights</span>
+
+
 <div class="viewcode-block" id="pinhole_extend_q"><a class="viewcode-back" href="../../../dev/api/sas.models.html#sas.models.resolution.pinhole_extend_q">[docs]</a><span class="k">def</span> <span class="nf">pinhole_extend_q</span><span class="p">(</span><span class="n">q</span><span class="p">,</span> <span class="n">q_width</span><span class="p">,</span> <span class="n">nsigma</span><span class="o">=</span><span class="mi">3</span><span class="p">):</span>
     <span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">    Given *q* and *q_width*, find a set of sampling points *q_calc* so</span>
@@ -262,8 +386,8 @@
 <span class="sd">    that each point I(q) has sufficient support from the underlying</span>
 <span class="sd">    function.</span>
 <span class="sd">    &quot;&quot;&quot;</span>
-    <span class="n">height</span> <span class="c"># keep lint happy</span>
-    <span class="n">q_min</span><span class="p">,</span> <span class="n">q_max</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">min</span><span class="p">(</span><span class="n">q</span><span class="p">),</span> <span class="n">np</span><span class="o">.</span><span class="n">max</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">sqrt</span><span class="p">(</span><span class="n">q</span><span class="o">**</span><span class="mi">2</span> <span class="o">+</span> <span class="n">width</span><span class="o">**</span><span class="mi">2</span><span class="p">))</span>
+    <span class="n">q_min</span><span class="p">,</span> <span class="n">q_max</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">min</span><span class="p">(</span><span class="n">q</span><span class="o">-</span><span class="n">height</span><span class="p">),</span> <span class="n">np</span><span class="o">.</span><span class="n">max</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">sqrt</span><span class="p">((</span><span class="n">q</span><span class="o">+</span><span class="n">height</span><span class="p">)</span><span class="o">**</span><span class="mi">2</span> <span class="o">+</span> <span class="n">width</span><span class="o">**</span><span class="mi">2</span><span class="p">))</span>
+
     <span class="k">return</span> <span class="n">geometric_extrapolation</span><span class="p">(</span><span class="n">q</span><span class="p">,</span> <span class="n">q_min</span><span class="p">,</span> <span class="n">q_max</span><span class="p">)</span>
 
 </div>
@@ -283,16 +407,6 @@
         <span class="n">x</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span> <span class="o">+</span> <span class="mf">0.5</span><span class="o">*</span><span class="p">(</span><span class="n">x</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span> <span class="o">-</span> <span class="n">x</span><span class="p">[</span><span class="o">-</span><span class="mi">2</span><span class="p">]),</span> <span class="c"># last point plus half last interval</span>
         <span class="p">])</span>
     <span class="k">return</span> <span class="n">edges</span>
-
-</div>
-<div class="viewcode-block" id="q_to_u"><a class="viewcode-back" href="../../../dev/api/sas.models.html#sas.models.resolution.q_to_u">[docs]</a><span class="k">def</span> <span class="nf">q_to_u</span><span class="p">(</span><span class="n">q</span><span class="p">,</span> <span class="n">q0</span><span class="p">):</span>
-    <span class="sd">&quot;&quot;&quot;</span>
-<span class="sd">    Convert *q* values to *u* values for the integral computed at *q0*.</span>
-<span class="sd">    &quot;&quot;&quot;</span>
-    <span class="c"># array([value])**2 - value**2 is not always zero</span>
-    <span class="n">qpsq</span> <span class="o">=</span> <span class="n">q</span><span class="o">**</span><span class="mi">2</span> <span class="o">-</span> <span class="n">q0</span><span class="o">**</span><span class="mi">2</span>
-    <span class="n">qpsq</span><span class="p">[</span><span class="n">qpsq</span><span class="o">&lt;</span><span class="mi">0</span><span class="p">]</span> <span class="o">=</span> <span class="mi">0</span>
-    <span class="k">return</span> <span class="n">sqrt</span><span class="p">(</span><span class="n">qpsq</span><span class="p">)</span>
 
 </div>
 <div class="viewcode-block" id="interpolate"><a class="viewcode-back" href="../../../dev/api/sas.models.html#sas.models.resolution.interpolate">[docs]</a><span class="k">def</span> <span class="nf">interpolate</span><span class="p">(</span><span class="n">q</span><span class="p">,</span> <span class="n">max_step</span><span class="p">):</span>
@@ -325,7 +439,7 @@
 <span class="sd">    &quot;&quot;&quot;</span>
     <span class="n">q</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">sort</span><span class="p">(</span><span class="n">q</span><span class="p">)</span>
     <span class="k">if</span> <span class="n">q_min</span> <span class="o">&lt;</span> <span class="n">q</span><span class="p">[</span><span class="mi">0</span><span class="p">]:</span>
-        <span class="k">if</span> <span class="n">q_min</span> <span class="o">&lt;=</span> <span class="mi">0</span><span class="p">:</span> <span class="n">q_min</span> <span class="o">=</span> <span class="n">q</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="o">/</span><span class="mi">10</span>
+        <span class="k">if</span> <span class="n">q_min</span> <span class="o">&lt;=</span> <span class="mi">0</span><span class="p">:</span> <span class="n">q_min</span> <span class="o">=</span> <span class="n">q_min</span><span class="o">*</span><span class="n">MIN_Q_SCALE_FOR_NEGATIVE_Q_EXTRAPOLATION</span>
         <span class="n">n_low</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">ceil</span><span class="p">((</span><span class="n">q</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="o">-</span><span class="n">q_min</span><span class="p">)</span> <span class="o">/</span> <span class="p">(</span><span class="n">q</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span><span class="o">-</span><span class="n">q</span><span class="p">[</span><span class="mi">0</span><span class="p">]))</span> <span class="k">if</span> <span class="n">q</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span><span class="o">&gt;</span><span class="n">q</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="k">else</span> <span class="mi">15</span>
         <span class="n">q_low</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">linspace</span><span class="p">(</span><span class="n">q_min</span><span class="p">,</span> <span class="n">q</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span> <span class="n">n_low</span><span class="o">+</span><span class="mi">1</span><span class="p">)[:</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span>
     <span class="k">else</span><span class="p">:</span>
@@ -347,7 +461,7 @@
 
 <span class="sd">    *points_per_decade* sets the ratio between consecutive steps such</span>
 <span class="sd">    that there will be $n$ points used for every factor of 10 increase</span>
-<span class="sd">    in $q$.</span>
+<span class="sd">    in *q*.</span>
 
 <span class="sd">    If *points_per_decade* is not given, it will be estimated as follows.</span>
 <span class="sd">    Starting at $q_1$ and stepping geometrically by $\Delta q$ to $q_n$</span>
@@ -366,10 +480,8 @@
 
 <span class="sd">    Substituting:</span>
 
-<span class="sd">    .. math::</span>
-
 <span class="sd">        n_\text{extend} = (n-1) (\log q_\text{max} - \log q_n)</span>
-<span class="sd">            / (\log q_n - \log q_1)</span>
+<span class="sd">            / (\log q_n - log q_1)</span>
 <span class="sd">    &quot;&quot;&quot;</span>
     <span class="n">q</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">sort</span><span class="p">(</span><span class="n">q</span><span class="p">)</span>
     <span class="k">if</span> <span class="n">points_per_decade</span> <span class="ow">is</span> <span class="bp">None</span><span class="p">:</span>
@@ -377,7 +489,7 @@
     <span class="k">else</span><span class="p">:</span>
         <span class="n">log_delta_q</span> <span class="o">=</span> <span class="n">log</span><span class="p">(</span><span class="mf">10.</span><span class="p">)</span> <span class="o">/</span> <span class="n">points_per_decade</span>
     <span class="k">if</span> <span class="n">q_min</span> <span class="o">&lt;</span> <span class="n">q</span><span class="p">[</span><span class="mi">0</span><span class="p">]:</span>
-        <span class="k">if</span> <span class="n">q_min</span> <span class="o">&lt;</span> <span class="mi">0</span><span class="p">:</span> <span class="n">q_min</span> <span class="o">=</span> <span class="n">q</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="o">/</span><span class="mi">10</span>
+        <span class="k">if</span> <span class="n">q_min</span> <span class="o">&lt;</span> <span class="mi">0</span><span class="p">:</span> <span class="n">q_min</span> <span class="o">=</span> <span class="n">q</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="o">*</span><span class="n">MIN_Q_SCALE_FOR_NEGATIVE_Q_EXTRAPOLATION</span>
         <span class="n">n_low</span> <span class="o">=</span> <span class="n">log_delta_q</span> <span class="o">*</span> <span class="p">(</span><span class="n">log</span><span class="p">(</span><span class="n">q</span><span class="p">[</span><span class="mi">0</span><span class="p">])</span><span class="o">-</span><span class="n">log</span><span class="p">(</span><span class="n">q_min</span><span class="p">))</span>
         <span class="n">q_low</span>  <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">logspace</span><span class="p">(</span><span class="n">log10</span><span class="p">(</span><span class="n">q_min</span><span class="p">),</span> <span class="n">log10</span><span class="p">(</span><span class="n">q</span><span class="p">[</span><span class="mi">0</span><span class="p">]),</span> <span class="n">np</span><span class="o">.</span><span class="n">ceil</span><span class="p">(</span><span class="n">n_low</span><span class="p">)</span><span class="o">+</span><span class="mi">1</span><span class="p">)[:</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span>
     <span class="k">else</span><span class="p">:</span>
@@ -409,14 +521,14 @@
     <span class="k">return</span> <span class="n">exp</span><span class="p">(</span><span class="o">-</span><span class="mf">0.5</span><span class="o">*</span><span class="p">((</span><span class="n">q</span><span class="o">-</span><span class="n">q0</span><span class="p">)</span><span class="o">/</span><span class="n">dq</span><span class="p">)</span><span class="o">**</span><span class="mi">2</span><span class="p">)</span><span class="o">/</span><span class="p">(</span><span class="n">sqrt</span><span class="p">(</span><span class="mi">2</span><span class="o">*</span><span class="n">pi</span><span class="p">)</span><span class="o">*</span><span class="n">dq</span><span class="p">)</span>
 
 </div>
-<div class="viewcode-block" id="romberg_slit_1d"><a class="viewcode-back" href="../../../dev/api/sas.models.html#sas.models.resolution.romberg_slit_1d">[docs]</a><span class="k">def</span> <span class="nf">romberg_slit_1d</span><span class="p">(</span><span class="n">q</span><span class="p">,</span> <span class="n">delta_qv</span><span class="p">,</span> <span class="n">form</span><span class="p">,</span> <span class="n">pars</span><span class="p">):</span>
+<div class="viewcode-block" id="romberg_slit_1d"><a class="viewcode-back" href="../../../dev/api/sas.models.html#sas.models.resolution.romberg_slit_1d">[docs]</a><span class="k">def</span> <span class="nf">romberg_slit_1d</span><span class="p">(</span><span class="n">q</span><span class="p">,</span> <span class="n">width</span><span class="p">,</span> <span class="n">height</span><span class="p">,</span> <span class="n">form</span><span class="p">,</span> <span class="n">pars</span><span class="p">):</span>
     <span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">    Romberg integration for slit resolution.</span>
 
 <span class="sd">    This is an adaptive integration technique.  It is called with settings</span>
 <span class="sd">    that make it slow to evaluate but give it good accuracy.</span>
 <span class="sd">    &quot;&quot;&quot;</span>
-    <span class="kn">from</span> <span class="nn">scipy.integrate</span> <span class="kn">import</span> <span class="n">romberg</span>
+    <span class="kn">from</span> <span class="nn">scipy.integrate</span> <span class="kn">import</span> <span class="n">romberg</span><span class="p">,</span> <span class="n">dblquad</span>
 
     <span class="k">if</span> <span class="nb">any</span><span class="p">(</span><span class="n">k</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">form</span><span class="o">.</span><span class="n">info</span><span class="p">[</span><span class="s">&#39;defaults&#39;</span><span class="p">]</span> <span class="k">for</span> <span class="n">k</span> <span class="ow">in</span> <span class="n">pars</span><span class="o">.</span><span class="n">keys</span><span class="p">()):</span>
         <span class="n">keys</span> <span class="o">=</span> <span class="nb">set</span><span class="p">(</span><span class="n">form</span><span class="o">.</span><span class="n">info</span><span class="p">[</span><span class="s">&#39;defaults&#39;</span><span class="p">]</span><span class="o">.</span><span class="n">keys</span><span class="p">())</span>
@@ -424,12 +536,44 @@
         <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s">&quot;bad parameters: [</span><span class="si">%s</span><span class="s">] not in [</span><span class="si">%s</span><span class="s">]&quot;</span><span class="o">%</span>
                          <span class="p">(</span><span class="s">&quot;, &quot;</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="nb">sorted</span><span class="p">(</span><span class="n">extra</span><span class="p">)),</span> <span class="s">&quot;, &quot;</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="nb">sorted</span><span class="p">(</span><span class="n">keys</span><span class="p">))))</span>
 
-    <span class="n">_fn</span> <span class="o">=</span> <span class="k">lambda</span> <span class="n">u</span><span class="p">,</span> <span class="n">q0</span><span class="p">:</span> <span class="n">eval_form</span><span class="p">(</span><span class="n">sqrt</span><span class="p">(</span><span class="n">q0</span><span class="o">**</span><span class="mi">2</span> <span class="o">+</span> <span class="n">u</span><span class="o">**</span><span class="mi">2</span><span class="p">),</span> <span class="n">form</span><span class="p">,</span> <span class="n">pars</span><span class="p">)</span>
-    <span class="n">r</span> <span class="o">=</span> <span class="p">[</span><span class="n">romberg</span><span class="p">(</span><span class="n">_fn</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="n">delta_qv</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span> <span class="n">args</span><span class="o">=</span><span class="p">(</span><span class="n">qi</span><span class="p">,),</span>
-                 <span class="n">divmax</span><span class="o">=</span><span class="mi">100</span><span class="p">,</span> <span class="n">vec_func</span><span class="o">=</span><span class="bp">True</span><span class="p">,</span> <span class="n">tol</span><span class="o">=</span><span class="mi">0</span><span class="p">,</span> <span class="n">rtol</span><span class="o">=</span><span class="mf">1e-8</span><span class="p">)</span>
-         <span class="k">for</span> <span class="n">qi</span> <span class="ow">in</span> <span class="n">q</span><span class="p">]</span>
+    <span class="k">if</span> <span class="n">np</span><span class="o">.</span><span class="n">isscalar</span><span class="p">(</span><span class="n">width</span><span class="p">):</span>
+        <span class="n">width</span> <span class="o">=</span> <span class="p">[</span><span class="n">width</span><span class="p">]</span><span class="o">*</span><span class="nb">len</span><span class="p">(</span><span class="n">q</span><span class="p">)</span>
+    <span class="k">if</span> <span class="n">np</span><span class="o">.</span><span class="n">isscalar</span><span class="p">(</span><span class="n">height</span><span class="p">):</span>
+        <span class="n">height</span> <span class="o">=</span> <span class="p">[</span><span class="n">height</span><span class="p">]</span><span class="o">*</span><span class="nb">len</span><span class="p">(</span><span class="n">q</span><span class="p">)</span>
+    <span class="n">_int_w</span> <span class="o">=</span> <span class="k">lambda</span> <span class="n">w</span><span class="p">,</span> <span class="n">qi</span><span class="p">:</span> <span class="n">eval_form</span><span class="p">(</span><span class="n">sqrt</span><span class="p">(</span><span class="n">qi</span><span class="o">**</span><span class="mi">2</span> <span class="o">+</span> <span class="n">w</span><span class="o">**</span><span class="mi">2</span><span class="p">),</span> <span class="n">form</span><span class="p">,</span> <span class="n">pars</span><span class="p">)</span>
+    <span class="n">_int_h</span> <span class="o">=</span> <span class="k">lambda</span> <span class="n">h</span><span class="p">,</span> <span class="n">qi</span><span class="p">:</span> <span class="n">eval_form</span><span class="p">(</span><span class="nb">abs</span><span class="p">(</span><span class="n">qi</span><span class="o">+</span><span class="n">h</span><span class="p">),</span> <span class="n">form</span><span class="p">,</span> <span class="n">pars</span><span class="p">)</span>
+    <span class="c"># If both width and height are defined, then it is too slow to use dblquad.</span>
+    <span class="c"># Instead use trapz on a fixed grid, interpolated into the I(Q) for</span>
+    <span class="c"># the extended Q range.</span>
+    <span class="c">#_int_wh = lambda w, h, qi: eval_form(sqrt((qi+h)**2 + w**2), form, pars)</span>
+    <span class="n">q_calc</span> <span class="o">=</span> <span class="n">slit_extend_q</span><span class="p">(</span><span class="n">q</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">asarray</span><span class="p">(</span><span class="n">width</span><span class="p">),</span> <span class="n">np</span><span class="o">.</span><span class="n">asarray</span><span class="p">(</span><span class="n">height</span><span class="p">))</span>
+    <span class="n">Iq</span> <span class="o">=</span> <span class="n">eval_form</span><span class="p">(</span><span class="n">q_calc</span><span class="p">,</span> <span class="n">form</span><span class="p">,</span> <span class="n">pars</span><span class="p">)</span>
+    <span class="n">result</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">empty</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">q</span><span class="p">))</span>
+    <span class="k">for</span> <span class="n">i</span><span class="p">,</span> <span class="p">(</span><span class="n">qi</span><span class="p">,</span> <span class="n">w</span><span class="p">,</span> <span class="n">h</span><span class="p">)</span> <span class="ow">in</span> <span class="nb">enumerate</span><span class="p">(</span><span class="nb">zip</span><span class="p">(</span><span class="n">q</span><span class="p">,</span> <span class="n">width</span><span class="p">,</span> <span class="n">height</span><span class="p">)):</span>
+        <span class="k">if</span> <span class="n">h</span> <span class="o">==</span> <span class="mf">0.</span><span class="p">:</span>
+            <span class="n">r</span> <span class="o">=</span> <span class="n">romberg</span><span class="p">(</span><span class="n">_int_w</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="n">w</span><span class="p">,</span> <span class="n">args</span><span class="o">=</span><span class="p">(</span><span class="n">qi</span><span class="p">,),</span>
+                        <span class="n">divmax</span><span class="o">=</span><span class="mi">100</span><span class="p">,</span> <span class="n">vec_func</span><span class="o">=</span><span class="bp">True</span><span class="p">,</span> <span class="n">tol</span><span class="o">=</span><span class="mi">0</span><span class="p">,</span> <span class="n">rtol</span><span class="o">=</span><span class="mf">1e-8</span><span class="p">)</span>
+            <span class="n">result</span><span class="p">[</span><span class="n">i</span><span class="p">]</span> <span class="o">=</span> <span class="n">r</span><span class="o">/</span><span class="n">w</span>
+        <span class="k">elif</span> <span class="n">w</span> <span class="o">==</span> <span class="mf">0.</span><span class="p">:</span>
+            <span class="n">r</span> <span class="o">=</span> <span class="n">romberg</span><span class="p">(</span><span class="n">_int_h</span><span class="p">,</span> <span class="o">-</span><span class="n">h</span><span class="p">,</span> <span class="n">h</span><span class="p">,</span> <span class="n">args</span><span class="o">=</span><span class="p">(</span><span class="n">qi</span><span class="p">,),</span>
+                        <span class="n">divmax</span><span class="o">=</span><span class="mi">100</span><span class="p">,</span> <span class="n">vec_func</span><span class="o">=</span><span class="bp">True</span><span class="p">,</span> <span class="n">tol</span><span class="o">=</span><span class="mi">0</span><span class="p">,</span> <span class="n">rtol</span><span class="o">=</span><span class="mf">1e-8</span><span class="p">)</span>
+            <span class="n">result</span><span class="p">[</span><span class="n">i</span><span class="p">]</span> <span class="o">=</span> <span class="n">r</span><span class="o">/</span><span class="p">(</span><span class="mi">2</span><span class="o">*</span><span class="n">h</span><span class="p">)</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">w_grid</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">linspace</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="n">w</span><span class="p">,</span> <span class="mi">21</span><span class="p">)[</span><span class="bp">None</span><span class="p">,:]</span>
+            <span class="n">h_grid</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">linspace</span><span class="p">(</span><span class="o">-</span><span class="n">h</span><span class="p">,</span> <span class="n">h</span><span class="p">,</span> <span class="mi">23</span><span class="p">)[:,</span><span class="bp">None</span><span class="p">]</span>
+            <span class="n">u</span> <span class="o">=</span> <span class="n">sqrt</span><span class="p">((</span><span class="n">qi</span><span class="o">+</span><span class="n">h_grid</span><span class="p">)</span><span class="o">**</span><span class="mi">2</span> <span class="o">+</span> <span class="n">w_grid</span><span class="o">**</span><span class="mi">2</span><span class="p">)</span>
+            <span class="n">Iu</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">interp</span><span class="p">(</span><span class="n">u</span><span class="p">,</span> <span class="n">q_calc</span><span class="p">,</span> <span class="n">Iq</span><span class="p">)</span>
+            <span class="c">#print np.trapz(Iu, w_grid, axis=1)</span>
+            <span class="n">Is</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">trapz</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">trapz</span><span class="p">(</span><span class="n">Iu</span><span class="p">,</span> <span class="n">w_grid</span><span class="p">,</span> <span class="n">axis</span><span class="o">=</span><span class="mi">1</span><span class="p">),</span> <span class="n">h_grid</span><span class="p">[:,</span><span class="mi">0</span><span class="p">])</span>
+            <span class="n">result</span><span class="p">[</span><span class="n">i</span><span class="p">]</span> <span class="o">=</span> <span class="n">Is</span> <span class="o">/</span> <span class="p">(</span><span class="mi">2</span><span class="o">*</span><span class="n">h</span><span class="o">*</span><span class="n">w</span><span class="p">)</span>
+            <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">            r, err = dblquad(_int_wh, -h, h, lambda h: 0., lambda h: w,</span>
+<span class="sd">                             args=(qi,))</span>
+<span class="sd">            result[i] = r/(w*2*h)</span>
+<span class="sd">            &quot;&quot;&quot;</span>
+
     <span class="c"># r should be [float, ...], but it is [array([float]), array([float]),...]</span>
-    <span class="k">return</span> <span class="n">np</span><span class="o">.</span><span class="n">asarray</span><span class="p">(</span><span class="n">r</span><span class="p">)</span><span class="o">.</span><span class="n">flatten</span><span class="p">()</span><span class="o">/</span><span class="n">delta_qv</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
+    <span class="k">return</span> <span class="n">result</span>
 
 </div>
 <div class="viewcode-block" id="romberg_pinhole_1d"><a class="viewcode-back" href="../../../dev/api/sas.models.html#sas.models.resolution.romberg_pinhole_1d">[docs]</a><span class="k">def</span> <span class="nf">romberg_pinhole_1d</span><span class="p">(</span><span class="n">q</span><span class="p">,</span> <span class="n">q_width</span><span class="p">,</span> <span class="n">form</span><span class="p">,</span> <span class="n">pars</span><span class="p">,</span> <span class="n">nsigma</span><span class="o">=</span><span class="mi">5</span><span class="p">):</span>
@@ -570,10 +714,10 @@
         <span class="k">return</span> <span class="n">result</span>
 </div>
 <div class="viewcode-block" id="IgorComparisonTest.compare"><a class="viewcode-back" href="../../../dev/api/sas.models.html#sas.models.resolution.IgorComparisonTest.compare">[docs]</a>    <span class="k">def</span> <span class="nf">compare</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">q</span><span class="p">,</span> <span class="n">output</span><span class="p">,</span> <span class="n">answer</span><span class="p">,</span> <span class="n">tolerance</span><span class="p">):</span>
-        <span class="n">err</span> <span class="o">=</span> <span class="p">(</span><span class="n">output</span> <span class="o">-</span> <span class="n">answer</span><span class="p">)</span><span class="o">/</span><span class="n">answer</span>
-        <span class="n">idx</span> <span class="o">=</span> <span class="nb">abs</span><span class="p">(</span><span class="n">err</span><span class="p">)</span> <span class="o">&gt;=</span> <span class="n">tolerance</span>
-        <span class="n">problem</span> <span class="o">=</span> <span class="nb">zip</span><span class="p">(</span><span class="n">q</span><span class="p">[</span><span class="n">idx</span><span class="p">],</span> <span class="n">output</span><span class="p">[</span><span class="n">idx</span><span class="p">],</span> <span class="n">answer</span><span class="p">[</span><span class="n">idx</span><span class="p">],</span> <span class="n">err</span><span class="p">[</span><span class="n">idx</span><span class="p">])</span>
-        <span class="k">print</span> <span class="s">&quot;</span><span class="se">\n</span><span class="s">&quot;</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="nb">str</span><span class="p">(</span><span class="n">v</span><span class="p">)</span> <span class="k">for</span> <span class="n">v</span> <span class="ow">in</span> <span class="n">problem</span><span class="p">)</span>
+        <span class="c">#err = (output - answer)/answer</span>
+        <span class="c">#idx = abs(err) &gt;= tolerance</span>
+        <span class="c">#problem = zip(q[idx], output[idx], answer[idx], err[idx])</span>
+        <span class="c">#print &quot;\n&quot;.join(str(v) for v in problem)</span>
         <span class="n">np</span><span class="o">.</span><span class="n">testing</span><span class="o">.</span><span class="n">assert_allclose</span><span class="p">(</span><span class="n">output</span><span class="p">,</span> <span class="n">answer</span><span class="p">,</span> <span class="n">rtol</span><span class="o">=</span><span class="n">tolerance</span><span class="p">)</span>
 </div>
 <div class="viewcode-block" id="IgorComparisonTest.test_perfect"><a class="viewcode-back" href="../../../dev/api/sas.models.html#sas.models.resolution.IgorComparisonTest.test_perfect">[docs]</a>    <span class="k">def</span> <span class="nf">test_perfect</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
@@ -659,9 +803,9 @@
 
         <span class="n">data</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">loadtxt</span><span class="p">(</span><span class="n">data_string</span><span class="o">.</span><span class="n">split</span><span class="p">(</span><span class="s">&#39;</span><span class="se">\n</span><span class="s">&#39;</span><span class="p">))</span><span class="o">.</span><span class="n">T</span>
         <span class="n">q</span><span class="p">,</span> <span class="n">delta_qv</span><span class="p">,</span> <span class="n">_</span><span class="p">,</span> <span class="n">answer</span> <span class="o">=</span> <span class="n">data</span>
-        <span class="n">answer</span> <span class="o">=</span> <span class="n">romberg_slit_1d</span><span class="p">(</span><span class="n">q</span><span class="p">,</span> <span class="n">delta_qv</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">model</span><span class="p">,</span> <span class="n">pars</span><span class="p">)</span>
+        <span class="n">answer</span> <span class="o">=</span> <span class="n">romberg_slit_1d</span><span class="p">(</span><span class="n">q</span><span class="p">,</span> <span class="n">delta_qv</span><span class="p">,</span> <span class="mf">0.</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">model</span><span class="p">,</span> <span class="n">pars</span><span class="p">)</span>
         <span class="n">q_calc</span> <span class="o">=</span> <span class="n">slit_extend_q</span><span class="p">(</span><span class="n">interpolate</span><span class="p">(</span><span class="n">q</span><span class="p">,</span> <span class="mi">2</span><span class="o">*</span><span class="n">np</span><span class="o">.</span><span class="n">pi</span><span class="o">/</span><span class="n">radius</span><span class="o">/</span><span class="mi">20</span><span class="p">),</span>
-                               <span class="n">delta_qv</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span> <span class="n">delta_qv</span><span class="p">[</span><span class="mi">0</span><span class="p">])</span>
+                               <span class="n">delta_qv</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span> <span class="mf">0.</span><span class="p">)</span>
         <span class="n">resolution</span> <span class="o">=</span> <span class="n">Slit1D</span><span class="p">(</span><span class="n">q</span><span class="p">,</span> <span class="n">width</span><span class="o">=</span><span class="n">delta_qv</span><span class="p">,</span> <span class="n">height</span><span class="o">=</span><span class="mi">0</span><span class="p">,</span> <span class="n">q_calc</span><span class="o">=</span><span class="n">q_calc</span><span class="p">)</span>
         <span class="n">output</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">Iq_sphere</span><span class="p">(</span><span class="n">pars</span><span class="p">,</span> <span class="n">resolution</span><span class="p">)</span>
         <span class="c"># TODO: relative error should be lower</span>
@@ -679,11 +823,12 @@
             <span class="p">}</span>
         <span class="n">form</span> <span class="o">=</span> <span class="n">load_model</span><span class="p">(</span><span class="s">&#39;ellipsoid&#39;</span><span class="p">,</span> <span class="n">dtype</span><span class="o">=</span><span class="s">&#39;double&#39;</span><span class="p">)</span>
         <span class="n">q</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">logspace</span><span class="p">(</span><span class="n">log10</span><span class="p">(</span><span class="mf">4e-5</span><span class="p">),</span><span class="n">log10</span><span class="p">(</span><span class="mf">2.5e-2</span><span class="p">),</span> <span class="mi">68</span><span class="p">)</span>
-        <span class="n">delta_qv</span> <span class="o">=</span> <span class="p">[</span><span class="mf">0.117</span><span class="p">]</span>
-        <span class="n">resolution</span> <span class="o">=</span> <span class="n">Slit1D</span><span class="p">(</span><span class="n">q</span><span class="p">,</span> <span class="n">width</span><span class="o">=</span><span class="n">delta_qv</span><span class="p">,</span> <span class="n">height</span><span class="o">=</span><span class="mi">0</span><span class="p">)</span>
-        <span class="n">answer</span> <span class="o">=</span> <span class="n">romberg_slit_1d</span><span class="p">(</span><span class="n">q</span><span class="p">,</span> <span class="n">delta_qv</span><span class="p">,</span> <span class="n">form</span><span class="p">,</span> <span class="n">pars</span><span class="p">)</span>
+        <span class="n">width</span><span class="p">,</span> <span class="n">height</span> <span class="o">=</span> <span class="mf">0.117</span><span class="p">,</span> <span class="mf">0.</span>
+        <span class="n">resolution</span> <span class="o">=</span> <span class="n">Slit1D</span><span class="p">(</span><span class="n">q</span><span class="p">,</span> <span class="n">width</span><span class="o">=</span><span class="n">width</span><span class="p">,</span> <span class="n">height</span><span class="o">=</span><span class="n">height</span><span class="p">)</span>
+        <span class="n">answer</span> <span class="o">=</span> <span class="n">romberg_slit_1d</span><span class="p">(</span><span class="n">q</span><span class="p">,</span> <span class="n">width</span><span class="p">,</span> <span class="n">height</span><span class="p">,</span> <span class="n">form</span><span class="p">,</span> <span class="n">pars</span><span class="p">)</span>
         <span class="n">output</span> <span class="o">=</span> <span class="n">resolution</span><span class="o">.</span><span class="n">apply</span><span class="p">(</span><span class="n">eval_form</span><span class="p">(</span><span class="n">resolution</span><span class="o">.</span><span class="n">q_calc</span><span class="p">,</span> <span class="n">form</span><span class="p">,</span> <span class="n">pars</span><span class="p">))</span>
         <span class="c"># TODO: 10% is too much error; use better algorithm</span>
+        <span class="c">#print np.max(abs(answer-output)/answer)</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">compare</span><span class="p">(</span><span class="n">q</span><span class="p">,</span> <span class="n">output</span><span class="p">,</span> <span class="n">answer</span><span class="p">,</span> <span class="mf">0.1</span><span class="p">)</span>
 
     <span class="c">#TODO: can sas q spacing be too sparse for the resolution calculation?</span></div>
@@ -910,49 +1055,77 @@
 <span class="c">############################################################################</span>
 </div>
 <span class="k">def</span> <span class="nf">_eval_demo_1d</span><span class="p">(</span><span class="n">resolution</span><span class="p">,</span> <span class="n">title</span><span class="p">):</span>
+    <span class="kn">import</span> <span class="nn">sys</span>
     <span class="kn">from</span> <span class="nn">sasmodels</span> <span class="kn">import</span> <span class="n">core</span>
-    <span class="kn">from</span> <span class="nn">sasmodels.models</span> <span class="kn">import</span> <span class="n">cylinder</span>
-    <span class="c">## or alternatively:</span>
-    <span class="c"># cylinder = core.load_model_definition(&#39;cylinder&#39;)</span>
-    <span class="n">model</span> <span class="o">=</span> <span class="n">core</span><span class="o">.</span><span class="n">load_model</span><span class="p">(</span><span class="n">cylinder</span><span class="p">)</span>
+    <span class="n">name</span> <span class="o">=</span> <span class="n">sys</span><span class="o">.</span><span class="n">argv</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span> <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">sys</span><span class="o">.</span><span class="n">argv</span><span class="p">)</span> <span class="o">&gt;</span> <span class="mi">1</span> <span class="k">else</span> <span class="s">&#39;cylinder&#39;</span>
+
+    <span class="k">if</span> <span class="n">name</span> <span class="o">==</span> <span class="s">&#39;cylinder&#39;</span><span class="p">:</span>
+        <span class="n">pars</span> <span class="o">=</span> <span class="p">{</span><span class="s">&#39;length&#39;</span><span class="p">:</span><span class="mi">210</span><span class="p">,</span> <span class="s">&#39;radius&#39;</span><span class="p">:</span><span class="mi">500</span><span class="p">}</span>
+    <span class="k">elif</span> <span class="n">name</span> <span class="o">==</span> <span class="s">&#39;teubner_strey&#39;</span><span class="p">:</span>
+        <span class="n">pars</span> <span class="o">=</span> <span class="p">{</span><span class="s">&#39;a2&#39;</span><span class="p">:</span><span class="mf">0.003</span><span class="p">,</span> <span class="s">&#39;c1&#39;</span><span class="p">:</span><span class="o">-</span><span class="mf">1e4</span><span class="p">,</span> <span class="s">&#39;c2&#39;</span><span class="p">:</span><span class="mf">1e10</span><span class="p">,</span> <span class="s">&#39;background&#39;</span><span class="p">:</span><span class="mf">0.312643</span><span class="p">}</span>
+    <span class="k">elif</span> <span class="n">name</span> <span class="o">==</span> <span class="s">&#39;sphere&#39;</span> <span class="ow">or</span> <span class="n">name</span> <span class="o">==</span> <span class="s">&#39;spherepy&#39;</span><span class="p">:</span>
+        <span class="n">pars</span> <span class="o">=</span> <span class="n">TEST_PARS_SLIT_SPHERE</span>
+    <span class="k">elif</span> <span class="n">name</span> <span class="o">==</span> <span class="s">&#39;ellipsoid&#39;</span><span class="p">:</span>
+        <span class="n">pars</span> <span class="o">=</span> <span class="p">{</span>
+            <span class="s">&#39;scale&#39;</span><span class="p">:</span><span class="mf">0.05</span><span class="p">,</span>
+            <span class="s">&#39;rpolar&#39;</span><span class="p">:</span><span class="mi">500</span><span class="p">,</span> <span class="s">&#39;requatorial&#39;</span><span class="p">:</span><span class="mi">15000</span><span class="p">,</span>
+            <span class="s">&#39;sld&#39;</span><span class="p">:</span><span class="mi">6</span><span class="p">,</span> <span class="s">&#39;solvent_sld&#39;</span><span class="p">:</span> <span class="mi">1</span><span class="p">,</span>
+            <span class="p">}</span>
+    <span class="k">else</span><span class="p">:</span>
+        <span class="n">pars</span> <span class="o">=</span> <span class="p">{}</span>
+    <span class="n">defn</span> <span class="o">=</span> <span class="n">core</span><span class="o">.</span><span class="n">load_model_definition</span><span class="p">(</span><span class="n">name</span><span class="p">)</span>
+    <span class="n">model</span> <span class="o">=</span> <span class="n">core</span><span class="o">.</span><span class="n">load_model</span><span class="p">(</span><span class="n">defn</span><span class="p">)</span>
 
     <span class="n">kernel</span> <span class="o">=</span> <span class="n">core</span><span class="o">.</span><span class="n">make_kernel</span><span class="p">(</span><span class="n">model</span><span class="p">,</span> <span class="p">[</span><span class="n">resolution</span><span class="o">.</span><span class="n">q_calc</span><span class="p">])</span>
-    <span class="n">theory</span> <span class="o">=</span> <span class="n">core</span><span class="o">.</span><span class="n">call_kernel</span><span class="p">(</span><span class="n">kernel</span><span class="p">,</span> <span class="p">{</span><span class="s">&#39;length&#39;</span><span class="p">:</span><span class="mi">210</span><span class="p">,</span> <span class="s">&#39;radius&#39;</span><span class="p">:</span><span class="mi">500</span><span class="p">})</span>
+    <span class="n">theory</span> <span class="o">=</span> <span class="n">core</span><span class="o">.</span><span class="n">call_kernel</span><span class="p">(</span><span class="n">kernel</span><span class="p">,</span> <span class="n">pars</span><span class="p">)</span>
     <span class="n">Iq</span> <span class="o">=</span> <span class="n">resolution</span><span class="o">.</span><span class="n">apply</span><span class="p">(</span><span class="n">theory</span><span class="p">)</span>
+
+    <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">resolution</span><span class="p">,</span> <span class="n">Slit1D</span><span class="p">):</span>
+        <span class="n">width</span><span class="p">,</span> <span class="n">height</span> <span class="o">=</span> <span class="n">resolution</span><span class="o">.</span><span class="n">width</span><span class="p">,</span> <span class="n">resolution</span><span class="o">.</span><span class="n">height</span>
+        <span class="n">Iq_romb</span> <span class="o">=</span> <span class="n">romberg_slit_1d</span><span class="p">(</span><span class="n">resolution</span><span class="o">.</span><span class="n">q</span><span class="p">,</span> <span class="n">width</span><span class="p">,</span> <span class="n">height</span><span class="p">,</span> <span class="n">model</span><span class="p">,</span> <span class="n">pars</span><span class="p">)</span>
+    <span class="k">else</span><span class="p">:</span>
+        <span class="n">dq</span> <span class="o">=</span> <span class="n">resolution</span><span class="o">.</span><span class="n">q_width</span>
+        <span class="n">Iq_romb</span> <span class="o">=</span> <span class="n">romberg_pinhole_1d</span><span class="p">(</span><span class="n">resolution</span><span class="o">.</span><span class="n">q</span><span class="p">,</span> <span class="n">dq</span><span class="p">,</span> <span class="n">model</span><span class="p">,</span> <span class="n">pars</span><span class="p">)</span>
 
     <span class="kn">import</span> <span class="nn">matplotlib.pyplot</span> <span class="kn">as</span> <span class="nn">plt</span>
     <span class="n">plt</span><span class="o">.</span><span class="n">loglog</span><span class="p">(</span><span class="n">resolution</span><span class="o">.</span><span class="n">q_calc</span><span class="p">,</span> <span class="n">theory</span><span class="p">,</span> <span class="n">label</span><span class="o">=</span><span class="s">&#39;unsmeared&#39;</span><span class="p">)</span>
     <span class="n">plt</span><span class="o">.</span><span class="n">loglog</span><span class="p">(</span><span class="n">resolution</span><span class="o">.</span><span class="n">q</span><span class="p">,</span> <span class="n">Iq</span><span class="p">,</span> <span class="n">label</span><span class="o">=</span><span class="s">&#39;smeared&#39;</span><span class="p">,</span> <span class="n">hold</span><span class="o">=</span><span class="bp">True</span><span class="p">)</span>
+    <span class="n">plt</span><span class="o">.</span><span class="n">loglog</span><span class="p">(</span><span class="n">resolution</span><span class="o">.</span><span class="n">q</span><span class="p">,</span> <span class="n">Iq_romb</span><span class="p">,</span> <span class="n">label</span><span class="o">=</span><span class="s">&#39;romberg smeared&#39;</span><span class="p">,</span> <span class="n">hold</span><span class="o">=</span><span class="bp">True</span><span class="p">)</span>
     <span class="n">plt</span><span class="o">.</span><span class="n">legend</span><span class="p">()</span>
     <span class="n">plt</span><span class="o">.</span><span class="n">title</span><span class="p">(</span><span class="n">title</span><span class="p">)</span>
     <span class="n">plt</span><span class="o">.</span><span class="n">xlabel</span><span class="p">(</span><span class="s">&quot;Q (1/Ang)&quot;</span><span class="p">)</span>
     <span class="n">plt</span><span class="o">.</span><span class="n">ylabel</span><span class="p">(</span><span class="s">&quot;I(Q) (1/cm)&quot;</span><span class="p">)</span>
 
 <div class="viewcode-block" id="demo_pinhole_1d"><a class="viewcode-back" href="../../../dev/api/sas.models.html#sas.models.resolution.demo_pinhole_1d">[docs]</a><span class="k">def</span> <span class="nf">demo_pinhole_1d</span><span class="p">():</span>
-    <span class="n">q</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">logspace</span><span class="p">(</span><span class="o">-</span><span class="mi">3</span><span class="p">,</span> <span class="o">-</span><span class="mi">1</span><span class="p">,</span> <span class="mi">400</span><span class="p">)</span>
+    <span class="n">q</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">logspace</span><span class="p">(</span><span class="o">-</span><span class="mi">4</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">log10</span><span class="p">(</span><span class="mf">0.2</span><span class="p">),</span> <span class="mi">400</span><span class="p">)</span>
     <span class="n">q_width</span> <span class="o">=</span> <span class="mf">0.1</span><span class="o">*</span><span class="n">q</span>
     <span class="n">resolution</span> <span class="o">=</span> <span class="n">Pinhole1D</span><span class="p">(</span><span class="n">q</span><span class="p">,</span> <span class="n">q_width</span><span class="p">)</span>
     <span class="n">_eval_demo_1d</span><span class="p">(</span><span class="n">resolution</span><span class="p">,</span> <span class="n">title</span><span class="o">=</span><span class="s">&quot;10</span><span class="si">% d</span><span class="s">Q/Q Pinhole Resolution&quot;</span><span class="p">)</span>
 </div>
 <div class="viewcode-block" id="demo_slit_1d"><a class="viewcode-back" href="../../../dev/api/sas.models.html#sas.models.resolution.demo_slit_1d">[docs]</a><span class="k">def</span> <span class="nf">demo_slit_1d</span><span class="p">():</span>
-    <span class="n">q</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">logspace</span><span class="p">(</span><span class="o">-</span><span class="mi">3</span><span class="p">,</span> <span class="o">-</span><span class="mi">1</span><span class="p">,</span> <span class="mi">400</span><span class="p">)</span>
-    <span class="n">qx_width</span> <span class="o">=</span> <span class="mf">0.005</span>
-    <span class="n">qy_width</span> <span class="o">=</span> <span class="mf">0.0</span>
-    <span class="n">resolution</span> <span class="o">=</span> <span class="n">Slit1D</span><span class="p">(</span><span class="n">q</span><span class="p">,</span> <span class="n">qx_width</span><span class="p">,</span> <span class="n">qy_width</span><span class="p">)</span>
-    <span class="n">_eval_demo_1d</span><span class="p">(</span><span class="n">resolution</span><span class="p">,</span> <span class="n">title</span><span class="o">=</span><span class="s">&quot;0.005 Qx Slit Resolution&quot;</span><span class="p">)</span>
+    <span class="n">q</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">logspace</span><span class="p">(</span><span class="o">-</span><span class="mi">4</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">log10</span><span class="p">(</span><span class="mf">0.2</span><span class="p">),</span> <span class="mi">100</span><span class="p">)</span>
+    <span class="n">w</span> <span class="o">=</span> <span class="n">h</span> <span class="o">=</span> <span class="mf">0.</span>
+    <span class="c">#w = 0.000000277790</span>
+    <span class="n">w</span> <span class="o">=</span> <span class="mf">0.0277790</span>
+    <span class="c">#h = 0.00277790</span>
+    <span class="c">#h = 0.0277790</span>
+    <span class="n">resolution</span> <span class="o">=</span> <span class="n">Slit1D</span><span class="p">(</span><span class="n">q</span><span class="p">,</span> <span class="n">w</span><span class="p">,</span> <span class="n">h</span><span class="p">)</span>
+    <span class="n">_eval_demo_1d</span><span class="p">(</span><span class="n">resolution</span><span class="p">,</span> <span class="n">title</span><span class="o">=</span><span class="s">&quot;(</span><span class="si">%g</span><span class="s">,</span><span class="si">%g</span><span class="s">) Slit Resolution&quot;</span><span class="o">%</span><span class="p">(</span><span class="n">w</span><span class="p">,</span><span class="n">h</span><span class="p">))</span>
 </div>
 <div class="viewcode-block" id="demo"><a class="viewcode-back" href="../../../dev/api/sas.models.html#sas.models.resolution.demo">[docs]</a><span class="k">def</span> <span class="nf">demo</span><span class="p">():</span>
     <span class="kn">import</span> <span class="nn">matplotlib.pyplot</span> <span class="kn">as</span> <span class="nn">plt</span>
     <span class="n">plt</span><span class="o">.</span><span class="n">subplot</span><span class="p">(</span><span class="mi">121</span><span class="p">)</span>
     <span class="n">demo_pinhole_1d</span><span class="p">()</span>
+    <span class="c">#plt.yscale(&#39;linear&#39;)</span>
     <span class="n">plt</span><span class="o">.</span><span class="n">subplot</span><span class="p">(</span><span class="mi">122</span><span class="p">)</span>
     <span class="n">demo_slit_1d</span><span class="p">()</span>
+    <span class="c">#plt.yscale(&#39;linear&#39;)</span>
     <span class="n">plt</span><span class="o">.</span><span class="n">show</span><span class="p">()</span>
 
 </div>
 <span class="k">if</span> <span class="n">__name__</span> <span class="o">==</span> <span class="s">&quot;__main__&quot;</span><span class="p">:</span>
-    <span class="c">#demo()</span>
-    <span class="n">main</span><span class="p">()</span>
+    <span class="n">demo</span><span class="p">()</span>
+    <span class="c">#main()</span>
 </pre></div>
 
           </div>
@@ -986,7 +1159,7 @@
         <li class="right" >
           <a href="../../../py-modindex.html" title="Python Module Index"
              >modules</a> |</li>
-        <li class="nav-item nav-item-0"><a href="../../../index.html">SasView 3.1.0 documentation</a> &raquo;</li>
+        <li class="nav-item nav-item-0"><a href="../../../index.html">SasView 3.1.2 documentation</a> &raquo;</li>
           <li class="nav-item nav-item-1"><a href="../../index.html" >Module code</a> &raquo;</li>
           <li class="nav-item nav-item-2"><a href="../models.html" >sas.models</a> &raquo;</li> 
       </ul>

@@ -6,7 +6,7 @@
   <head>
     <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
     
-    <title>sas.perspectives.fitting.basepage &mdash; SasView 3.1.0 documentation</title>
+    <title>sas.perspectives.fitting.basepage &mdash; SasView 3.1.2 documentation</title>
     
     <link rel="stylesheet" href="../../../../_static/classic.css" type="text/css" />
     <link rel="stylesheet" href="../../../../_static/pygments.css" type="text/css" />
@@ -14,7 +14,7 @@
     <script type="text/javascript">
       var DOCUMENTATION_OPTIONS = {
         URL_ROOT:    '../../../../',
-        VERSION:     '3.1.0',
+        VERSION:     '3.1.2',
         COLLAPSE_INDEX: false,
         FILE_SUFFIX: '.html',
         HAS_SOURCE:  true
@@ -24,7 +24,7 @@
     <script type="text/javascript" src="../../../../_static/underscore.js"></script>
     <script type="text/javascript" src="../../../../_static/doctools.js"></script>
     <script type="text/javascript" src="https://cdn.mathjax.org/mathjax/latest/MathJax.js?config=TeX-AMS-MML_HTMLorMML"></script>
-    <link rel="top" title="SasView 3.1.0 documentation" href="../../../../index.html" />
+    <link rel="top" title="SasView 3.1.2 documentation" href="../../../../index.html" />
     <link rel="up" title="sas.perspectives.fitting" href="../fitting.html" /> 
   </head>
   <body role="document">
@@ -37,7 +37,7 @@
         <li class="right" >
           <a href="../../../../py-modindex.html" title="Python Module Index"
              >modules</a> |</li>
-        <li class="nav-item nav-item-0"><a href="../../../../index.html">SasView 3.1.0 documentation</a> &raquo;</li>
+        <li class="nav-item nav-item-0"><a href="../../../../index.html">SasView 3.1.2 documentation</a> &raquo;</li>
           <li class="nav-item nav-item-1"><a href="../../../index.html" >Module code</a> &raquo;</li>
           <li class="nav-item nav-item-2"><a href="../fitting.html" accesskey="U">sas.perspectives.fitting</a> &raquo;</li> 
       </ul>
@@ -65,7 +65,7 @@
 <span class="kn">from</span> <span class="nn">collections</span> <span class="kn">import</span> <span class="n">defaultdict</span>
 <span class="kn">from</span> <span class="nn">wx.lib.scrolledpanel</span> <span class="kn">import</span> <span class="n">ScrolledPanel</span>
 <span class="kn">from</span> <span class="nn">sas.guiframe.panel_base</span> <span class="kn">import</span> <span class="n">PanelBase</span>
-<span class="kn">from</span> <span class="nn">sas.guiframe.utils</span> <span class="kn">import</span> <span class="n">format_number</span><span class="p">,</span> <span class="n">check_float</span>
+<span class="kn">from</span> <span class="nn">sas.guiframe.utils</span> <span class="kn">import</span> <span class="n">format_number</span><span class="p">,</span> <span class="n">check_float</span><span class="p">,</span> <span class="n">IdList</span>
 <span class="kn">from</span> <span class="nn">sas.guiframe.events</span> <span class="kn">import</span> <span class="n">PanelOnFocusEvent</span>
 <span class="kn">from</span> <span class="nn">sas.guiframe.events</span> <span class="kn">import</span> <span class="n">StatusEvent</span>
 <span class="kn">from</span> <span class="nn">sas.guiframe.events</span> <span class="kn">import</span> <span class="n">AppendBookmarkEvent</span>
@@ -107,6 +107,12 @@
     <span class="n">window_name</span> <span class="o">=</span> <span class="s">&quot;Fit Page&quot;</span>
     <span class="c">## Title to appear on top of the window</span>
     <span class="n">window_caption</span> <span class="o">=</span> <span class="s">&quot;Fit Page &quot;</span>
+    <span class="c"># These two buttons have specific IDs since they seem to be created more</span>
+    <span class="c"># frequently than they need to.  In particular, set_dispers_sizer() is</span>
+    <span class="c"># called by _on_select_model</span>
+    <span class="n">ID_BOOKMARK</span> <span class="o">=</span> <span class="n">wx</span><span class="o">.</span><span class="n">NewId</span><span class="p">()</span>
+    <span class="n">ID_DISPERSER_HELP</span> <span class="o">=</span> <span class="n">wx</span><span class="o">.</span><span class="n">NewId</span><span class="p">()</span>
+    <span class="n">_id_pool</span> <span class="o">=</span> <span class="n">IdList</span><span class="p">()</span>
 
     <span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">parent</span><span class="p">,</span> <span class="n">color</span><span class="o">=</span><span class="s">&#39;blue&#39;</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
         <span class="sd">&quot;&quot;&quot;</span>
@@ -116,8 +122,9 @@
         <span class="bp">self</span><span class="o">.</span><span class="n">SetupScrolling</span><span class="p">()</span>
         <span class="c">#Set window&#39;s font size</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">SetWindowVariant</span><span class="p">(</span><span class="n">variant</span><span class="o">=</span><span class="n">FONT_VARIANT</span><span class="p">)</span>
-
         <span class="bp">self</span><span class="o">.</span><span class="n">SetBackgroundColour</span><span class="p">(</span><span class="n">color</span><span class="p">)</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">_ids</span> <span class="o">=</span> <span class="nb">iter</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_id_pool</span><span class="p">)</span>
         <span class="c">## parent of the page</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">parent</span> <span class="o">=</span> <span class="n">parent</span>
         <span class="c">## manager is the fitting plugin</span>
@@ -249,14 +256,14 @@
         <span class="c">## Create context menu for page</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">popUpMenu</span> <span class="o">=</span> <span class="n">wx</span><span class="o">.</span><span class="n">Menu</span><span class="p">()</span>
 
-        <span class="nb">id</span> <span class="o">=</span> <span class="n">wx</span><span class="o">.</span><span class="n">NewId</span><span class="p">()</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">_keep</span> <span class="o">=</span> <span class="n">wx</span><span class="o">.</span><span class="n">MenuItem</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">popUpMenu</span><span class="p">,</span> <span class="nb">id</span><span class="p">,</span> <span class="s">&quot;Add bookmark&quot;</span><span class="p">,</span>
+        <span class="n">wx_id</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_ids</span><span class="o">.</span><span class="n">next</span><span class="p">()</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_keep</span> <span class="o">=</span> <span class="n">wx</span><span class="o">.</span><span class="n">MenuItem</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">popUpMenu</span><span class="p">,</span> <span class="n">wx_id</span><span class="p">,</span> <span class="s">&quot;Add bookmark&quot;</span><span class="p">,</span>
                                  <span class="s">&quot; Keep the panel status to recall it later&quot;</span><span class="p">)</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">popUpMenu</span><span class="o">.</span><span class="n">AppendItem</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_keep</span><span class="p">)</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">_keep</span><span class="o">.</span><span class="n">Enable</span><span class="p">(</span><span class="bp">False</span><span class="p">)</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">_set_bookmark_flag</span><span class="p">(</span><span class="bp">False</span><span class="p">)</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">_set_save_flag</span><span class="p">(</span><span class="bp">False</span><span class="p">)</span>
-        <span class="n">wx</span><span class="o">.</span><span class="n">EVT_MENU</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="nb">id</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">on_bookmark</span><span class="p">)</span>
+        <span class="n">wx</span><span class="o">.</span><span class="n">EVT_MENU</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">wx_id</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">on_bookmark</span><span class="p">)</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">popUpMenu</span><span class="o">.</span><span class="n">AppendSeparator</span><span class="p">()</span>
 
         <span class="c">## Default locations</span>
@@ -644,21 +651,22 @@
         <span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">        fill sizer containing dispersity info</span>
 <span class="sd">        &quot;&quot;&quot;</span>
+        <span class="c">#print &quot;==== entering set_dispers_sizer ===&quot;</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">sizer4</span><span class="o">.</span><span class="n">Clear</span><span class="p">(</span><span class="bp">True</span><span class="p">)</span>
         <span class="n">name</span> <span class="o">=</span> <span class="s">&quot;Polydispersity and Orientational Distribution&quot;</span>
-        <span class="n">box_description</span> <span class="o">=</span> <span class="n">wx</span><span class="o">.</span><span class="n">StaticBox</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="o">-</span><span class="mi">1</span><span class="p">,</span> <span class="n">name</span><span class="p">)</span>
+        <span class="n">box_description</span> <span class="o">=</span> <span class="n">wx</span><span class="o">.</span><span class="n">StaticBox</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">wx</span><span class="o">.</span><span class="n">ID_ANY</span><span class="p">,</span> <span class="n">name</span><span class="p">)</span>
         <span class="n">box_description</span><span class="o">.</span><span class="n">SetForegroundColour</span><span class="p">(</span><span class="n">wx</span><span class="o">.</span><span class="n">BLUE</span><span class="p">)</span>
         <span class="n">boxsizer1</span> <span class="o">=</span> <span class="n">wx</span><span class="o">.</span><span class="n">StaticBoxSizer</span><span class="p">(</span><span class="n">box_description</span><span class="p">,</span> <span class="n">wx</span><span class="o">.</span><span class="n">VERTICAL</span><span class="p">)</span>
         <span class="c">#----------------------------------------------------</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">disable_disp</span> <span class="o">=</span> <span class="n">wx</span><span class="o">.</span><span class="n">RadioButton</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="o">-</span><span class="mi">1</span><span class="p">,</span> <span class="s">&#39;Off&#39;</span><span class="p">,</span> <span class="p">(</span><span class="mi">10</span><span class="p">,</span> <span class="mi">10</span><span class="p">),</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">disable_disp</span> <span class="o">=</span> <span class="n">wx</span><span class="o">.</span><span class="n">RadioButton</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">wx</span><span class="o">.</span><span class="n">ID_ANY</span><span class="p">,</span> <span class="s">&#39;Off&#39;</span><span class="p">,</span> <span class="p">(</span><span class="mi">10</span><span class="p">,</span> <span class="mi">10</span><span class="p">),</span>
                                            <span class="n">style</span><span class="o">=</span><span class="n">wx</span><span class="o">.</span><span class="n">RB_GROUP</span><span class="p">)</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">enable_disp</span> <span class="o">=</span> <span class="n">wx</span><span class="o">.</span><span class="n">RadioButton</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="o">-</span><span class="mi">1</span><span class="p">,</span> <span class="s">&#39;On&#39;</span><span class="p">,</span> <span class="p">(</span><span class="mi">10</span><span class="p">,</span> <span class="mi">30</span><span class="p">))</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">enable_disp</span> <span class="o">=</span> <span class="n">wx</span><span class="o">.</span><span class="n">RadioButton</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">wx</span><span class="o">.</span><span class="n">ID_ANY</span><span class="p">,</span> <span class="s">&#39;On&#39;</span><span class="p">,</span> <span class="p">(</span><span class="mi">10</span><span class="p">,</span> <span class="mi">30</span><span class="p">))</span>
         <span class="c"># best size for MAC and PC</span>
         <span class="k">if</span> <span class="n">ON_MAC</span><span class="p">:</span>
             <span class="n">size_q</span> <span class="o">=</span> <span class="p">(</span><span class="mi">30</span><span class="p">,</span> <span class="mi">20</span><span class="p">)</span>
         <span class="k">else</span><span class="p">:</span>
             <span class="n">size_q</span> <span class="o">=</span> <span class="p">(</span><span class="mi">20</span><span class="p">,</span> <span class="mi">15</span><span class="p">)</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">disp_help_bt</span> <span class="o">=</span> <span class="n">wx</span><span class="o">.</span><span class="n">Button</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">wx</span><span class="o">.</span><span class="n">NewId</span><span class="p">(),</span> <span class="s">&#39;?&#39;</span><span class="p">,</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">disp_help_bt</span> <span class="o">=</span> <span class="n">wx</span><span class="o">.</span><span class="n">Button</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">ID_DISPERSER_HELP</span><span class="p">,</span> <span class="s">&#39;?&#39;</span><span class="p">,</span>
                                       <span class="n">style</span><span class="o">=</span><span class="n">wx</span><span class="o">.</span><span class="n">BU_EXACTFIT</span><span class="p">,</span>
                                       <span class="n">size</span><span class="o">=</span><span class="n">size_q</span><span class="p">)</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">disp_help_bt</span><span class="o">.</span><span class="n">Bind</span><span class="p">(</span><span class="n">wx</span><span class="o">.</span><span class="n">EVT_BUTTON</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">on_pd_help_clicked</span><span class="p">,</span>
@@ -674,7 +682,7 @@
         <span class="n">sizer_dispersion</span> <span class="o">=</span> <span class="n">wx</span><span class="o">.</span><span class="n">BoxSizer</span><span class="p">(</span><span class="n">wx</span><span class="o">.</span><span class="n">HORIZONTAL</span><span class="p">)</span>
         <span class="n">sizer_dispersion</span><span class="o">.</span><span class="n">Add</span><span class="p">((</span><span class="mi">20</span><span class="p">,</span> <span class="mi">20</span><span class="p">))</span>
         <span class="n">name</span> <span class="o">=</span> <span class="s">&quot;&quot;</span>  <span class="c"># Polydispersity and \nOrientational Distribution &quot;</span>
-        <span class="n">sizer_dispersion</span><span class="o">.</span><span class="n">Add</span><span class="p">(</span><span class="n">wx</span><span class="o">.</span><span class="n">StaticText</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="o">-</span><span class="mi">1</span><span class="p">,</span> <span class="n">name</span><span class="p">))</span>
+        <span class="n">sizer_dispersion</span><span class="o">.</span><span class="n">Add</span><span class="p">(</span><span class="n">wx</span><span class="o">.</span><span class="n">StaticText</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">wx</span><span class="o">.</span><span class="n">ID_ANY</span><span class="p">,</span> <span class="n">name</span><span class="p">))</span>
         <span class="n">sizer_dispersion</span><span class="o">.</span><span class="n">Add</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">enable_disp</span><span class="p">)</span>
         <span class="n">sizer_dispersion</span><span class="o">.</span><span class="n">Add</span><span class="p">((</span><span class="mi">20</span><span class="p">,</span> <span class="mi">20</span><span class="p">))</span>
         <span class="n">sizer_dispersion</span><span class="o">.</span><span class="n">Add</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">disable_disp</span><span class="p">)</span>
@@ -845,9 +853,8 @@
         <span class="n">msg</span> <span class="o">+=</span> <span class="s">&quot; Saved! right click on this page to retrieve this model&quot;</span>
         <span class="n">wx</span><span class="o">.</span><span class="n">PostEvent</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_manager</span><span class="o">.</span><span class="n">parent</span><span class="p">,</span> <span class="n">StatusEvent</span><span class="p">(</span><span class="n">status</span><span class="o">=</span><span class="n">msg</span><span class="p">))</span>
 
-        <span class="nb">id</span> <span class="o">=</span> <span class="n">wx</span><span class="o">.</span><span class="n">NewId</span><span class="p">()</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">popUpMenu</span><span class="o">.</span><span class="n">Append</span><span class="p">(</span><span class="nb">id</span><span class="p">,</span> <span class="n">name</span><span class="p">,</span> <span class="nb">str</span><span class="p">(</span><span class="n">msg</span><span class="p">))</span>
-        <span class="n">wx</span><span class="o">.</span><span class="n">EVT_MENU</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="nb">id</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">onResetModel</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">popUpMenu</span><span class="o">.</span><span class="n">Append</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">ID_BOOKMARK</span><span class="p">,</span> <span class="n">name</span><span class="p">,</span> <span class="nb">str</span><span class="p">(</span><span class="n">msg</span><span class="p">))</span>
+        <span class="n">wx</span><span class="o">.</span><span class="n">EVT_MENU</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">ID_BOOKMARK</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">onResetModel</span><span class="p">)</span>
         <span class="n">wx</span><span class="o">.</span><span class="n">PostEvent</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_manager</span><span class="o">.</span><span class="n">parent</span><span class="p">,</span>
                      <span class="n">AppendBookmarkEvent</span><span class="p">(</span><span class="n">title</span><span class="o">=</span><span class="n">name</span><span class="p">,</span>
                                          <span class="n">hint</span><span class="o">=</span><span class="nb">str</span><span class="p">(</span><span class="n">msg</span><span class="p">),</span>
@@ -1488,13 +1495,14 @@
         <span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">        reset the context menu</span>
 <span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">ids</span> <span class="o">=</span> <span class="nb">iter</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_id_pool</span><span class="p">)</span>  <span class="c"># Reusing ids for context menu</span>
         <span class="k">for</span> <span class="n">name</span><span class="p">,</span> <span class="n">_</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">state</span><span class="o">.</span><span class="n">saved_states</span><span class="o">.</span><span class="n">iteritems</span><span class="p">():</span>
             <span class="bp">self</span><span class="o">.</span><span class="n">number_saved_state</span> <span class="o">+=</span> <span class="mi">1</span>
             <span class="c">## Add item in the context menu</span>
-            <span class="nb">id</span> <span class="o">=</span> <span class="n">wx</span><span class="o">.</span><span class="n">NewId</span><span class="p">()</span>
+            <span class="n">wx_id</span> <span class="o">=</span> <span class="n">ids</span><span class="o">.</span><span class="n">next</span><span class="p">()</span>
             <span class="n">msg</span> <span class="o">=</span> <span class="s">&#39;Save model and state </span><span class="si">%g</span><span class="s">&#39;</span> <span class="o">%</span> <span class="bp">self</span><span class="o">.</span><span class="n">number_saved_state</span>
-            <span class="bp">self</span><span class="o">.</span><span class="n">popUpMenu</span><span class="o">.</span><span class="n">Append</span><span class="p">(</span><span class="nb">id</span><span class="p">,</span> <span class="n">name</span><span class="p">,</span> <span class="n">msg</span><span class="p">)</span>
-            <span class="n">wx</span><span class="o">.</span><span class="n">EVT_MENU</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="nb">id</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">onResetModel</span><span class="p">)</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">popUpMenu</span><span class="o">.</span><span class="n">Append</span><span class="p">(</span><span class="n">wx_id</span><span class="p">,</span> <span class="n">name</span><span class="p">,</span> <span class="n">msg</span><span class="p">)</span>
+            <span class="n">wx</span><span class="o">.</span><span class="n">EVT_MENU</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">wx_id</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">onResetModel</span><span class="p">)</span>
 
     <span class="k">def</span> <span class="nf">_reset_plotting_range</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">state</span><span class="p">):</span>
         <span class="sd">&quot;&quot;&quot;</span>
@@ -1881,7 +1889,8 @@
         <span class="n">sld_data</span> <span class="o">=</span> <span class="n">pf_data1d</span><span class="p">(</span><span class="n">x</span><span class="p">,</span> <span class="n">y</span><span class="p">)</span>
         <span class="n">sld_data</span><span class="o">.</span><span class="n">name</span> <span class="o">=</span> <span class="s">&#39;SLD&#39;</span>
         <span class="n">sld_data</span><span class="o">.</span><span class="n">axes</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">sld_axes</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">panel</span> <span class="o">=</span> <span class="n">SLDPanel</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">data</span><span class="o">=</span><span class="n">sld_data</span><span class="p">,</span> <span class="n">axes</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">sld_axes</span><span class="p">,</span> <span class="nb">id</span><span class="o">=</span> <span class="o">-</span><span class="mi">1</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">panel</span> <span class="o">=</span> <span class="n">SLDPanel</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">data</span><span class="o">=</span><span class="n">sld_data</span><span class="p">,</span> <span class="n">axes</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">sld_axes</span><span class="p">,</span>
+                              <span class="nb">id</span><span class="o">=</span><span class="n">wx</span><span class="o">.</span><span class="n">ID_ANY</span><span class="p">)</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">panel</span><span class="o">.</span><span class="n">ShowModal</span><span class="p">()</span>
 
     <span class="k">def</span> <span class="nf">_set_multfactor_combobox</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">multiplicity</span><span class="o">=</span><span class="mi">10</span><span class="p">):</span>
@@ -2454,10 +2463,14 @@
             <span class="n">wx</span><span class="o">.</span><span class="n">PostEvent</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">parent</span><span class="p">,</span> <span class="n">event</span><span class="p">)</span>
         <span class="c">#draw the model with the current dispersity</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">_draw_model</span><span class="p">()</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">sizer4_4</span><span class="o">.</span><span class="n">Layout</span><span class="p">()</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">sizer5</span><span class="o">.</span><span class="n">Layout</span><span class="p">()</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">Layout</span><span class="p">()</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">Refresh</span><span class="p">()</span>
+        <span class="c">## Need to use FitInside again here to replace the next four lines.</span>
+        <span class="c">## Otherwised polydispersity off does not resize the scrollwindow. </span>
+        <span class="c">## PDB Nov 28, 2015</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">FitInside</span><span class="p">()</span>
+<span class="c">#        self.sizer4_4.Layout()</span>
+<span class="c">#        self.sizer5.Layout()</span>
+<span class="c">#        self.Layout()</span>
+<span class="c">#        self.Refresh()</span>
 
     <span class="k">def</span> <span class="nf">_layout_sizer_noDipers</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
         <span class="sd">&quot;&quot;&quot;</span>
@@ -2471,7 +2484,7 @@
 
         <span class="bp">self</span><span class="o">.</span><span class="n">sizer4_4</span><span class="o">.</span><span class="n">Clear</span><span class="p">(</span><span class="bp">True</span><span class="p">)</span>
         <span class="n">text</span> <span class="o">=</span> <span class="s">&quot;No polydispersity available for this model&quot;</span>
-        <span class="n">model_disp</span> <span class="o">=</span> <span class="n">wx</span><span class="o">.</span><span class="n">StaticText</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="o">-</span><span class="mi">1</span><span class="p">,</span> <span class="n">text</span><span class="p">)</span>
+        <span class="n">model_disp</span> <span class="o">=</span> <span class="n">wx</span><span class="o">.</span><span class="n">StaticText</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">wx</span><span class="o">.</span><span class="n">ID_ANY</span><span class="p">,</span> <span class="n">text</span><span class="p">)</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">sizer4_4</span><span class="o">.</span><span class="n">Add</span><span class="p">(</span><span class="n">model_disp</span><span class="p">,</span> <span class="p">(</span><span class="n">iy</span><span class="p">,</span> <span class="n">ix</span><span class="p">),</span> <span class="p">(</span><span class="mi">1</span><span class="p">,</span> <span class="mi">1</span><span class="p">),</span>
                           <span class="n">wx</span><span class="o">.</span><span class="n">LEFT</span> <span class="o">|</span> <span class="n">wx</span><span class="o">.</span><span class="n">EXPAND</span> <span class="o">|</span> <span class="n">wx</span><span class="o">.</span><span class="n">ADJUST_MINSIZE</span><span class="p">,</span> <span class="mi">10</span><span class="p">)</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">sizer4_4</span><span class="o">.</span><span class="n">Layout</span><span class="p">()</span>
@@ -2901,11 +2914,11 @@
         <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">model</span> <span class="o">!=</span> <span class="bp">None</span><span class="p">:</span>
             <span class="n">name</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">formfactorbox</span><span class="o">.</span><span class="n">GetValue</span><span class="p">()</span>
             <span class="n">_PageAnchor</span> <span class="o">=</span> <span class="s">&#39;#&#39;</span> <span class="o">+</span> <span class="n">name</span><span class="o">.</span><span class="n">lower</span><span class="p">()</span>
-            <span class="n">_doc_viewer</span> <span class="o">=</span> <span class="n">DocumentationWindow</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="o">-</span><span class="mi">1</span><span class="p">,</span> <span class="n">_TreeLocation</span><span class="p">,</span>
+            <span class="n">_doc_viewer</span> <span class="o">=</span> <span class="n">DocumentationWindow</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">wx</span><span class="o">.</span><span class="n">ID_ANY</span><span class="p">,</span> <span class="n">_TreeLocation</span><span class="p">,</span>
                                               <span class="n">_PageAnchor</span><span class="p">,</span> <span class="n">name</span> <span class="o">+</span> <span class="s">&quot; Help&quot;</span><span class="p">)</span>
         <span class="k">else</span><span class="p">:</span>
-            <span class="n">_doc_viewer</span> <span class="o">=</span> <span class="n">DocumentationWindow</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="o">-</span><span class="mi">1</span><span class="p">,</span> <span class="n">_TreeLocation</span><span class="p">,</span> <span class="s">&quot;&quot;</span><span class="p">,</span>
-                                                <span class="s">&quot;General Model Help&quot;</span><span class="p">)</span>
+            <span class="n">_doc_viewer</span> <span class="o">=</span> <span class="n">DocumentationWindow</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">wx</span><span class="o">.</span><span class="n">ID_ANY</span><span class="p">,</span> <span class="n">_TreeLocation</span><span class="p">,</span>
+                                              <span class="s">&quot;&quot;</span><span class="p">,</span> <span class="s">&quot;General Model Help&quot;</span><span class="p">)</span>
 
 </div>
 <div class="viewcode-block" id="BasicPage.on_model_help_clicked"><a class="viewcode-back" href="../../../../dev/api/sas.perspectives.fitting.html#sas.perspectives.fitting.basepage.BasicPage.on_model_help_clicked">[docs]</a>    <span class="k">def</span> <span class="nf">on_model_help_clicked</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">event</span><span class="p">):</span>
@@ -2956,7 +2969,7 @@
 <span class="sd">        &quot;&quot;&quot;</span>
 
         <span class="n">_TreeLocation</span> <span class="o">=</span> <span class="s">&quot;_images/M_angles_pic.bmp&quot;</span>
-        <span class="n">_doc_viewer</span> <span class="o">=</span> <span class="n">DocumentationWindow</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="o">-</span><span class="mi">1</span><span class="p">,</span> <span class="n">_TreeLocation</span><span class="p">,</span> <span class="s">&quot;&quot;</span><span class="p">,</span>
+        <span class="n">_doc_viewer</span> <span class="o">=</span> <span class="n">DocumentationWindow</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">wx</span><span class="o">.</span><span class="n">ID_ANY</span><span class="p">,</span> <span class="n">_TreeLocation</span><span class="p">,</span> <span class="s">&quot;&quot;</span><span class="p">,</span>
                                           <span class="s">&quot;Magnetic Angle Defintions&quot;</span><span class="p">)</span>
 
     <span class="k">def</span> <span class="nf">_on_mag_help</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">event</span><span class="p">):</span>
@@ -2976,7 +2989,7 @@
 <span class="sd">        &quot;&quot;&quot;</span>
 
         <span class="n">_TreeLocation</span> <span class="o">=</span> <span class="s">&quot;user/perspectives/fitting/mag_help.html&quot;</span>
-        <span class="n">_doc_viewer</span> <span class="o">=</span> <span class="n">DocumentationWindow</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="o">-</span><span class="mi">1</span><span class="p">,</span> <span class="n">_TreeLocation</span><span class="p">,</span> <span class="s">&quot;&quot;</span><span class="p">,</span>
+        <span class="n">_doc_viewer</span> <span class="o">=</span> <span class="n">DocumentationWindow</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">wx</span><span class="o">.</span><span class="n">ID_ANY</span><span class="p">,</span> <span class="n">_TreeLocation</span><span class="p">,</span> <span class="s">&quot;&quot;</span><span class="p">,</span>
                                           <span class="s">&quot;Polarized Beam/Magnetc Help&quot;</span><span class="p">)</span>
 
     <span class="k">def</span> <span class="nf">_on_mag_on</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">event</span><span class="p">):</span>
@@ -3023,7 +3036,7 @@
 
         <span class="n">_TreeLocation</span> <span class="o">=</span> <span class="s">&quot;user/perspectives/fitting/pd_help.html&quot;</span>
         <span class="n">_PageAnchor</span> <span class="o">=</span> <span class="s">&quot;&quot;</span>
-        <span class="n">_doc_viewer</span> <span class="o">=</span> <span class="n">DocumentationWindow</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="o">-</span><span class="mi">1</span><span class="p">,</span> <span class="n">_TreeLocation</span><span class="p">,</span>
+        <span class="n">_doc_viewer</span> <span class="o">=</span> <span class="n">DocumentationWindow</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">wx</span><span class="o">.</span><span class="n">ID_ANY</span><span class="p">,</span> <span class="n">_TreeLocation</span><span class="p">,</span>
                                           <span class="n">_PageAnchor</span><span class="p">,</span> <span class="s">&quot;Polydispersity Help&quot;</span><span class="p">)</span>
 </div>
 <div class="viewcode-block" id="BasicPage.on_left_down"><a class="viewcode-back" href="../../../../dev/api/sas.perspectives.fitting.html#sas.perspectives.fitting.basepage.BasicPage.on_left_down">[docs]</a>    <span class="k">def</span> <span class="nf">on_left_down</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">event</span><span class="p">):</span>
@@ -3567,42 +3580,49 @@
         <span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">        fill sizer containing model info</span>
 <span class="sd">        &quot;&quot;&quot;</span>
+        <span class="c"># This should only be called once per fit tab</span>
+        <span class="c">#print &quot;==== Entering _fill_model_sizer&quot;</span>
         <span class="c">##Add model function Details button in fitpanel.</span>
         <span class="c">##The following 3 lines are for Mac. Let JHC know before modifying...</span>
         <span class="n">title</span> <span class="o">=</span> <span class="s">&quot;Model&quot;</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">formfactorbox</span> <span class="o">=</span> <span class="bp">None</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">multifactorbox</span> <span class="o">=</span> <span class="bp">None</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">mbox_description</span> <span class="o">=</span> <span class="n">wx</span><span class="o">.</span><span class="n">StaticBox</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="o">-</span><span class="mi">1</span><span class="p">,</span> <span class="nb">str</span><span class="p">(</span><span class="n">title</span><span class="p">))</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">mbox_description</span> <span class="o">=</span> <span class="n">wx</span><span class="o">.</span><span class="n">StaticBox</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">wx</span><span class="o">.</span><span class="n">ID_ANY</span><span class="p">,</span> <span class="nb">str</span><span class="p">(</span><span class="n">title</span><span class="p">))</span>
         <span class="n">boxsizer1</span> <span class="o">=</span> <span class="n">wx</span><span class="o">.</span><span class="n">StaticBoxSizer</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">mbox_description</span><span class="p">,</span> <span class="n">wx</span><span class="o">.</span><span class="n">VERTICAL</span><span class="p">)</span>
         <span class="n">sizer_cat</span> <span class="o">=</span> <span class="n">wx</span><span class="o">.</span><span class="n">BoxSizer</span><span class="p">(</span><span class="n">wx</span><span class="o">.</span><span class="n">HORIZONTAL</span><span class="p">)</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">mbox_description</span><span class="o">.</span><span class="n">SetForegroundColour</span><span class="p">(</span><span class="n">wx</span><span class="o">.</span><span class="n">RED</span><span class="p">)</span>
-        <span class="nb">id</span> <span class="o">=</span> <span class="n">wx</span><span class="o">.</span><span class="n">NewId</span><span class="p">()</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">model_func</span> <span class="o">=</span> <span class="n">wx</span><span class="o">.</span><span class="n">Button</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="nb">id</span><span class="p">,</span> <span class="s">&#39;Help&#39;</span><span class="p">,</span> <span class="n">size</span><span class="o">=</span><span class="p">(</span><span class="mi">80</span><span class="p">,</span> <span class="mi">23</span><span class="p">))</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">model_func</span><span class="o">.</span><span class="n">Bind</span><span class="p">(</span><span class="n">wx</span><span class="o">.</span><span class="n">EVT_BUTTON</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">on_function_help_clicked</span><span class="p">,</span> <span class="nb">id</span><span class="o">=</span><span class="nb">id</span><span class="p">)</span>
+        <span class="n">wx_id</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_ids</span><span class="o">.</span><span class="n">next</span><span class="p">()</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">model_func</span> <span class="o">=</span> <span class="n">wx</span><span class="o">.</span><span class="n">Button</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">wx_id</span><span class="p">,</span> <span class="s">&#39;Help&#39;</span><span class="p">,</span> <span class="n">size</span><span class="o">=</span><span class="p">(</span><span class="mi">80</span><span class="p">,</span> <span class="mi">23</span><span class="p">))</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">model_func</span><span class="o">.</span><span class="n">Bind</span><span class="p">(</span><span class="n">wx</span><span class="o">.</span><span class="n">EVT_BUTTON</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">on_function_help_clicked</span><span class="p">,</span>
+                             <span class="nb">id</span><span class="o">=</span><span class="n">wx_id</span><span class="p">)</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">model_func</span><span class="o">.</span><span class="n">SetToolTipString</span><span class="p">(</span><span class="s">&quot;Full Model Function Help&quot;</span><span class="p">)</span>
-        <span class="nb">id</span> <span class="o">=</span> <span class="n">wx</span><span class="o">.</span><span class="n">NewId</span><span class="p">()</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">model_help</span> <span class="o">=</span> <span class="n">wx</span><span class="o">.</span><span class="n">Button</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="nb">id</span><span class="p">,</span> <span class="s">&#39;Description&#39;</span><span class="p">,</span> <span class="n">size</span><span class="o">=</span><span class="p">(</span><span class="mi">80</span><span class="p">,</span> <span class="mi">23</span><span class="p">))</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">model_help</span><span class="o">.</span><span class="n">Bind</span><span class="p">(</span><span class="n">wx</span><span class="o">.</span><span class="n">EVT_BUTTON</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">on_model_help_clicked</span><span class="p">,</span> <span class="nb">id</span><span class="o">=</span><span class="nb">id</span><span class="p">)</span>
+        <span class="n">wx_id</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_ids</span><span class="o">.</span><span class="n">next</span><span class="p">()</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">model_help</span> <span class="o">=</span> <span class="n">wx</span><span class="o">.</span><span class="n">Button</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">wx_id</span><span class="p">,</span> <span class="s">&#39;Description&#39;</span><span class="p">,</span> <span class="n">size</span><span class="o">=</span><span class="p">(</span><span class="mi">80</span><span class="p">,</span> <span class="mi">23</span><span class="p">))</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">model_help</span><span class="o">.</span><span class="n">Bind</span><span class="p">(</span><span class="n">wx</span><span class="o">.</span><span class="n">EVT_BUTTON</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">on_model_help_clicked</span><span class="p">,</span>
+                             <span class="nb">id</span><span class="o">=</span><span class="n">wx_id</span><span class="p">)</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">model_help</span><span class="o">.</span><span class="n">SetToolTipString</span><span class="p">(</span><span class="s">&quot;Short Model Function Description&quot;</span><span class="p">)</span>
-        <span class="nb">id</span> <span class="o">=</span> <span class="n">wx</span><span class="o">.</span><span class="n">NewId</span><span class="p">()</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">model_view</span> <span class="o">=</span> <span class="n">wx</span><span class="o">.</span><span class="n">Button</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="nb">id</span><span class="p">,</span> <span class="s">&quot;Show 2D&quot;</span><span class="p">,</span> <span class="n">size</span><span class="o">=</span><span class="p">(</span><span class="mi">80</span><span class="p">,</span> <span class="mi">23</span><span class="p">))</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">model_view</span><span class="o">.</span><span class="n">Bind</span><span class="p">(</span><span class="n">wx</span><span class="o">.</span><span class="n">EVT_BUTTON</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">_onModel2D</span><span class="p">,</span> <span class="nb">id</span><span class="o">=</span><span class="nb">id</span><span class="p">)</span>
+        <span class="n">wx_id</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_ids</span><span class="o">.</span><span class="n">next</span><span class="p">()</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">model_view</span> <span class="o">=</span> <span class="n">wx</span><span class="o">.</span><span class="n">Button</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">wx_id</span><span class="p">,</span> <span class="s">&quot;Show 2D&quot;</span><span class="p">,</span> <span class="n">size</span><span class="o">=</span><span class="p">(</span><span class="mi">80</span><span class="p">,</span> <span class="mi">23</span><span class="p">))</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">model_view</span><span class="o">.</span><span class="n">Bind</span><span class="p">(</span><span class="n">wx</span><span class="o">.</span><span class="n">EVT_BUTTON</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">_onModel2D</span><span class="p">,</span> <span class="nb">id</span><span class="o">=</span><span class="n">wx_id</span><span class="p">)</span>
         <span class="n">hint</span> <span class="o">=</span> <span class="s">&quot;toggle view of model from 1D to 2D  or 2D to 1D&quot;</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">model_view</span><span class="o">.</span><span class="n">SetToolTipString</span><span class="p">(</span><span class="n">hint</span><span class="p">)</span>
 
-        <span class="n">cat_set_box</span> <span class="o">=</span> <span class="n">wx</span><span class="o">.</span><span class="n">StaticBox</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="o">-</span><span class="mi">1</span><span class="p">,</span> <span class="s">&#39;Category&#39;</span><span class="p">)</span>
+        <span class="n">cat_set_box</span> <span class="o">=</span> <span class="n">wx</span><span class="o">.</span><span class="n">StaticBox</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">wx</span><span class="o">.</span><span class="n">ID_ANY</span><span class="p">,</span> <span class="s">&#39;Category&#39;</span><span class="p">)</span>
         <span class="n">sizer_cat_box</span> <span class="o">=</span> <span class="n">wx</span><span class="o">.</span><span class="n">StaticBoxSizer</span><span class="p">(</span><span class="n">cat_set_box</span><span class="p">,</span> <span class="n">wx</span><span class="o">.</span><span class="n">HORIZONTAL</span><span class="p">)</span>
         <span class="n">sizer_cat_box</span><span class="o">.</span><span class="n">SetMinSize</span><span class="p">((</span><span class="mi">200</span><span class="p">,</span> <span class="mi">50</span><span class="p">))</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">categorybox</span> <span class="o">=</span> <span class="n">wx</span><span class="o">.</span><span class="n">ComboBox</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="o">-</span><span class="mi">1</span><span class="p">,</span> <span class="n">style</span><span class="o">=</span><span class="n">wx</span><span class="o">.</span><span class="n">CB_READONLY</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">categorybox</span> <span class="o">=</span> <span class="n">wx</span><span class="o">.</span><span class="n">ComboBox</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">wx</span><span class="o">.</span><span class="n">ID_ANY</span><span class="p">,</span>
+                                       <span class="n">style</span><span class="o">=</span><span class="n">wx</span><span class="o">.</span><span class="n">CB_READONLY</span><span class="p">)</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">categorybox</span><span class="o">.</span><span class="n">SetToolTip</span><span class="p">(</span><span class="n">wx</span><span class="o">.</span><span class="n">ToolTip</span><span class="p">(</span><span class="s">&quot;Select a Category/Type&quot;</span><span class="p">))</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">_populate_listbox</span><span class="p">()</span>
-        <span class="n">wx</span><span class="o">.</span><span class="n">EVT_COMBOBOX</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">categorybox</span><span class="p">,</span> <span class="o">-</span><span class="mi">1</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">_show_combox</span><span class="p">)</span>
-        <span class="c">#self.shape_rbutton = wx.RadioButton(self, -1, &#39;Shapes&#39;,</span>
+        <span class="n">wx</span><span class="o">.</span><span class="n">EVT_COMBOBOX</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">categorybox</span><span class="p">,</span> <span class="n">wx</span><span class="o">.</span><span class="n">ID_ANY</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">_show_combox</span><span class="p">)</span>
+        <span class="c">#self.shape_rbutton = wx.RadioButton(self, wx.ID_ANY, &#39;Shapes&#39;,</span>
         <span class="c">#                                     style=wx.RB_GROUP)</span>
-        <span class="c">#self.shape_indep_rbutton = wx.RadioButton(self, -1,</span>
+        <span class="c">#self.shape_indep_rbutton = wx.RadioButton(self, wx.ID_ANY,</span>
         <span class="c">#                                          &quot;Shape-Independent&quot;)</span>
-        <span class="c">#self.struct_rbutton = wx.RadioButton(self, -1, &quot;Structure Factor &quot;)</span>
-        <span class="c">#self.plugin_rbutton = wx.RadioButton(self, -1, &quot;Uncategorized&quot;)</span>
+        <span class="c">#self.struct_rbutton = wx.RadioButton(self, wx.ID_ANY,</span>
+        <span class="c">#                                     &quot;Structure Factor &quot;)</span>
+        <span class="c">#self.plugin_rbutton = wx.RadioButton(self, wx.ID_ANY,</span>
+        <span class="c">#                                     &quot;Uncategorized&quot;)</span>
 
         <span class="c">#self.Bind(wx.EVT_RADIOBUTTON, self._show_combox,</span>
         <span class="c">#                   id=self.shape_rbutton.GetId())</span>
@@ -3614,7 +3634,7 @@
         <span class="c">#                    id=self.plugin_rbutton.GetId())</span>
         <span class="c">#MAC needs SetValue</span>
 
-        <span class="n">show_cat_button</span> <span class="o">=</span> <span class="n">wx</span><span class="o">.</span><span class="n">Button</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="o">-</span><span class="mi">1</span><span class="p">,</span> <span class="s">&quot;Modify&quot;</span><span class="p">)</span>
+        <span class="n">show_cat_button</span> <span class="o">=</span> <span class="n">wx</span><span class="o">.</span><span class="n">Button</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">wx</span><span class="o">.</span><span class="n">ID_ANY</span><span class="p">,</span> <span class="s">&quot;Modify&quot;</span><span class="p">)</span>
         <span class="n">cat_tip</span> <span class="o">=</span> <span class="s">&quot;Modify model categories </span><span class="se">\n</span><span class="s">&quot;</span>
         <span class="n">cat_tip</span> <span class="o">+=</span> <span class="s">&quot;(also accessible from the menu bar).&quot;</span>
         <span class="n">show_cat_button</span><span class="o">.</span><span class="n">SetToolTip</span><span class="p">(</span><span class="n">wx</span><span class="o">.</span><span class="n">ToolTip</span><span class="p">(</span><span class="n">cat_tip</span><span class="p">))</span>
@@ -3640,24 +3660,24 @@
         <span class="n">sizer_selection</span> <span class="o">=</span> <span class="n">wx</span><span class="o">.</span><span class="n">BoxSizer</span><span class="p">(</span><span class="n">wx</span><span class="o">.</span><span class="n">HORIZONTAL</span><span class="p">)</span>
         <span class="n">mutifactor_selection</span> <span class="o">=</span> <span class="n">wx</span><span class="o">.</span><span class="n">BoxSizer</span><span class="p">(</span><span class="n">wx</span><span class="o">.</span><span class="n">HORIZONTAL</span><span class="p">)</span>
 
-        <span class="bp">self</span><span class="o">.</span><span class="n">text1</span> <span class="o">=</span> <span class="n">wx</span><span class="o">.</span><span class="n">StaticText</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="o">-</span><span class="mi">1</span><span class="p">,</span> <span class="s">&quot;&quot;</span><span class="p">)</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">text2</span> <span class="o">=</span> <span class="n">wx</span><span class="o">.</span><span class="n">StaticText</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="o">-</span><span class="mi">1</span><span class="p">,</span> <span class="s">&quot;P(Q)*S(Q)&quot;</span><span class="p">)</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">mutifactor_text</span> <span class="o">=</span> <span class="n">wx</span><span class="o">.</span><span class="n">StaticText</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="o">-</span><span class="mi">1</span><span class="p">,</span> <span class="s">&quot;No. of Shells: &quot;</span><span class="p">)</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">mutifactor_text1</span> <span class="o">=</span> <span class="n">wx</span><span class="o">.</span><span class="n">StaticText</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="o">-</span><span class="mi">1</span><span class="p">,</span> <span class="s">&quot;&quot;</span><span class="p">)</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">show_sld_button</span> <span class="o">=</span> <span class="n">wx</span><span class="o">.</span><span class="n">Button</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="o">-</span><span class="mi">1</span><span class="p">,</span> <span class="s">&quot;Show SLD Profile&quot;</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">text1</span> <span class="o">=</span> <span class="n">wx</span><span class="o">.</span><span class="n">StaticText</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">wx</span><span class="o">.</span><span class="n">ID_ANY</span><span class="p">,</span> <span class="s">&quot;&quot;</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">text2</span> <span class="o">=</span> <span class="n">wx</span><span class="o">.</span><span class="n">StaticText</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">wx</span><span class="o">.</span><span class="n">ID_ANY</span><span class="p">,</span> <span class="s">&quot;P(Q)*S(Q)&quot;</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">mutifactor_text</span> <span class="o">=</span> <span class="n">wx</span><span class="o">.</span><span class="n">StaticText</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">wx</span><span class="o">.</span><span class="n">ID_ANY</span><span class="p">,</span> <span class="s">&quot;No. of Shells: &quot;</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">mutifactor_text1</span> <span class="o">=</span> <span class="n">wx</span><span class="o">.</span><span class="n">StaticText</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">wx</span><span class="o">.</span><span class="n">ID_ANY</span><span class="p">,</span> <span class="s">&quot;&quot;</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">show_sld_button</span> <span class="o">=</span> <span class="n">wx</span><span class="o">.</span><span class="n">Button</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">wx</span><span class="o">.</span><span class="n">ID_ANY</span><span class="p">,</span> <span class="s">&quot;Show SLD Profile&quot;</span><span class="p">)</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">show_sld_button</span><span class="o">.</span><span class="n">Bind</span><span class="p">(</span><span class="n">wx</span><span class="o">.</span><span class="n">EVT_BUTTON</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">_on_show_sld</span><span class="p">)</span>
 
-        <span class="bp">self</span><span class="o">.</span><span class="n">formfactorbox</span> <span class="o">=</span> <span class="n">wx</span><span class="o">.</span><span class="n">ComboBox</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="o">-</span><span class="mi">1</span><span class="p">,</span> <span class="n">style</span><span class="o">=</span><span class="n">wx</span><span class="o">.</span><span class="n">CB_READONLY</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">formfactorbox</span> <span class="o">=</span> <span class="n">wx</span><span class="o">.</span><span class="n">ComboBox</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">wx</span><span class="o">.</span><span class="n">ID_ANY</span><span class="p">,</span> <span class="n">style</span><span class="o">=</span><span class="n">wx</span><span class="o">.</span><span class="n">CB_READONLY</span><span class="p">)</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">formfactorbox</span><span class="o">.</span><span class="n">SetToolTip</span><span class="p">(</span><span class="n">wx</span><span class="o">.</span><span class="n">ToolTip</span><span class="p">(</span><span class="s">&quot;Select a Model&quot;</span><span class="p">))</span>
         <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">model</span> <span class="o">!=</span> <span class="bp">None</span><span class="p">:</span>
             <span class="bp">self</span><span class="o">.</span><span class="n">formfactorbox</span><span class="o">.</span><span class="n">SetValue</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">model</span><span class="o">.</span><span class="n">name</span><span class="p">)</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">structurebox</span> <span class="o">=</span> <span class="n">wx</span><span class="o">.</span><span class="n">ComboBox</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="o">-</span><span class="mi">1</span><span class="p">,</span> <span class="n">style</span><span class="o">=</span><span class="n">wx</span><span class="o">.</span><span class="n">CB_READONLY</span><span class="p">)</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">multifactorbox</span> <span class="o">=</span> <span class="n">wx</span><span class="o">.</span><span class="n">ComboBox</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="o">-</span><span class="mi">1</span><span class="p">,</span> <span class="n">style</span><span class="o">=</span><span class="n">wx</span><span class="o">.</span><span class="n">CB_READONLY</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">structurebox</span> <span class="o">=</span> <span class="n">wx</span><span class="o">.</span><span class="n">ComboBox</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">wx</span><span class="o">.</span><span class="n">ID_ANY</span><span class="p">,</span> <span class="n">style</span><span class="o">=</span><span class="n">wx</span><span class="o">.</span><span class="n">CB_READONLY</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">multifactorbox</span> <span class="o">=</span> <span class="n">wx</span><span class="o">.</span><span class="n">ComboBox</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">wx</span><span class="o">.</span><span class="n">ID_ANY</span><span class="p">,</span> <span class="n">style</span><span class="o">=</span><span class="n">wx</span><span class="o">.</span><span class="n">CB_READONLY</span><span class="p">)</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">initialize_combox</span><span class="p">()</span>
-        <span class="n">wx</span><span class="o">.</span><span class="n">EVT_COMBOBOX</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">formfactorbox</span><span class="p">,</span> <span class="o">-</span><span class="mi">1</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">_on_select_model</span><span class="p">)</span>
+        <span class="n">wx</span><span class="o">.</span><span class="n">EVT_COMBOBOX</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">formfactorbox</span><span class="p">,</span> <span class="n">wx</span><span class="o">.</span><span class="n">ID_ANY</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">_on_select_model</span><span class="p">)</span>
 
-        <span class="n">wx</span><span class="o">.</span><span class="n">EVT_COMBOBOX</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">structurebox</span><span class="p">,</span> <span class="o">-</span><span class="mi">1</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">_on_select_model</span><span class="p">)</span>
-        <span class="n">wx</span><span class="o">.</span><span class="n">EVT_COMBOBOX</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">multifactorbox</span><span class="p">,</span> <span class="o">-</span><span class="mi">1</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">_on_select_model</span><span class="p">)</span>
+        <span class="n">wx</span><span class="o">.</span><span class="n">EVT_COMBOBOX</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">structurebox</span><span class="p">,</span> <span class="n">wx</span><span class="o">.</span><span class="n">ID_ANY</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">_on_select_model</span><span class="p">)</span>
+        <span class="n">wx</span><span class="o">.</span><span class="n">EVT_COMBOBOX</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">multifactorbox</span><span class="p">,</span> <span class="n">wx</span><span class="o">.</span><span class="n">ID_ANY</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">_on_select_model</span><span class="p">)</span>
         <span class="c">## check model type to show sizer</span>
         <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">model</span> <span class="o">!=</span> <span class="bp">None</span><span class="p">:</span>
             <span class="k">print</span> <span class="s">&quot;_set_model_sizer_selection: disabled.&quot;</span>
@@ -3876,7 +3896,7 @@
         <li class="right" >
           <a href="../../../../py-modindex.html" title="Python Module Index"
              >modules</a> |</li>
-        <li class="nav-item nav-item-0"><a href="../../../../index.html">SasView 3.1.0 documentation</a> &raquo;</li>
+        <li class="nav-item nav-item-0"><a href="../../../../index.html">SasView 3.1.2 documentation</a> &raquo;</li>
           <li class="nav-item nav-item-1"><a href="../../../index.html" >Module code</a> &raquo;</li>
           <li class="nav-item nav-item-2"><a href="../fitting.html" >sas.perspectives.fitting</a> &raquo;</li> 
       </ul>

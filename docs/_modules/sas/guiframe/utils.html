@@ -6,7 +6,7 @@
   <head>
     <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
     
-    <title>sas.guiframe.utils &mdash; SasView 3.1.0 documentation</title>
+    <title>sas.guiframe.utils &mdash; SasView 3.1.2 documentation</title>
     
     <link rel="stylesheet" href="../../../_static/classic.css" type="text/css" />
     <link rel="stylesheet" href="../../../_static/pygments.css" type="text/css" />
@@ -14,7 +14,7 @@
     <script type="text/javascript">
       var DOCUMENTATION_OPTIONS = {
         URL_ROOT:    '../../../',
-        VERSION:     '3.1.0',
+        VERSION:     '3.1.2',
         COLLAPSE_INDEX: false,
         FILE_SUFFIX: '.html',
         HAS_SOURCE:  true
@@ -24,7 +24,7 @@
     <script type="text/javascript" src="../../../_static/underscore.js"></script>
     <script type="text/javascript" src="../../../_static/doctools.js"></script>
     <script type="text/javascript" src="https://cdn.mathjax.org/mathjax/latest/MathJax.js?config=TeX-AMS-MML_HTMLorMML"></script>
-    <link rel="top" title="SasView 3.1.0 documentation" href="../../../index.html" />
+    <link rel="top" title="SasView 3.1.2 documentation" href="../../../index.html" />
     <link rel="up" title="sas.guiframe" href="../guiframe.html" /> 
   </head>
   <body role="document">
@@ -37,7 +37,7 @@
         <li class="right" >
           <a href="../../../py-modindex.html" title="Python Module Index"
              >modules</a> |</li>
-        <li class="nav-item nav-item-0"><a href="../../../index.html">SasView 3.1.0 documentation</a> &raquo;</li>
+        <li class="nav-item nav-item-0"><a href="../../../index.html">SasView 3.1.2 documentation</a> &raquo;</li>
           <li class="nav-item nav-item-1"><a href="../../index.html" >Module code</a> &raquo;</li>
           <li class="nav-item nav-item-2"><a href="../guiframe.html" accesskey="U">sas.guiframe</a> &raquo;</li> 
       </ul>
@@ -172,7 +172,80 @@
         <span class="k">if</span>  <span class="n">re</span><span class="o">.</span><span class="n">search</span><span class="p">(</span><span class="n">end</span><span class="p">,</span><span class="n">string1</span><span class="p">)</span> <span class="ow">is</span> <span class="ow">not</span> <span class="bp">None</span><span class="p">:</span>
             <span class="n">end_flag</span> <span class="o">=</span> <span class="bp">True</span>
     <span class="k">return</span> <span class="n">begin_flag</span><span class="p">,</span> <span class="n">end_flag</span>
-</pre></div></div>
+</div>
+<div class="viewcode-block" id="IdList"><a class="viewcode-back" href="../../../dev/api/sas.guiframe.html#sas.guiframe.utils.IdList">[docs]</a><span class="k">class</span> <span class="nc">IdList</span><span class="p">:</span>
+    <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Create a list of wx ids that can be reused.</span>
+
+<span class="sd">    Ids for items need to be unique within their context.  In a dynamic</span>
+<span class="sd">    application where the number of ids needed different each time the</span>
+<span class="sd">    form is created, depending for example, on the number of items that</span>
+<span class="sd">    need to be shown in the context menu, you cannot preallocate the</span>
+<span class="sd">    ids that you are going to use for the form.  Instead, you can use</span>
+<span class="sd">    an IdList, which will reuse ids from context to context, adding new</span>
+<span class="sd">    ones if the new context requires more than a previous context.</span>
+
+<span class="sd">    IdList is set up as an iterator, which returns new ids forever</span>
+<span class="sd">    or until it runs out.  This makes it pretty useful for defining</span>
+<span class="sd">    menus::</span>
+
+<span class="sd">        class Form(wx.Dialog):</span>
+<span class="sd">            _form_id_pool = IdList()</span>
+<span class="sd">            def __init__(self):</span>
+<span class="sd">                ...</span>
+<span class="sd">                menu = wx.Menu()</span>
+<span class="sd">                for item, wx_id in zip(menu_items, self._form_id_pool):</span>
+<span class="sd">                    name, description, callback = item</span>
+<span class="sd">                    menu.Append(wx_id, name, description)</span>
+<span class="sd">                    wx.EVT_MENU(self, wx_id, callback)</span>
+<span class="sd">                ...</span>
+
+<span class="sd">    It is a little unusual to use an iterator outside of a loop, but it is</span>
+<span class="sd">    supported. For example, when defining a form, your class definition</span>
+<span class="sd">    might look something like::</span>
+
+<span class="sd">        class Form(wx.Dialog):</span>
+<span class="sd">            _form_id_pool = IdList()</span>
+<span class="sd">            def __init__(self, pairs, ...):</span>
+<span class="sd">                ids = iter(_form_id_pool)</span>
+<span class="sd">                ...</span>
+<span class="sd">                wx.StaticText(self, ids.next(), &quot;Some key-value pairs&quot;)</span>
+<span class="sd">                for name, value in pairs:</span>
+<span class="sd">                    label = wx.StaticText(self, ids.next(), name)</span>
+<span class="sd">                    input = wx.TextCtrl(self, ids.next(), value=str(value))</span>
+<span class="sd">                    ...</span>
+<span class="sd">                ...</span>
+
+<span class="sd">    If the dialog is really dynamic, and not defined all in one place, then</span>
+<span class="sd">    save the id list iterator as *self._ids = iter(_form_id_pool)* in the</span>
+<span class="sd">    constructor.</span>
+
+<span class="sd">    The wx documentation is not clear on whether ids need to be unique.</span>
+<span class="sd">    Clearly different dialogs can use the same ids, as this is done for the</span>
+<span class="sd">    standard button ids such as wx.ID_HELP.  Presumably each widget on the</span>
+<span class="sd">    form needs its own id, but whether these ids can match the ids of menu</span>
+<span class="sd">    items is not indicated, or whether different submenus need their own</span>
+<span class="sd">    ids.  Using different id lists for menu items and widgets is safest,</span>
+<span class="sd">    but probably not necessary.  And what about notebook tabs.  Do the</span>
+<span class="sd">    ids need to be unique across all tabs?</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_ids</span> <span class="o">=</span> <span class="p">[]</span>
+    <span class="k">def</span> <span class="nf">__iter__</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="k">return</span> <span class="n">_IdListIterator</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span>
+    <span class="k">def</span> <span class="nf">__getitem__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">index</span><span class="p">):</span>
+        <span class="k">while</span> <span class="n">index</span> <span class="o">&gt;=</span> <span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_ids</span><span class="p">):</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_ids</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">wx</span><span class="o">.</span><span class="n">NewId</span><span class="p">())</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_ids</span><span class="p">[</span><span class="n">index</span><span class="p">]</span>
+</div>
+<span class="k">class</span> <span class="nc">_IdListIterator</span><span class="p">:</span>
+    <span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">id_list</span><span class="p">):</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">id_list</span> <span class="o">=</span> <span class="n">id_list</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">index</span> <span class="o">=</span> <span class="o">-</span><span class="mi">1</span>
+    <span class="k">def</span> <span class="nf">next</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">index</span> <span class="o">+=</span> <span class="mi">1</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">id_list</span><span class="p">[</span><span class="bp">self</span><span class="o">.</span><span class="n">index</span><span class="p">]</span>
+</pre></div>
 
           </div>
         </div>
@@ -205,7 +278,7 @@
         <li class="right" >
           <a href="../../../py-modindex.html" title="Python Module Index"
              >modules</a> |</li>
-        <li class="nav-item nav-item-0"><a href="../../../index.html">SasView 3.1.0 documentation</a> &raquo;</li>
+        <li class="nav-item nav-item-0"><a href="../../../index.html">SasView 3.1.2 documentation</a> &raquo;</li>
           <li class="nav-item nav-item-1"><a href="../../index.html" >Module code</a> &raquo;</li>
           <li class="nav-item nav-item-2"><a href="../guiframe.html" >sas.guiframe</a> &raquo;</li> 
       </ul>
