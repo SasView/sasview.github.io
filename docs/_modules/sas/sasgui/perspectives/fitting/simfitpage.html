@@ -1,0 +1,1088 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+  "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+    
+    <title>sas.sasgui.perspectives.fitting.simfitpage &mdash; SasView 4.0.0 documentation</title>
+    
+    <link rel="stylesheet" href="../../../../../_static/classic.css" type="text/css" />
+    <link rel="stylesheet" href="../../../../../_static/pygments.css" type="text/css" />
+    
+    <script type="text/javascript">
+      var DOCUMENTATION_OPTIONS = {
+        URL_ROOT:    '../../../../../',
+        VERSION:     '4.0.0',
+        COLLAPSE_INDEX: false,
+        FILE_SUFFIX: '.html',
+        HAS_SOURCE:  true
+      };
+    </script>
+    <script type="text/javascript" src="../../../../../_static/jquery.js"></script>
+    <script type="text/javascript" src="../../../../../_static/underscore.js"></script>
+    <script type="text/javascript" src="../../../../../_static/doctools.js"></script>
+    <script type="text/javascript" src="https://cdn.mathjax.org/mathjax/latest/MathJax.js?config=TeX-AMS-MML_HTMLorMML"></script>
+    <link rel="top" title="SasView 4.0.0 documentation" href="../../../../../index.html" />
+    <link rel="up" title="sas.sasgui.perspectives.fitting" href="../fitting.html" /> 
+  </head>
+  <body role="document">
+    <div class="related" role="navigation" aria-label="related navigation">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="../../../../../genindex.html" title="General Index"
+             accesskey="I">index</a></li>
+        <li class="right" >
+          <a href="../../../../../py-modindex.html" title="Python Module Index"
+             >modules</a> |</li>
+        <li class="nav-item nav-item-0"><a href="../../../../../index.html">SasView 4.0.0 documentation</a> &raquo;</li>
+          <li class="nav-item nav-item-1"><a href="../../../../index.html" >Module code</a> &raquo;</li>
+          <li class="nav-item nav-item-2"><a href="../fitting.html" accesskey="U">sas.sasgui.perspectives.fitting</a> &raquo;</li> 
+      </ul>
+    </div>  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          <div class="body" role="main">
+            
+  <h1>Source code for sas.sasgui.perspectives.fitting.simfitpage</h1><div class="highlight"><pre>
+<span></span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Simultaneous fit page</span>
+<span class="sd">&quot;&quot;&quot;</span>
+<span class="kn">import</span> <span class="nn">sys</span>
+<span class="kn">from</span> <span class="nn">collections</span> <span class="kn">import</span> <span class="n">namedtuple</span>
+
+<span class="kn">import</span> <span class="nn">wx</span>
+<span class="kn">import</span> <span class="nn">wx.lib.newevent</span>
+<span class="kn">from</span> <span class="nn">wx.lib.scrolledpanel</span> <span class="kn">import</span> <span class="n">ScrolledPanel</span>
+
+<span class="kn">from</span> <span class="nn">sas.sasgui.guiframe.events</span> <span class="kn">import</span> <span class="n">StatusEvent</span>
+<span class="kn">from</span> <span class="nn">sas.sasgui.guiframe.panel_base</span> <span class="kn">import</span> <span class="n">PanelBase</span>
+<span class="kn">from</span> <span class="nn">sas.sasgui.guiframe.events</span> <span class="kn">import</span> <span class="n">PanelOnFocusEvent</span>
+<span class="kn">from</span> <span class="nn">sas.sasgui.guiframe.utils</span> <span class="kn">import</span> <span class="n">IdList</span>
+<span class="kn">from</span> <span class="nn">sas.sasgui.guiframe.documentation_window</span> <span class="kn">import</span> <span class="n">DocumentationWindow</span>
+
+<span class="c1">#Control panel width </span>
+<span class="k">if</span> <span class="n">sys</span><span class="o">.</span><span class="n">platform</span><span class="o">.</span><span class="n">count</span><span class="p">(</span><span class="s2">&quot;darwin&quot;</span><span class="p">)</span> <span class="o">==</span> <span class="mi">0</span><span class="p">:</span>
+    <span class="n">PANEL_WID</span> <span class="o">=</span> <span class="mi">420</span>
+    <span class="n">FONT_VARIANT</span> <span class="o">=</span> <span class="mi">0</span>
+<span class="k">else</span><span class="p">:</span>
+    <span class="n">PANEL_WID</span> <span class="o">=</span> <span class="mi">490</span>
+    <span class="n">FONT_VARIANT</span> <span class="o">=</span> <span class="mi">1</span>
+
+
+<span class="c1"># Each constraint requires five widgets and sizer.  Package them in</span>
+<span class="c1"># a named tuple for easy access.</span>
+<span class="n">ConstraintLine</span> <span class="o">=</span> <span class="n">namedtuple</span><span class="p">(</span><span class="s1">&#39;ConstraintLine&#39;</span><span class="p">,</span>
+        <span class="s1">&#39;model_cbox param_cbox egal_txt constraint btRemove sizer&#39;</span><span class="p">)</span>
+
+<div class="viewcode-block" id="get_fittableParam"><a class="viewcode-back" href="../../../../../dev/api/sas.sasgui.perspectives.fitting.html#sas.sasgui.perspectives.fitting.simfitpage.get_fittableParam">[docs]</a><span class="k">def</span> <span class="nf">get_fittableParam</span><span class="p">(</span><span class="n">model</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    return list of fittable parameters from a model</span>
+
+<span class="sd">    :param model: the model used</span>
+
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">fittable_param</span> <span class="o">=</span> <span class="p">[]</span>
+    <span class="k">for</span> <span class="n">item</span> <span class="ow">in</span> <span class="n">model</span><span class="o">.</span><span class="n">getParamList</span><span class="p">():</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="n">item</span>  <span class="ow">in</span> <span class="n">model</span><span class="o">.</span><span class="n">getDispParamList</span><span class="p">():</span>
+            <span class="k">if</span> <span class="ow">not</span> <span class="n">item</span> <span class="ow">in</span> <span class="n">model</span><span class="o">.</span><span class="n">non_fittable</span><span class="p">:</span>
+                <span class="n">fittable_param</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">item</span><span class="p">)</span>
+
+    <span class="k">for</span> <span class="n">item</span> <span class="ow">in</span> <span class="n">model</span><span class="o">.</span><span class="n">fixed</span><span class="p">:</span>
+        <span class="n">fittable_param</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">item</span><span class="p">)</span>
+
+    <span class="k">return</span> <span class="n">fittable_param</span></div>
+
+<div class="viewcode-block" id="SimultaneousFitPage"><a class="viewcode-back" href="../../../../../dev/api/sas.sasgui.perspectives.fitting.html#sas.sasgui.perspectives.fitting.simfitpage.SimultaneousFitPage">[docs]</a><span class="k">class</span> <span class="nc">SimultaneousFitPage</span><span class="p">(</span><span class="n">ScrolledPanel</span><span class="p">,</span> <span class="n">PanelBase</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Simultaneous fitting panel</span>
+<span class="sd">    All that needs to be defined are the</span>
+<span class="sd">    two data members window_name and window_caption</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="c1">## Internal name for the AUI manager</span>
+    <span class="n">window_name</span> <span class="o">=</span> <span class="s2">&quot;simultaneous Fit page&quot;</span>
+    <span class="c1">## Title to appear on top of the window</span>
+    <span class="n">window_caption</span> <span class="o">=</span> <span class="s2">&quot;Simultaneous Fit Page&quot;</span>
+    <span class="n">ID_DOC</span> <span class="o">=</span> <span class="n">wx</span><span class="o">.</span><span class="n">NewId</span><span class="p">()</span>
+    <span class="n">ID_SET_ALL</span> <span class="o">=</span> <span class="n">wx</span><span class="o">.</span><span class="n">NewId</span><span class="p">()</span>
+    <span class="n">ID_FIT</span> <span class="o">=</span> <span class="n">wx</span><span class="o">.</span><span class="n">NewId</span><span class="p">()</span>
+    <span class="n">ID_ADD</span> <span class="o">=</span> <span class="n">wx</span><span class="o">.</span><span class="n">NewId</span><span class="p">()</span>
+    <span class="n">_id_pool</span> <span class="o">=</span> <span class="n">IdList</span><span class="p">()</span>
+
+    <span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">parent</span><span class="p">,</span> <span class="n">page_finder</span><span class="o">=</span><span class="p">{},</span> <span class="nb">id</span><span class="o">=</span><span class="n">wx</span><span class="o">.</span><span class="n">ID_ANY</span><span class="p">,</span> <span class="n">batch_on</span><span class="o">=</span><span class="bp">False</span><span class="p">,</span>
+                 <span class="o">*</span><span class="n">args</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
+        <span class="n">ScrolledPanel</span><span class="o">.</span><span class="n">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">parent</span><span class="p">,</span> <span class="nb">id</span><span class="o">=</span><span class="nb">id</span><span class="p">,</span>
+                               <span class="n">style</span><span class="o">=</span><span class="n">wx</span><span class="o">.</span><span class="n">FULL_REPAINT_ON_RESIZE</span><span class="p">,</span>
+                               <span class="o">*</span><span class="n">args</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">)</span>
+        <span class="n">PanelBase</span><span class="o">.</span><span class="n">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">parent</span><span class="p">)</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Simultaneous page display</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_ids</span> <span class="o">=</span> <span class="nb">iter</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_id_pool</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">SetupScrolling</span><span class="p">()</span>
+        <span class="c1">##Font size</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">SetWindowVariant</span><span class="p">(</span><span class="n">variant</span><span class="o">=</span><span class="n">FONT_VARIANT</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">uid</span> <span class="o">=</span> <span class="n">wx</span><span class="o">.</span><span class="n">NewId</span><span class="p">()</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">parent</span> <span class="o">=</span> <span class="n">parent</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">batch_on</span> <span class="o">=</span> <span class="n">batch_on</span>
+        <span class="c1">## store page_finder</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">page_finder</span> <span class="o">=</span> <span class="n">page_finder</span>
+        <span class="c1">## list containing info to set constraint</span>
+        <span class="c1">## look like self.constraint_dict[page_id]= page</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">constraint_dict</span> <span class="o">=</span> <span class="p">{}</span>
+        <span class="c1">## item list</span>
+        <span class="c1">## self.constraints_list=[combobox1, combobox2,=,textcrtl, button ]</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">constraints_list</span> <span class="o">=</span> <span class="p">[]</span>
+        <span class="c1">## list of current model</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">model_list</span> <span class="o">=</span> <span class="p">[]</span>
+        <span class="c1">## selected mdoel to fit</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">model_toFit</span> <span class="o">=</span> <span class="p">[]</span>
+        <span class="c1">## Control the fit state</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">fit_started</span> <span class="o">=</span> <span class="bp">False</span>
+        <span class="c1">## number of constraint</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">nb_constraint</span> <span class="o">=</span> <span class="mi">0</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">model_cbox_left</span> <span class="o">=</span> <span class="bp">None</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">model_cbox_right</span> <span class="o">=</span> <span class="bp">None</span>
+        <span class="c1">## draw page</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">define_page_structure</span><span class="p">()</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">draw_page</span><span class="p">()</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_set_save_flag</span><span class="p">(</span><span class="bp">False</span><span class="p">)</span>
+
+<div class="viewcode-block" id="SimultaneousFitPage.define_page_structure"><a class="viewcode-back" href="../../../../../dev/api/sas.sasgui.perspectives.fitting.html#sas.sasgui.perspectives.fitting.simfitpage.SimultaneousFitPage.define_page_structure">[docs]</a>    <span class="k">def</span> <span class="nf">define_page_structure</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Create empty sizers, their hierarchy and set the sizer for the panel</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">vbox</span> <span class="o">=</span> <span class="n">wx</span><span class="o">.</span><span class="n">BoxSizer</span><span class="p">(</span><span class="n">wx</span><span class="o">.</span><span class="n">VERTICAL</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">sizer1</span> <span class="o">=</span> <span class="n">wx</span><span class="o">.</span><span class="n">BoxSizer</span><span class="p">(</span><span class="n">wx</span><span class="o">.</span><span class="n">VERTICAL</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">sizer2</span> <span class="o">=</span> <span class="n">wx</span><span class="o">.</span><span class="n">BoxSizer</span><span class="p">(</span><span class="n">wx</span><span class="o">.</span><span class="n">VERTICAL</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">sizer3</span> <span class="o">=</span> <span class="n">wx</span><span class="o">.</span><span class="n">BoxSizer</span><span class="p">(</span><span class="n">wx</span><span class="o">.</span><span class="n">VERTICAL</span><span class="p">)</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">sizer1</span><span class="o">.</span><span class="n">SetMinSize</span><span class="p">((</span><span class="n">PANEL_WID</span><span class="p">,</span> <span class="o">-</span><span class="mi">1</span><span class="p">))</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">sizer2</span><span class="o">.</span><span class="n">SetMinSize</span><span class="p">((</span><span class="n">PANEL_WID</span><span class="p">,</span> <span class="o">-</span><span class="mi">1</span><span class="p">))</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">sizer3</span><span class="o">.</span><span class="n">SetMinSize</span><span class="p">((</span><span class="n">PANEL_WID</span><span class="p">,</span> <span class="o">-</span><span class="mi">1</span><span class="p">))</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">vbox</span><span class="o">.</span><span class="n">Add</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">sizer1</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">vbox</span><span class="o">.</span><span class="n">Add</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">sizer2</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">vbox</span><span class="o">.</span><span class="n">Add</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">sizer3</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">SetSizer</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">vbox</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">Centre</span><span class="p">()</span></div>
+
+<div class="viewcode-block" id="SimultaneousFitPage.draw_page"><a class="viewcode-back" href="../../../../../dev/api/sas.sasgui.perspectives.fitting.html#sas.sasgui.perspectives.fitting.simfitpage.SimultaneousFitPage.draw_page">[docs]</a>    <span class="k">def</span> <span class="nf">draw_page</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Construct the Simultaneous/Constrained fit page. fills the first</span>
+<span class="sd">        region (sizer1) with the list of available fit page pairs of data </span>
+<span class="sd">        and models.  Then fills sizer2 with the checkbox for adding</span>
+<span class="sd">        constraints, and finally fills sizer3 with the fit button and</span>
+<span class="sd">        instructions.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+
+        <span class="c1"># create blank list of constraints</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">model_list</span> <span class="o">=</span> <span class="p">[]</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">model_toFit</span> <span class="o">=</span> <span class="p">[]</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">constraints_list</span> <span class="o">=</span> <span class="p">[]</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">constraint_dict</span> <span class="o">=</span> <span class="p">{}</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">nb_constraint</span> <span class="o">=</span> <span class="mi">0</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">model_cbox_left</span> <span class="o">=</span> <span class="bp">None</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">model_cbox_right</span> <span class="o">=</span> <span class="bp">None</span>
+
+        <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">model_list</span><span class="p">)</span> <span class="o">&gt;</span> <span class="mi">0</span><span class="p">:</span>
+            <span class="k">for</span> <span class="n">item</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">model_list</span><span class="p">:</span>
+                <span class="n">item</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">SetValue</span><span class="p">(</span><span class="bp">False</span><span class="p">)</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">manager</span><span class="o">.</span><span class="n">schedule_for_fit</span><span class="p">(</span><span class="n">value</span><span class="o">=</span><span class="mi">0</span><span class="p">,</span> <span class="n">uid</span><span class="o">=</span><span class="n">item</span><span class="p">[</span><span class="mi">2</span><span class="p">])</span>
+
+        <span class="c1">#-------------------------------------------------------</span>
+        <span class="c1">## setup sizer1 (which fitpages to include)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">sizer1</span><span class="o">.</span><span class="n">Clear</span><span class="p">(</span><span class="bp">True</span><span class="p">)</span>
+        <span class="n">box_description</span> <span class="o">=</span> <span class="n">wx</span><span class="o">.</span><span class="n">StaticBox</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">wx</span><span class="o">.</span><span class="n">ID_ANY</span><span class="p">,</span> <span class="s2">&quot;Fit Combinations&quot;</span><span class="p">)</span>
+        <span class="n">boxsizer1</span> <span class="o">=</span> <span class="n">wx</span><span class="o">.</span><span class="n">StaticBoxSizer</span><span class="p">(</span><span class="n">box_description</span><span class="p">,</span> <span class="n">wx</span><span class="o">.</span><span class="n">VERTICAL</span><span class="p">)</span>
+        <span class="n">sizer_title</span> <span class="o">=</span> <span class="n">wx</span><span class="o">.</span><span class="n">BoxSizer</span><span class="p">(</span><span class="n">wx</span><span class="o">.</span><span class="n">HORIZONTAL</span><span class="p">)</span>
+        <span class="n">sizer_couples</span> <span class="o">=</span> <span class="n">wx</span><span class="o">.</span><span class="n">GridBagSizer</span><span class="p">(</span><span class="mi">5</span><span class="p">,</span> <span class="mi">5</span><span class="p">)</span>
+
+        <span class="c1">#This if statement should be obsolete and can be removed in version 4</span>
+        <span class="c1">#Leave it here for now as no time to thoroughly test.  However if no</span>
+        <span class="c1">#fit page is found the menu item that calls this page is inactive </span>
+        <span class="c1"># Nov. 22 2015  --PDB</span>
+        <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">page_finder</span><span class="p">)</span> <span class="o">==</span> <span class="mi">0</span><span class="p">:</span>
+            <span class="n">msg</span> <span class="o">=</span> <span class="s2">&quot; No fit combinations are found! </span><span class="se">\n\n</span><span class="s2">&quot;</span>
+            <span class="n">msg</span> <span class="o">+=</span> <span class="s2">&quot; Please load data and set up &quot;</span>
+            <span class="n">msg</span> <span class="o">+=</span> <span class="s2">&quot;at least one fit panels first...&quot;</span>
+            <span class="n">sizer_title</span><span class="o">.</span><span class="n">Add</span><span class="p">(</span><span class="n">wx</span><span class="o">.</span><span class="n">StaticText</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">wx</span><span class="o">.</span><span class="n">ID_ANY</span><span class="p">,</span> <span class="n">msg</span><span class="p">))</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="c1">## store model</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_store_model</span><span class="p">()</span>
+
+            <span class="bp">self</span><span class="o">.</span><span class="n">cb1</span> <span class="o">=</span> <span class="n">wx</span><span class="o">.</span><span class="n">CheckBox</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">wx</span><span class="o">.</span><span class="n">ID_ANY</span><span class="p">,</span> <span class="s1">&#39;Select all&#39;</span><span class="p">)</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">cb1</span><span class="o">.</span><span class="n">SetValue</span><span class="p">(</span><span class="bp">False</span><span class="p">)</span>
+            <span class="n">wx</span><span class="o">.</span><span class="n">EVT_CHECKBOX</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">cb1</span><span class="o">.</span><span class="n">GetId</span><span class="p">(),</span> <span class="bp">self</span><span class="o">.</span><span class="n">check_all_model_name</span><span class="p">)</span>
+
+            <span class="n">sizer_title</span><span class="o">.</span><span class="n">Add</span><span class="p">((</span><span class="mi">10</span><span class="p">,</span> <span class="mi">10</span><span class="p">),</span> <span class="mi">0</span><span class="p">,</span>
+                <span class="n">wx</span><span class="o">.</span><span class="n">TOP</span> <span class="o">|</span> <span class="n">wx</span><span class="o">.</span><span class="n">BOTTOM</span> <span class="o">|</span> <span class="n">wx</span><span class="o">.</span><span class="n">EXPAND</span> <span class="o">|</span> <span class="n">wx</span><span class="o">.</span><span class="n">ADJUST_MINSIZE</span><span class="p">,</span> <span class="n">border</span><span class="o">=</span><span class="mi">5</span><span class="p">)</span>
+            <span class="n">sizer_title</span><span class="o">.</span><span class="n">Add</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">cb1</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span>
+                <span class="n">wx</span><span class="o">.</span><span class="n">TOP</span> <span class="o">|</span> <span class="n">wx</span><span class="o">.</span><span class="n">BOTTOM</span> <span class="o">|</span> <span class="n">wx</span><span class="o">.</span><span class="n">LEFT</span> <span class="o">|</span> <span class="n">wx</span><span class="o">.</span><span class="n">EXPAND</span> <span class="o">|</span> <span class="n">wx</span><span class="o">.</span><span class="n">ADJUST_MINSIZE</span><span class="p">,</span> <span class="n">border</span><span class="o">=</span><span class="mi">5</span><span class="p">)</span>
+
+            <span class="c1">## draw list of model and data names</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_fill_sizer_model_list</span><span class="p">(</span><span class="n">sizer_couples</span><span class="p">)</span>
+
+        <span class="n">boxsizer1</span><span class="o">.</span><span class="n">Add</span><span class="p">(</span><span class="n">sizer_title</span><span class="p">,</span> <span class="n">flag</span><span class="o">=</span><span class="n">wx</span><span class="o">.</span><span class="n">TOP</span> <span class="o">|</span> <span class="n">wx</span><span class="o">.</span><span class="n">BOTTOM</span><span class="p">,</span> <span class="n">border</span><span class="o">=</span><span class="mi">5</span><span class="p">)</span>
+        <span class="n">boxsizer1</span><span class="o">.</span><span class="n">Add</span><span class="p">(</span><span class="n">sizer_couples</span><span class="p">,</span> <span class="mi">1</span><span class="p">,</span> <span class="n">flag</span><span class="o">=</span><span class="n">wx</span><span class="o">.</span><span class="n">TOP</span> <span class="o">|</span> <span class="n">wx</span><span class="o">.</span><span class="n">BOTTOM</span><span class="p">,</span> <span class="n">border</span><span class="o">=</span><span class="mi">5</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">sizer1</span><span class="o">.</span><span class="n">Add</span><span class="p">(</span><span class="n">boxsizer1</span><span class="p">,</span> <span class="mi">1</span><span class="p">,</span> <span class="n">wx</span><span class="o">.</span><span class="n">EXPAND</span> <span class="o">|</span> <span class="n">wx</span><span class="o">.</span><span class="n">ALL</span><span class="p">,</span> <span class="mi">10</span><span class="p">)</span>
+<span class="c1">#        self.sizer1.Layout()</span>
+
+        <span class="c1">#--------------------------------------------------------</span>
+        <span class="c1">## set up the other 2 sizers: the constraints list and the</span>
+        <span class="c1">## buttons (fit, help etc) sizer at the bottom of the page.</span>
+        <span class="c1">## Note: the if statement should be removed along with the above</span>
+        <span class="c1">## if statement as soon as it can be properly tested.</span>
+        <span class="c1">## Nov. 22 2015  --PDB</span>
+        <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">page_finder</span><span class="p">)</span> <span class="o">&gt;</span> <span class="mi">0</span><span class="p">:</span>
+            <span class="c1">## draw the sizer containing constraint info</span>
+            <span class="k">if</span> <span class="ow">not</span> <span class="bp">self</span><span class="o">.</span><span class="n">batch_on</span><span class="p">:</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">_fill_sizer_constraint</span><span class="p">()</span>
+            <span class="c1">## draw fit button sizer</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_fill_sizer_fit</span><span class="p">()</span></div>
+
+
+    <span class="k">def</span> <span class="nf">_fill_sizer_model_list</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">sizer</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Receive a dictionary containing information to display model name</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">ix</span> <span class="o">=</span> <span class="mi">0</span>
+        <span class="n">iy</span> <span class="o">=</span> <span class="mi">0</span>
+        <span class="nb">list</span> <span class="o">=</span> <span class="p">[]</span>
+        <span class="n">sizer</span><span class="o">.</span><span class="n">Clear</span><span class="p">(</span><span class="bp">True</span><span class="p">)</span>
+
+        <span class="n">new_name</span> <span class="o">=</span> <span class="n">wx</span><span class="o">.</span><span class="n">StaticText</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">wx</span><span class="o">.</span><span class="n">ID_ANY</span><span class="p">,</span> <span class="s1">&#39;  Model Title &#39;</span><span class="p">,</span>
+                                 <span class="n">style</span><span class="o">=</span><span class="n">wx</span><span class="o">.</span><span class="n">ALIGN_CENTER</span><span class="p">)</span>
+        <span class="n">new_name</span><span class="o">.</span><span class="n">SetBackgroundColour</span><span class="p">(</span><span class="s1">&#39;orange&#39;</span><span class="p">)</span>
+        <span class="n">new_name</span><span class="o">.</span><span class="n">SetForegroundColour</span><span class="p">(</span><span class="n">wx</span><span class="o">.</span><span class="n">WHITE</span><span class="p">)</span>
+        <span class="n">sizer</span><span class="o">.</span><span class="n">Add</span><span class="p">(</span><span class="n">new_name</span><span class="p">,</span> <span class="p">(</span><span class="n">iy</span><span class="p">,</span> <span class="n">ix</span><span class="p">),</span> <span class="p">(</span><span class="mi">1</span><span class="p">,</span> <span class="mi">1</span><span class="p">),</span>
+                            <span class="n">wx</span><span class="o">.</span><span class="n">LEFT</span> <span class="o">|</span> <span class="n">wx</span><span class="o">.</span><span class="n">EXPAND</span> <span class="o">|</span> <span class="n">wx</span><span class="o">.</span><span class="n">ADJUST_MINSIZE</span><span class="p">,</span> <span class="mi">15</span><span class="p">)</span>
+        <span class="n">ix</span> <span class="o">+=</span> <span class="mi">2</span>
+        <span class="n">model_type</span> <span class="o">=</span> <span class="n">wx</span><span class="o">.</span><span class="n">StaticText</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">wx</span><span class="o">.</span><span class="n">ID_ANY</span><span class="p">,</span> <span class="s1">&#39;  Model &#39;</span><span class="p">)</span>
+        <span class="n">model_type</span><span class="o">.</span><span class="n">SetBackgroundColour</span><span class="p">(</span><span class="s1">&#39;grey&#39;</span><span class="p">)</span>
+        <span class="n">model_type</span><span class="o">.</span><span class="n">SetForegroundColour</span><span class="p">(</span><span class="n">wx</span><span class="o">.</span><span class="n">WHITE</span><span class="p">)</span>
+        <span class="n">sizer</span><span class="o">.</span><span class="n">Add</span><span class="p">(</span><span class="n">model_type</span><span class="p">,</span> <span class="p">(</span><span class="n">iy</span><span class="p">,</span> <span class="n">ix</span><span class="p">),</span> <span class="p">(</span><span class="mi">1</span><span class="p">,</span> <span class="mi">1</span><span class="p">),</span>
+                            <span class="n">wx</span><span class="o">.</span><span class="n">EXPAND</span> <span class="o">|</span> <span class="n">wx</span><span class="o">.</span><span class="n">ADJUST_MINSIZE</span><span class="p">,</span> <span class="mi">0</span><span class="p">)</span>
+        <span class="n">ix</span> <span class="o">+=</span> <span class="mi">1</span>
+        <span class="n">data_used</span> <span class="o">=</span> <span class="n">wx</span><span class="o">.</span><span class="n">StaticText</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">wx</span><span class="o">.</span><span class="n">ID_ANY</span><span class="p">,</span> <span class="s1">&#39;  Data &#39;</span><span class="p">)</span>
+        <span class="n">data_used</span><span class="o">.</span><span class="n">SetBackgroundColour</span><span class="p">(</span><span class="s1">&#39;grey&#39;</span><span class="p">)</span>
+        <span class="n">data_used</span><span class="o">.</span><span class="n">SetForegroundColour</span><span class="p">(</span><span class="n">wx</span><span class="o">.</span><span class="n">WHITE</span><span class="p">)</span>
+        <span class="n">sizer</span><span class="o">.</span><span class="n">Add</span><span class="p">(</span><span class="n">data_used</span><span class="p">,</span> <span class="p">(</span><span class="n">iy</span><span class="p">,</span> <span class="n">ix</span><span class="p">),</span> <span class="p">(</span><span class="mi">1</span><span class="p">,</span> <span class="mi">1</span><span class="p">),</span>
+                            <span class="n">wx</span><span class="o">.</span><span class="n">EXPAND</span> <span class="o">|</span> <span class="n">wx</span><span class="o">.</span><span class="n">ADJUST_MINSIZE</span><span class="p">,</span> <span class="mi">0</span><span class="p">)</span>
+        <span class="n">ix</span> <span class="o">+=</span> <span class="mi">1</span>
+        <span class="n">tab_used</span> <span class="o">=</span> <span class="n">wx</span><span class="o">.</span><span class="n">StaticText</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">wx</span><span class="o">.</span><span class="n">ID_ANY</span><span class="p">,</span> <span class="s1">&#39;  FitPage &#39;</span><span class="p">)</span>
+        <span class="n">tab_used</span><span class="o">.</span><span class="n">SetBackgroundColour</span><span class="p">(</span><span class="s1">&#39;grey&#39;</span><span class="p">)</span>
+        <span class="n">tab_used</span><span class="o">.</span><span class="n">SetForegroundColour</span><span class="p">(</span><span class="n">wx</span><span class="o">.</span><span class="n">WHITE</span><span class="p">)</span>
+        <span class="n">sizer</span><span class="o">.</span><span class="n">Add</span><span class="p">(</span><span class="n">tab_used</span><span class="p">,</span> <span class="p">(</span><span class="n">iy</span><span class="p">,</span> <span class="n">ix</span><span class="p">),</span> <span class="p">(</span><span class="mi">1</span><span class="p">,</span> <span class="mi">1</span><span class="p">),</span>
+                  <span class="n">wx</span><span class="o">.</span><span class="n">EXPAND</span> <span class="o">|</span> <span class="n">wx</span><span class="o">.</span><span class="n">ADJUST_MINSIZE</span><span class="p">,</span> <span class="mi">0</span><span class="p">)</span>
+        <span class="k">for</span> <span class="nb">id</span><span class="p">,</span> <span class="n">value</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">page_finder</span><span class="o">.</span><span class="n">iteritems</span><span class="p">():</span>
+            <span class="k">if</span> <span class="nb">id</span> <span class="ow">not</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">parent</span><span class="o">.</span><span class="n">opened_pages</span><span class="p">:</span>
+                <span class="k">continue</span>
+
+            <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">batch_on</span> <span class="o">!=</span> <span class="bp">self</span><span class="o">.</span><span class="n">parent</span><span class="o">.</span><span class="n">get_page_by_id</span><span class="p">(</span><span class="nb">id</span><span class="p">)</span><span class="o">.</span><span class="n">batch_on</span><span class="p">:</span>
+                <span class="k">continue</span>
+
+            <span class="n">data_list</span> <span class="o">=</span> <span class="p">[]</span>
+            <span class="n">model_list</span> <span class="o">=</span> <span class="p">[]</span>
+            <span class="c1"># get data name and model objetta</span>
+            <span class="k">for</span> <span class="n">fitproblem</span> <span class="ow">in</span> <span class="n">value</span><span class="o">.</span><span class="n">get_fit_problem</span><span class="p">():</span>
+
+                <span class="n">data</span> <span class="o">=</span> <span class="n">fitproblem</span><span class="o">.</span><span class="n">get_fit_data</span><span class="p">()</span>
+                <span class="k">if</span> <span class="ow">not</span> <span class="n">data</span><span class="o">.</span><span class="n">is_data</span><span class="p">:</span>
+                    <span class="k">continue</span>
+                <span class="n">name</span> <span class="o">=</span> <span class="s1">&#39;-&#39;</span>
+                <span class="k">if</span> <span class="n">data</span> <span class="ow">is</span> <span class="ow">not</span> <span class="bp">None</span> <span class="ow">and</span> <span class="n">data</span><span class="o">.</span><span class="n">is_data</span><span class="p">:</span>
+                    <span class="n">name</span> <span class="o">=</span> <span class="nb">str</span><span class="p">(</span><span class="n">data</span><span class="o">.</span><span class="n">name</span><span class="p">)</span>
+                <span class="n">data_list</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">name</span><span class="p">)</span>
+
+                <span class="n">model</span> <span class="o">=</span> <span class="n">fitproblem</span><span class="o">.</span><span class="n">get_model</span><span class="p">()</span>
+                <span class="k">if</span> <span class="n">model</span> <span class="ow">is</span> <span class="bp">None</span><span class="p">:</span>
+                    <span class="k">continue</span>
+                <span class="n">model_list</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">model</span><span class="p">)</span>
+
+            <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">model_list</span><span class="p">)</span> <span class="o">==</span> <span class="mi">0</span><span class="p">:</span>
+                <span class="k">continue</span>
+            <span class="c1"># Draw sizer</span>
+            <span class="n">ix</span> <span class="o">=</span> <span class="mi">0</span>
+            <span class="n">iy</span> <span class="o">+=</span> <span class="mi">1</span>
+            <span class="n">model</span> <span class="o">=</span> <span class="n">model_list</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
+            <span class="n">name</span> <span class="o">=</span> <span class="s1">&#39;_&#39;</span>
+            <span class="k">if</span> <span class="n">model</span> <span class="ow">is</span> <span class="ow">not</span> <span class="bp">None</span><span class="p">:</span>
+                <span class="n">name</span> <span class="o">=</span> <span class="nb">str</span><span class="p">(</span><span class="n">model</span><span class="o">.</span><span class="n">name</span><span class="p">)</span>
+            <span class="n">cb</span> <span class="o">=</span> <span class="n">wx</span><span class="o">.</span><span class="n">CheckBox</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">wx</span><span class="o">.</span><span class="n">ID_ANY</span><span class="p">,</span> <span class="n">name</span><span class="p">)</span>
+            <span class="n">cb</span><span class="o">.</span><span class="n">SetValue</span><span class="p">(</span><span class="bp">False</span><span class="p">)</span>
+            <span class="n">cb</span><span class="o">.</span><span class="n">Enable</span><span class="p">(</span><span class="n">model</span> <span class="ow">is</span> <span class="ow">not</span> <span class="bp">None</span> <span class="ow">and</span> <span class="n">data</span><span class="o">.</span><span class="n">is_data</span><span class="p">)</span>
+            <span class="n">sizer</span><span class="o">.</span><span class="n">Add</span><span class="p">(</span><span class="n">cb</span><span class="p">,</span> <span class="p">(</span><span class="n">iy</span><span class="p">,</span> <span class="n">ix</span><span class="p">),</span> <span class="p">(</span><span class="mi">1</span><span class="p">,</span> <span class="mi">1</span><span class="p">),</span>
+                      <span class="n">wx</span><span class="o">.</span><span class="n">LEFT</span> <span class="o">|</span> <span class="n">wx</span><span class="o">.</span><span class="n">EXPAND</span> <span class="o">|</span> <span class="n">wx</span><span class="o">.</span><span class="n">ADJUST_MINSIZE</span><span class="p">,</span> <span class="mi">15</span><span class="p">)</span>
+            <span class="n">wx</span><span class="o">.</span><span class="n">EVT_CHECKBOX</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">cb</span><span class="o">.</span><span class="n">GetId</span><span class="p">(),</span> <span class="bp">self</span><span class="o">.</span><span class="n">check_model_name</span><span class="p">)</span>
+            <span class="n">ix</span> <span class="o">+=</span> <span class="mi">2</span>
+            <span class="n">model_type</span> <span class="o">=</span> <span class="n">wx</span><span class="o">.</span><span class="n">StaticText</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">wx</span><span class="o">.</span><span class="n">ID_ANY</span><span class="p">,</span>
+                                       <span class="n">model</span><span class="o">.</span><span class="n">__class__</span><span class="o">.</span><span class="n">__name__</span><span class="p">)</span>
+            <span class="n">sizer</span><span class="o">.</span><span class="n">Add</span><span class="p">(</span><span class="n">model_type</span><span class="p">,</span> <span class="p">(</span><span class="n">iy</span><span class="p">,</span> <span class="n">ix</span><span class="p">),</span> <span class="p">(</span><span class="mi">1</span><span class="p">,</span> <span class="mi">1</span><span class="p">),</span>
+                      <span class="n">wx</span><span class="o">.</span><span class="n">EXPAND</span> <span class="o">|</span> <span class="n">wx</span><span class="o">.</span><span class="n">ADJUST_MINSIZE</span><span class="p">,</span> <span class="mi">0</span><span class="p">)</span>
+            <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">batch_on</span><span class="p">:</span>
+                <span class="n">data_used</span> <span class="o">=</span> <span class="n">wx</span><span class="o">.</span><span class="n">ComboBox</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">wx</span><span class="o">.</span><span class="n">ID_ANY</span><span class="p">,</span> <span class="n">style</span><span class="o">=</span><span class="n">wx</span><span class="o">.</span><span class="n">CB_READONLY</span><span class="p">)</span>
+                <span class="n">data_used</span><span class="o">.</span><span class="n">AppendItems</span><span class="p">(</span><span class="n">data_list</span><span class="p">)</span>
+                <span class="n">data_used</span><span class="o">.</span><span class="n">SetSelection</span><span class="p">(</span><span class="mi">0</span><span class="p">)</span>
+            <span class="k">else</span><span class="p">:</span>
+                <span class="n">data_used</span> <span class="o">=</span> <span class="n">wx</span><span class="o">.</span><span class="n">StaticText</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">wx</span><span class="o">.</span><span class="n">ID_ANY</span><span class="p">,</span> <span class="n">data_list</span><span class="p">[</span><span class="mi">0</span><span class="p">])</span>
+
+            <span class="n">ix</span> <span class="o">+=</span> <span class="mi">1</span>
+            <span class="n">sizer</span><span class="o">.</span><span class="n">Add</span><span class="p">(</span><span class="n">data_used</span><span class="p">,</span> <span class="p">(</span><span class="n">iy</span><span class="p">,</span> <span class="n">ix</span><span class="p">),</span> <span class="p">(</span><span class="mi">1</span><span class="p">,</span> <span class="mi">1</span><span class="p">),</span>
+                      <span class="n">wx</span><span class="o">.</span><span class="n">EXPAND</span> <span class="o">|</span> <span class="n">wx</span><span class="o">.</span><span class="n">ADJUST_MINSIZE</span><span class="p">,</span> <span class="mi">0</span><span class="p">)</span>
+            <span class="n">ix</span> <span class="o">+=</span> <span class="mi">1</span>
+            <span class="n">caption</span> <span class="o">=</span> <span class="n">value</span><span class="o">.</span><span class="n">get_fit_tab_caption</span><span class="p">()</span>
+            <span class="n">tab_caption_used</span> <span class="o">=</span> <span class="n">wx</span><span class="o">.</span><span class="n">StaticText</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">wx</span><span class="o">.</span><span class="n">ID_ANY</span><span class="p">,</span> <span class="nb">str</span><span class="p">(</span><span class="n">caption</span><span class="p">))</span>
+            <span class="n">sizer</span><span class="o">.</span><span class="n">Add</span><span class="p">(</span><span class="n">tab_caption_used</span><span class="p">,</span> <span class="p">(</span><span class="n">iy</span><span class="p">,</span> <span class="n">ix</span><span class="p">),</span> <span class="p">(</span><span class="mi">1</span><span class="p">,</span> <span class="mi">1</span><span class="p">),</span>
+                      <span class="n">wx</span><span class="o">.</span><span class="n">EXPAND</span> <span class="o">|</span> <span class="n">wx</span><span class="o">.</span><span class="n">ADJUST_MINSIZE</span><span class="p">,</span> <span class="mi">0</span><span class="p">)</span>
+
+            <span class="bp">self</span><span class="o">.</span><span class="n">model_list</span><span class="o">.</span><span class="n">append</span><span class="p">([</span><span class="n">cb</span><span class="p">,</span> <span class="n">value</span><span class="p">,</span> <span class="nb">id</span><span class="p">,</span> <span class="n">model</span><span class="p">])</span>
+
+        <span class="n">iy</span> <span class="o">+=</span> <span class="mi">1</span>
+        <span class="n">sizer</span><span class="o">.</span><span class="n">Add</span><span class="p">((</span><span class="mi">20</span><span class="p">,</span> <span class="mi">20</span><span class="p">),</span> <span class="p">(</span><span class="n">iy</span><span class="p">,</span> <span class="n">ix</span><span class="p">),</span> <span class="p">(</span><span class="mi">1</span><span class="p">,</span> <span class="mi">1</span><span class="p">),</span>
+                  <span class="n">wx</span><span class="o">.</span><span class="n">LEFT</span> <span class="o">|</span> <span class="n">wx</span><span class="o">.</span><span class="n">EXPAND</span> <span class="o">|</span> <span class="n">wx</span><span class="o">.</span><span class="n">ADJUST_MINSIZE</span><span class="p">,</span> <span class="mi">15</span><span class="p">)</span>
+
+    <span class="k">def</span> <span class="nf">_fill_sizer_constraint</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Fill sizer containing constraint info</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">msg</span> <span class="o">=</span> <span class="s2">&quot;Select at least 1 model to add constraint &quot;</span>
+        <span class="n">wx</span><span class="o">.</span><span class="n">PostEvent</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">parent</span><span class="o">.</span><span class="n">parent</span><span class="p">,</span> <span class="n">StatusEvent</span><span class="p">(</span><span class="n">status</span><span class="o">=</span><span class="n">msg</span><span class="p">))</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">sizer2</span><span class="o">.</span><span class="n">Clear</span><span class="p">(</span><span class="bp">True</span><span class="p">)</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">batch_on</span><span class="p">:</span>
+            <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">sizer2</span><span class="o">.</span><span class="n">IsShown</span><span class="p">():</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">sizer2</span><span class="o">.</span><span class="n">Show</span><span class="p">(</span><span class="bp">False</span><span class="p">)</span>
+            <span class="k">return</span>
+        <span class="n">box_description</span> <span class="o">=</span> <span class="n">wx</span><span class="o">.</span><span class="n">StaticBox</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">wx</span><span class="o">.</span><span class="n">ID_ANY</span><span class="p">,</span> <span class="s2">&quot;Fit Constraints&quot;</span><span class="p">)</span>
+        <span class="n">boxsizer1</span> <span class="o">=</span> <span class="n">wx</span><span class="o">.</span><span class="n">StaticBoxSizer</span><span class="p">(</span><span class="n">box_description</span><span class="p">,</span> <span class="n">wx</span><span class="o">.</span><span class="n">VERTICAL</span><span class="p">)</span>
+        <span class="n">sizer_title</span> <span class="o">=</span> <span class="n">wx</span><span class="o">.</span><span class="n">BoxSizer</span><span class="p">(</span><span class="n">wx</span><span class="o">.</span><span class="n">HORIZONTAL</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">sizer_all_constraints</span> <span class="o">=</span> <span class="n">wx</span><span class="o">.</span><span class="n">BoxSizer</span><span class="p">(</span><span class="n">wx</span><span class="o">.</span><span class="n">HORIZONTAL</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">sizer_constraints</span> <span class="o">=</span> <span class="n">wx</span><span class="o">.</span><span class="n">BoxSizer</span><span class="p">(</span><span class="n">wx</span><span class="o">.</span><span class="n">VERTICAL</span><span class="p">)</span>
+        <span class="n">sizer_button</span> <span class="o">=</span> <span class="n">wx</span><span class="o">.</span><span class="n">BoxSizer</span><span class="p">(</span><span class="n">wx</span><span class="o">.</span><span class="n">HORIZONTAL</span><span class="p">)</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">hide_constraint</span> <span class="o">=</span> <span class="n">wx</span><span class="o">.</span><span class="n">RadioButton</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">wx</span><span class="o">.</span><span class="n">ID_ANY</span><span class="p">,</span> <span class="s1">&#39;No&#39;</span><span class="p">,</span> <span class="p">(</span><span class="mi">10</span><span class="p">,</span> <span class="mi">10</span><span class="p">),</span>
+                                              <span class="n">style</span><span class="o">=</span><span class="n">wx</span><span class="o">.</span><span class="n">RB_GROUP</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">show_constraint</span> <span class="o">=</span> <span class="n">wx</span><span class="o">.</span><span class="n">RadioButton</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">wx</span><span class="o">.</span><span class="n">ID_ANY</span><span class="p">,</span> <span class="s1">&#39;Yes&#39;</span><span class="p">,</span> <span class="p">(</span><span class="mi">10</span><span class="p">,</span> <span class="mi">30</span><span class="p">))</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">Bind</span><span class="p">(</span><span class="n">wx</span><span class="o">.</span><span class="n">EVT_RADIOBUTTON</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">_display_constraint</span><span class="p">,</span>
+                  <span class="nb">id</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">hide_constraint</span><span class="o">.</span><span class="n">GetId</span><span class="p">())</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">Bind</span><span class="p">(</span><span class="n">wx</span><span class="o">.</span><span class="n">EVT_RADIOBUTTON</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">_display_constraint</span><span class="p">,</span>
+                  <span class="nb">id</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">show_constraint</span><span class="o">.</span><span class="n">GetId</span><span class="p">())</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">batch_on</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">hide_constraint</span><span class="o">.</span><span class="n">Enable</span><span class="p">(</span><span class="bp">False</span><span class="p">)</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">show_constraint</span><span class="o">.</span><span class="n">Enable</span><span class="p">(</span><span class="bp">False</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">hide_constraint</span><span class="o">.</span><span class="n">SetValue</span><span class="p">(</span><span class="bp">True</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">show_constraint</span><span class="o">.</span><span class="n">SetValue</span><span class="p">(</span><span class="bp">False</span><span class="p">)</span>
+
+        <span class="n">sizer_title</span><span class="o">.</span><span class="n">Add</span><span class="p">(</span><span class="n">wx</span><span class="o">.</span><span class="n">StaticText</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">wx</span><span class="o">.</span><span class="n">ID_ANY</span><span class="p">,</span> <span class="s2">&quot; Model&quot;</span><span class="p">))</span>
+        <span class="n">sizer_title</span><span class="o">.</span><span class="n">Add</span><span class="p">((</span><span class="mi">10</span><span class="p">,</span> <span class="mi">10</span><span class="p">))</span>
+        <span class="n">sizer_title</span><span class="o">.</span><span class="n">Add</span><span class="p">(</span><span class="n">wx</span><span class="o">.</span><span class="n">StaticText</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">wx</span><span class="o">.</span><span class="n">ID_ANY</span><span class="p">,</span> <span class="s2">&quot; Parameter&quot;</span><span class="p">))</span>
+        <span class="n">sizer_title</span><span class="o">.</span><span class="n">Add</span><span class="p">((</span><span class="mi">10</span><span class="p">,</span> <span class="mi">10</span><span class="p">))</span>
+        <span class="n">sizer_title</span><span class="o">.</span><span class="n">Add</span><span class="p">(</span><span class="n">wx</span><span class="o">.</span><span class="n">StaticText</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">wx</span><span class="o">.</span><span class="n">ID_ANY</span><span class="p">,</span> <span class="s2">&quot; Add Constraint?&quot;</span><span class="p">))</span>
+        <span class="n">sizer_title</span><span class="o">.</span><span class="n">Add</span><span class="p">((</span><span class="mi">10</span><span class="p">,</span> <span class="mi">10</span><span class="p">))</span>
+        <span class="n">sizer_title</span><span class="o">.</span><span class="n">Add</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">show_constraint</span><span class="p">)</span>
+        <span class="n">sizer_title</span><span class="o">.</span><span class="n">Add</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">hide_constraint</span><span class="p">)</span>
+        <span class="n">sizer_title</span><span class="o">.</span><span class="n">Add</span><span class="p">((</span><span class="mi">10</span><span class="p">,</span> <span class="mi">10</span><span class="p">))</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">btAdd</span> <span class="o">=</span> <span class="n">wx</span><span class="o">.</span><span class="n">Button</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">ID_ADD</span><span class="p">,</span> <span class="s1">&#39;Add&#39;</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">btAdd</span><span class="o">.</span><span class="n">Bind</span><span class="p">(</span><span class="n">wx</span><span class="o">.</span><span class="n">EVT_BUTTON</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">_onAdd_constraint</span><span class="p">,</span>
+                        <span class="nb">id</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">btAdd</span><span class="o">.</span><span class="n">GetId</span><span class="p">())</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">btAdd</span><span class="o">.</span><span class="n">SetToolTipString</span><span class="p">(</span><span class="s2">&quot;Add another constraint?&quot;</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">btAdd</span><span class="o">.</span><span class="n">Hide</span><span class="p">()</span>
+
+        <span class="n">text_hint</span> <span class="o">=</span> <span class="n">wx</span><span class="o">.</span><span class="n">StaticText</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">wx</span><span class="o">.</span><span class="n">ID_ANY</span><span class="p">,</span>
+                                  <span class="s2">&quot;Example: [M0][paramter] = M1.parameter&quot;</span><span class="p">)</span>
+        <span class="n">sizer_button</span><span class="o">.</span><span class="n">Add</span><span class="p">(</span><span class="n">text_hint</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span>
+                         <span class="n">wx</span><span class="o">.</span><span class="n">LEFT</span> <span class="o">|</span> <span class="n">wx</span><span class="o">.</span><span class="n">EXPAND</span> <span class="o">|</span> <span class="n">wx</span><span class="o">.</span><span class="n">ADJUST_MINSIZE</span><span class="p">,</span> <span class="mi">10</span><span class="p">)</span>
+        <span class="n">sizer_button</span><span class="o">.</span><span class="n">Add</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">btAdd</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span>
+                         <span class="n">wx</span><span class="o">.</span><span class="n">LEFT</span> <span class="o">|</span> <span class="n">wx</span><span class="o">.</span><span class="n">EXPAND</span> <span class="o">|</span> <span class="n">wx</span><span class="o">.</span><span class="n">ADJUST_MINSIZE</span><span class="p">,</span> <span class="mi">10</span><span class="p">)</span>
+
+        <span class="n">boxsizer1</span><span class="o">.</span><span class="n">Add</span><span class="p">(</span><span class="n">sizer_title</span><span class="p">,</span> <span class="n">flag</span><span class="o">=</span><span class="n">wx</span><span class="o">.</span><span class="n">TOP</span> <span class="o">|</span> <span class="n">wx</span><span class="o">.</span><span class="n">BOTTOM</span><span class="p">,</span> <span class="n">border</span><span class="o">=</span><span class="mi">10</span><span class="p">)</span>
+        <span class="n">boxsizer1</span><span class="o">.</span><span class="n">Add</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">sizer_all_constraints</span><span class="p">,</span> <span class="n">flag</span><span class="o">=</span><span class="n">wx</span><span class="o">.</span><span class="n">TOP</span> <span class="o">|</span> <span class="n">wx</span><span class="o">.</span><span class="n">BOTTOM</span><span class="p">,</span>
+                      <span class="n">border</span><span class="o">=</span><span class="mi">10</span><span class="p">)</span>
+        <span class="n">boxsizer1</span><span class="o">.</span><span class="n">Add</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">sizer_constraints</span><span class="p">,</span> <span class="n">flag</span><span class="o">=</span><span class="n">wx</span><span class="o">.</span><span class="n">TOP</span> <span class="o">|</span> <span class="n">wx</span><span class="o">.</span><span class="n">BOTTOM</span><span class="p">,</span>
+                      <span class="n">border</span><span class="o">=</span><span class="mi">10</span><span class="p">)</span>
+        <span class="n">boxsizer1</span><span class="o">.</span><span class="n">Add</span><span class="p">(</span><span class="n">sizer_button</span><span class="p">,</span> <span class="n">flag</span><span class="o">=</span><span class="n">wx</span><span class="o">.</span><span class="n">TOP</span> <span class="o">|</span> <span class="n">wx</span><span class="o">.</span><span class="n">BOTTOM</span><span class="p">,</span> <span class="n">border</span><span class="o">=</span><span class="mi">10</span><span class="p">)</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">sizer2</span><span class="o">.</span><span class="n">Add</span><span class="p">(</span><span class="n">boxsizer1</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="n">wx</span><span class="o">.</span><span class="n">EXPAND</span> <span class="o">|</span> <span class="n">wx</span><span class="o">.</span><span class="n">ALL</span><span class="p">,</span> <span class="mi">10</span><span class="p">)</span>
+
+
+    <span class="k">def</span> <span class="nf">_fill_sizer_fit</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Draw fit button</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">sizer3</span><span class="o">.</span><span class="n">Clear</span><span class="p">(</span><span class="bp">True</span><span class="p">)</span>
+        <span class="n">box_description</span> <span class="o">=</span> <span class="n">wx</span><span class="o">.</span><span class="n">StaticBox</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">wx</span><span class="o">.</span><span class="n">ID_ANY</span><span class="p">,</span> <span class="s2">&quot;Fit &quot;</span><span class="p">)</span>
+        <span class="n">boxsizer1</span> <span class="o">=</span> <span class="n">wx</span><span class="o">.</span><span class="n">StaticBoxSizer</span><span class="p">(</span><span class="n">box_description</span><span class="p">,</span> <span class="n">wx</span><span class="o">.</span><span class="n">VERTICAL</span><span class="p">)</span>
+        <span class="n">sizer_button</span> <span class="o">=</span> <span class="n">wx</span><span class="o">.</span><span class="n">BoxSizer</span><span class="p">(</span><span class="n">wx</span><span class="o">.</span><span class="n">HORIZONTAL</span><span class="p">)</span>
+
+        <span class="c1">#Fit button</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">btFit</span> <span class="o">=</span> <span class="n">wx</span><span class="o">.</span><span class="n">Button</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">ID_FIT</span><span class="p">,</span> <span class="s1">&#39;Fit&#39;</span><span class="p">,</span> <span class="n">size</span><span class="o">=</span><span class="n">wx</span><span class="o">.</span><span class="n">DefaultSize</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">btFit</span><span class="o">.</span><span class="n">Bind</span><span class="p">(</span><span class="n">wx</span><span class="o">.</span><span class="n">EVT_BUTTON</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">onFit</span><span class="p">,</span> <span class="nb">id</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">btFit</span><span class="o">.</span><span class="n">GetId</span><span class="p">())</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">btFit</span><span class="o">.</span><span class="n">SetToolTipString</span><span class="p">(</span><span class="s2">&quot;Perform fit.&quot;</span><span class="p">)</span>
+
+        <span class="c1">#General Help button</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">btHelp</span> <span class="o">=</span> <span class="n">wx</span><span class="o">.</span><span class="n">Button</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">wx</span><span class="o">.</span><span class="n">ID_HELP</span><span class="p">,</span> <span class="s1">&#39;HELP&#39;</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">btHelp</span><span class="o">.</span><span class="n">SetToolTipString</span><span class="p">(</span><span class="s2">&quot;Simultaneous/Constrained Fitting help.&quot;</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">btHelp</span><span class="o">.</span><span class="n">Bind</span><span class="p">(</span><span class="n">wx</span><span class="o">.</span><span class="n">EVT_BUTTON</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">_onHelp</span><span class="p">)</span>
+
+        <span class="c1">#hint text on button line</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">batch_on</span><span class="p">:</span>
+            <span class="n">text</span> <span class="o">=</span> <span class="s2">&quot; Fit in Parallel all Data sets</span><span class="se">\n</span><span class="s2">&quot;</span>
+            <span class="n">text</span> <span class="o">+=</span> <span class="s2">&quot;and model selected.&quot;</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">text</span> <span class="o">=</span> <span class="s2">&quot; At least one set of model and data</span><span class="se">\n</span><span class="s2">&quot;</span>
+            <span class="n">text</span> <span class="o">+=</span> <span class="s2">&quot; must be selected for fitting.&quot;</span>
+        <span class="n">text_hint</span> <span class="o">=</span> <span class="n">wx</span><span class="o">.</span><span class="n">StaticText</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">wx</span><span class="o">.</span><span class="n">ID_ANY</span><span class="p">,</span> <span class="n">text</span><span class="p">)</span>
+
+        <span class="n">sizer_button</span><span class="o">.</span><span class="n">Add</span><span class="p">(</span><span class="n">text_hint</span><span class="p">)</span>
+        <span class="n">sizer_button</span><span class="o">.</span><span class="n">Add</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">btFit</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="n">wx</span><span class="o">.</span><span class="n">LEFT</span> <span class="o">|</span> <span class="n">wx</span><span class="o">.</span><span class="n">ADJUST_MINSIZE</span><span class="p">,</span> <span class="mi">10</span><span class="p">)</span>
+        <span class="n">sizer_button</span><span class="o">.</span><span class="n">Add</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">btHelp</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="n">wx</span><span class="o">.</span><span class="n">LEFT</span> <span class="o">|</span> <span class="n">wx</span><span class="o">.</span><span class="n">ADJUST_MINSIZE</span><span class="p">,</span> <span class="mi">10</span><span class="p">)</span>
+
+        <span class="n">boxsizer1</span><span class="o">.</span><span class="n">Add</span><span class="p">(</span><span class="n">sizer_button</span><span class="p">,</span> <span class="n">flag</span><span class="o">=</span><span class="n">wx</span><span class="o">.</span><span class="n">TOP</span> <span class="o">|</span> <span class="n">wx</span><span class="o">.</span><span class="n">BOTTOM</span><span class="p">,</span> <span class="n">border</span><span class="o">=</span><span class="mi">10</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">sizer3</span><span class="o">.</span><span class="n">Add</span><span class="p">(</span><span class="n">boxsizer1</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="n">wx</span><span class="o">.</span><span class="n">EXPAND</span> <span class="o">|</span> <span class="n">wx</span><span class="o">.</span><span class="n">ALL</span><span class="p">,</span> <span class="mi">10</span><span class="p">)</span>
+
+<div class="viewcode-block" id="SimultaneousFitPage.onRemove"><a class="viewcode-back" href="../../../../../dev/api/sas.sasgui.perspectives.fitting.html#sas.sasgui.perspectives.fitting.simfitpage.SimultaneousFitPage.onRemove">[docs]</a>    <span class="k">def</span> <span class="nf">onRemove</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">event</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Remove constraint fields</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">constraints_list</span><span class="p">)</span> <span class="o">==</span> <span class="mi">1</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">hide_constraint</span><span class="o">.</span><span class="n">SetValue</span><span class="p">(</span><span class="bp">True</span><span class="p">)</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_hide_constraint</span><span class="p">()</span>
+            <span class="k">return</span>
+        <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">constraints_list</span><span class="p">)</span> <span class="o">==</span> <span class="mi">0</span><span class="p">:</span>
+            <span class="k">return</span>
+        <span class="n">wx</span><span class="o">.</span><span class="n">CallAfter</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_remove_after</span><span class="p">,</span> <span class="n">event</span><span class="o">.</span><span class="n">GetId</span><span class="p">())</span></div>
+        <span class="c1">#self._onAdd_constraint(None)</span>
+
+    <span class="k">def</span> <span class="nf">_remove_after</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="nb">id</span><span class="p">):</span>
+        <span class="k">for</span> <span class="n">item</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">constraints_list</span><span class="p">:</span>
+            <span class="k">if</span> <span class="nb">id</span> <span class="o">==</span> <span class="n">item</span><span class="o">.</span><span class="n">btRemove</span><span class="o">.</span><span class="n">GetId</span><span class="p">():</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">sizer_constraints</span><span class="o">.</span><span class="n">Hide</span><span class="p">(</span><span class="n">item</span><span class="o">.</span><span class="n">sizer</span><span class="p">)</span>
+                <span class="n">item</span><span class="o">.</span><span class="n">sizer</span><span class="o">.</span><span class="n">Clear</span><span class="p">(</span><span class="bp">True</span><span class="p">)</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">sizer_constraints</span><span class="o">.</span><span class="n">Remove</span><span class="p">(</span><span class="n">item</span><span class="o">.</span><span class="n">sizer</span><span class="p">)</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">constraints_list</span><span class="o">.</span><span class="n">remove</span><span class="p">(</span><span class="n">item</span><span class="p">)</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">nb_constraint</span> <span class="o">-=</span> <span class="mi">1</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">sizer2</span><span class="o">.</span><span class="n">Layout</span><span class="p">()</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">FitInside</span><span class="p">()</span>
+                <span class="k">break</span>
+
+<div class="viewcode-block" id="SimultaneousFitPage.onFit"><a class="viewcode-back" href="../../../../../dev/api/sas.sasgui.perspectives.fitting.html#sas.sasgui.perspectives.fitting.simfitpage.SimultaneousFitPage.onFit">[docs]</a>    <span class="k">def</span> <span class="nf">onFit</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">event</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        signal for fitting</span>
+
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">fit_started</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_stop_fit</span><span class="p">()</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">fit_started</span> <span class="o">=</span> <span class="bp">False</span>
+            <span class="k">return</span>
+
+        <span class="n">flag</span> <span class="o">=</span> <span class="bp">False</span>
+        <span class="c1"># check if the current page a simultaneous fit page or a batch page</span>
+        <span class="k">if</span> <span class="bp">self</span> <span class="o">==</span> <span class="bp">self</span><span class="o">.</span><span class="n">_manager</span><span class="o">.</span><span class="n">sim_page</span><span class="p">:</span>
+            <span class="n">flag</span> <span class="o">=</span> <span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_manager</span><span class="o">.</span><span class="n">sim_page</span><span class="o">.</span><span class="n">uid</span> <span class="o">==</span> <span class="bp">self</span><span class="o">.</span><span class="n">uid</span><span class="p">)</span>
+
+        <span class="c1">## making sure all parameters content a constraint</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="bp">self</span><span class="o">.</span><span class="n">batch_on</span> <span class="ow">and</span> <span class="bp">self</span><span class="o">.</span><span class="n">show_constraint</span><span class="o">.</span><span class="n">GetValue</span><span class="p">():</span>
+            <span class="k">if</span> <span class="ow">not</span> <span class="bp">self</span><span class="o">.</span><span class="n">_set_constraint</span><span class="p">():</span>
+                <span class="k">return</span>
+        <span class="c1">## model was actually selected from this page to be fit</span>
+        <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">model_toFit</span><span class="p">)</span> <span class="o">&gt;=</span> <span class="mi">1</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">manager</span><span class="o">.</span><span class="n">_reset_schedule_problem</span><span class="p">(</span><span class="n">value</span><span class="o">=</span><span class="mi">0</span><span class="p">)</span>
+            <span class="k">for</span> <span class="n">item</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">model_list</span><span class="p">:</span>
+                <span class="k">if</span> <span class="n">item</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">GetValue</span><span class="p">():</span>
+                    <span class="bp">self</span><span class="o">.</span><span class="n">manager</span><span class="o">.</span><span class="n">schedule_for_fit</span><span class="p">(</span><span class="n">value</span><span class="o">=</span><span class="mi">1</span><span class="p">,</span> <span class="n">uid</span><span class="o">=</span><span class="n">item</span><span class="p">[</span><span class="mi">2</span><span class="p">])</span>
+            <span class="k">try</span><span class="p">:</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">fit_started</span> <span class="o">=</span> <span class="bp">True</span>
+                <span class="n">wx</span><span class="o">.</span><span class="n">CallAfter</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">set_fitbutton</span><span class="p">)</span>
+                <span class="k">if</span> <span class="ow">not</span> <span class="bp">self</span><span class="o">.</span><span class="n">manager</span><span class="o">.</span><span class="n">onFit</span><span class="p">(</span><span class="n">uid</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">uid</span><span class="p">):</span>
+                    <span class="k">return</span>
+            <span class="k">except</span><span class="p">:</span>
+                <span class="n">msg</span> <span class="o">=</span> <span class="s2">&quot;Select at least one parameter to fit in the FitPages.&quot;</span>
+                <span class="n">wx</span><span class="o">.</span><span class="n">PostEvent</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">parent</span><span class="o">.</span><span class="n">parent</span><span class="p">,</span> <span class="n">StatusEvent</span><span class="p">(</span><span class="n">status</span><span class="o">=</span><span class="n">msg</span><span class="p">))</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">msg</span> <span class="o">=</span> <span class="s2">&quot;Select at least one model check box to fit &quot;</span>
+            <span class="n">wx</span><span class="o">.</span><span class="n">PostEvent</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">parent</span><span class="o">.</span><span class="n">parent</span><span class="p">,</span> <span class="n">StatusEvent</span><span class="p">(</span><span class="n">status</span><span class="o">=</span><span class="n">msg</span><span class="p">))</span></div>
+
+    <span class="k">def</span> <span class="nf">_on_fit_complete</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Set the completion flag and display the updated fit button label.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">fit_started</span> <span class="o">=</span> <span class="bp">False</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">set_fitbutton</span><span class="p">()</span>
+
+    <span class="k">def</span> <span class="nf">_stop_fit</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">event</span><span class="o">=</span><span class="bp">None</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Attempt to stop the fitting thread</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">if</span> <span class="n">event</span> <span class="o">!=</span> <span class="bp">None</span><span class="p">:</span>
+            <span class="n">event</span><span class="o">.</span><span class="n">Skip</span><span class="p">()</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">manager</span><span class="o">.</span><span class="n">stop_fit</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">uid</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">manager</span><span class="o">.</span><span class="n">_reset_schedule_problem</span><span class="p">(</span><span class="n">value</span><span class="o">=</span><span class="mi">0</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_on_fit_complete</span><span class="p">()</span>
+
+<div class="viewcode-block" id="SimultaneousFitPage.set_fitbutton"><a class="viewcode-back" href="../../../../../dev/api/sas.sasgui.perspectives.fitting.html#sas.sasgui.perspectives.fitting.simfitpage.SimultaneousFitPage.set_fitbutton">[docs]</a>    <span class="k">def</span> <span class="nf">set_fitbutton</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Set fit button label depending on the fit_started</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">label</span> <span class="o">=</span> <span class="s2">&quot;Stop&quot;</span> <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">fit_started</span> <span class="k">else</span> <span class="s2">&quot;Fit&quot;</span>
+        <span class="n">color</span> <span class="o">=</span> <span class="s2">&quot;red&quot;</span> <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">fit_started</span> <span class="k">else</span> <span class="s2">&quot;black&quot;</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">btFit</span><span class="o">.</span><span class="n">SetLabel</span><span class="p">(</span><span class="n">label</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">btFit</span><span class="o">.</span><span class="n">SetForegroundColour</span><span class="p">(</span><span class="n">color</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">btFit</span><span class="o">.</span><span class="n">Enable</span><span class="p">(</span><span class="bp">True</span><span class="p">)</span></div>
+
+    <span class="k">def</span> <span class="nf">_onHelp</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">event</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Bring up the simultaneous Fitting Documentation whenever the HELP</span>
+<span class="sd">        button is clicked.</span>
+
+<span class="sd">        Calls DocumentationWindow with the path of the location within the</span>
+<span class="sd">        documentation tree (after /doc/ ....&quot;.  Note that when using old</span>
+<span class="sd">        versions of Wx (before 2.9) and thus not the release version of</span>
+<span class="sd">        installers, the help comes up at the top level of the file as</span>
+<span class="sd">        webbrowser does not pass anything past the # to the browser when it is</span>
+<span class="sd">        running &quot;file:///....&quot;</span>
+
+<span class="sd">    :param evt: Triggers on clicking the help button</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+        <span class="n">_TreeLocation</span> <span class="o">=</span> <span class="s2">&quot;user/sasgui/perspectives/fitting/fitting_help.html&quot;</span>
+        <span class="n">_PageAnchor</span> <span class="o">=</span> <span class="s2">&quot;#simultaneous-fit-mode&quot;</span>
+        <span class="n">_doc_viewer</span> <span class="o">=</span> <span class="n">DocumentationWindow</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">ID_DOC</span><span class="p">,</span> <span class="n">_TreeLocation</span><span class="p">,</span>
+                                          <span class="n">_PageAnchor</span><span class="p">,</span>
+                                          <span class="s2">&quot;Simultaneous/Constrained Fitting Help&quot;</span><span class="p">)</span>
+
+<div class="viewcode-block" id="SimultaneousFitPage.set_manager"><a class="viewcode-back" href="../../../../../dev/api/sas.sasgui.perspectives.fitting.html#sas.sasgui.perspectives.fitting.simfitpage.SimultaneousFitPage.set_manager">[docs]</a>    <span class="k">def</span> <span class="nf">set_manager</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">manager</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        set panel manager</span>
+
+<span class="sd">        :param manager: instance of plugin fitting</span>
+
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">manager</span> <span class="o">=</span> <span class="n">manager</span></div>
+
+<div class="viewcode-block" id="SimultaneousFitPage.check_all_model_name"><a class="viewcode-back" href="../../../../../dev/api/sas.sasgui.perspectives.fitting.html#sas.sasgui.perspectives.fitting.simfitpage.SimultaneousFitPage.check_all_model_name">[docs]</a>    <span class="k">def</span> <span class="nf">check_all_model_name</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">event</span><span class="o">=</span><span class="bp">None</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        check all models names</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">model_toFit</span> <span class="o">=</span> <span class="p">[]</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">cb1</span><span class="o">.</span><span class="n">GetValue</span><span class="p">()</span> <span class="o">==</span> <span class="bp">True</span><span class="p">:</span>
+            <span class="k">for</span> <span class="n">item</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">model_list</span><span class="p">:</span>
+                <span class="k">if</span> <span class="n">item</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">IsEnabled</span><span class="p">():</span>
+                    <span class="n">item</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">SetValue</span><span class="p">(</span><span class="bp">True</span><span class="p">)</span>
+                    <span class="bp">self</span><span class="o">.</span><span class="n">model_toFit</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">item</span><span class="p">)</span>
+
+            <span class="c1">## constraint info</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_store_model</span><span class="p">()</span>
+            <span class="k">if</span> <span class="ow">not</span> <span class="bp">self</span><span class="o">.</span><span class="n">batch_on</span><span class="p">:</span>
+                <span class="c1">## display constraint fields</span>
+                <span class="k">if</span> <span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">show_constraint</span><span class="o">.</span><span class="n">GetValue</span><span class="p">()</span> <span class="ow">and</span>
+                                 <span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">constraints_list</span><span class="p">)</span> <span class="o">==</span> <span class="mi">0</span><span class="p">):</span>
+                    <span class="bp">self</span><span class="o">.</span><span class="n">_show_all_constraint</span><span class="p">()</span>
+                    <span class="bp">self</span><span class="o">.</span><span class="n">_show_constraint</span><span class="p">()</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="k">for</span> <span class="n">item</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">model_list</span><span class="p">:</span>
+                <span class="n">item</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">SetValue</span><span class="p">(</span><span class="bp">False</span><span class="p">)</span>
+
+            <span class="k">if</span> <span class="ow">not</span> <span class="bp">self</span><span class="o">.</span><span class="n">batch_on</span><span class="p">:</span>
+                <span class="c1">##constraint info</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">_hide_constraint</span><span class="p">()</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">_update_easy_setup_cb</span><span class="p">()</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">FitInside</span><span class="p">()</span></div>
+
+
+<div class="viewcode-block" id="SimultaneousFitPage.check_model_name"><a class="viewcode-back" href="../../../../../dev/api/sas.sasgui.perspectives.fitting.html#sas.sasgui.perspectives.fitting.simfitpage.SimultaneousFitPage.check_model_name">[docs]</a>    <span class="k">def</span> <span class="nf">check_model_name</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">event</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Save information related to checkbox and their states</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">model_toFit</span> <span class="o">=</span> <span class="p">[]</span>
+        <span class="n">cbox</span> <span class="o">=</span> <span class="n">event</span><span class="o">.</span><span class="n">GetEventObject</span><span class="p">()</span>
+        <span class="k">for</span> <span class="n">item</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">model_list</span><span class="p">:</span>
+            <span class="k">if</span> <span class="n">item</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">GetValue</span><span class="p">()</span> <span class="o">==</span> <span class="bp">True</span><span class="p">:</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">model_toFit</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">item</span><span class="p">)</span>
+            <span class="k">else</span><span class="p">:</span>
+                <span class="k">if</span> <span class="n">item</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">model_toFit</span><span class="p">:</span>
+                    <span class="bp">self</span><span class="o">.</span><span class="n">model_toFit</span><span class="o">.</span><span class="n">remove</span><span class="p">(</span><span class="n">item</span><span class="p">)</span>
+                    <span class="bp">self</span><span class="o">.</span><span class="n">cb1</span><span class="o">.</span><span class="n">SetValue</span><span class="p">(</span><span class="bp">False</span><span class="p">)</span>
+
+        <span class="c1">## display constraint fields</span>
+        <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">model_toFit</span><span class="p">)</span> <span class="o">&gt;=</span> <span class="mi">1</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_store_model</span><span class="p">()</span>
+            <span class="k">if</span> <span class="ow">not</span> <span class="bp">self</span><span class="o">.</span><span class="n">batch_on</span> <span class="ow">and</span> <span class="bp">self</span><span class="o">.</span><span class="n">show_constraint</span><span class="o">.</span><span class="n">GetValue</span><span class="p">()</span> <span class="ow">and</span>\
+                             <span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">constraints_list</span><span class="p">)</span> <span class="o">==</span> <span class="mi">0</span><span class="p">:</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">_show_all_constraint</span><span class="p">()</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">_show_constraint</span><span class="p">()</span>
+
+        <span class="k">elif</span> <span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">model_toFit</span><span class="p">)</span> <span class="o">&lt;</span> <span class="mi">1</span><span class="p">:</span>
+            <span class="c1">##constraint info</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_hide_constraint</span><span class="p">()</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">_update_easy_setup_cb</span><span class="p">()</span>
+        <span class="c1">## set the value of the main check button</span>
+        <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">model_list</span><span class="p">)</span> <span class="o">==</span> <span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">model_toFit</span><span class="p">):</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">cb1</span><span class="o">.</span><span class="n">SetValue</span><span class="p">(</span><span class="bp">True</span><span class="p">)</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">FitInside</span><span class="p">()</span>
+            <span class="k">return</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">cb1</span><span class="o">.</span><span class="n">SetValue</span><span class="p">(</span><span class="bp">False</span><span class="p">)</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">FitInside</span><span class="p">()</span></div>
+
+    <span class="k">def</span> <span class="nf">_update_easy_setup_cb</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Update easy setup combobox on selecting a model</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">model_cbox_left</span> <span class="o">==</span> <span class="bp">None</span> <span class="ow">or</span> <span class="bp">self</span><span class="o">.</span><span class="n">model_cbox_right</span> <span class="o">==</span> <span class="bp">None</span><span class="p">:</span>
+            <span class="k">return</span>
+
+        <span class="n">models</span> <span class="o">=</span> <span class="p">[(</span><span class="n">item</span><span class="p">[</span><span class="mi">3</span><span class="p">]</span><span class="o">.</span><span class="n">name</span><span class="p">,</span> <span class="n">item</span><span class="p">[</span><span class="mi">3</span><span class="p">])</span> <span class="k">for</span> <span class="n">item</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">model_toFit</span><span class="p">]</span>
+        <span class="n">setComboBoxItems</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">model_cbox_left</span><span class="p">,</span> <span class="n">models</span><span class="p">)</span>
+        <span class="n">setComboBoxItems</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">model_cbox_right</span><span class="p">,</span> <span class="n">models</span><span class="p">)</span>
+        <span class="k">for</span> <span class="n">item</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">constraints_list</span><span class="p">:</span>
+            <span class="n">setComboBoxItems</span><span class="p">(</span><span class="n">item</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span> <span class="n">models</span><span class="p">)</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">model_cbox_left</span><span class="o">.</span><span class="n">GetSelection</span><span class="p">()</span> <span class="o">==</span> <span class="n">wx</span><span class="o">.</span><span class="n">NOT_FOUND</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">model_cbox_left</span><span class="o">.</span><span class="n">SetSelection</span><span class="p">(</span><span class="mi">0</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">sizer2</span><span class="o">.</span><span class="n">Layout</span><span class="p">()</span>
+
+    <span class="k">def</span> <span class="nf">_store_model</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">         Store selected model</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">model_toFit</span><span class="p">)</span> <span class="o">&lt;</span> <span class="mi">1</span><span class="p">:</span>
+            <span class="k">return</span>
+        <span class="k">for</span> <span class="n">item</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">model_toFit</span><span class="p">:</span>
+            <span class="n">model</span> <span class="o">=</span> <span class="n">item</span><span class="p">[</span><span class="mi">3</span><span class="p">]</span>
+            <span class="n">page_id</span> <span class="o">=</span> <span class="n">item</span><span class="p">[</span><span class="mi">2</span><span class="p">]</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">constraint_dict</span><span class="p">[</span><span class="n">page_id</span><span class="p">]</span> <span class="o">=</span> <span class="n">model</span>
+
+    <span class="k">def</span> <span class="nf">_display_constraint</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">event</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Show fields to add constraint</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">model_toFit</span><span class="p">)</span> <span class="o">&lt;</span> <span class="mi">1</span><span class="p">:</span>
+            <span class="n">msg</span> <span class="o">=</span> <span class="s2">&quot;Select at least 1 model to add constraint &quot;</span>
+            <span class="n">wx</span><span class="o">.</span><span class="n">PostEvent</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">parent</span><span class="o">.</span><span class="n">parent</span><span class="p">,</span> <span class="n">StatusEvent</span><span class="p">(</span><span class="n">status</span><span class="o">=</span><span class="n">msg</span><span class="p">))</span>
+            <span class="c1">## hide button</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_hide_constraint</span><span class="p">()</span>
+            <span class="k">return</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">show_constraint</span><span class="o">.</span><span class="n">GetValue</span><span class="p">():</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_show_all_constraint</span><span class="p">()</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_show_constraint</span><span class="p">()</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">FitInside</span><span class="p">()</span>
+            <span class="k">return</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_hide_constraint</span><span class="p">()</span>
+            <span class="k">return</span>
+
+    <span class="k">def</span> <span class="nf">_show_all_constraint</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Show constraint fields</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">box_description</span> <span class="o">=</span> <span class="n">wx</span><span class="o">.</span><span class="n">StaticBox</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">wx</span><span class="o">.</span><span class="n">ID_ANY</span><span class="p">,</span> <span class="s2">&quot;Easy Setup &quot;</span><span class="p">)</span>
+        <span class="n">boxsizer</span> <span class="o">=</span> <span class="n">wx</span><span class="o">.</span><span class="n">StaticBoxSizer</span><span class="p">(</span><span class="n">box_description</span><span class="p">,</span> <span class="n">wx</span><span class="o">.</span><span class="n">HORIZONTAL</span><span class="p">)</span>
+        <span class="n">sizer_constraint</span> <span class="o">=</span> <span class="n">wx</span><span class="o">.</span><span class="n">BoxSizer</span><span class="p">(</span><span class="n">wx</span><span class="o">.</span><span class="n">HORIZONTAL</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">model_cbox_left</span> <span class="o">=</span> <span class="n">wx</span><span class="o">.</span><span class="n">ComboBox</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">wx</span><span class="o">.</span><span class="n">ID_ANY</span><span class="p">,</span> <span class="n">style</span><span class="o">=</span><span class="n">wx</span><span class="o">.</span><span class="n">CB_READONLY</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">model_cbox_left</span><span class="o">.</span><span class="n">Clear</span><span class="p">()</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">model_cbox_right</span> <span class="o">=</span> <span class="n">wx</span><span class="o">.</span><span class="n">ComboBox</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">wx</span><span class="o">.</span><span class="n">ID_ANY</span><span class="p">,</span> <span class="n">style</span><span class="o">=</span><span class="n">wx</span><span class="o">.</span><span class="n">CB_READONLY</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">model_cbox_right</span><span class="o">.</span><span class="n">Clear</span><span class="p">()</span>
+        <span class="n">wx</span><span class="o">.</span><span class="n">EVT_COMBOBOX</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">model_cbox_left</span><span class="p">,</span> <span class="n">wx</span><span class="o">.</span><span class="n">ID_ANY</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">_on_select_modelcb</span><span class="p">)</span>
+        <span class="n">wx</span><span class="o">.</span><span class="n">EVT_COMBOBOX</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">model_cbox_right</span><span class="p">,</span> <span class="n">wx</span><span class="o">.</span><span class="n">ID_ANY</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">_on_select_modelcb</span><span class="p">)</span>
+        <span class="n">egal_txt</span> <span class="o">=</span> <span class="n">wx</span><span class="o">.</span><span class="n">StaticText</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">wx</span><span class="o">.</span><span class="n">ID_ANY</span><span class="p">,</span> <span class="s2">&quot; = &quot;</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">set_button</span> <span class="o">=</span> <span class="n">wx</span><span class="o">.</span><span class="n">Button</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">ID_SET_ALL</span><span class="p">,</span> <span class="s1">&#39;Set All&#39;</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">set_button</span><span class="o">.</span><span class="n">Bind</span><span class="p">(</span><span class="n">wx</span><span class="o">.</span><span class="n">EVT_BUTTON</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">_on_set_all_equal</span><span class="p">,</span>
+                             <span class="nb">id</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">set_button</span><span class="o">.</span><span class="n">GetId</span><span class="p">())</span>
+        <span class="n">set_tip</span> <span class="o">=</span> <span class="s2">&quot;Add constraints for all the adjustable parameters &quot;</span>
+        <span class="n">set_tip</span> <span class="o">+=</span> <span class="s2">&quot;(checked in FitPages) if exist.&quot;</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">set_button</span><span class="o">.</span><span class="n">SetToolTipString</span><span class="p">(</span><span class="n">set_tip</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">set_button</span><span class="o">.</span><span class="n">Disable</span><span class="p">()</span>
+
+        <span class="k">for</span> <span class="nb">id</span><span class="p">,</span> <span class="n">model</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">constraint_dict</span><span class="o">.</span><span class="n">iteritems</span><span class="p">():</span>
+            <span class="c1">## check if all parameters have been selected for constraint</span>
+            <span class="c1">## then do not allow add constraint on parameters</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">model_cbox_left</span><span class="o">.</span><span class="n">Append</span><span class="p">(</span><span class="nb">str</span><span class="p">(</span><span class="n">model</span><span class="o">.</span><span class="n">name</span><span class="p">),</span> <span class="n">model</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">model_cbox_left</span><span class="o">.</span><span class="n">Select</span><span class="p">(</span><span class="mi">0</span><span class="p">)</span>
+        <span class="k">for</span> <span class="nb">id</span><span class="p">,</span> <span class="n">model</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">constraint_dict</span><span class="o">.</span><span class="n">iteritems</span><span class="p">():</span>
+            <span class="c1">## check if all parameters have been selected for constraint</span>
+            <span class="c1">## then do not allow add constraint on parameters</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">model_cbox_right</span><span class="o">.</span><span class="n">Append</span><span class="p">(</span><span class="nb">str</span><span class="p">(</span><span class="n">model</span><span class="o">.</span><span class="n">name</span><span class="p">),</span> <span class="n">model</span><span class="p">)</span>
+        <span class="n">boxsizer</span><span class="o">.</span><span class="n">Add</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">model_cbox_left</span><span class="p">,</span>
+                             <span class="n">flag</span><span class="o">=</span><span class="n">wx</span><span class="o">.</span><span class="n">RIGHT</span> <span class="o">|</span> <span class="n">wx</span><span class="o">.</span><span class="n">EXPAND</span><span class="p">,</span> <span class="n">border</span><span class="o">=</span><span class="mi">10</span><span class="p">)</span>
+        <span class="c1">#boxsizer.Add(wx.StaticText(self, wx.ID_ANY, &quot;.parameters&quot;),</span>
+        <span class="c1">#                     flag=wx.RIGHT | wx.EXPAND, border=5)</span>
+        <span class="n">boxsizer</span><span class="o">.</span><span class="n">Add</span><span class="p">(</span><span class="n">egal_txt</span><span class="p">,</span> <span class="n">flag</span><span class="o">=</span><span class="n">wx</span><span class="o">.</span><span class="n">RIGHT</span> <span class="o">|</span> <span class="n">wx</span><span class="o">.</span><span class="n">EXPAND</span><span class="p">,</span> <span class="n">border</span><span class="o">=</span><span class="mi">5</span><span class="p">)</span>
+        <span class="n">boxsizer</span><span class="o">.</span><span class="n">Add</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">model_cbox_right</span><span class="p">,</span>
+                             <span class="n">flag</span><span class="o">=</span><span class="n">wx</span><span class="o">.</span><span class="n">RIGHT</span> <span class="o">|</span> <span class="n">wx</span><span class="o">.</span><span class="n">EXPAND</span><span class="p">,</span> <span class="n">border</span><span class="o">=</span><span class="mi">10</span><span class="p">)</span>
+        <span class="c1">#boxsizer.Add(wx.StaticText(self, wx.ID_ANY, &quot;.parameters&quot;),</span>
+        <span class="c1">#                     flag=wx.RIGHT | wx.EXPAND, border=5)</span>
+        <span class="n">boxsizer</span><span class="o">.</span><span class="n">Add</span><span class="p">((</span><span class="mi">20</span><span class="p">,</span> <span class="o">-</span><span class="mi">1</span><span class="p">))</span>
+        <span class="n">boxsizer</span><span class="o">.</span><span class="n">Add</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">set_button</span><span class="p">,</span> <span class="n">flag</span><span class="o">=</span><span class="n">wx</span><span class="o">.</span><span class="n">RIGHT</span> <span class="o">|</span> <span class="n">wx</span><span class="o">.</span><span class="n">EXPAND</span><span class="p">,</span> <span class="n">border</span><span class="o">=</span><span class="mi">5</span><span class="p">)</span>
+        <span class="n">sizer_constraint</span><span class="o">.</span><span class="n">Add</span><span class="p">(</span><span class="n">boxsizer</span><span class="p">,</span> <span class="n">flag</span><span class="o">=</span><span class="n">wx</span><span class="o">.</span><span class="n">RIGHT</span> <span class="o">|</span> <span class="n">wx</span><span class="o">.</span><span class="n">EXPAND</span><span class="p">,</span> <span class="n">border</span><span class="o">=</span><span class="mi">5</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">sizer_all_constraints</span><span class="o">.</span><span class="n">Insert</span><span class="p">(</span><span class="n">before</span><span class="o">=</span><span class="mi">0</span><span class="p">,</span>
+                             <span class="n">item</span><span class="o">=</span><span class="n">sizer_constraint</span><span class="p">,</span>
+                             <span class="n">flag</span><span class="o">=</span><span class="n">wx</span><span class="o">.</span><span class="n">TOP</span> <span class="o">|</span> <span class="n">wx</span><span class="o">.</span><span class="n">BOTTOM</span> <span class="o">|</span> <span class="n">wx</span><span class="o">.</span><span class="n">EXPAND</span><span class="p">,</span> <span class="n">border</span><span class="o">=</span><span class="mi">5</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">FitInside</span><span class="p">()</span>
+
+    <span class="k">def</span> <span class="nf">_on_select_modelcb</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">event</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        On select model left or right combobox</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">event</span><span class="o">.</span><span class="n">Skip</span><span class="p">()</span>
+        <span class="n">flag</span> <span class="o">=</span> <span class="bp">True</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">model_cbox_left</span><span class="o">.</span><span class="n">GetValue</span><span class="p">()</span><span class="o">.</span><span class="n">strip</span><span class="p">()</span> <span class="o">==</span> <span class="s1">&#39;&#39;</span><span class="p">:</span>
+            <span class="n">flag</span> <span class="o">=</span> <span class="bp">False</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">model_cbox_right</span><span class="o">.</span><span class="n">GetValue</span><span class="p">()</span><span class="o">.</span><span class="n">strip</span><span class="p">()</span> <span class="o">==</span> <span class="s1">&#39;&#39;</span><span class="p">:</span>
+            <span class="n">flag</span> <span class="o">=</span> <span class="bp">False</span>
+        <span class="k">if</span> <span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">model_cbox_left</span><span class="o">.</span><span class="n">GetValue</span><span class="p">()</span> <span class="o">==</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">model_cbox_right</span><span class="o">.</span><span class="n">GetValue</span><span class="p">()):</span>
+            <span class="n">flag</span> <span class="o">=</span> <span class="bp">False</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">set_button</span><span class="o">.</span><span class="n">Enable</span><span class="p">(</span><span class="n">flag</span><span class="p">)</span>
+
+    <span class="k">def</span> <span class="nf">_on_set_all_equal</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">event</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        On set button</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">event</span><span class="o">.</span><span class="n">Skip</span><span class="p">()</span>
+        <span class="n">length</span> <span class="o">=</span> <span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">constraints_list</span><span class="p">)</span>
+        <span class="k">if</span> <span class="n">length</span> <span class="o">&lt;</span> <span class="mi">1</span><span class="p">:</span>
+            <span class="k">return</span>
+        <span class="n">param_list</span> <span class="o">=</span> <span class="p">[]</span>
+        <span class="n">param_listB</span> <span class="o">=</span> <span class="p">[]</span>
+        <span class="n">selection</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">model_cbox_left</span><span class="o">.</span><span class="n">GetCurrentSelection</span><span class="p">()</span>
+        <span class="n">model_left</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">model_cbox_left</span><span class="o">.</span><span class="n">GetValue</span><span class="p">()</span>
+        <span class="n">model</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">model_cbox_left</span><span class="o">.</span><span class="n">GetClientData</span><span class="p">(</span><span class="n">selection</span><span class="p">)</span>
+        <span class="n">selectionB</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">model_cbox_right</span><span class="o">.</span><span class="n">GetCurrentSelection</span><span class="p">()</span>
+        <span class="n">model_right</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">model_cbox_right</span><span class="o">.</span><span class="n">GetValue</span><span class="p">()</span>
+        <span class="n">modelB</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">model_cbox_right</span><span class="o">.</span><span class="n">GetClientData</span><span class="p">(</span><span class="n">selectionB</span><span class="p">)</span>
+        <span class="k">for</span> <span class="nb">id</span><span class="p">,</span> <span class="n">dic_model</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">constraint_dict</span><span class="o">.</span><span class="n">iteritems</span><span class="p">():</span>
+            <span class="k">if</span> <span class="n">model</span> <span class="o">==</span> <span class="n">dic_model</span><span class="p">:</span>
+                <span class="n">param_list</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">page_finder</span><span class="p">[</span><span class="nb">id</span><span class="p">]</span><span class="o">.</span><span class="n">get_param2fit</span><span class="p">()</span>
+            <span class="k">if</span> <span class="n">modelB</span> <span class="o">==</span> <span class="n">dic_model</span><span class="p">:</span>
+                <span class="n">param_listB</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">page_finder</span><span class="p">[</span><span class="nb">id</span><span class="p">]</span><span class="o">.</span><span class="n">get_param2fit</span><span class="p">()</span>
+            <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">param_list</span><span class="p">)</span> <span class="o">&gt;</span> <span class="mi">0</span> <span class="ow">and</span> <span class="nb">len</span><span class="p">(</span><span class="n">param_listB</span><span class="p">)</span> <span class="o">&gt;</span> <span class="mi">0</span><span class="p">:</span>
+                <span class="k">break</span>
+        <span class="n">num_cbox</span> <span class="o">=</span> <span class="mi">0</span>
+        <span class="n">has_param</span> <span class="o">=</span> <span class="bp">False</span>
+        <span class="k">for</span> <span class="n">param</span> <span class="ow">in</span> <span class="n">param_list</span><span class="p">:</span>
+            <span class="n">num_cbox</span> <span class="o">+=</span> <span class="mi">1</span>
+            <span class="k">if</span> <span class="n">param</span> <span class="ow">in</span> <span class="n">param_listB</span><span class="p">:</span>
+                <span class="n">item</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">constraints_list</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span>
+                <span class="n">item</span><span class="o">.</span><span class="n">model_cbox</span><span class="o">.</span><span class="n">SetStringSelection</span><span class="p">(</span><span class="n">model_left</span><span class="p">)</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">_on_select_model</span><span class="p">(</span><span class="bp">None</span><span class="p">)</span>
+                <span class="n">item</span><span class="o">.</span><span class="n">param_cbox</span><span class="o">.</span><span class="n">Clear</span><span class="p">()</span>
+                <span class="n">item</span><span class="o">.</span><span class="n">param_cbox</span><span class="o">.</span><span class="n">Append</span><span class="p">(</span><span class="nb">str</span><span class="p">(</span><span class="n">param</span><span class="p">),</span> <span class="n">model</span><span class="p">)</span>
+                <span class="n">item</span><span class="o">.</span><span class="n">param_cbox</span><span class="o">.</span><span class="n">SetStringSelection</span><span class="p">(</span><span class="nb">str</span><span class="p">(</span><span class="n">param</span><span class="p">))</span>
+                <span class="n">item</span><span class="o">.</span><span class="n">constraint</span><span class="o">.</span><span class="n">SetValue</span><span class="p">(</span><span class="nb">str</span><span class="p">(</span><span class="n">model_right</span> <span class="o">+</span> <span class="s2">&quot;.&quot;</span> <span class="o">+</span> <span class="nb">str</span><span class="p">(</span><span class="n">param</span><span class="p">)))</span>
+                <span class="n">has_param</span> <span class="o">=</span> <span class="bp">True</span>
+                <span class="k">if</span> <span class="n">num_cbox</span> <span class="o">==</span> <span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">param_list</span><span class="p">)</span> <span class="o">+</span> <span class="mi">1</span><span class="p">):</span>
+                    <span class="k">break</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">_show_constraint</span><span class="p">()</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">FitInside</span><span class="p">()</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="n">has_param</span><span class="p">:</span>
+            <span class="n">msg</span> <span class="o">=</span> <span class="s2">&quot; There is no adjustable parameter (checked to fit)&quot;</span>
+            <span class="n">msg</span> <span class="o">+=</span> <span class="s2">&quot; either one of the models.&quot;</span>
+            <span class="n">wx</span><span class="o">.</span><span class="n">PostEvent</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">parent</span><span class="o">.</span><span class="n">parent</span><span class="p">,</span> <span class="n">StatusEvent</span><span class="p">(</span><span class="n">info</span><span class="o">=</span><span class="s2">&quot;warning&quot;</span><span class="p">,</span>
+                                                         <span class="n">status</span><span class="o">=</span><span class="n">msg</span><span class="p">))</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">msg</span> <span class="o">=</span> <span class="s2">&quot; The constraints are added.&quot;</span>
+            <span class="n">wx</span><span class="o">.</span><span class="n">PostEvent</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">parent</span><span class="o">.</span><span class="n">parent</span><span class="p">,</span> <span class="n">StatusEvent</span><span class="p">(</span><span class="n">info</span><span class="o">=</span><span class="s2">&quot;info&quot;</span><span class="p">,</span>
+                                                         <span class="n">status</span><span class="o">=</span><span class="n">msg</span><span class="p">))</span>
+
+    <span class="k">def</span> <span class="nf">_show_constraint</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Show constraint fields</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">btAdd</span><span class="o">.</span><span class="n">Show</span><span class="p">(</span><span class="bp">True</span><span class="p">)</span>
+        <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">constraints_list</span><span class="p">)</span> <span class="o">!=</span> <span class="mi">0</span><span class="p">:</span>
+            <span class="n">nb_fit_param</span> <span class="o">=</span> <span class="mi">0</span>
+            <span class="k">for</span> <span class="nb">id</span><span class="p">,</span> <span class="n">model</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">constraint_dict</span><span class="o">.</span><span class="n">iteritems</span><span class="p">():</span>
+                <span class="n">nb_fit_param</span> <span class="o">+=</span> <span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">page_finder</span><span class="p">[</span><span class="nb">id</span><span class="p">]</span><span class="o">.</span><span class="n">get_param2fit</span><span class="p">())</span>
+            <span class="c1">##Don&#39;t add anymore</span>
+            <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">constraints_list</span><span class="p">)</span> <span class="o">==</span> <span class="n">nb_fit_param</span><span class="p">:</span>
+                <span class="n">msg</span> <span class="o">=</span> <span class="s2">&quot;Cannot add another constraint. Maximum of number &quot;</span>
+                <span class="n">msg</span> <span class="o">+=</span> <span class="s2">&quot;Parameters name reached </span><span class="si">%s</span><span class="s2">&quot;</span> <span class="o">%</span> <span class="nb">str</span><span class="p">(</span><span class="n">nb_fit_param</span><span class="p">)</span>
+                <span class="n">wx</span><span class="o">.</span><span class="n">PostEvent</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">parent</span><span class="o">.</span><span class="n">parent</span><span class="p">,</span> <span class="n">StatusEvent</span><span class="p">(</span><span class="n">status</span><span class="o">=</span><span class="n">msg</span><span class="p">))</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">sizer_constraints</span><span class="o">.</span><span class="n">Layout</span><span class="p">()</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">sizer2</span><span class="o">.</span><span class="n">Layout</span><span class="p">()</span>
+                <span class="k">return</span>
+        <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">model_toFit</span><span class="p">)</span> <span class="o">&lt;</span> <span class="mi">1</span><span class="p">:</span>
+            <span class="n">msg</span> <span class="o">=</span> <span class="s2">&quot;Select at least 1 model to add constraint &quot;</span>
+            <span class="n">wx</span><span class="o">.</span><span class="n">PostEvent</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">parent</span><span class="o">.</span><span class="n">parent</span><span class="p">,</span> <span class="n">StatusEvent</span><span class="p">(</span><span class="n">status</span><span class="o">=</span><span class="n">msg</span><span class="p">))</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">sizer_constraints</span><span class="o">.</span><span class="n">Layout</span><span class="p">()</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">sizer2</span><span class="o">.</span><span class="n">Layout</span><span class="p">()</span>
+            <span class="k">return</span>
+
+        <span class="n">sizer_constraint</span> <span class="o">=</span> <span class="n">wx</span><span class="o">.</span><span class="n">BoxSizer</span><span class="p">(</span><span class="n">wx</span><span class="o">.</span><span class="n">HORIZONTAL</span><span class="p">)</span>
+
+        <span class="c1"># Model list</span>
+        <span class="n">model_cbox</span> <span class="o">=</span> <span class="n">wx</span><span class="o">.</span><span class="n">ComboBox</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">wx</span><span class="o">.</span><span class="n">ID_ANY</span><span class="p">,</span> <span class="n">style</span><span class="o">=</span><span class="n">wx</span><span class="o">.</span><span class="n">CB_READONLY</span><span class="p">)</span>
+        <span class="n">model_cbox</span><span class="o">.</span><span class="n">Clear</span><span class="p">()</span>
+        <span class="k">for</span> <span class="nb">id</span><span class="p">,</span> <span class="n">model</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">constraint_dict</span><span class="o">.</span><span class="n">iteritems</span><span class="p">():</span>
+            <span class="c1">## check if all parameters have been selected for constraint</span>
+            <span class="c1">## then do not allow add constraint on parameters</span>
+            <span class="n">model_cbox</span><span class="o">.</span><span class="n">Append</span><span class="p">(</span><span class="nb">str</span><span class="p">(</span><span class="n">model</span><span class="o">.</span><span class="n">name</span><span class="p">),</span> <span class="n">model</span><span class="p">)</span>
+        <span class="n">wx</span><span class="o">.</span><span class="n">EVT_COMBOBOX</span><span class="p">(</span><span class="n">model_cbox</span><span class="p">,</span> <span class="n">wx</span><span class="o">.</span><span class="n">ID_ANY</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">_on_select_model</span><span class="p">)</span>
+
+        <span class="c1"># Parameters in model</span>
+        <span class="n">param_cbox</span> <span class="o">=</span> <span class="n">wx</span><span class="o">.</span><span class="n">ComboBox</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">wx</span><span class="o">.</span><span class="n">ID_ANY</span><span class="p">,</span> <span class="n">style</span><span class="o">=</span><span class="n">wx</span><span class="o">.</span><span class="n">CB_READONLY</span><span class="p">,</span>
+                                 <span class="n">size</span><span class="o">=</span><span class="p">(</span><span class="mi">100</span><span class="p">,</span> <span class="o">-</span><span class="mi">1</span><span class="p">))</span>
+        <span class="n">param_cbox</span><span class="o">.</span><span class="n">Hide</span><span class="p">()</span>
+        <span class="n">wx</span><span class="o">.</span><span class="n">EVT_COMBOBOX</span><span class="p">(</span><span class="n">param_cbox</span><span class="p">,</span> <span class="n">wx</span><span class="o">.</span><span class="n">ID_ANY</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">_on_select_param</span><span class="p">)</span>
+
+        <span class="n">egal_txt</span> <span class="o">=</span> <span class="n">wx</span><span class="o">.</span><span class="n">StaticText</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">wx</span><span class="o">.</span><span class="n">ID_ANY</span><span class="p">,</span> <span class="s2">&quot; = &quot;</span><span class="p">)</span>
+
+        <span class="c1"># Parameter constraint</span>
+        <span class="n">constraint</span> <span class="o">=</span> <span class="n">wx</span><span class="o">.</span><span class="n">TextCtrl</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">wx</span><span class="o">.</span><span class="n">ID_ANY</span><span class="p">)</span>
+
+        <span class="c1"># Remove button</span>
+        <span class="c1">#btRemove = wx.Button(self, self.ID_REMOVE, &#39;Remove&#39;)</span>
+        <span class="n">btRemove</span> <span class="o">=</span> <span class="n">wx</span><span class="o">.</span><span class="n">Button</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">_ids</span><span class="o">.</span><span class="n">next</span><span class="p">(),</span> <span class="s1">&#39;Remove&#39;</span><span class="p">)</span>
+        <span class="n">btRemove</span><span class="o">.</span><span class="n">Bind</span><span class="p">(</span><span class="n">wx</span><span class="o">.</span><span class="n">EVT_BUTTON</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">onRemove</span><span class="p">,</span>
+                      <span class="nb">id</span><span class="o">=</span><span class="n">btRemove</span><span class="o">.</span><span class="n">GetId</span><span class="p">())</span>
+        <span class="n">btRemove</span><span class="o">.</span><span class="n">SetToolTipString</span><span class="p">(</span><span class="s2">&quot;Remove constraint.&quot;</span><span class="p">)</span>
+        <span class="n">btRemove</span><span class="o">.</span><span class="n">Hide</span><span class="p">()</span>
+
+        <span class="c1"># Hid the add button, if it exists</span>
+        <span class="k">if</span> <span class="nb">hasattr</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="s2">&quot;btAdd&quot;</span><span class="p">):</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">btAdd</span><span class="o">.</span><span class="n">Hide</span><span class="p">()</span>
+
+        <span class="n">sizer_constraint</span><span class="o">.</span><span class="n">Add</span><span class="p">((</span><span class="mi">5</span><span class="p">,</span> <span class="o">-</span><span class="mi">1</span><span class="p">))</span>
+        <span class="n">sizer_constraint</span><span class="o">.</span><span class="n">Add</span><span class="p">(</span><span class="n">model_cbox</span><span class="p">,</span> <span class="n">flag</span><span class="o">=</span><span class="n">wx</span><span class="o">.</span><span class="n">RIGHT</span> <span class="o">|</span> <span class="n">wx</span><span class="o">.</span><span class="n">EXPAND</span><span class="p">,</span> <span class="n">border</span><span class="o">=</span><span class="mi">10</span><span class="p">)</span>
+        <span class="n">sizer_constraint</span><span class="o">.</span><span class="n">Add</span><span class="p">(</span><span class="n">param_cbox</span><span class="p">,</span> <span class="n">flag</span><span class="o">=</span><span class="n">wx</span><span class="o">.</span><span class="n">RIGHT</span> <span class="o">|</span> <span class="n">wx</span><span class="o">.</span><span class="n">EXPAND</span><span class="p">,</span> <span class="n">border</span><span class="o">=</span><span class="mi">5</span><span class="p">)</span>
+        <span class="n">sizer_constraint</span><span class="o">.</span><span class="n">Add</span><span class="p">(</span><span class="n">egal_txt</span><span class="p">,</span> <span class="n">flag</span><span class="o">=</span><span class="n">wx</span><span class="o">.</span><span class="n">RIGHT</span> <span class="o">|</span> <span class="n">wx</span><span class="o">.</span><span class="n">EXPAND</span><span class="p">,</span> <span class="n">border</span><span class="o">=</span><span class="mi">5</span><span class="p">)</span>
+        <span class="n">sizer_constraint</span><span class="o">.</span><span class="n">Add</span><span class="p">(</span><span class="n">constraint</span><span class="p">,</span> <span class="n">flag</span><span class="o">=</span><span class="n">wx</span><span class="o">.</span><span class="n">RIGHT</span> <span class="o">|</span> <span class="n">wx</span><span class="o">.</span><span class="n">EXPAND</span><span class="p">,</span> <span class="n">border</span><span class="o">=</span><span class="mi">10</span><span class="p">)</span>
+        <span class="n">sizer_constraint</span><span class="o">.</span><span class="n">Add</span><span class="p">(</span><span class="n">btRemove</span><span class="p">,</span> <span class="n">flag</span><span class="o">=</span><span class="n">wx</span><span class="o">.</span><span class="n">RIGHT</span> <span class="o">|</span> <span class="n">wx</span><span class="o">.</span><span class="n">EXPAND</span><span class="p">,</span> <span class="n">border</span><span class="o">=</span><span class="mi">10</span><span class="p">)</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">sizer_constraints</span><span class="o">.</span><span class="n">Insert</span><span class="p">(</span><span class="n">before</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">nb_constraint</span><span class="p">,</span>
+                <span class="n">item</span><span class="o">=</span><span class="n">sizer_constraint</span><span class="p">,</span> <span class="n">flag</span><span class="o">=</span><span class="n">wx</span><span class="o">.</span><span class="n">TOP</span> <span class="o">|</span> <span class="n">wx</span><span class="o">.</span><span class="n">BOTTOM</span> <span class="o">|</span> <span class="n">wx</span><span class="o">.</span><span class="n">EXPAND</span><span class="p">,</span>
+                <span class="n">border</span><span class="o">=</span><span class="mi">5</span><span class="p">)</span>
+        <span class="n">c</span> <span class="o">=</span> <span class="n">ConstraintLine</span><span class="p">(</span><span class="n">model_cbox</span><span class="p">,</span> <span class="n">param_cbox</span><span class="p">,</span> <span class="n">egal_txt</span><span class="p">,</span>
+                           <span class="n">constraint</span><span class="p">,</span> <span class="n">btRemove</span><span class="p">,</span> <span class="n">sizer_constraint</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">constraints_list</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">c</span><span class="p">)</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">nb_constraint</span> <span class="o">+=</span> <span class="mi">1</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">sizer_constraints</span><span class="o">.</span><span class="n">Layout</span><span class="p">()</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">sizer2</span><span class="o">.</span><span class="n">Layout</span><span class="p">()</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">Layout</span>
+
+    <span class="k">def</span> <span class="nf">_hide_constraint</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        hide buttons related constraint</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">for</span> <span class="nb">id</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">page_finder</span><span class="o">.</span><span class="n">iterkeys</span><span class="p">():</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">page_finder</span><span class="p">[</span><span class="nb">id</span><span class="p">]</span><span class="o">.</span><span class="n">clear_model_param</span><span class="p">()</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">nb_constraint</span> <span class="o">=</span> <span class="mi">0</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">constraint_dict</span> <span class="o">=</span> <span class="p">{}</span>
+        <span class="k">if</span> <span class="nb">hasattr</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="s2">&quot;btAdd&quot;</span><span class="p">):</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">btAdd</span><span class="o">.</span><span class="n">Hide</span><span class="p">()</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_store_model</span><span class="p">()</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">model_cbox_left</span> <span class="ow">is</span> <span class="ow">not</span> <span class="bp">None</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">model_cbox_left</span><span class="o">.</span><span class="n">Clear</span><span class="p">()</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">model_cbox_left</span> <span class="o">=</span> <span class="bp">None</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">model_cbox_right</span> <span class="ow">is</span> <span class="ow">not</span> <span class="bp">None</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">model_cbox_right</span><span class="o">.</span><span class="n">Clear</span><span class="p">()</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">model_cbox_right</span> <span class="o">=</span> <span class="bp">None</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">constraints_list</span> <span class="o">=</span> <span class="p">[]</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">sizer_all_constraints</span><span class="o">.</span><span class="n">Clear</span><span class="p">(</span><span class="bp">True</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">sizer_all_constraints</span><span class="o">.</span><span class="n">Layout</span><span class="p">()</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">sizer_constraints</span><span class="o">.</span><span class="n">Clear</span><span class="p">(</span><span class="bp">True</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">sizer_constraints</span><span class="o">.</span><span class="n">Layout</span><span class="p">()</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">sizer2</span><span class="o">.</span><span class="n">Layout</span><span class="p">()</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">Layout</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">FitInside</span><span class="p">()</span>
+
+    <span class="k">def</span> <span class="nf">_on_select_model</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">event</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        fill combox box with list of parameters</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="bp">self</span><span class="o">.</span><span class="n">constraints_list</span><span class="p">:</span>
+            <span class="k">return</span>
+
+        <span class="c1">##This way PC/MAC both work, instead of using event.GetClientData().</span>
+        <span class="n">model_cbox</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">constraints_list</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span><span class="o">.</span><span class="n">model_cbox</span>
+        <span class="n">n</span> <span class="o">=</span> <span class="n">model_cbox</span><span class="o">.</span><span class="n">GetCurrentSelection</span><span class="p">()</span>
+        <span class="k">if</span> <span class="n">n</span> <span class="o">==</span> <span class="n">wx</span><span class="o">.</span><span class="n">NOT_FOUND</span><span class="p">:</span>
+            <span class="k">return</span>
+
+        <span class="n">model</span> <span class="o">=</span> <span class="n">model_cbox</span><span class="o">.</span><span class="n">GetClientData</span><span class="p">(</span><span class="n">n</span><span class="p">)</span>
+        <span class="n">param_list</span> <span class="o">=</span> <span class="p">[]</span>
+        <span class="k">for</span> <span class="nb">id</span><span class="p">,</span> <span class="n">dic_model</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">constraint_dict</span><span class="o">.</span><span class="n">iteritems</span><span class="p">():</span>
+            <span class="k">if</span> <span class="n">model</span> <span class="o">==</span> <span class="n">dic_model</span><span class="p">:</span>
+                <span class="n">param_list</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">page_finder</span><span class="p">[</span><span class="nb">id</span><span class="p">]</span><span class="o">.</span><span class="n">get_param2fit</span><span class="p">()</span>
+                <span class="k">break</span>
+
+        <span class="n">param_cbox</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">constraints_list</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span><span class="o">.</span><span class="n">param_cbox</span>
+        <span class="n">param_cbox</span><span class="o">.</span><span class="n">Clear</span><span class="p">()</span>
+        <span class="c1">## insert only fittable paramaters</span>
+        <span class="k">for</span> <span class="n">param</span> <span class="ow">in</span> <span class="n">param_list</span><span class="p">:</span>
+            <span class="n">param_cbox</span><span class="o">.</span><span class="n">Append</span><span class="p">(</span><span class="nb">str</span><span class="p">(</span><span class="n">param</span><span class="p">),</span> <span class="n">model</span><span class="p">)</span>
+        <span class="n">param_cbox</span><span class="o">.</span><span class="n">Show</span><span class="p">(</span><span class="bp">True</span><span class="p">)</span>
+
+        <span class="n">btRemove</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">constraints_list</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span><span class="o">.</span><span class="n">btRemove</span>
+        <span class="n">btRemove</span><span class="o">.</span><span class="n">Show</span><span class="p">(</span><span class="bp">True</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">btAdd</span><span class="o">.</span><span class="n">Show</span><span class="p">(</span><span class="bp">True</span><span class="p">)</span>
+<span class="c1">#        self.Layout()</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">FitInside</span><span class="p">()</span>
+
+    <span class="k">def</span> <span class="nf">_on_select_param</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">event</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Store the appropriate constraint in the page_finder</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="c1">##This way PC/MAC both work, instead of using event.GetClientData().</span>
+        <span class="c1">#n = self.param_cbox.GetCurrentSelection()</span>
+        <span class="c1">#model = self.param_cbox.GetClientData(n)</span>
+        <span class="c1">#param = event.GetString()</span>
+
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">constraints_list</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">constraints_list</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span><span class="o">.</span><span class="n">egal_txt</span><span class="o">.</span><span class="n">Show</span><span class="p">(</span><span class="bp">True</span><span class="p">)</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">constraints_list</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span><span class="o">.</span><span class="n">constraint</span><span class="o">.</span><span class="n">Show</span><span class="p">(</span><span class="bp">True</span><span class="p">)</span>
+
+    <span class="k">def</span> <span class="nf">_onAdd_constraint</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">event</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Add another line for constraint</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="bp">self</span><span class="o">.</span><span class="n">show_constraint</span><span class="o">.</span><span class="n">GetValue</span><span class="p">():</span>
+            <span class="n">msg</span> <span class="o">=</span> <span class="s2">&quot; Select Yes to add Constraint &quot;</span>
+            <span class="n">wx</span><span class="o">.</span><span class="n">PostEvent</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">parent</span><span class="o">.</span><span class="n">parent</span><span class="p">,</span> <span class="n">StatusEvent</span><span class="p">(</span><span class="n">status</span><span class="o">=</span><span class="n">msg</span><span class="p">))</span>
+            <span class="k">return</span>
+        <span class="c1">## check that a constraint is added</span>
+        <span class="c1"># before allow to add another constraint</span>
+        <span class="k">for</span> <span class="n">item</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">constraints_list</span><span class="p">:</span>
+            <span class="k">if</span> <span class="n">item</span><span class="o">.</span><span class="n">model_cbox</span><span class="o">.</span><span class="n">GetString</span><span class="p">(</span><span class="mi">0</span><span class="p">)</span> <span class="o">==</span> <span class="s2">&quot;&quot;</span><span class="p">:</span>
+                <span class="n">msg</span> <span class="o">=</span> <span class="s2">&quot; Select a model Name! &quot;</span>
+                <span class="n">wx</span><span class="o">.</span><span class="n">PostEvent</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">parent</span><span class="o">.</span><span class="n">parent</span><span class="p">,</span> <span class="n">StatusEvent</span><span class="p">(</span><span class="n">status</span><span class="o">=</span><span class="n">msg</span><span class="p">))</span>
+                <span class="k">return</span>
+            <span class="k">if</span> <span class="n">item</span><span class="o">.</span><span class="n">param_cbox</span><span class="o">.</span><span class="n">GetString</span><span class="p">(</span><span class="mi">0</span><span class="p">)</span> <span class="o">==</span> <span class="s2">&quot;&quot;</span><span class="p">:</span>
+                <span class="n">msg</span> <span class="o">=</span> <span class="s2">&quot; Select a parameter Name! &quot;</span>
+                <span class="n">wx</span><span class="o">.</span><span class="n">PostEvent</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">parent</span><span class="o">.</span><span class="n">parent</span><span class="p">,</span> <span class="n">StatusEvent</span><span class="p">(</span><span class="n">status</span><span class="o">=</span><span class="n">msg</span><span class="p">))</span>
+                <span class="k">return</span>
+            <span class="k">if</span> <span class="n">item</span><span class="o">.</span><span class="n">constraint</span><span class="o">.</span><span class="n">GetValue</span><span class="p">()</span><span class="o">.</span><span class="n">lstrip</span><span class="p">()</span><span class="o">.</span><span class="n">rstrip</span><span class="p">()</span> <span class="o">==</span> <span class="s2">&quot;&quot;</span><span class="p">:</span>
+                <span class="n">model</span> <span class="o">=</span> <span class="n">item</span><span class="o">.</span><span class="n">param_cbox</span><span class="o">.</span><span class="n">GetClientData</span><span class="p">(</span>
+                                        <span class="n">item</span><span class="o">.</span><span class="n">param_cbox</span><span class="o">.</span><span class="n">GetCurrentSelection</span><span class="p">())</span>
+                <span class="k">if</span> <span class="n">model</span> <span class="o">!=</span> <span class="bp">None</span><span class="p">:</span>
+                    <span class="n">msg</span> <span class="o">=</span> <span class="s2">&quot; Enter a constraint for </span><span class="si">%s</span><span class="s2">.</span><span class="si">%s</span><span class="s2">! &quot;</span> <span class="o">%</span> <span class="p">(</span><span class="n">model</span><span class="o">.</span><span class="n">name</span><span class="p">,</span>
+                                        <span class="n">item</span><span class="o">.</span><span class="n">param_cbox</span><span class="o">.</span><span class="n">GetString</span><span class="p">(</span><span class="mi">0</span><span class="p">))</span>
+                <span class="k">else</span><span class="p">:</span>
+                    <span class="n">msg</span> <span class="o">=</span> <span class="s2">&quot; Enter a constraint&quot;</span>
+                <span class="n">wx</span><span class="o">.</span><span class="n">PostEvent</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">parent</span><span class="o">.</span><span class="n">parent</span><span class="p">,</span> <span class="n">StatusEvent</span><span class="p">(</span><span class="n">status</span><span class="o">=</span><span class="n">msg</span><span class="p">))</span>
+                <span class="k">return</span>
+        <span class="c1">## some model or parameters can be constrained</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_show_constraint</span><span class="p">()</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">FitInside</span><span class="p">()</span>
+
+    <span class="k">def</span> <span class="nf">_set_constraint</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        get values from the constraint textcrtl ,parses them into model name</span>
+<span class="sd">        parameter name and parameters values.</span>
+<span class="sd">        store them in a list self.params .when when params is not empty</span>
+<span class="sd">        set_model uses it to reset the appropriate model</span>
+<span class="sd">        and its appropriates parameters</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">for</span> <span class="n">item</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">constraints_list</span><span class="p">:</span>
+            <span class="n">select0</span> <span class="o">=</span> <span class="n">item</span><span class="o">.</span><span class="n">model_cbox</span><span class="o">.</span><span class="n">GetSelection</span><span class="p">()</span>
+            <span class="k">if</span> <span class="n">select0</span> <span class="o">==</span> <span class="n">wx</span><span class="o">.</span><span class="n">NOT_FOUND</span><span class="p">:</span>
+                <span class="k">continue</span>
+            <span class="n">model</span> <span class="o">=</span> <span class="n">item</span><span class="o">.</span><span class="n">model_cbox</span><span class="o">.</span><span class="n">GetClientData</span><span class="p">(</span><span class="n">select0</span><span class="p">)</span>
+            <span class="n">select1</span> <span class="o">=</span> <span class="n">item</span><span class="o">.</span><span class="n">param_cbox</span><span class="o">.</span><span class="n">GetSelection</span><span class="p">()</span>
+            <span class="k">if</span> <span class="n">select1</span> <span class="o">==</span> <span class="n">wx</span><span class="o">.</span><span class="n">NOT_FOUND</span><span class="p">:</span>
+                <span class="k">continue</span>
+            <span class="n">param</span> <span class="o">=</span> <span class="n">item</span><span class="o">.</span><span class="n">param_cbox</span><span class="o">.</span><span class="n">GetString</span><span class="p">(</span><span class="n">select1</span><span class="p">)</span>
+            <span class="n">constraint</span> <span class="o">=</span> <span class="n">item</span><span class="o">.</span><span class="n">constraint</span><span class="o">.</span><span class="n">GetValue</span><span class="p">()</span><span class="o">.</span><span class="n">lstrip</span><span class="p">()</span><span class="o">.</span><span class="n">rstrip</span><span class="p">()</span>
+            <span class="k">if</span> <span class="n">param</span><span class="o">.</span><span class="n">lstrip</span><span class="p">()</span><span class="o">.</span><span class="n">rstrip</span><span class="p">()</span> <span class="o">==</span> <span class="s2">&quot;&quot;</span><span class="p">:</span>
+                <span class="n">param</span> <span class="o">=</span> <span class="bp">None</span>
+                <span class="n">msg</span> <span class="o">=</span> <span class="s2">&quot; Constraint will be ignored!. missing parameters&quot;</span>
+                <span class="n">msg</span> <span class="o">+=</span> <span class="s2">&quot; in combobox to set constraint! &quot;</span>
+                <span class="n">wx</span><span class="o">.</span><span class="n">PostEvent</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">parent</span><span class="o">.</span><span class="n">parent</span><span class="p">,</span> <span class="n">StatusEvent</span><span class="p">(</span><span class="n">status</span><span class="o">=</span><span class="n">msg</span><span class="p">))</span>
+            <span class="k">for</span> <span class="nb">id</span><span class="p">,</span> <span class="n">value</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">constraint_dict</span><span class="o">.</span><span class="n">iteritems</span><span class="p">():</span>
+                <span class="k">if</span> <span class="n">model</span> <span class="o">==</span> <span class="n">value</span><span class="p">:</span>
+                    <span class="k">if</span> <span class="n">constraint</span> <span class="o">==</span> <span class="s2">&quot;&quot;</span><span class="p">:</span>
+                        <span class="n">msg</span> <span class="o">=</span> <span class="s2">&quot; Constraint will be ignored!. missing value&quot;</span>
+                        <span class="n">msg</span> <span class="o">+=</span> <span class="s2">&quot; in textcrtl to set constraint! &quot;</span>
+                        <span class="n">wx</span><span class="o">.</span><span class="n">PostEvent</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">parent</span><span class="o">.</span><span class="n">parent</span><span class="p">,</span>
+                                     <span class="n">StatusEvent</span><span class="p">(</span><span class="n">status</span><span class="o">=</span><span class="n">msg</span><span class="p">))</span>
+                        <span class="n">constraint</span> <span class="o">=</span> <span class="bp">None</span>
+                    <span class="k">if</span> <span class="nb">str</span><span class="p">(</span><span class="n">param</span><span class="p">)</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">page_finder</span><span class="p">[</span><span class="nb">id</span><span class="p">]</span><span class="o">.</span><span class="n">get_param2fit</span><span class="p">():</span>
+                        <span class="n">msg</span> <span class="o">=</span> <span class="s2">&quot; Checking constraint for parameter: </span><span class="si">%s</span><span class="s2"> &quot;</span><span class="p">,</span> <span class="n">param</span>
+                        <span class="n">wx</span><span class="o">.</span><span class="n">PostEvent</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">parent</span><span class="o">.</span><span class="n">parent</span><span class="p">,</span>
+                                     <span class="n">StatusEvent</span><span class="p">(</span><span class="n">info</span><span class="o">=</span><span class="s2">&quot;info&quot;</span><span class="p">,</span> <span class="n">status</span><span class="o">=</span><span class="n">msg</span><span class="p">))</span>
+                    <span class="k">else</span><span class="p">:</span>
+                        <span class="n">model_name</span> <span class="o">=</span> <span class="n">item</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">GetLabel</span><span class="p">()</span>
+                        <span class="n">fitpage</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">page_finder</span><span class="p">[</span><span class="nb">id</span><span class="p">]</span><span class="o">.</span><span class="n">get_fit_tab_caption</span><span class="p">()</span>
+                        <span class="n">msg</span> <span class="o">=</span> <span class="s2">&quot;All constrainted parameters must be set &quot;</span>
+                        <span class="n">msg</span> <span class="o">+=</span> <span class="s2">&quot; adjustable: &#39;</span><span class="si">%s</span><span class="s2">.</span><span class="si">%s</span><span class="s2">&#39; &quot;</span> <span class="o">%</span> <span class="p">(</span><span class="n">model_name</span><span class="p">,</span> <span class="n">param</span><span class="p">)</span>
+                        <span class="n">msg</span> <span class="o">+=</span> <span class="s2">&quot;is NOT checked in &#39;</span><span class="si">%s</span><span class="s2">&#39;. &quot;</span> <span class="o">%</span> <span class="n">fitpage</span>
+                        <span class="n">msg</span> <span class="o">+=</span> <span class="s2">&quot; Please check it to fit or&quot;</span>
+                        <span class="n">msg</span> <span class="o">+=</span> <span class="s2">&quot; remove the line of the constraint.&quot;</span>
+                        <span class="n">wx</span><span class="o">.</span><span class="n">PostEvent</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">parent</span><span class="o">.</span><span class="n">parent</span><span class="p">,</span>
+                                <span class="n">StatusEvent</span><span class="p">(</span><span class="n">info</span><span class="o">=</span><span class="s2">&quot;error&quot;</span><span class="p">,</span> <span class="n">status</span><span class="o">=</span><span class="n">msg</span><span class="p">))</span>
+                        <span class="k">return</span> <span class="bp">False</span>
+
+                    <span class="k">for</span> <span class="n">fid</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">page_finder</span><span class="p">[</span><span class="nb">id</span><span class="p">]</span><span class="o">.</span><span class="n">iterkeys</span><span class="p">():</span>
+                        <span class="c1"># wrap in param/constraint in str() to remove unicode</span>
+                        <span class="bp">self</span><span class="o">.</span><span class="n">page_finder</span><span class="p">[</span><span class="nb">id</span><span class="p">]</span><span class="o">.</span><span class="n">set_model_param</span><span class="p">(</span><span class="nb">str</span><span class="p">(</span><span class="n">param</span><span class="p">),</span>
+                                <span class="nb">str</span><span class="p">(</span><span class="n">constraint</span><span class="p">),</span> <span class="n">fid</span><span class="o">=</span><span class="n">fid</span><span class="p">)</span>
+                    <span class="k">break</span>
+        <span class="k">return</span> <span class="bp">True</span>
+
+<div class="viewcode-block" id="SimultaneousFitPage.on_set_focus"><a class="viewcode-back" href="../../../../../dev/api/sas.sasgui.perspectives.fitting.html#sas.sasgui.perspectives.fitting.simfitpage.SimultaneousFitPage.on_set_focus">[docs]</a>    <span class="k">def</span> <span class="nf">on_set_focus</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">event</span><span class="o">=</span><span class="bp">None</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        The  derivative class is on focus if implemented</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">parent</span> <span class="ow">is</span> <span class="ow">not</span> <span class="bp">None</span><span class="p">:</span>
+            <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">parent</span><span class="o">.</span><span class="n">parent</span> <span class="ow">is</span> <span class="ow">not</span> <span class="bp">None</span><span class="p">:</span>
+                <span class="n">wx</span><span class="o">.</span><span class="n">PostEvent</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">parent</span><span class="o">.</span><span class="n">parent</span><span class="p">,</span> <span class="n">PanelOnFocusEvent</span><span class="p">(</span><span class="n">panel</span><span class="o">=</span><span class="bp">self</span><span class="p">))</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">page_finder</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">parent</span><span class="o">.</span><span class="n">_manager</span><span class="o">.</span><span class="n">get_page_finder</span><span class="p">()</span></div></div>
+
+
+<div class="viewcode-block" id="setComboBoxItems"><a class="viewcode-back" href="../../../../../dev/api/sas.sasgui.perspectives.fitting.html#sas.sasgui.perspectives.fitting.simfitpage.setComboBoxItems">[docs]</a><span class="k">def</span> <span class="nf">setComboBoxItems</span><span class="p">(</span><span class="n">cbox</span><span class="p">,</span> <span class="n">items</span><span class="p">):</span>
+    <span class="k">assert</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">cbox</span><span class="p">,</span> <span class="n">wx</span><span class="o">.</span><span class="n">ComboBox</span><span class="p">)</span>
+    <span class="n">selected</span> <span class="o">=</span> <span class="n">cbox</span><span class="o">.</span><span class="n">GetStringSelection</span><span class="p">()</span>
+    <span class="n">cbox</span><span class="o">.</span><span class="n">Clear</span><span class="p">()</span>
+    <span class="k">for</span> <span class="n">k</span><span class="p">,</span> <span class="p">(</span><span class="n">name</span><span class="p">,</span> <span class="n">value</span><span class="p">)</span> <span class="ow">in</span> <span class="nb">enumerate</span><span class="p">(</span><span class="n">items</span><span class="p">):</span>
+        <span class="n">cbox</span><span class="o">.</span><span class="n">Append</span><span class="p">(</span><span class="n">name</span><span class="p">,</span> <span class="n">value</span><span class="p">)</span>
+    <span class="n">cbox</span><span class="o">.</span><span class="n">SetStringSelection</span><span class="p">(</span><span class="n">selected</span><span class="p">)</span></div>
+</pre></div>
+
+          </div>
+        </div>
+      </div>
+      <div class="sphinxsidebar" role="navigation" aria-label="main navigation">
+        <div class="sphinxsidebarwrapper">
+<div id="searchbox" style="display: none" role="search">
+  <h3>Quick search</h3>
+    <form class="search" action="../../../../../search.html" method="get">
+      <input type="text" name="q" />
+      <input type="submit" value="Go" />
+      <input type="hidden" name="check_keywords" value="yes" />
+      <input type="hidden" name="area" value="default" />
+    </form>
+</div>
+<script type="text/javascript">$('#searchbox').show(0);</script>
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="related" role="navigation" aria-label="related navigation">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="../../../../../genindex.html" title="General Index"
+             >index</a></li>
+        <li class="right" >
+          <a href="../../../../../py-modindex.html" title="Python Module Index"
+             >modules</a> |</li>
+        <li class="nav-item nav-item-0"><a href="../../../../../index.html">SasView 4.0.0 documentation</a> &raquo;</li>
+          <li class="nav-item nav-item-1"><a href="../../../../index.html" >Module code</a> &raquo;</li>
+          <li class="nav-item nav-item-2"><a href="../fitting.html" >sas.sasgui.perspectives.fitting</a> &raquo;</li> 
+      </ul>
+    </div>
+    <div class="footer" role="contentinfo">
+        &copy; Copyright 2015, The SasView Project.
+      Created using <a href="http://sphinx-doc.org/">Sphinx</a> 1.4.
+    </div>
+  </body>
+</html>

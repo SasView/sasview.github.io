@@ -1,0 +1,406 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+  "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+    
+    <title>sas.sasgui.perspectives.calculator.slit_length_calculator_panel &mdash; SasView 4.0.0 documentation</title>
+    
+    <link rel="stylesheet" href="../../../../../_static/classic.css" type="text/css" />
+    <link rel="stylesheet" href="../../../../../_static/pygments.css" type="text/css" />
+    
+    <script type="text/javascript">
+      var DOCUMENTATION_OPTIONS = {
+        URL_ROOT:    '../../../../../',
+        VERSION:     '4.0.0',
+        COLLAPSE_INDEX: false,
+        FILE_SUFFIX: '.html',
+        HAS_SOURCE:  true
+      };
+    </script>
+    <script type="text/javascript" src="../../../../../_static/jquery.js"></script>
+    <script type="text/javascript" src="../../../../../_static/underscore.js"></script>
+    <script type="text/javascript" src="../../../../../_static/doctools.js"></script>
+    <script type="text/javascript" src="https://cdn.mathjax.org/mathjax/latest/MathJax.js?config=TeX-AMS-MML_HTMLorMML"></script>
+    <link rel="top" title="SasView 4.0.0 documentation" href="../../../../../index.html" />
+    <link rel="up" title="sas.sasgui.perspectives.calculator" href="../calculator.html" /> 
+  </head>
+  <body role="document">
+    <div class="related" role="navigation" aria-label="related navigation">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="../../../../../genindex.html" title="General Index"
+             accesskey="I">index</a></li>
+        <li class="right" >
+          <a href="../../../../../py-modindex.html" title="Python Module Index"
+             >modules</a> |</li>
+        <li class="nav-item nav-item-0"><a href="../../../../../index.html">SasView 4.0.0 documentation</a> &raquo;</li>
+          <li class="nav-item nav-item-1"><a href="../../../../index.html" >Module code</a> &raquo;</li>
+          <li class="nav-item nav-item-2"><a href="../calculator.html" accesskey="U">sas.sasgui.perspectives.calculator</a> &raquo;</li> 
+      </ul>
+    </div>  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          <div class="body" role="main">
+            
+  <h1>Source code for sas.sasgui.perspectives.calculator.slit_length_calculator_panel</h1><div class="highlight"><pre>
+<span></span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">This software was developed by the University of Tennessee as part of the</span>
+<span class="sd">Distributed Data Analysis of Neutron Scattering Experiments (DANSE)</span>
+<span class="sd">project funded by the US National Science Foundation.</span>
+
+<span class="sd">See the license text in license.txt</span>
+
+<span class="sd">copyright 2008, 2009, University of Tennessee</span>
+<span class="sd">&quot;&quot;&quot;</span>
+
+<span class="kn">import</span> <span class="nn">wx</span>
+<span class="kn">import</span> <span class="nn">sys</span>
+<span class="kn">import</span> <span class="nn">os</span>
+
+<span class="kn">from</span> <span class="nn">sas.sasgui.guiframe.panel_base</span> <span class="kn">import</span> <span class="n">PanelBase</span>
+
+<span class="kn">from</span> <span class="nn">sas.sasgui.guiframe.events</span> <span class="kn">import</span> <span class="n">StatusEvent</span>
+<span class="kn">from</span> <span class="nn">sas.sascalc.calculator.slit_length_calculator</span> <span class="kn">import</span> <span class="n">SlitlengthCalculator</span>
+<span class="kn">from</span> <span class="nn">calculator_widgets</span> <span class="kn">import</span> <span class="n">OutputTextCtrl</span>
+<span class="kn">from</span> <span class="nn">calculator_widgets</span> <span class="kn">import</span> <span class="n">InterActiveOutputTextCtrl</span>
+<span class="kn">from</span> <span class="nn">sas.sasgui.perspectives.calculator</span> <span class="kn">import</span> <span class="n">calculator_widgets</span> <span class="k">as</span> <span class="n">widget</span>
+<span class="kn">from</span> <span class="nn">sas.sasgui.guiframe.documentation_window</span> <span class="kn">import</span> <span class="n">DocumentationWindow</span>
+
+<span class="n">_BOX_WIDTH</span> <span class="o">=</span> <span class="mi">76</span>
+<span class="c1">#Slit length panel size </span>
+<span class="k">if</span> <span class="n">sys</span><span class="o">.</span><span class="n">platform</span><span class="o">.</span><span class="n">count</span><span class="p">(</span><span class="s2">&quot;win32&quot;</span><span class="p">)</span> <span class="o">&gt;</span> <span class="mi">0</span><span class="p">:</span>
+    <span class="n">PANEL_TOP</span> <span class="o">=</span> <span class="mi">0</span>
+    <span class="n">PANEL_WIDTH</span> <span class="o">=</span> <span class="mi">500</span>
+    <span class="n">PANEL_HEIGHT</span> <span class="o">=</span> <span class="mi">210</span>
+    <span class="n">FONT_VARIANT</span> <span class="o">=</span> <span class="mi">0</span>
+<span class="k">else</span><span class="p">:</span>
+    <span class="n">PANEL_TOP</span> <span class="o">=</span> <span class="mi">60</span>
+    <span class="n">PANEL_WIDTH</span> <span class="o">=</span> <span class="mi">530</span>
+    <span class="n">PANEL_HEIGHT</span> <span class="o">=</span> <span class="mi">210</span>
+    <span class="n">FONT_VARIANT</span> <span class="o">=</span> <span class="mi">1</span>
+
+<div class="viewcode-block" id="SlitLengthCalculatorPanel"><a class="viewcode-back" href="../../../../../dev/api/sas.sasgui.perspectives.calculator.html#sas.sasgui.perspectives.calculator.slit_length_calculator_panel.SlitLengthCalculatorPanel">[docs]</a><span class="k">class</span> <span class="nc">SlitLengthCalculatorPanel</span><span class="p">(</span><span class="n">wx</span><span class="o">.</span><span class="n">Panel</span><span class="p">,</span> <span class="n">PanelBase</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Provides the slit length calculator GUI.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="c1">## Internal nickname for the window, used by the AUI manager</span>
+    <span class="n">window_name</span> <span class="o">=</span> <span class="s2">&quot;Slit Size Calculator&quot;</span>
+    <span class="c1">## Name to appear on the window title bar</span>
+    <span class="n">window_caption</span> <span class="o">=</span> <span class="s2">&quot;Slit Size Calculator&quot;</span>
+    <span class="c1">## Flag to tell the AUI manager to put this panel in the center pane</span>
+    <span class="n">CENTER_PANE</span> <span class="o">=</span> <span class="bp">True</span>
+
+    <span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">parent</span><span class="p">,</span> <span class="o">*</span><span class="n">args</span><span class="p">,</span> <span class="o">**</span><span class="n">kwds</span><span class="p">):</span>
+        <span class="n">wx</span><span class="o">.</span><span class="n">Panel</span><span class="o">.</span><span class="n">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">parent</span><span class="p">,</span> <span class="o">*</span><span class="n">args</span><span class="p">,</span> <span class="o">**</span><span class="n">kwds</span><span class="p">)</span>
+        <span class="n">PanelBase</span><span class="o">.</span><span class="n">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span>
+        <span class="c1">#Font size </span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">SetWindowVariant</span><span class="p">(</span><span class="n">variant</span><span class="o">=</span><span class="n">FONT_VARIANT</span><span class="p">)</span>
+        <span class="c1">#thread to read data </span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">reader</span> <span class="o">=</span> <span class="bp">None</span>
+        <span class="c1"># Default location</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_default_save_location</span> <span class="o">=</span> <span class="n">os</span><span class="o">.</span><span class="n">getcwd</span><span class="p">()</span>
+        <span class="c1"># Object that receive status event</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">parent</span> <span class="o">=</span> <span class="n">parent</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_do_layout</span><span class="p">()</span>
+
+    <span class="k">def</span> <span class="nf">_define_structure</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">            Define the main sizers building to build this application.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">main_sizer</span> <span class="o">=</span> <span class="n">wx</span><span class="o">.</span><span class="n">BoxSizer</span><span class="p">(</span><span class="n">wx</span><span class="o">.</span><span class="n">VERTICAL</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">box_source</span> <span class="o">=</span> <span class="n">wx</span><span class="o">.</span><span class="n">StaticBox</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="o">-</span><span class="mi">1</span><span class="p">,</span> <span class="nb">str</span><span class="p">(</span><span class="s2">&quot;Slit Size Calculator&quot;</span><span class="p">))</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">boxsizer_source</span> <span class="o">=</span> <span class="n">wx</span><span class="o">.</span><span class="n">StaticBoxSizer</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">box_source</span><span class="p">,</span>
+                                                    <span class="n">wx</span><span class="o">.</span><span class="n">VERTICAL</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">data_name_sizer</span> <span class="o">=</span> <span class="n">wx</span><span class="o">.</span><span class="n">BoxSizer</span><span class="p">(</span><span class="n">wx</span><span class="o">.</span><span class="n">HORIZONTAL</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">slit_size_sizer</span> <span class="o">=</span> <span class="n">wx</span><span class="o">.</span><span class="n">BoxSizer</span><span class="p">(</span><span class="n">wx</span><span class="o">.</span><span class="n">HORIZONTAL</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">hint_sizer</span> <span class="o">=</span> <span class="n">wx</span><span class="o">.</span><span class="n">BoxSizer</span><span class="p">(</span><span class="n">wx</span><span class="o">.</span><span class="n">HORIZONTAL</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">button_sizer</span> <span class="o">=</span> <span class="n">wx</span><span class="o">.</span><span class="n">BoxSizer</span><span class="p">(</span><span class="n">wx</span><span class="o">.</span><span class="n">HORIZONTAL</span><span class="p">)</span>
+
+    <span class="k">def</span> <span class="nf">_layout_data_name</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">            Fill the sizer containing data&#39;s name</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">data_name_txt</span> <span class="o">=</span> <span class="n">wx</span><span class="o">.</span><span class="n">StaticText</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="o">-</span><span class="mi">1</span><span class="p">,</span> <span class="s1">&#39;Data: &#39;</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">data_name_tcl</span> <span class="o">=</span> <span class="n">OutputTextCtrl</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="o">-</span><span class="mi">1</span><span class="p">,</span>
+                                            <span class="n">size</span><span class="o">=</span><span class="p">(</span><span class="n">_BOX_WIDTH</span> <span class="o">*</span> <span class="mi">4</span><span class="p">,</span> <span class="o">-</span><span class="mi">1</span><span class="p">))</span>
+        <span class="n">data_hint</span> <span class="o">=</span> <span class="s2">&quot;Loaded data&quot;</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">data_name_tcl</span><span class="o">.</span><span class="n">SetToolTipString</span><span class="p">(</span><span class="n">data_hint</span><span class="p">)</span>
+        <span class="c1">#control that triggers importing data</span>
+        <span class="nb">id</span> <span class="o">=</span> <span class="n">wx</span><span class="o">.</span><span class="n">NewId</span><span class="p">()</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">browse_button</span> <span class="o">=</span> <span class="n">wx</span><span class="o">.</span><span class="n">Button</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="nb">id</span><span class="p">,</span> <span class="s2">&quot;Browse&quot;</span><span class="p">)</span>
+        <span class="n">hint_on_browse</span> <span class="o">=</span> <span class="s2">&quot;Click on this button to import data in this panel.&quot;</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">browse_button</span><span class="o">.</span><span class="n">SetToolTipString</span><span class="p">(</span><span class="n">hint_on_browse</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">Bind</span><span class="p">(</span><span class="n">wx</span><span class="o">.</span><span class="n">EVT_BUTTON</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">on_load_data</span><span class="p">,</span> <span class="nb">id</span><span class="o">=</span><span class="nb">id</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">data_name_sizer</span><span class="o">.</span><span class="n">AddMany</span><span class="p">([(</span><span class="n">data_name_txt</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="n">wx</span><span class="o">.</span><span class="n">LEFT</span><span class="p">,</span> <span class="mi">15</span><span class="p">),</span>
+                                      <span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">data_name_tcl</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="n">wx</span><span class="o">.</span><span class="n">LEFT</span><span class="p">,</span> <span class="mi">10</span><span class="p">),</span>
+                                      <span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">browse_button</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="n">wx</span><span class="o">.</span><span class="n">LEFT</span><span class="p">,</span> <span class="mi">10</span><span class="p">)])</span>
+    <span class="k">def</span> <span class="nf">_layout_slit_size</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">            Fill the sizer containing slit size information</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">slit_size_txt</span> <span class="o">=</span> <span class="n">wx</span><span class="o">.</span><span class="n">StaticText</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="o">-</span><span class="mi">1</span><span class="p">,</span> <span class="s1">&#39;Slit Size (FWHM/2): &#39;</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">slit_size_tcl</span> <span class="o">=</span> <span class="n">InterActiveOutputTextCtrl</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="o">-</span><span class="mi">1</span><span class="p">,</span>
+                                                       <span class="n">size</span><span class="o">=</span><span class="p">(</span><span class="n">_BOX_WIDTH</span><span class="p">,</span> <span class="o">-</span><span class="mi">1</span><span class="p">))</span>
+        <span class="n">slit_size_hint</span> <span class="o">=</span> <span class="s2">&quot; Estimated full slit size&quot;</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">slit_size_tcl</span><span class="o">.</span><span class="n">SetToolTipString</span><span class="p">(</span><span class="n">slit_size_hint</span><span class="p">)</span>
+        <span class="n">slit_size_unit_txt</span> <span class="o">=</span> <span class="n">wx</span><span class="o">.</span><span class="n">StaticText</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="o">-</span><span class="mi">1</span><span class="p">,</span> <span class="s1">&#39;Unit: &#39;</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">slit_size_unit_tcl</span> <span class="o">=</span> <span class="n">OutputTextCtrl</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="o">-</span><span class="mi">1</span><span class="p">,</span>
+                                                 <span class="n">size</span><span class="o">=</span><span class="p">(</span><span class="n">_BOX_WIDTH</span><span class="p">,</span> <span class="o">-</span><span class="mi">1</span><span class="p">))</span>
+        <span class="n">slit_size_unit_hint</span> <span class="o">=</span> <span class="s2">&quot;Full slit size&#39;s unit&quot;</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">slit_size_unit_tcl</span><span class="o">.</span><span class="n">SetToolTipString</span><span class="p">(</span><span class="n">slit_size_unit_hint</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">slit_size_sizer</span><span class="o">.</span><span class="n">AddMany</span><span class="p">([(</span><span class="n">slit_size_txt</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="n">wx</span><span class="o">.</span><span class="n">LEFT</span><span class="p">,</span> <span class="mi">15</span><span class="p">),</span>
+                                      <span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">slit_size_tcl</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="n">wx</span><span class="o">.</span><span class="n">LEFT</span><span class="p">,</span> <span class="mi">10</span><span class="p">),</span>
+                                      <span class="p">(</span><span class="n">slit_size_unit_txt</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="n">wx</span><span class="o">.</span><span class="n">LEFT</span><span class="p">,</span> <span class="mi">10</span><span class="p">),</span>
+                                    <span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">slit_size_unit_tcl</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="n">wx</span><span class="o">.</span><span class="n">LEFT</span><span class="p">,</span> <span class="mi">10</span><span class="p">)])</span>
+
+    <span class="k">def</span> <span class="nf">_layout_hint</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">            Fill the sizer containing hint</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">hint_msg</span> <span class="o">=</span> <span class="s2">&quot;This calculation works only for  SAXSess beam profile data.&quot;</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">hint_txt</span> <span class="o">=</span> <span class="n">wx</span><span class="o">.</span><span class="n">StaticText</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="o">-</span><span class="mi">1</span><span class="p">,</span> <span class="n">hint_msg</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">hint_sizer</span><span class="o">.</span><span class="n">AddMany</span><span class="p">([(</span><span class="bp">self</span><span class="o">.</span><span class="n">hint_txt</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="n">wx</span><span class="o">.</span><span class="n">LEFT</span><span class="p">,</span> <span class="mi">15</span><span class="p">)])</span>
+
+    <span class="k">def</span> <span class="nf">_layout_button</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">            Do the layout for the button widgets</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">bt_close</span> <span class="o">=</span> <span class="n">wx</span><span class="o">.</span><span class="n">Button</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">wx</span><span class="o">.</span><span class="n">ID_CANCEL</span><span class="p">,</span> <span class="s1">&#39;Close&#39;</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">bt_close</span><span class="o">.</span><span class="n">Bind</span><span class="p">(</span><span class="n">wx</span><span class="o">.</span><span class="n">EVT_BUTTON</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">on_close</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">bt_close</span><span class="o">.</span><span class="n">SetToolTipString</span><span class="p">(</span><span class="s2">&quot;Close this window.&quot;</span><span class="p">)</span>
+
+        <span class="nb">id</span> <span class="o">=</span> <span class="n">wx</span><span class="o">.</span><span class="n">NewId</span><span class="p">()</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">button_help</span> <span class="o">=</span> <span class="n">wx</span><span class="o">.</span><span class="n">Button</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="nb">id</span><span class="p">,</span> <span class="s2">&quot;HELP&quot;</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">button_help</span><span class="o">.</span><span class="n">SetToolTipString</span><span class="p">(</span><span class="s2">&quot;Help for slit length calculator.&quot;</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">Bind</span><span class="p">(</span><span class="n">wx</span><span class="o">.</span><span class="n">EVT_BUTTON</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">on_help</span><span class="p">,</span> <span class="nb">id</span><span class="o">=</span><span class="nb">id</span><span class="p">)</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">button_sizer</span><span class="o">.</span><span class="n">AddMany</span><span class="p">([(</span><span class="bp">self</span><span class="o">.</span><span class="n">button_help</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="n">wx</span><span class="o">.</span><span class="n">LEFT</span><span class="p">,</span> <span class="mi">280</span><span class="p">),</span>
+                                   <span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">bt_close</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="n">wx</span><span class="o">.</span><span class="n">LEFT</span><span class="p">,</span> <span class="mi">20</span><span class="p">)])</span>
+
+    <span class="k">def</span> <span class="nf">_do_layout</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">            Draw window content</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_define_structure</span><span class="p">()</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_layout_data_name</span><span class="p">()</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_layout_slit_size</span><span class="p">()</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_layout_hint</span><span class="p">()</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_layout_button</span><span class="p">()</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">boxsizer_source</span><span class="o">.</span><span class="n">AddMany</span><span class="p">([(</span><span class="bp">self</span><span class="o">.</span><span class="n">data_name_sizer</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span>
+                                          <span class="n">wx</span><span class="o">.</span><span class="n">EXPAND</span> <span class="o">|</span> <span class="n">wx</span><span class="o">.</span><span class="n">TOP</span> <span class="o">|</span> <span class="n">wx</span><span class="o">.</span><span class="n">BOTTOM</span><span class="p">,</span> <span class="mi">5</span><span class="p">),</span>
+                                   <span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">slit_size_sizer</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span>
+                                     <span class="n">wx</span><span class="o">.</span><span class="n">EXPAND</span> <span class="o">|</span> <span class="n">wx</span><span class="o">.</span><span class="n">TOP</span> <span class="o">|</span> <span class="n">wx</span><span class="o">.</span><span class="n">BOTTOM</span><span class="p">,</span> <span class="mi">5</span><span class="p">),</span>
+                                     <span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">hint_sizer</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span>
+                                     <span class="n">wx</span><span class="o">.</span><span class="n">EXPAND</span> <span class="o">|</span> <span class="n">wx</span><span class="o">.</span><span class="n">TOP</span> <span class="o">|</span> <span class="n">wx</span><span class="o">.</span><span class="n">BOTTOM</span><span class="p">,</span> <span class="mi">5</span><span class="p">)])</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">main_sizer</span><span class="o">.</span><span class="n">AddMany</span><span class="p">([(</span><span class="bp">self</span><span class="o">.</span><span class="n">boxsizer_source</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="n">wx</span><span class="o">.</span><span class="n">ALL</span><span class="p">,</span> <span class="mi">10</span><span class="p">),</span>
+                                  <span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">button_sizer</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span>
+                                    <span class="n">wx</span><span class="o">.</span><span class="n">EXPAND</span> <span class="o">|</span> <span class="n">wx</span><span class="o">.</span><span class="n">TOP</span> <span class="o">|</span> <span class="n">wx</span><span class="o">.</span><span class="n">BOTTOM</span><span class="p">,</span> <span class="mi">5</span><span class="p">)])</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">SetSizer</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">main_sizer</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">SetAutoLayout</span><span class="p">(</span><span class="bp">True</span><span class="p">)</span>
+
+<div class="viewcode-block" id="SlitLengthCalculatorPanel.choose_data_file"><a class="viewcode-back" href="../../../../../dev/api/sas.sasgui.perspectives.calculator.html#sas.sasgui.perspectives.calculator.slit_length_calculator_panel.SlitLengthCalculatorPanel.choose_data_file">[docs]</a>    <span class="k">def</span> <span class="nf">choose_data_file</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">location</span><span class="o">=</span><span class="bp">None</span><span class="p">):</span>
+        <span class="n">path</span> <span class="o">=</span> <span class="bp">None</span>
+        <span class="n">filename</span> <span class="o">=</span> <span class="s1">&#39;&#39;</span>
+        <span class="k">if</span> <span class="n">location</span> <span class="o">==</span> <span class="bp">None</span><span class="p">:</span>
+            <span class="n">location</span> <span class="o">=</span> <span class="n">os</span><span class="o">.</span><span class="n">getcwd</span><span class="p">()</span>
+
+        <span class="n">wildcard</span> <span class="o">=</span> <span class="s2">&quot;SAXSess Data 1D (*.DAT, *.dat)|*.DAT&quot;</span>
+
+        <span class="n">dlg</span> <span class="o">=</span> <span class="n">wx</span><span class="o">.</span><span class="n">FileDialog</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="s2">&quot;Choose a file&quot;</span><span class="p">,</span> <span class="n">location</span><span class="p">,</span>
+                            <span class="s2">&quot;&quot;</span><span class="p">,</span> <span class="n">wildcard</span><span class="p">,</span> <span class="n">wx</span><span class="o">.</span><span class="n">OPEN</span><span class="p">)</span>
+        <span class="k">if</span> <span class="n">dlg</span><span class="o">.</span><span class="n">ShowModal</span><span class="p">()</span> <span class="o">==</span> <span class="n">wx</span><span class="o">.</span><span class="n">ID_OK</span><span class="p">:</span>
+            <span class="n">path</span> <span class="o">=</span> <span class="n">dlg</span><span class="o">.</span><span class="n">GetPath</span><span class="p">()</span>
+            <span class="n">filename</span> <span class="o">=</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">basename</span><span class="p">(</span><span class="n">path</span><span class="p">)</span>
+        <span class="n">dlg</span><span class="o">.</span><span class="n">Destroy</span><span class="p">()</span>
+
+        <span class="k">return</span> <span class="n">path</span></div>
+
+<div class="viewcode-block" id="SlitLengthCalculatorPanel.on_help"><a class="viewcode-back" href="../../../../../dev/api/sas.sasgui.perspectives.calculator.html#sas.sasgui.perspectives.calculator.slit_length_calculator_panel.SlitLengthCalculatorPanel.on_help">[docs]</a>    <span class="k">def</span> <span class="nf">on_help</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">event</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Bring up the slit length calculator Documentation whenever</span>
+<span class="sd">        the HELP button is clicked.</span>
+
+<span class="sd">        Calls DocumentationWindow with the path of the location within the</span>
+<span class="sd">        documentation tree (after /doc/ ....&quot;.  Note that when using old</span>
+<span class="sd">        versions of Wx (before 2.9) and thus not the release version of</span>
+<span class="sd">        installers, the help comes up at the top level of the file as</span>
+<span class="sd">        webbrowser does not pass anything past the # to the browser when it is</span>
+<span class="sd">        running &quot;file:///....&quot;</span>
+
+<span class="sd">    :param evt: Triggers on clicking the help button</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+
+        <span class="n">_TreeLocation</span> <span class="o">=</span> <span class="s2">&quot;user/sasgui/perspectives/calculator/&quot;</span>
+        <span class="n">_TreeLocation</span> <span class="o">+=</span> <span class="s2">&quot;slit_calculator_help.html&quot;</span>
+        <span class="n">_doc_viewer</span> <span class="o">=</span> <span class="n">DocumentationWindow</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="o">-</span><span class="mi">1</span><span class="p">,</span> <span class="n">_TreeLocation</span><span class="p">,</span> <span class="s2">&quot;&quot;</span><span class="p">,</span>
+                                          <span class="s2">&quot;Slit Length Calculator Help&quot;</span><span class="p">)</span></div>
+
+<div class="viewcode-block" id="SlitLengthCalculatorPanel.on_close"><a class="viewcode-back" href="../../../../../dev/api/sas.sasgui.perspectives.calculator.html#sas.sasgui.perspectives.calculator.slit_length_calculator_panel.SlitLengthCalculatorPanel.on_close">[docs]</a>    <span class="k">def</span> <span class="nf">on_close</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">event</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">            close the window containing this panel</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">parent</span><span class="o">.</span><span class="n">Close</span><span class="p">()</span></div>
+
+<div class="viewcode-block" id="SlitLengthCalculatorPanel.on_load_data"><a class="viewcode-back" href="../../../../../dev/api/sas.sasgui.perspectives.calculator.html#sas.sasgui.perspectives.calculator.slit_length_calculator_panel.SlitLengthCalculatorPanel.on_load_data">[docs]</a>    <span class="k">def</span> <span class="nf">on_load_data</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">event</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">            Open a file dialog to allow the user to select a given file.</span>
+<span class="sd">            The user is only allow to load file with extension .DAT or .dat.</span>
+<span class="sd">            Display the slit size corresponding to the loaded data.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">path</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">choose_data_file</span><span class="p">(</span><span class="n">location</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">_default_save_location</span><span class="p">)</span>
+
+        <span class="k">if</span> <span class="n">path</span> <span class="ow">is</span> <span class="bp">None</span><span class="p">:</span>
+            <span class="k">return</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_default_save_location</span> <span class="o">=</span> <span class="n">path</span>
+        <span class="k">try</span><span class="p">:</span>
+            <span class="c1">#Load data</span>
+            <span class="kn">from</span> <span class="nn">load_thread</span> <span class="kn">import</span> <span class="n">DataReader</span>
+            <span class="c1">## If a thread is already started, stop it</span>
+            <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">reader</span> <span class="ow">is</span> <span class="ow">not</span> <span class="bp">None</span> <span class="ow">and</span> <span class="bp">self</span><span class="o">.</span><span class="n">reader</span><span class="o">.</span><span class="n">isrunning</span><span class="p">():</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">reader</span><span class="o">.</span><span class="n">stop</span><span class="p">()</span>
+            <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">parent</span><span class="o">.</span><span class="n">parent</span> <span class="ow">is</span> <span class="ow">not</span> <span class="bp">None</span><span class="p">:</span>
+                <span class="n">wx</span><span class="o">.</span><span class="n">PostEvent</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">parent</span><span class="o">.</span><span class="n">parent</span><span class="p">,</span>
+                                <span class="n">StatusEvent</span><span class="p">(</span><span class="n">status</span><span class="o">=</span><span class="s2">&quot;Loading...&quot;</span><span class="p">,</span>
+                                <span class="nb">type</span><span class="o">=</span><span class="s2">&quot;progress&quot;</span><span class="p">))</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">reader</span> <span class="o">=</span> <span class="n">DataReader</span><span class="p">(</span><span class="n">path</span><span class="o">=</span><span class="n">path</span><span class="p">,</span>
+                                    <span class="n">completefn</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">complete_loading</span><span class="p">,</span>
+                                    <span class="n">updatefn</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">load_update</span><span class="p">)</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">reader</span><span class="o">.</span><span class="n">queue</span><span class="p">()</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">load_update</span><span class="p">()</span>
+        <span class="k">except</span><span class="p">:</span>
+            <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">parent</span><span class="o">.</span><span class="n">parent</span> <span class="ow">is</span> <span class="bp">None</span><span class="p">:</span>
+                <span class="k">return</span>
+            <span class="n">msg</span> <span class="o">=</span> <span class="s2">&quot;Slit Length Calculator: </span><span class="si">%s</span><span class="s2">&quot;</span> <span class="o">%</span> <span class="p">(</span><span class="n">sys</span><span class="o">.</span><span class="n">exc_value</span><span class="p">)</span>
+            <span class="n">wx</span><span class="o">.</span><span class="n">PostEvent</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">parent</span><span class="o">.</span><span class="n">parent</span><span class="p">,</span>
+                          <span class="n">StatusEvent</span><span class="p">(</span><span class="n">status</span><span class="o">=</span><span class="n">msg</span><span class="p">,</span> <span class="nb">type</span><span class="o">=</span><span class="s1">&#39;stop&#39;</span><span class="p">))</span>
+            <span class="k">return</span></div>
+
+<div class="viewcode-block" id="SlitLengthCalculatorPanel.load_update"><a class="viewcode-back" href="../../../../../dev/api/sas.sasgui.perspectives.calculator.html#sas.sasgui.perspectives.calculator.slit_length_calculator_panel.SlitLengthCalculatorPanel.load_update">[docs]</a>    <span class="k">def</span> <span class="nf">load_update</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        print update on the status bar</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">parent</span><span class="o">.</span><span class="n">parent</span> <span class="ow">is</span> <span class="bp">None</span><span class="p">:</span>
+                <span class="k">return</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">reader</span><span class="o">.</span><span class="n">isrunning</span><span class="p">():</span>
+            <span class="nb">type</span> <span class="o">=</span> <span class="s2">&quot;progress&quot;</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="nb">type</span> <span class="o">=</span> <span class="s2">&quot;stop&quot;</span>
+        <span class="n">wx</span><span class="o">.</span><span class="n">PostEvent</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">parent</span><span class="o">.</span><span class="n">parent</span><span class="p">,</span> <span class="n">StatusEvent</span><span class="p">(</span><span class="n">status</span><span class="o">=</span><span class="s2">&quot;&quot;</span><span class="p">,</span>
+                                                  <span class="nb">type</span><span class="o">=</span><span class="nb">type</span><span class="p">))</span></div>
+
+<div class="viewcode-block" id="SlitLengthCalculatorPanel.complete_loading"><a class="viewcode-back" href="../../../../../dev/api/sas.sasgui.perspectives.calculator.html#sas.sasgui.perspectives.calculator.slit_length_calculator_panel.SlitLengthCalculatorPanel.complete_loading">[docs]</a>    <span class="k">def</span> <span class="nf">complete_loading</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">data</span><span class="o">=</span><span class="bp">None</span><span class="p">,</span> <span class="n">filename</span><span class="o">=</span><span class="s1">&#39;&#39;</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">            Complete the loading and compute the slit size</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">if</span> <span class="n">data</span> <span class="ow">is</span> <span class="bp">None</span> <span class="ow">or</span> <span class="n">data</span><span class="o">.</span><span class="n">__class__</span><span class="o">.</span><span class="n">__name__</span> <span class="o">==</span> <span class="s1">&#39;Data2D&#39;</span><span class="p">:</span>
+            <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">parent</span><span class="o">.</span><span class="n">parent</span> <span class="ow">is</span> <span class="bp">None</span><span class="p">:</span>
+                <span class="k">return</span>
+            <span class="n">msg</span> <span class="o">=</span> <span class="s2">&quot;Slit Length cannot be computed for 2D Data&quot;</span>
+            <span class="n">wx</span><span class="o">.</span><span class="n">PostEvent</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">parent</span><span class="o">.</span><span class="n">parent</span><span class="p">,</span>
+                         <span class="n">StatusEvent</span><span class="p">(</span><span class="n">status</span><span class="o">=</span><span class="n">msg</span><span class="p">,</span> <span class="nb">type</span><span class="o">=</span><span class="s1">&#39;stop&#39;</span><span class="p">))</span>
+            <span class="k">return</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">data_name_tcl</span><span class="o">.</span><span class="n">SetValue</span><span class="p">(</span><span class="nb">str</span><span class="p">(</span><span class="n">data</span><span class="o">.</span><span class="n">filename</span><span class="p">))</span>
+        <span class="c1">#compute the slit size</span>
+        <span class="k">try</span><span class="p">:</span>
+            <span class="n">x</span> <span class="o">=</span> <span class="n">data</span><span class="o">.</span><span class="n">x</span>
+            <span class="n">y</span> <span class="o">=</span> <span class="n">data</span><span class="o">.</span><span class="n">y</span>
+            <span class="k">if</span> <span class="n">x</span> <span class="o">==</span> <span class="p">[]</span> <span class="ow">or</span>  <span class="n">x</span> <span class="ow">is</span> <span class="bp">None</span> <span class="ow">or</span> <span class="n">y</span> <span class="o">==</span> <span class="p">[]</span> <span class="ow">or</span> <span class="n">y</span> <span class="ow">is</span> <span class="bp">None</span><span class="p">:</span>
+                <span class="n">msg</span> <span class="o">=</span> <span class="s2">&quot;The current data is empty please check x and y&quot;</span>
+                <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">,</span> <span class="n">msg</span>
+            <span class="n">slit_length_calculator</span> <span class="o">=</span> <span class="n">SlitlengthCalculator</span><span class="p">()</span>
+            <span class="n">slit_length_calculator</span><span class="o">.</span><span class="n">set_data</span><span class="p">(</span><span class="n">x</span><span class="o">=</span><span class="n">x</span><span class="p">,</span> <span class="n">y</span><span class="o">=</span><span class="n">y</span><span class="p">)</span>
+            <span class="n">slit_length</span> <span class="o">=</span> <span class="n">slit_length_calculator</span><span class="o">.</span><span class="n">calculate_slit_length</span><span class="p">()</span>
+        <span class="k">except</span><span class="p">:</span>
+            <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">parent</span><span class="o">.</span><span class="n">parent</span> <span class="ow">is</span> <span class="bp">None</span><span class="p">:</span>
+                <span class="k">return</span>
+            <span class="n">msg</span> <span class="o">=</span> <span class="s2">&quot;Slit Size Calculator: </span><span class="si">%s</span><span class="s2">&quot;</span> <span class="o">%</span> <span class="p">(</span><span class="n">sys</span><span class="o">.</span><span class="n">exc_value</span><span class="p">)</span>
+            <span class="n">wx</span><span class="o">.</span><span class="n">PostEvent</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">parent</span><span class="o">.</span><span class="n">parent</span><span class="p">,</span>
+                          <span class="n">StatusEvent</span><span class="p">(</span><span class="n">status</span><span class="o">=</span><span class="n">msg</span><span class="p">,</span> <span class="nb">type</span><span class="o">=</span><span class="s1">&#39;stop&#39;</span><span class="p">))</span>
+            <span class="k">return</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">slit_size_tcl</span><span class="o">.</span><span class="n">SetValue</span><span class="p">(</span><span class="nb">str</span><span class="p">(</span><span class="n">slit_length</span><span class="p">))</span>
+        <span class="c1">#Display unit</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">slit_size_unit_tcl</span><span class="o">.</span><span class="n">SetValue</span><span class="p">(</span><span class="s1">&#39;[Unknown]&#39;</span><span class="p">)</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">parent</span><span class="o">.</span><span class="n">parent</span> <span class="ow">is</span> <span class="bp">None</span><span class="p">:</span>
+            <span class="k">return</span>
+        <span class="n">msg</span> <span class="o">=</span> <span class="s2">&quot;Load Complete&quot;</span>
+        <span class="n">wx</span><span class="o">.</span><span class="n">PostEvent</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">parent</span><span class="o">.</span><span class="n">parent</span><span class="p">,</span> <span class="n">StatusEvent</span><span class="p">(</span><span class="n">status</span><span class="o">=</span><span class="n">msg</span><span class="p">,</span> <span class="nb">type</span><span class="o">=</span><span class="s1">&#39;stop&#39;</span><span class="p">))</span></div></div>
+
+
+<div class="viewcode-block" id="SlitLengthCalculatorWindow"><a class="viewcode-back" href="../../../../../dev/api/sas.sasgui.perspectives.calculator.html#sas.sasgui.perspectives.calculator.slit_length_calculator_panel.SlitLengthCalculatorWindow">[docs]</a><span class="k">class</span> <span class="nc">SlitLengthCalculatorWindow</span><span class="p">(</span><span class="n">widget</span><span class="o">.</span><span class="n">CHILD_FRAME</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">parent</span><span class="o">=</span><span class="bp">None</span><span class="p">,</span> <span class="n">manager</span><span class="o">=</span><span class="bp">None</span><span class="p">,</span> <span class="n">title</span><span class="o">=</span><span class="s2">&quot;Slit Size Calculator&quot;</span><span class="p">,</span>
+                <span class="n">size</span><span class="o">=</span><span class="p">(</span><span class="n">PANEL_WIDTH</span><span class="p">,</span> <span class="n">PANEL_HEIGHT</span><span class="p">),</span> <span class="o">*</span><span class="n">args</span><span class="p">,</span> <span class="o">**</span><span class="n">kwds</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">kwds</span><span class="p">[</span><span class="s1">&#39;size&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="n">size</span>
+        <span class="n">kwds</span><span class="p">[</span><span class="s1">&#39;title&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="n">title</span>
+        <span class="n">widget</span><span class="o">.</span><span class="n">CHILD_FRAME</span><span class="o">.</span><span class="n">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">parent</span><span class="p">,</span> <span class="o">*</span><span class="n">args</span><span class="p">,</span> <span class="o">**</span><span class="n">kwds</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">parent</span> <span class="o">=</span> <span class="n">parent</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">manager</span> <span class="o">=</span> <span class="n">manager</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">panel</span> <span class="o">=</span> <span class="n">SlitLengthCalculatorPanel</span><span class="p">(</span><span class="n">parent</span><span class="o">=</span><span class="bp">self</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">Bind</span><span class="p">(</span><span class="n">wx</span><span class="o">.</span><span class="n">EVT_CLOSE</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">on_close</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">SetPosition</span><span class="p">((</span><span class="n">wx</span><span class="o">.</span><span class="n">LEFT</span><span class="p">,</span> <span class="n">PANEL_TOP</span><span class="p">))</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">Show</span><span class="p">(</span><span class="bp">True</span><span class="p">)</span>
+
+<div class="viewcode-block" id="SlitLengthCalculatorWindow.on_close"><a class="viewcode-back" href="../../../../../dev/api/sas.sasgui.perspectives.calculator.html#sas.sasgui.perspectives.calculator.slit_length_calculator_panel.SlitLengthCalculatorWindow.on_close">[docs]</a>    <span class="k">def</span> <span class="nf">on_close</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">event</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Close event</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">manager</span> <span class="o">!=</span> <span class="bp">None</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">manager</span><span class="o">.</span><span class="n">cal_slit_frame</span> <span class="o">=</span> <span class="bp">None</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">Destroy</span><span class="p">()</span></div></div>
+
+<span class="k">if</span> <span class="n">__name__</span> <span class="o">==</span> <span class="s2">&quot;__main__&quot;</span><span class="p">:</span>
+    <span class="n">app</span> <span class="o">=</span> <span class="n">wx</span><span class="o">.</span><span class="n">PySimpleApp</span><span class="p">()</span>
+    <span class="n">widget</span><span class="o">.</span><span class="n">CHILD_FRAME</span> <span class="o">=</span> <span class="n">wx</span><span class="o">.</span><span class="n">Frame</span>
+    <span class="n">frame</span> <span class="o">=</span> <span class="n">SlitLengthCalculatorWindow</span><span class="p">()</span>
+    <span class="n">frame</span><span class="o">.</span><span class="n">Show</span><span class="p">(</span><span class="bp">True</span><span class="p">)</span>
+    <span class="n">app</span><span class="o">.</span><span class="n">MainLoop</span><span class="p">()</span>
+</pre></div>
+
+          </div>
+        </div>
+      </div>
+      <div class="sphinxsidebar" role="navigation" aria-label="main navigation">
+        <div class="sphinxsidebarwrapper">
+<div id="searchbox" style="display: none" role="search">
+  <h3>Quick search</h3>
+    <form class="search" action="../../../../../search.html" method="get">
+      <input type="text" name="q" />
+      <input type="submit" value="Go" />
+      <input type="hidden" name="check_keywords" value="yes" />
+      <input type="hidden" name="area" value="default" />
+    </form>
+</div>
+<script type="text/javascript">$('#searchbox').show(0);</script>
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="related" role="navigation" aria-label="related navigation">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="../../../../../genindex.html" title="General Index"
+             >index</a></li>
+        <li class="right" >
+          <a href="../../../../../py-modindex.html" title="Python Module Index"
+             >modules</a> |</li>
+        <li class="nav-item nav-item-0"><a href="../../../../../index.html">SasView 4.0.0 documentation</a> &raquo;</li>
+          <li class="nav-item nav-item-1"><a href="../../../../index.html" >Module code</a> &raquo;</li>
+          <li class="nav-item nav-item-2"><a href="../calculator.html" >sas.sasgui.perspectives.calculator</a> &raquo;</li> 
+      </ul>
+    </div>
+    <div class="footer" role="contentinfo">
+        &copy; Copyright 2015, The SasView Project.
+      Created using <a href="http://sphinx-doc.org/">Sphinx</a> 1.4.
+    </div>
+  </body>
+</html>

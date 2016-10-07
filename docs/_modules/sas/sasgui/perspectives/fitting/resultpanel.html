@@ -1,0 +1,191 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+  "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+    
+    <title>sas.sasgui.perspectives.fitting.resultpanel &mdash; SasView 4.0.0 documentation</title>
+    
+    <link rel="stylesheet" href="../../../../../_static/classic.css" type="text/css" />
+    <link rel="stylesheet" href="../../../../../_static/pygments.css" type="text/css" />
+    
+    <script type="text/javascript">
+      var DOCUMENTATION_OPTIONS = {
+        URL_ROOT:    '../../../../../',
+        VERSION:     '4.0.0',
+        COLLAPSE_INDEX: false,
+        FILE_SUFFIX: '.html',
+        HAS_SOURCE:  true
+      };
+    </script>
+    <script type="text/javascript" src="../../../../../_static/jquery.js"></script>
+    <script type="text/javascript" src="../../../../../_static/underscore.js"></script>
+    <script type="text/javascript" src="../../../../../_static/doctools.js"></script>
+    <script type="text/javascript" src="https://cdn.mathjax.org/mathjax/latest/MathJax.js?config=TeX-AMS-MML_HTMLorMML"></script>
+    <link rel="top" title="SasView 4.0.0 documentation" href="../../../../../index.html" />
+    <link rel="up" title="sas.sasgui.perspectives.fitting" href="../fitting.html" /> 
+  </head>
+  <body role="document">
+    <div class="related" role="navigation" aria-label="related navigation">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="../../../../../genindex.html" title="General Index"
+             accesskey="I">index</a></li>
+        <li class="right" >
+          <a href="../../../../../py-modindex.html" title="Python Module Index"
+             >modules</a> |</li>
+        <li class="nav-item nav-item-0"><a href="../../../../../index.html">SasView 4.0.0 documentation</a> &raquo;</li>
+          <li class="nav-item nav-item-1"><a href="../../../../index.html" >Module code</a> &raquo;</li>
+          <li class="nav-item nav-item-2"><a href="../fitting.html" accesskey="U">sas.sasgui.perspectives.fitting</a> &raquo;</li> 
+      </ul>
+    </div>  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          <div class="body" role="main">
+            
+  <h1>Source code for sas.sasgui.perspectives.fitting.resultpanel</h1><div class="highlight"><pre>
+<span></span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">FitPanel class contains fields allowing to fit  models and  data</span>
+
+<span class="sd">:note: For Fit to be performed the user should check at least one parameter</span>
+<span class="sd">    on fit Panel window.</span>
+
+<span class="sd">&quot;&quot;&quot;</span>
+<span class="kn">import</span> <span class="nn">wx</span>
+<span class="kn">import</span> <span class="nn">wx.lib.newevent</span>
+<span class="kn">from</span> <span class="nn">wx.aui</span> <span class="kn">import</span> <span class="n">AuiNotebook</span> <span class="k">as</span> <span class="n">Notebook</span>
+
+<span class="kn">import</span> <span class="nn">datetime</span>
+
+<span class="kn">from</span> <span class="nn">bumps.gui.convergence_view</span> <span class="kn">import</span> <span class="n">ConvergenceView</span>
+<span class="kn">from</span> <span class="nn">bumps.gui.uncertainty_view</span> <span class="kn">import</span> <span class="n">UncertaintyView</span><span class="p">,</span> <span class="n">CorrelationView</span><span class="p">,</span> <span class="n">TraceView</span>
+<span class="kn">from</span> <span class="nn">bumps.dream.stats</span> <span class="kn">import</span> <span class="n">var_stats</span><span class="p">,</span> <span class="n">format_vars</span>
+
+<span class="kn">from</span> <span class="nn">sas.sasgui.guiframe.panel_base</span> <span class="kn">import</span> <span class="n">PanelBase</span>
+<span class="kn">from</span> <span class="nn">sas.sasgui.guiframe.events</span> <span class="kn">import</span> <span class="n">StatusEvent</span>
+
+<span class="p">(</span><span class="n">PlotResultEvent</span><span class="p">,</span> <span class="n">EVT_PLOT_RESULT</span><span class="p">)</span> <span class="o">=</span> <span class="n">wx</span><span class="o">.</span><span class="n">lib</span><span class="o">.</span><span class="n">newevent</span><span class="o">.</span><span class="n">NewEvent</span><span class="p">()</span>
+
+
+<div class="viewcode-block" id="ResultPanel"><a class="viewcode-back" href="../../../../../dev/api/sas.sasgui.perspectives.fitting.html#sas.sasgui.perspectives.fitting.resultpanel.ResultPanel">[docs]</a><span class="k">class</span> <span class="nc">ResultPanel</span><span class="p">(</span><span class="n">Notebook</span><span class="p">,</span> <span class="n">PanelBase</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    FitPanel class contains fields allowing to fit  models and  data</span>
+
+<span class="sd">    :note: For Fit to be performed the user should check at least one parameter</span>
+<span class="sd">        on fit Panel window.</span>
+
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="c1">## Internal name for the AUI manager</span>
+    <span class="n">window_name</span> <span class="o">=</span> <span class="s2">&quot;Result panel&quot;</span>
+    <span class="c1">## Title to appear on top of the window</span>
+    <span class="n">window_caption</span> <span class="o">=</span> <span class="s2">&quot;Result Panel&quot;</span>
+    <span class="n">CENTER_PANE</span> <span class="o">=</span> <span class="bp">True</span>
+
+    <span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">parent</span><span class="p">,</span> <span class="n">manager</span><span class="o">=</span><span class="bp">None</span><span class="p">,</span> <span class="o">*</span><span class="n">args</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">style</span> <span class="o">=</span> <span class="p">((</span><span class="n">wx</span><span class="o">.</span><span class="n">aui</span><span class="o">.</span><span class="n">AUI_NB_WINDOWLIST_BUTTON</span>
+                 <span class="o">|</span> <span class="n">wx</span><span class="o">.</span><span class="n">aui</span><span class="o">.</span><span class="n">AUI_NB_DEFAULT_STYLE</span>
+                 <span class="o">|</span> <span class="n">wx</span><span class="o">.</span><span class="n">CLIP_CHILDREN</span><span class="p">)</span>
+                 <span class="o">&amp;</span> <span class="o">~</span><span class="n">wx</span><span class="o">.</span><span class="n">aui</span><span class="o">.</span><span class="n">AUI_NB_CLOSE_ON_ACTIVE_TAB</span><span class="p">)</span>
+        <span class="n">Notebook</span><span class="o">.</span><span class="n">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">parent</span><span class="p">,</span> <span class="n">wx</span><span class="o">.</span><span class="n">ID_ANY</span><span class="p">,</span> <span class="n">style</span><span class="o">=</span><span class="n">style</span><span class="p">)</span>
+        <span class="n">PanelBase</span><span class="o">.</span><span class="n">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">parent</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">frame</span> <span class="o">=</span> <span class="n">parent</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">Bind</span><span class="p">(</span><span class="n">EVT_PLOT_RESULT</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">on_plot_results</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">frame</span><span class="o">.</span><span class="n">Bind</span><span class="p">(</span><span class="n">wx</span><span class="o">.</span><span class="n">EVT_CLOSE</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">on_close</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_manager</span> <span class="o">=</span> <span class="bp">None</span>
+
+<div class="viewcode-block" id="ResultPanel.on_close"><a class="viewcode-back" href="../../../../../dev/api/sas.sasgui.perspectives.fitting.html#sas.sasgui.perspectives.fitting.resultpanel.ResultPanel.on_close">[docs]</a>    <span class="k">def</span> <span class="nf">on_close</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">event</span><span class="p">):</span>
+        <span class="k">if</span> <span class="n">event</span><span class="o">.</span><span class="n">CanVeto</span><span class="p">():</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">frame</span><span class="o">.</span><span class="n">Hide</span><span class="p">()</span>
+            <span class="n">event</span><span class="o">.</span><span class="n">Veto</span><span class="p">()</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">event</span><span class="o">.</span><span class="n">Skip</span><span class="p">()</span></div>
+
+<div class="viewcode-block" id="ResultPanel.on_plot_results"><a class="viewcode-back" href="../../../../../dev/api/sas.sasgui.perspectives.fitting.html#sas.sasgui.perspectives.fitting.resultpanel.ResultPanel.on_plot_results">[docs]</a>    <span class="k">def</span> <span class="nf">on_plot_results</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">event</span><span class="p">):</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">frame</span><span class="o">.</span><span class="n">Show</span><span class="p">(</span><span class="bp">True</span><span class="p">)</span>
+        <span class="n">result</span> <span class="o">=</span> <span class="n">event</span><span class="o">.</span><span class="n">result</span><span class="p">[</span><span class="mi">0</span><span class="p">][</span><span class="mi">0</span><span class="p">]</span>
+        <span class="n">filename</span> <span class="o">=</span> <span class="n">result</span><span class="o">.</span><span class="n">data</span><span class="o">.</span><span class="n">sas_data</span><span class="o">.</span><span class="n">filename</span>
+        <span class="n">current_time</span> <span class="o">=</span> <span class="n">datetime</span><span class="o">.</span><span class="n">datetime</span><span class="o">.</span><span class="n">now</span><span class="p">()</span><span class="o">.</span><span class="n">strftime</span><span class="p">(</span><span class="s2">&quot;%I:%M%p, %B </span><span class="si">%d</span><span class="s2">, %Y&quot;</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">parent</span><span class="o">.</span><span class="n">SetTitle</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">window_name</span> <span class="o">+</span> <span class="s2">&quot; - &quot;</span> <span class="o">+</span> <span class="n">filename</span> <span class="o">+</span> <span class="s2">&quot; - &quot;</span> <span class="o">+</span> <span class="n">current_time</span><span class="p">)</span>
+        <span class="k">if</span> <span class="nb">hasattr</span><span class="p">(</span><span class="n">result</span><span class="p">,</span> <span class="s1">&#39;convergence&#39;</span><span class="p">):</span>
+            <span class="n">best</span><span class="p">,</span> <span class="n">pop</span> <span class="o">=</span> <span class="n">result</span><span class="o">.</span><span class="n">convergence</span><span class="p">[:,</span> <span class="mi">0</span><span class="p">],</span> <span class="n">result</span><span class="o">.</span><span class="n">convergence</span><span class="p">[:,</span> <span class="mi">1</span><span class="p">:]</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_get_view</span><span class="p">(</span><span class="n">ConvergenceView</span><span class="p">)</span><span class="o">.</span><span class="n">update</span><span class="p">(</span><span class="n">best</span><span class="p">,</span> <span class="n">pop</span><span class="p">)</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_del_view</span><span class="p">(</span><span class="n">ConvergenceView</span><span class="p">)</span>
+        <span class="k">if</span> <span class="nb">hasattr</span><span class="p">(</span><span class="n">result</span><span class="p">,</span> <span class="s1">&#39;uncertainty_state&#39;</span><span class="p">):</span>
+            <span class="n">stats</span> <span class="o">=</span> <span class="n">var_stats</span><span class="p">(</span><span class="n">result</span><span class="o">.</span><span class="n">uncertainty_state</span><span class="o">.</span><span class="n">draw</span><span class="p">())</span>
+            <span class="n">msg</span> <span class="o">=</span> <span class="n">format_vars</span><span class="p">(</span><span class="n">stats</span><span class="p">)</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_get_view</span><span class="p">(</span><span class="n">CorrelationView</span><span class="p">)</span><span class="o">.</span><span class="n">update</span><span class="p">(</span><span class="n">result</span><span class="o">.</span><span class="n">uncertainty_state</span><span class="p">)</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_get_view</span><span class="p">(</span><span class="n">UncertaintyView</span><span class="p">)</span><span class="o">.</span><span class="n">update</span><span class="p">((</span><span class="n">result</span><span class="o">.</span><span class="n">uncertainty_state</span><span class="p">,</span> <span class="n">stats</span><span class="p">))</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_get_view</span><span class="p">(</span><span class="n">TraceView</span><span class="p">)</span><span class="o">.</span><span class="n">update</span><span class="p">(</span><span class="n">result</span><span class="o">.</span><span class="n">uncertainty_state</span><span class="p">)</span>
+            <span class="c1"># TODO: stats should be stored in result rather than computed in bumps UncertaintyView</span>
+            <span class="n">wx</span><span class="o">.</span><span class="n">PostEvent</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">frame</span><span class="o">.</span><span class="n">parent</span><span class="p">,</span>
+                         <span class="n">StatusEvent</span><span class="p">(</span><span class="n">status</span><span class="o">=</span><span class="n">msg</span><span class="p">,</span> <span class="n">info</span><span class="o">=</span><span class="s2">&quot;info&quot;</span><span class="p">))</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="k">for</span> <span class="n">view</span> <span class="ow">in</span> <span class="p">(</span><span class="n">CorrelationView</span><span class="p">,</span> <span class="n">UncertaintyView</span><span class="p">,</span> <span class="n">TraceView</span><span class="p">):</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">_del_view</span><span class="p">(</span><span class="n">view</span><span class="p">)</span></div>
+
+<div class="viewcode-block" id="ResultPanel.get_frame"><a class="viewcode-back" href="../../../../../dev/api/sas.sasgui.perspectives.fitting.html#sas.sasgui.perspectives.fitting.resultpanel.ResultPanel.get_frame">[docs]</a>    <span class="k">def</span> <span class="nf">get_frame</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">frame</span></div>
+
+    <span class="k">def</span> <span class="nf">_get_view</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">view_class</span><span class="p">):</span>
+        <span class="k">for</span> <span class="n">idx</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">PageCount</span><span class="p">):</span>
+            <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">GetPageText</span><span class="p">(</span><span class="n">idx</span><span class="p">)</span> <span class="o">==</span> <span class="n">view_class</span><span class="o">.</span><span class="n">title</span><span class="p">:</span>
+                <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">GetPage</span><span class="p">(</span><span class="n">idx</span><span class="p">)</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">panel</span> <span class="o">=</span> <span class="n">view_class</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">AddPage</span><span class="p">(</span><span class="n">panel</span><span class="p">,</span> <span class="n">panel</span><span class="o">.</span><span class="n">title</span><span class="p">)</span>
+            <span class="k">return</span> <span class="n">panel</span>
+
+    <span class="k">def</span> <span class="nf">_del_view</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">view_class</span><span class="p">):</span>
+        <span class="k">for</span> <span class="n">idx</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">PageCount</span><span class="p">):</span>
+            <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">GetPageText</span><span class="p">(</span><span class="n">idx</span><span class="p">)</span> <span class="o">==</span> <span class="n">view_class</span><span class="o">.</span><span class="n">title</span><span class="p">:</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">DeletePage</span><span class="p">(</span><span class="n">idx</span><span class="p">)</span></div>
+
+</pre></div>
+
+          </div>
+        </div>
+      </div>
+      <div class="sphinxsidebar" role="navigation" aria-label="main navigation">
+        <div class="sphinxsidebarwrapper">
+<div id="searchbox" style="display: none" role="search">
+  <h3>Quick search</h3>
+    <form class="search" action="../../../../../search.html" method="get">
+      <input type="text" name="q" />
+      <input type="submit" value="Go" />
+      <input type="hidden" name="check_keywords" value="yes" />
+      <input type="hidden" name="area" value="default" />
+    </form>
+</div>
+<script type="text/javascript">$('#searchbox').show(0);</script>
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="related" role="navigation" aria-label="related navigation">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="../../../../../genindex.html" title="General Index"
+             >index</a></li>
+        <li class="right" >
+          <a href="../../../../../py-modindex.html" title="Python Module Index"
+             >modules</a> |</li>
+        <li class="nav-item nav-item-0"><a href="../../../../../index.html">SasView 4.0.0 documentation</a> &raquo;</li>
+          <li class="nav-item nav-item-1"><a href="../../../../index.html" >Module code</a> &raquo;</li>
+          <li class="nav-item nav-item-2"><a href="../fitting.html" >sas.sasgui.perspectives.fitting</a> &raquo;</li> 
+      </ul>
+    </div>
+    <div class="footer" role="contentinfo">
+        &copy; Copyright 2015, The SasView Project.
+      Created using <a href="http://sphinx-doc.org/">Sphinx</a> 1.4.
+    </div>
+  </body>
+</html>

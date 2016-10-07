@@ -1,0 +1,390 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+  "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+    
+    <title>sas.sasgui.guiframe.data_manager &mdash; SasView 4.0.0 documentation</title>
+    
+    <link rel="stylesheet" href="../../../../_static/classic.css" type="text/css" />
+    <link rel="stylesheet" href="../../../../_static/pygments.css" type="text/css" />
+    
+    <script type="text/javascript">
+      var DOCUMENTATION_OPTIONS = {
+        URL_ROOT:    '../../../../',
+        VERSION:     '4.0.0',
+        COLLAPSE_INDEX: false,
+        FILE_SUFFIX: '.html',
+        HAS_SOURCE:  true
+      };
+    </script>
+    <script type="text/javascript" src="../../../../_static/jquery.js"></script>
+    <script type="text/javascript" src="../../../../_static/underscore.js"></script>
+    <script type="text/javascript" src="../../../../_static/doctools.js"></script>
+    <script type="text/javascript" src="https://cdn.mathjax.org/mathjax/latest/MathJax.js?config=TeX-AMS-MML_HTMLorMML"></script>
+    <link rel="top" title="SasView 4.0.0 documentation" href="../../../../index.html" />
+    <link rel="up" title="sas.sasgui.guiframe" href="../guiframe.html" /> 
+  </head>
+  <body role="document">
+    <div class="related" role="navigation" aria-label="related navigation">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="../../../../genindex.html" title="General Index"
+             accesskey="I">index</a></li>
+        <li class="right" >
+          <a href="../../../../py-modindex.html" title="Python Module Index"
+             >modules</a> |</li>
+        <li class="nav-item nav-item-0"><a href="../../../../index.html">SasView 4.0.0 documentation</a> &raquo;</li>
+          <li class="nav-item nav-item-1"><a href="../../../index.html" >Module code</a> &raquo;</li>
+          <li class="nav-item nav-item-2"><a href="../guiframe.html" accesskey="U">sas.sasgui.guiframe</a> &raquo;</li> 
+      </ul>
+    </div>  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          <div class="body" role="main">
+            
+  <h1>Source code for sas.sasgui.guiframe.data_manager</h1><div class="highlight"><pre>
+<span></span><span class="c1">################################################################################</span>
+<span class="c1">#This software was developed by the University of Tennessee as part of the</span>
+<span class="c1">#Distributed Data Analysis of Neutron Scattering Experiments (DANSE)</span>
+<span class="c1">#project funded by the US National Science Foundation. </span>
+<span class="c1">#</span>
+<span class="c1">#See the license text in license.txt</span>
+<span class="c1">#</span>
+<span class="c1">#copyright 2010, University of Tennessee</span>
+<span class="c1">################################################################################</span>
+<span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">This module manages all data loaded into the application. Data_manager makes </span>
+<span class="sd">available all data loaded  for the current perspective. </span>
+
+<span class="sd">All modules &quot;creating Data&quot; posts their data to data_manager . </span>
+<span class="sd">Data_manager  make these new data available for all other perspectives.</span>
+<span class="sd">&quot;&quot;&quot;</span>
+<span class="kn">import</span> <span class="nn">logging</span>
+<span class="kn">import</span> <span class="nn">os</span>
+<span class="kn">import</span> <span class="nn">copy</span> 
+
+<span class="kn">from</span> <span class="nn">sas.sasgui.guiframe.data_state</span> <span class="kn">import</span> <span class="n">DataState</span>
+<span class="kn">from</span> <span class="nn">sas.sasgui.guiframe.utils</span> <span class="kn">import</span> <span class="n">parse_name</span>
+<span class="kn">import</span> <span class="nn">sas.sascalc.dataloader.data_info</span> <span class="kn">as</span> <span class="nn">DataInfo</span>
+<span class="kn">from</span> <span class="nn">sas.sasgui.guiframe.dataFitting</span> <span class="kn">import</span> <span class="n">Data1D</span>
+<span class="kn">from</span> <span class="nn">sas.sasgui.guiframe.dataFitting</span> <span class="kn">import</span> <span class="n">Data2D</span>
+<span class="kn">import</span> <span class="nn">time</span>
+
+<div class="viewcode-block" id="DataManager"><a class="viewcode-back" href="../../../../dev/api/sas.sasgui.guiframe.html#sas.sasgui.guiframe.data_manager.DataManager">[docs]</a><span class="k">class</span> <span class="nc">DataManager</span><span class="p">(</span><span class="nb">object</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Manage a list of data</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Store opened path and data object created at the loading time</span>
+<span class="sd">        :param auto_plot: if True the datamanager sends data to plotting </span>
+<span class="sd">                            plugin. </span>
+<span class="sd">        :param auto_set_data: if True the datamanager sends to the current</span>
+<span class="sd">        perspective</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">stored_data</span> <span class="o">=</span> <span class="p">{}</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">message</span> <span class="o">=</span> <span class="s2">&quot;&quot;</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">data_name_dict</span> <span class="o">=</span> <span class="p">{}</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">count</span> <span class="o">=</span> <span class="mi">0</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">list_of_id</span> <span class="o">=</span> <span class="p">[]</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">time_stamp</span> <span class="o">=</span> <span class="n">time</span><span class="o">.</span><span class="n">time</span><span class="p">()</span>
+      
+    <span class="k">def</span> <span class="nf">__str__</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="n">_str</span>  <span class="o">=</span> <span class="s2">&quot;&quot;</span>
+        <span class="n">_str</span> <span class="o">+=</span> <span class="s2">&quot;No of states  is </span><span class="si">%s</span><span class="s2"> </span><span class="se">\n</span><span class="s2">&quot;</span> <span class="o">%</span> <span class="nb">str</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">stored_data</span><span class="p">))</span>
+        <span class="n">n_count</span> <span class="o">=</span> <span class="mi">0</span>
+        <span class="k">for</span>  <span class="n">value</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">stored_data</span><span class="o">.</span><span class="n">values</span><span class="p">():</span>
+            <span class="n">n_count</span> <span class="o">+=</span> <span class="mi">1</span> 
+            <span class="n">_str</span> <span class="o">+=</span> <span class="s2">&quot;State No </span><span class="si">%s</span><span class="s2"> </span><span class="se">\n</span><span class="s2">&quot;</span>  <span class="o">%</span> <span class="nb">str</span><span class="p">(</span><span class="n">n_count</span><span class="p">)</span>
+            <span class="n">_str</span> <span class="o">+=</span> <span class="nb">str</span><span class="p">(</span><span class="n">value</span><span class="p">)</span> <span class="o">+</span> <span class="s2">&quot;</span><span class="se">\n</span><span class="s2">&quot;</span>
+        <span class="k">return</span> <span class="n">_str</span>
+        
+<div class="viewcode-block" id="DataManager.create_gui_data"><a class="viewcode-back" href="../../../../dev/api/sas.sasgui.guiframe.html#sas.sasgui.guiframe.data_manager.DataManager.create_gui_data">[docs]</a>    <span class="k">def</span> <span class="nf">create_gui_data</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">data</span><span class="p">,</span> <span class="n">path</span><span class="o">=</span><span class="bp">None</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Receive data from loader and create a data to use for guiframe</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        
+        <span class="k">if</span> <span class="nb">issubclass</span><span class="p">(</span><span class="n">Data2D</span><span class="p">,</span> <span class="n">data</span><span class="o">.</span><span class="n">__class__</span><span class="p">):</span>
+            <span class="n">new_plot</span> <span class="o">=</span> <span class="n">Data2D</span><span class="p">(</span><span class="n">image</span><span class="o">=</span><span class="bp">None</span><span class="p">,</span> <span class="n">err_image</span><span class="o">=</span><span class="bp">None</span><span class="p">)</span> 
+        <span class="k">else</span><span class="p">:</span> 
+            <span class="n">new_plot</span> <span class="o">=</span> <span class="n">Data1D</span><span class="p">(</span><span class="n">x</span><span class="o">=</span><span class="p">[],</span> <span class="n">y</span><span class="o">=</span><span class="p">[],</span> <span class="n">dx</span><span class="o">=</span><span class="bp">None</span><span class="p">,</span> <span class="n">dy</span><span class="o">=</span><span class="bp">None</span><span class="p">)</span>
+           
+        <span class="n">new_plot</span><span class="o">.</span><span class="n">copy_from_datainfo</span><span class="p">(</span><span class="n">data</span><span class="p">)</span>
+        <span class="n">data</span><span class="o">.</span><span class="n">clone_without_data</span><span class="p">(</span><span class="n">clone</span><span class="o">=</span><span class="n">new_plot</span><span class="p">)</span>
+        <span class="c1">#creating a name for data</span>
+        <span class="n">title</span> <span class="o">=</span> <span class="s2">&quot;&quot;</span>
+        <span class="n">file_name</span> <span class="o">=</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">basename</span><span class="p">(</span><span class="n">path</span><span class="p">)</span> <span class="k">if</span> <span class="n">path</span> <span class="ow">is</span> <span class="ow">not</span> <span class="bp">None</span> <span class="k">else</span> <span class="n">data</span><span class="o">.</span><span class="n">filename</span>
+        <span class="k">if</span> <span class="n">file_name</span><span class="p">:</span>
+            <span class="n">name</span> <span class="o">=</span> <span class="n">file_name</span>
+        <span class="k">elif</span> <span class="n">data</span><span class="o">.</span><span class="n">run</span><span class="p">:</span>
+            <span class="n">name</span> <span class="o">=</span> <span class="n">data</span><span class="o">.</span><span class="n">run</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">name</span> <span class="o">=</span> <span class="s2">&quot;data&quot;</span>
+        <span class="n">name</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">rename</span><span class="p">(</span><span class="n">name</span><span class="p">)</span>
+        <span class="c1">#find title</span>
+        <span class="k">if</span> <span class="n">data</span><span class="o">.</span><span class="n">title</span><span class="o">.</span><span class="n">strip</span><span class="p">():</span>
+            <span class="n">title</span> <span class="o">=</span> <span class="n">data</span><span class="o">.</span><span class="n">title</span>
+        <span class="k">if</span> <span class="n">title</span><span class="o">.</span><span class="n">strip</span><span class="p">()</span> <span class="o">==</span> <span class="s2">&quot;&quot;</span><span class="p">:</span>
+            <span class="n">title</span> <span class="o">=</span> <span class="n">file_name</span>
+        
+        <span class="k">if</span> <span class="n">new_plot</span><span class="o">.</span><span class="n">filename</span><span class="o">.</span><span class="n">strip</span><span class="p">()</span> <span class="o">==</span> <span class="s2">&quot;&quot;</span><span class="p">:</span>
+            <span class="n">new_plot</span><span class="o">.</span><span class="n">filename</span> <span class="o">=</span> <span class="n">file_name</span>
+        
+        <span class="n">new_plot</span><span class="o">.</span><span class="n">name</span> <span class="o">=</span> <span class="n">name</span>
+        <span class="n">new_plot</span><span class="o">.</span><span class="n">title</span> <span class="o">=</span> <span class="n">title</span>
+        <span class="c1">## allow to highlight data when plotted</span>
+        <span class="n">new_plot</span><span class="o">.</span><span class="n">interactive</span> <span class="o">=</span> <span class="bp">True</span>
+        <span class="c1">## when 2 data have the same id override the 1 st plotted</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">time_stamp</span> <span class="o">+=</span> <span class="mi">1</span>
+        <span class="n">new_plot</span><span class="o">.</span><span class="n">id</span> <span class="o">=</span> <span class="nb">str</span><span class="p">(</span><span class="n">name</span><span class="p">)</span> <span class="o">+</span> <span class="nb">str</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">time_stamp</span><span class="p">)</span>
+        <span class="c1">##group_id specify on which panel to plot this data</span>
+        <span class="n">new_plot</span><span class="o">.</span><span class="n">group_id</span> <span class="o">=</span> <span class="nb">str</span><span class="p">(</span><span class="n">name</span><span class="p">)</span> <span class="o">+</span> <span class="nb">str</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">time_stamp</span><span class="p">)</span>
+        <span class="n">new_plot</span><span class="o">.</span><span class="n">is_data</span> <span class="o">=</span> <span class="bp">True</span>
+        <span class="n">new_plot</span><span class="o">.</span><span class="n">path</span> <span class="o">=</span> <span class="n">path</span>
+        <span class="n">new_plot</span><span class="o">.</span><span class="n">list_group_id</span> <span class="o">=</span> <span class="p">[]</span>
+        <span class="c1">##post data to plot</span>
+        <span class="c1"># plot data</span>
+        <span class="k">return</span> <span class="n">new_plot</span></div>
+ 
+<div class="viewcode-block" id="DataManager.rename"><a class="viewcode-back" href="../../../../dev/api/sas.sasgui.guiframe.html#sas.sasgui.guiframe.data_manager.DataManager.rename">[docs]</a>    <span class="k">def</span> <span class="nf">rename</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">name</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        rename data</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="c1">## name of the data allow to differentiate data when plotted</span>
+        <span class="n">name</span> <span class="o">=</span> <span class="n">parse_name</span><span class="p">(</span><span class="n">name</span><span class="o">=</span><span class="n">name</span><span class="p">,</span> <span class="n">expression</span><span class="o">=</span><span class="s2">&quot;_&quot;</span><span class="p">)</span>
+        
+        <span class="n">max_char</span> <span class="o">=</span> <span class="n">name</span><span class="o">.</span><span class="n">find</span><span class="p">(</span><span class="s2">&quot;[&quot;</span><span class="p">)</span>
+        <span class="k">if</span> <span class="n">max_char</span> <span class="o">&lt;</span> <span class="mi">0</span><span class="p">:</span>
+            <span class="n">max_char</span> <span class="o">=</span> <span class="nb">len</span><span class="p">(</span><span class="n">name</span><span class="p">)</span>
+        <span class="n">name</span> <span class="o">=</span> <span class="n">name</span><span class="p">[</span><span class="mi">0</span><span class="p">:</span><span class="n">max_char</span><span class="p">]</span>
+        
+        <span class="k">if</span> <span class="n">name</span> <span class="ow">not</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">data_name_dict</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">data_name_dict</span><span class="p">[</span><span class="n">name</span><span class="p">]</span> <span class="o">=</span> <span class="mi">0</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">data_name_dict</span><span class="p">[</span><span class="n">name</span><span class="p">]</span> <span class="o">+=</span> <span class="mi">1</span>
+            <span class="n">name</span> <span class="o">=</span> <span class="n">name</span> <span class="o">+</span> <span class="s2">&quot; [&quot;</span> <span class="o">+</span> <span class="nb">str</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">data_name_dict</span><span class="p">[</span><span class="n">name</span><span class="p">])</span> <span class="o">+</span> <span class="s2">&quot;]&quot;</span>
+        <span class="k">return</span> <span class="n">name</span></div>
+    
+  
+<div class="viewcode-block" id="DataManager.add_data"><a class="viewcode-back" href="../../../../dev/api/sas.sasgui.guiframe.html#sas.sasgui.guiframe.data_manager.DataManager.add_data">[docs]</a>    <span class="k">def</span> <span class="nf">add_data</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">data_list</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        receive a list of </span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">for</span> <span class="nb">id</span><span class="p">,</span> <span class="n">data</span> <span class="ow">in</span> <span class="n">data_list</span><span class="o">.</span><span class="n">iteritems</span><span class="p">():</span>
+            <span class="k">if</span> <span class="nb">id</span>  <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">stored_data</span><span class="p">:</span>
+                <span class="n">msg</span> <span class="o">=</span> <span class="s2">&quot;Data manager already stores </span><span class="si">%s</span><span class="s2">&quot;</span> <span class="o">%</span> <span class="nb">str</span><span class="p">(</span><span class="n">data</span><span class="o">.</span><span class="n">name</span><span class="p">)</span>
+                <span class="n">msg</span> <span class="o">+=</span> <span class="s2">&quot;&quot;</span>
+                <span class="n">logging</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="n">msg</span><span class="p">)</span>
+                <span class="n">data_state</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">stored_data</span><span class="p">[</span><span class="nb">id</span><span class="p">]</span>
+                <span class="n">data_state</span><span class="o">.</span><span class="n">data</span> <span class="o">=</span> <span class="n">data</span>
+            <span class="k">else</span><span class="p">:</span>
+                <span class="n">data_state</span> <span class="o">=</span> <span class="n">DataState</span><span class="p">(</span><span class="n">data</span><span class="p">)</span>
+                <span class="n">data_state</span><span class="o">.</span><span class="n">id</span> <span class="o">=</span> <span class="nb">id</span>
+                <span class="n">data_state</span><span class="o">.</span><span class="n">path</span> <span class="o">=</span> <span class="n">data</span><span class="o">.</span><span class="n">path</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">stored_data</span><span class="p">[</span><span class="nb">id</span><span class="p">]</span> <span class="o">=</span> <span class="n">data_state</span></div>
+    
+<div class="viewcode-block" id="DataManager.update_data"><a class="viewcode-back" href="../../../../dev/api/sas.sasgui.guiframe.html#sas.sasgui.guiframe.data_manager.DataManager.update_data">[docs]</a>    <span class="k">def</span> <span class="nf">update_data</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">prev_data</span><span class="p">,</span> <span class="n">new_data</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">if</span> <span class="n">prev_data</span><span class="o">.</span><span class="n">id</span> <span class="ow">not</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">stored_data</span><span class="o">.</span><span class="n">keys</span><span class="p">():</span>
+            <span class="k">return</span> <span class="bp">None</span><span class="p">,</span> <span class="p">{}</span>
+        <span class="n">data_state</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">stored_data</span><span class="p">[</span><span class="n">prev_data</span><span class="o">.</span><span class="n">id</span><span class="p">]</span> 
+        <span class="bp">self</span><span class="o">.</span><span class="n">stored_data</span><span class="p">[</span><span class="n">new_data</span><span class="o">.</span><span class="n">id</span><span class="p">]</span>  <span class="o">=</span> <span class="n">data_state</span><span class="o">.</span><span class="n">clone</span><span class="p">()</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">stored_data</span><span class="p">[</span><span class="n">new_data</span><span class="o">.</span><span class="n">id</span><span class="p">]</span><span class="o">.</span><span class="n">data</span> <span class="o">=</span> <span class="n">new_data</span>
+        <span class="k">if</span> <span class="n">prev_data</span><span class="o">.</span><span class="n">id</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">stored_data</span><span class="o">.</span><span class="n">keys</span><span class="p">():</span>
+            <span class="k">del</span> <span class="bp">self</span><span class="o">.</span><span class="n">stored_data</span><span class="p">[</span><span class="n">prev_data</span><span class="o">.</span><span class="n">id</span><span class="p">]</span> 
+        <span class="k">return</span> <span class="n">prev_data</span><span class="o">.</span><span class="n">id</span><span class="p">,</span> <span class="p">{</span><span class="n">new_data</span><span class="o">.</span><span class="n">id</span><span class="p">:</span> <span class="bp">self</span><span class="o">.</span><span class="n">stored_data</span><span class="p">[</span><span class="n">new_data</span><span class="o">.</span><span class="n">id</span><span class="p">]}</span></div>
+    
+<div class="viewcode-block" id="DataManager.update_theory"><a class="viewcode-back" href="../../../../dev/api/sas.sasgui.guiframe.html#sas.sasgui.guiframe.data_manager.DataManager.update_theory">[docs]</a>    <span class="k">def</span> <span class="nf">update_theory</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">theory</span><span class="p">,</span> <span class="n">data_id</span><span class="o">=</span><span class="bp">None</span><span class="p">,</span> <span class="n">state</span><span class="o">=</span><span class="bp">None</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">uid</span> <span class="o">=</span> <span class="n">data_id</span>
+        <span class="k">if</span> <span class="n">data_id</span> <span class="ow">is</span> <span class="bp">None</span> <span class="ow">and</span> <span class="n">theory</span> <span class="ow">is</span> <span class="ow">not</span> <span class="bp">None</span><span class="p">:</span>
+            <span class="n">uid</span> <span class="o">=</span> <span class="n">theory</span><span class="o">.</span><span class="n">id</span>
+        <span class="k">if</span> <span class="n">uid</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">stored_data</span><span class="o">.</span><span class="n">keys</span><span class="p">():</span>
+             <span class="n">data_state</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">stored_data</span><span class="p">[</span><span class="n">uid</span><span class="p">]</span> 
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">data_state</span> <span class="o">=</span> <span class="n">DataState</span><span class="p">()</span>
+        <span class="n">data_state</span><span class="o">.</span><span class="n">uid</span> <span class="o">=</span> <span class="n">uid</span>
+        <span class="n">data_state</span><span class="o">.</span><span class="n">set_theory</span><span class="p">(</span><span class="n">theory_data</span><span class="o">=</span><span class="n">theory</span><span class="p">,</span> <span class="n">theory_state</span><span class="o">=</span><span class="n">state</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">stored_data</span><span class="p">[</span><span class="n">uid</span><span class="p">]</span> <span class="o">=</span> <span class="n">data_state</span>
+        <span class="k">return</span> <span class="p">{</span><span class="n">uid</span><span class="p">:</span> <span class="bp">self</span><span class="o">.</span><span class="n">stored_data</span><span class="p">[</span><span class="n">uid</span><span class="p">]}</span></div>
+       
+    
+<div class="viewcode-block" id="DataManager.get_message"><a class="viewcode-back" href="../../../../dev/api/sas.sasgui.guiframe.html#sas.sasgui.guiframe.data_manager.DataManager.get_message">[docs]</a>    <span class="k">def</span> <span class="nf">get_message</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        return message</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">message</span></div>
+    
+<div class="viewcode-block" id="DataManager.get_by_id"><a class="viewcode-back" href="../../../../dev/api/sas.sasgui.guiframe.html#sas.sasgui.guiframe.data_manager.DataManager.get_by_id">[docs]</a>    <span class="k">def</span> <span class="nf">get_by_id</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">id_list</span><span class="o">=</span><span class="bp">None</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">_selected_data</span> <span class="o">=</span> <span class="p">{}</span>
+        <span class="n">_selected_theory_list</span> <span class="o">=</span> <span class="p">{}</span>
+        <span class="k">if</span> <span class="n">id_list</span> <span class="ow">is</span> <span class="bp">None</span><span class="p">:</span>
+            <span class="k">return</span>
+        <span class="k">for</span> <span class="n">d_id</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">stored_data</span><span class="p">:</span>
+            <span class="k">for</span> <span class="n">search_id</span> <span class="ow">in</span> <span class="n">id_list</span><span class="p">:</span>
+                <span class="n">data_state</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">stored_data</span><span class="p">[</span><span class="n">d_id</span><span class="p">]</span>
+                <span class="n">data</span> <span class="o">=</span> <span class="n">data_state</span><span class="o">.</span><span class="n">data</span>
+                <span class="n">theory_list</span> <span class="o">=</span> <span class="n">data_state</span><span class="o">.</span><span class="n">get_theory</span><span class="p">()</span>
+                <span class="k">if</span> <span class="n">search_id</span> <span class="o">==</span> <span class="n">d_id</span><span class="p">:</span>
+                    <span class="n">_selected_data</span><span class="p">[</span><span class="n">search_id</span><span class="p">]</span> <span class="o">=</span> <span class="n">data</span>
+                <span class="k">if</span> <span class="n">search_id</span> <span class="ow">in</span> <span class="n">theory_list</span><span class="o">.</span><span class="n">keys</span><span class="p">():</span>
+                     <span class="n">_selected_theory_list</span><span class="p">[</span><span class="n">search_id</span><span class="p">]</span> <span class="o">=</span> <span class="n">theory_list</span><span class="p">[</span><span class="n">search_id</span><span class="p">]</span>
+                   
+        <span class="k">return</span> <span class="n">_selected_data</span><span class="p">,</span> <span class="n">_selected_theory_list</span></div>
+   
+           
+<div class="viewcode-block" id="DataManager.freeze"><a class="viewcode-back" href="../../../../dev/api/sas.sasgui.guiframe.html#sas.sasgui.guiframe.data_manager.DataManager.freeze">[docs]</a>    <span class="k">def</span> <span class="nf">freeze</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">theory_id</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">freeze_theory</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">stored_data</span><span class="o">.</span><span class="n">keys</span><span class="p">(),</span> <span class="n">theory_id</span><span class="p">)</span></div>
+        
+<div class="viewcode-block" id="DataManager.freeze_theory"><a class="viewcode-back" href="../../../../dev/api/sas.sasgui.guiframe.html#sas.sasgui.guiframe.data_manager.DataManager.freeze_theory">[docs]</a>    <span class="k">def</span> <span class="nf">freeze_theory</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">data_id</span><span class="p">,</span> <span class="n">theory_id</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">selected_theory</span> <span class="o">=</span> <span class="p">{}</span>
+        <span class="k">for</span> <span class="n">d_id</span> <span class="ow">in</span> <span class="n">data_id</span><span class="p">:</span>
+            <span class="k">if</span> <span class="n">d_id</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">stored_data</span><span class="p">:</span>
+                <span class="n">data_state</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">stored_data</span><span class="p">[</span><span class="n">d_id</span><span class="p">]</span>
+                <span class="n">theory_list</span> <span class="o">=</span> <span class="n">data_state</span><span class="o">.</span><span class="n">get_theory</span><span class="p">()</span>
+                <span class="k">for</span> <span class="n">t_id</span> <span class="ow">in</span> <span class="n">theory_id</span><span class="p">:</span>
+                    <span class="k">if</span> <span class="n">t_id</span> <span class="ow">in</span> <span class="n">theory_list</span><span class="o">.</span><span class="n">keys</span><span class="p">():</span>
+                        <span class="n">theory_data</span><span class="p">,</span> <span class="n">theory_state</span> <span class="o">=</span> <span class="n">theory_list</span><span class="p">[</span><span class="n">t_id</span><span class="p">]</span>
+                        <span class="n">new_theory</span> <span class="o">=</span> <span class="n">copy</span><span class="o">.</span><span class="n">deepcopy</span><span class="p">(</span><span class="n">theory_data</span><span class="p">)</span>
+                        <span class="n">new_theory</span><span class="o">.</span><span class="n">id</span>  <span class="o">=</span> <span class="n">time</span><span class="o">.</span><span class="n">time</span><span class="p">()</span>
+                        <span class="n">new_theory</span><span class="o">.</span><span class="n">is_data</span> <span class="o">=</span> <span class="bp">True</span>
+                        <span class="n">new_theory</span><span class="o">.</span><span class="n">name</span> <span class="o">+=</span> <span class="s1">&#39;_@&#39;</span> <span class="o">+</span> \
+                                    <span class="nb">str</span><span class="p">(</span><span class="n">new_theory</span><span class="o">.</span><span class="n">id</span><span class="p">)[</span><span class="mi">7</span><span class="p">:</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span><span class="o">.</span><span class="n">replace</span><span class="p">(</span><span class="s1">&#39;.&#39;</span><span class="p">,</span> <span class="s1">&#39;&#39;</span><span class="p">)</span>
+                        <span class="n">new_theory</span><span class="o">.</span><span class="n">title</span> <span class="o">=</span> <span class="n">new_theory</span><span class="o">.</span><span class="n">name</span>
+                        <span class="n">new_theory</span><span class="o">.</span><span class="n">label</span> <span class="o">=</span> <span class="n">new_theory</span><span class="o">.</span><span class="n">name</span>
+                        <span class="n">selected_theory</span><span class="p">[</span><span class="n">new_theory</span><span class="o">.</span><span class="n">id</span><span class="p">]</span> <span class="o">=</span> <span class="n">DataState</span><span class="p">(</span><span class="n">new_theory</span><span class="p">)</span>
+                        <span class="bp">self</span><span class="o">.</span><span class="n">stored_data</span><span class="p">[</span><span class="n">new_theory</span><span class="o">.</span><span class="n">id</span><span class="p">]</span> <span class="o">=</span> \
+                                    <span class="n">selected_theory</span><span class="p">[</span><span class="n">new_theory</span><span class="o">.</span><span class="n">id</span><span class="p">]</span>
+
+        <span class="k">return</span> <span class="n">selected_theory</span></div>
+                    
+            
+<div class="viewcode-block" id="DataManager.delete_data"><a class="viewcode-back" href="../../../../dev/api/sas.sasgui.guiframe.html#sas.sasgui.guiframe.data_manager.DataManager.delete_data">[docs]</a>    <span class="k">def</span> <span class="nf">delete_data</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">data_id</span><span class="p">,</span> <span class="n">theory_id</span><span class="o">=</span><span class="bp">None</span><span class="p">,</span> <span class="n">delete_all</span><span class="o">=</span><span class="bp">False</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">for</span> <span class="n">d_id</span> <span class="ow">in</span> <span class="n">data_id</span><span class="p">:</span>
+            <span class="k">if</span> <span class="n">d_id</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">stored_data</span><span class="o">.</span><span class="n">keys</span><span class="p">():</span>
+                <span class="n">data_state</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">stored_data</span><span class="p">[</span><span class="n">d_id</span><span class="p">]</span>
+                <span class="k">if</span> <span class="n">data_state</span><span class="o">.</span><span class="n">data</span><span class="o">.</span><span class="n">name</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">data_name_dict</span><span class="p">:</span>
+                    <span class="k">del</span> <span class="bp">self</span><span class="o">.</span><span class="n">data_name_dict</span><span class="p">[</span><span class="n">data_state</span><span class="o">.</span><span class="n">data</span><span class="o">.</span><span class="n">name</span><span class="p">]</span>
+                <span class="k">del</span> <span class="bp">self</span><span class="o">.</span><span class="n">stored_data</span><span class="p">[</span><span class="n">d_id</span><span class="p">]</span>
+        
+        <span class="bp">self</span><span class="o">.</span><span class="n">delete_theory</span><span class="p">(</span><span class="n">data_id</span><span class="p">,</span> <span class="n">theory_id</span><span class="p">)</span>
+        <span class="k">if</span> <span class="n">delete_all</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">stored_data</span> <span class="o">=</span> <span class="p">{}</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">data_name_dict</span> <span class="o">=</span> <span class="p">{}</span></div>
+            
+<div class="viewcode-block" id="DataManager.delete_theory"><a class="viewcode-back" href="../../../../dev/api/sas.sasgui.guiframe.html#sas.sasgui.guiframe.data_manager.DataManager.delete_theory">[docs]</a>    <span class="k">def</span> <span class="nf">delete_theory</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">data_id</span><span class="p">,</span> <span class="n">theory_id</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">for</span> <span class="n">d_id</span> <span class="ow">in</span> <span class="n">data_id</span><span class="p">:</span>
+            <span class="k">if</span> <span class="n">d_id</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">stored_data</span><span class="p">:</span>
+                <span class="n">data_state</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">stored_data</span><span class="p">[</span><span class="n">d_id</span><span class="p">]</span>
+                <span class="n">theory_list</span> <span class="o">=</span> <span class="n">data_state</span><span class="o">.</span><span class="n">get_theory</span><span class="p">()</span>
+                <span class="k">if</span> <span class="n">theory_id</span> <span class="ow">in</span> <span class="n">theory_list</span><span class="o">.</span><span class="n">keys</span><span class="p">():</span>
+                    <span class="k">del</span> <span class="n">theory_list</span><span class="p">[</span><span class="n">theory_id</span><span class="p">]</span>
+        <span class="c1">#del pure theory</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">delete_by_id</span><span class="p">(</span><span class="n">theory_id</span><span class="p">)</span></div>
+            
+<div class="viewcode-block" id="DataManager.delete_by_id"><a class="viewcode-back" href="../../../../dev/api/sas.sasgui.guiframe.html#sas.sasgui.guiframe.data_manager.DataManager.delete_by_id">[docs]</a>    <span class="k">def</span> <span class="nf">delete_by_id</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">id_list</span><span class="o">=</span><span class="bp">None</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        save data and path</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">for</span> <span class="nb">id</span> <span class="ow">in</span> <span class="n">id_list</span><span class="p">:</span>
+            <span class="k">if</span> <span class="nb">id</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">stored_data</span><span class="p">:</span>
+                <span class="k">del</span> <span class="bp">self</span><span class="o">.</span><span class="n">stored_data</span><span class="p">[</span><span class="nb">id</span><span class="p">]</span></div>
+         
+    
+<div class="viewcode-block" id="DataManager.get_by_name"><a class="viewcode-back" href="../../../../dev/api/sas.sasgui.guiframe.html#sas.sasgui.guiframe.data_manager.DataManager.get_by_name">[docs]</a>    <span class="k">def</span> <span class="nf">get_by_name</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">name_list</span><span class="o">=</span><span class="bp">None</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        return a list of data given a list of data names</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">_selected_data</span> <span class="o">=</span> <span class="p">{}</span>
+        <span class="k">for</span> <span class="n">selected_name</span> <span class="ow">in</span> <span class="n">name_list</span><span class="p">:</span>
+            <span class="k">for</span> <span class="nb">id</span><span class="p">,</span> <span class="n">data_state</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">stored_data</span><span class="o">.</span><span class="n">iteritems</span><span class="p">():</span>
+                <span class="k">if</span> <span class="n">data_state</span><span class="o">.</span><span class="n">data</span><span class="o">.</span><span class="n">name</span> <span class="o">==</span> <span class="n">selected_name</span><span class="p">:</span>
+                    <span class="n">_selected_data</span><span class="p">[</span><span class="nb">id</span><span class="p">]</span> <span class="o">=</span> <span class="n">data_state</span><span class="o">.</span><span class="n">data</span>
+        <span class="k">return</span> <span class="n">_selected_data</span></div>
+    
+<div class="viewcode-block" id="DataManager.delete_by_name"><a class="viewcode-back" href="../../../../dev/api/sas.sasgui.guiframe.html#sas.sasgui.guiframe.data_manager.DataManager.delete_by_name">[docs]</a>    <span class="k">def</span> <span class="nf">delete_by_name</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">name_list</span><span class="o">=</span><span class="bp">None</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        save data and path</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">for</span> <span class="n">selected_name</span> <span class="ow">in</span> <span class="n">name_list</span><span class="p">:</span>
+            <span class="k">for</span> <span class="nb">id</span><span class="p">,</span> <span class="n">data_state</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">stored_data</span><span class="o">.</span><span class="n">iteritems</span><span class="p">():</span>
+                <span class="k">if</span> <span class="n">data_state</span><span class="o">.</span><span class="n">data</span><span class="o">.</span><span class="n">name</span> <span class="o">==</span> <span class="n">selected_name</span><span class="p">:</span>
+                    <span class="k">del</span> <span class="bp">self</span><span class="o">.</span><span class="n">stored_data</span><span class="p">[</span><span class="nb">id</span><span class="p">]</span></div>
+
+<div class="viewcode-block" id="DataManager.get_data_state"><a class="viewcode-back" href="../../../../dev/api/sas.sasgui.guiframe.html#sas.sasgui.guiframe.data_manager.DataManager.get_data_state">[docs]</a>    <span class="k">def</span> <span class="nf">get_data_state</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">data_id</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Send list of selected data</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">_selected_data_state</span> <span class="o">=</span> <span class="p">{}</span>
+        <span class="k">for</span> <span class="nb">id</span> <span class="ow">in</span> <span class="n">data_id</span><span class="p">:</span>
+            <span class="k">if</span> <span class="nb">id</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">stored_data</span><span class="o">.</span><span class="n">keys</span><span class="p">():</span>
+                <span class="n">_selected_data_state</span><span class="p">[</span><span class="nb">id</span><span class="p">]</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">stored_data</span><span class="p">[</span><span class="nb">id</span><span class="p">]</span>
+        <span class="k">return</span> <span class="n">_selected_data_state</span></div>
+    
+<div class="viewcode-block" id="DataManager.get_all_data"><a class="viewcode-back" href="../../../../dev/api/sas.sasgui.guiframe.html#sas.sasgui.guiframe.data_manager.DataManager.get_all_data">[docs]</a>    <span class="k">def</span> <span class="nf">get_all_data</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        return list of all available data</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">stored_data</span></div></div>
+    
+
+        
+</pre></div>
+
+          </div>
+        </div>
+      </div>
+      <div class="sphinxsidebar" role="navigation" aria-label="main navigation">
+        <div class="sphinxsidebarwrapper">
+<div id="searchbox" style="display: none" role="search">
+  <h3>Quick search</h3>
+    <form class="search" action="../../../../search.html" method="get">
+      <input type="text" name="q" />
+      <input type="submit" value="Go" />
+      <input type="hidden" name="check_keywords" value="yes" />
+      <input type="hidden" name="area" value="default" />
+    </form>
+</div>
+<script type="text/javascript">$('#searchbox').show(0);</script>
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="related" role="navigation" aria-label="related navigation">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="../../../../genindex.html" title="General Index"
+             >index</a></li>
+        <li class="right" >
+          <a href="../../../../py-modindex.html" title="Python Module Index"
+             >modules</a> |</li>
+        <li class="nav-item nav-item-0"><a href="../../../../index.html">SasView 4.0.0 documentation</a> &raquo;</li>
+          <li class="nav-item nav-item-1"><a href="../../../index.html" >Module code</a> &raquo;</li>
+          <li class="nav-item nav-item-2"><a href="../guiframe.html" >sas.sasgui.guiframe</a> &raquo;</li> 
+      </ul>
+    </div>
+    <div class="footer" role="contentinfo">
+        &copy; Copyright 2015, The SasView Project.
+      Created using <a href="http://sphinx-doc.org/">Sphinx</a> 1.4.
+    </div>
+  </body>
+</html>

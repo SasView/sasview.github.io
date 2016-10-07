@@ -1,0 +1,117 @@
+.. _ellipsoid:
+
+ellipsoid
+=======================================================
+
+Ellipsoid of revolution with uniform scattering length density.
+
+================= =================================== ============ =============
+Parameter         Description                         Units        Default value
+================= =================================== ============ =============
+scale             Source intensity                    None                     1
+background        Source background                   |cm^-1|              0.001
+sld               Ellipsoid scattering length density |1e-6Ang^-2|             4
+sld_solvent       Solvent scattering length density   |1e-6Ang^-2|             1
+radius_polar      Polar radius                        |Ang|                   20
+radius_equatorial Equatorial radius                   |Ang|                  400
+theta             In plane angle                      degree                  60
+phi               Out of plane angle                  degree                  60
+================= =================================== ============ =============
+
+The returned value is scaled to units of |cm^-1| |sr^-1|, absolute scale.
+
+
+The form factor is normalized by the particle volume 
+
+**Definition**
+
+The output of the 2D scattering intensity function for oriented ellipsoids
+is given by (Feigin, 1987)
+
+.. math::
+
+    P(q,\alpha) = \frac{\text{scale}}{V} F^2(q,\alpha) + \text{background}
+
+where
+
+.. math::
+
+    F(q,\alpha) = \frac{3 \Delta \rho V (\sin[qr(R_p,R_e,\alpha)]
+                - \cos[qr(R_p,R_e,\alpha)])}
+                {[qr(R_p,R_e,\alpha)]^3}
+
+and
+
+.. math::
+
+    r(R_p,R_e,\alpha) = \left[ R_e^2 \sin^2 \alpha
+        + R_p^2 \cos^2 \alpha \right]^{1/2}
+
+
+$\alpha$ is the angle between the axis of the ellipsoid and $\vec q$,
+$V = (4/3)\pi R_pR_e^2$ is the volume of the ellipsoid , $R_p$ is the polar radius along the
+rotational axis of the ellipsoid, $R_e$ is the equatorial radius perpendicular
+to the rotational axis of the ellipsoid and $\Delta \rho$ (contrast) is the
+scattering length density difference between the scatterer and the solvent.
+
+To provide easy access to the orientation of the ellipsoid, we define
+the rotation axis of the ellipsoid using two angles $\theta$ and $\phi$.
+These angles are defined in the
+:ref:`cylinder orientation figure <cylinder-angle-definition>`.
+For the ellipsoid, $\theta$ is the angle between the rotational axis
+and the $z$ -axis.
+
+NB: The 2nd virial coefficient of the solid ellipsoid is calculated based
+on the $R_p$ and $R_e$ values, and used as the effective radius for
+$S(q)$ when $P(q) \cdot S(q)$ is applied.
+
+
+The $\theta$ and $\phi$ parameters are not used for the 1D output.
+
+.. _ellipsoid-geometry:
+
+.. figure:: img/ellipsoid_angle_projection.jpg
+
+    The angles for oriented ellipsoid, shown here as oblate, $a$ = $R_p$ and $b$ = $R_e$
+
+**Validation**
+
+Validation of the code was done by comparing the output of the 1D model
+to the output of the software provided by the NIST (Kline, 2006).
+
+The implementation of the intensity for fully oriented ellipsoids was
+validated by averaging the 2D output using a uniform distribution
+$p(\theta,\phi) = 1.0$ and comparing with the output of the 1D calculation.
+
+
+.. _ellipsoid-comparison-2d:
+
+.. figure:: img/ellipsoid_comparison_2d.jpg
+
+    Comparison of the intensity for uniformly distributed ellipsoids
+    calculated from our 2D model and the intensity from the NIST SANS
+    analysis software. The parameters used were: *scale* = 1.0,
+    *radius_polar* = 20 |Ang|, *radius_equatorial* = 400 |Ang|,
+    *contrast* = 3e-6 |Ang^-2|, and *background* = 0.0 |cm^-1|.
+
+The discrepancy above $q$ = 0.3 |cm^-1| is due to the way the form factors
+are calculated in the c-library provided by NIST. A numerical integration
+has to be performed to obtain $P(q)$ for randomly oriented particles.
+The NIST software performs that integration with a 76-point Gaussian
+quadrature rule, which will become imprecise at high $q$ where the amplitude
+varies quickly as a function of $q$. The SasView result shown has been
+obtained by summing over 501 equidistant points. Our result was found
+to be stable over the range of $q$ shown for a number of points higher
+than 500.
+
+
+.. figure:: img/ellipsoid_autogenfig.png
+
+    1D and 2D plots corresponding to the default parameters of the model.
+
+**References**
+
+L A Feigin and D I Svergun.
+*Structure Analysis by Small-Angle X-Ray and Neutron Scattering*,
+Plenum Press, New York, 1987.
+

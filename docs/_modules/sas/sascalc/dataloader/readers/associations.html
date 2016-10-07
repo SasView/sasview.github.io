@@ -1,0 +1,200 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+  "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+    
+    <title>sas.sascalc.dataloader.readers.associations &mdash; SasView 4.0.0 documentation</title>
+    
+    <link rel="stylesheet" href="../../../../../_static/classic.css" type="text/css" />
+    <link rel="stylesheet" href="../../../../../_static/pygments.css" type="text/css" />
+    
+    <script type="text/javascript">
+      var DOCUMENTATION_OPTIONS = {
+        URL_ROOT:    '../../../../../',
+        VERSION:     '4.0.0',
+        COLLAPSE_INDEX: false,
+        FILE_SUFFIX: '.html',
+        HAS_SOURCE:  true
+      };
+    </script>
+    <script type="text/javascript" src="../../../../../_static/jquery.js"></script>
+    <script type="text/javascript" src="../../../../../_static/underscore.js"></script>
+    <script type="text/javascript" src="../../../../../_static/doctools.js"></script>
+    <script type="text/javascript" src="https://cdn.mathjax.org/mathjax/latest/MathJax.js?config=TeX-AMS-MML_HTMLorMML"></script>
+    <link rel="top" title="SasView 4.0.0 documentation" href="../../../../../index.html" />
+    <link rel="up" title="sas.sascalc.dataloader.readers" href="../readers.html" /> 
+  </head>
+  <body role="document">
+    <div class="related" role="navigation" aria-label="related navigation">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="../../../../../genindex.html" title="General Index"
+             accesskey="I">index</a></li>
+        <li class="right" >
+          <a href="../../../../../py-modindex.html" title="Python Module Index"
+             >modules</a> |</li>
+        <li class="nav-item nav-item-0"><a href="../../../../../index.html">SasView 4.0.0 documentation</a> &raquo;</li>
+          <li class="nav-item nav-item-1"><a href="../../../../index.html" >Module code</a> &raquo;</li>
+          <li class="nav-item nav-item-2"><a href="../readers.html" accesskey="U">sas.sascalc.dataloader.readers</a> &raquo;</li> 
+      </ul>
+    </div>  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          <div class="body" role="main">
+            
+  <h1>Source code for sas.sascalc.dataloader.readers.associations</h1><div class="highlight"><pre>
+<span></span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">Module to associate default readers to file extensions.</span>
+<span class="sd">The module reads an xml file to get the readers for each file extension.</span>
+<span class="sd">The readers are tried in order they appear when reading a file.</span>
+<span class="sd">&quot;&quot;&quot;</span>
+<span class="c1">############################################################################</span>
+<span class="c1">#This software was developed by the University of Tennessee as part of the</span>
+<span class="c1">#Distributed Data Analysis of Neutron Scattering Experiments (DANSE)</span>
+<span class="c1">#project funded by the US National Science Foundation.</span>
+<span class="c1">#If you use DANSE applications to do scientific research that leads to</span>
+<span class="c1">#publication, we ask that you acknowledge the use of the software with the</span>
+<span class="c1">#following sentence:</span>
+<span class="c1">#This work benefited from DANSE software developed under NSF award DMR-0520547.</span>
+<span class="c1">#copyright 2009, University of Tennessee</span>
+<span class="c1">#############################################################################</span>
+<span class="kn">import</span> <span class="nn">os</span>
+<span class="kn">import</span> <span class="nn">sys</span>
+<span class="kn">import</span> <span class="nn">logging</span>
+<span class="kn">import</span> <span class="nn">json</span>
+
+<span class="n">FILE_NAME</span> <span class="o">=</span> <span class="s1">&#39;defaults.json&#39;</span>
+
+<div class="viewcode-block" id="read_associations"><a class="viewcode-back" href="../../../../../dev/api/sas.sascalc.dataloader.readers.html#sas.sascalc.dataloader.readers.associations.read_associations">[docs]</a><span class="k">def</span> <span class="nf">read_associations</span><span class="p">(</span><span class="n">loader</span><span class="p">,</span> <span class="n">settings</span><span class="o">=</span><span class="n">FILE_NAME</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Read the specified settings file to associate</span>
+<span class="sd">    default readers to file extension.</span>
+<span class="sd">    </span>
+<span class="sd">    :param loader: Loader object</span>
+<span class="sd">    :param settings: path to the json settings file [string]</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">reader_dir</span> <span class="o">=</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">dirname</span><span class="p">(</span><span class="n">__file__</span><span class="p">)</span>
+    <span class="n">path</span> <span class="o">=</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">reader_dir</span><span class="p">,</span> <span class="n">settings</span><span class="p">)</span>
+    
+    <span class="c1"># If we can&#39;t find the file in the installation</span>
+    <span class="c1"># directory, look into the execution directory.</span>
+    <span class="k">if</span> <span class="ow">not</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">isfile</span><span class="p">(</span><span class="n">path</span><span class="p">):</span>
+        <span class="n">path</span> <span class="o">=</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">os</span><span class="o">.</span><span class="n">getcwd</span><span class="p">(),</span> <span class="n">settings</span><span class="p">)</span>
+    <span class="k">if</span> <span class="ow">not</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">isfile</span><span class="p">(</span><span class="n">path</span><span class="p">):</span>
+        <span class="n">path</span> <span class="o">=</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">sys</span><span class="o">.</span><span class="n">path</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span> <span class="n">settings</span><span class="p">)</span>
+    <span class="k">if</span> <span class="ow">not</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">isfile</span><span class="p">(</span><span class="n">path</span><span class="p">):</span>
+        <span class="n">path</span> <span class="o">=</span> <span class="n">settings</span>
+    <span class="k">if</span> <span class="ow">not</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">isfile</span><span class="p">(</span><span class="n">path</span><span class="p">):</span>
+        <span class="n">path</span> <span class="o">=</span> <span class="s2">&quot;./</span><span class="si">%s</span><span class="s2">&quot;</span> <span class="o">%</span> <span class="n">settings</span>
+    <span class="k">if</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">isfile</span><span class="p">(</span><span class="n">path</span><span class="p">):</span>
+        <span class="k">with</span> <span class="nb">open</span><span class="p">(</span><span class="n">path</span><span class="p">)</span> <span class="k">as</span> <span class="n">fh</span><span class="p">:</span>
+            <span class="n">json_tree</span> <span class="o">=</span> <span class="n">json</span><span class="o">.</span><span class="n">load</span><span class="p">(</span><span class="n">fh</span><span class="p">)</span>
+        
+        <span class="c1"># Read in the file extension associations</span>
+        <span class="n">entry_list</span> <span class="o">=</span> <span class="n">json_tree</span><span class="p">[</span><span class="s1">&#39;SasLoader&#39;</span><span class="p">][</span><span class="s1">&#39;FileType&#39;</span><span class="p">]</span>
+
+        <span class="c1"># For each FileType entry, get the associated reader and extension</span>
+        <span class="k">for</span> <span class="n">entry</span> <span class="ow">in</span> <span class="n">entry_list</span><span class="p">:</span>
+            <span class="n">reader</span> <span class="o">=</span> <span class="n">entry</span><span class="p">[</span><span class="s1">&#39;-reader&#39;</span><span class="p">]</span>
+            <span class="n">ext</span> <span class="o">=</span> <span class="n">entry</span><span class="p">[</span><span class="s1">&#39;-extension&#39;</span><span class="p">]</span>
+            
+            <span class="k">if</span> <span class="n">reader</span> <span class="ow">is</span> <span class="ow">not</span> <span class="bp">None</span> <span class="ow">and</span> <span class="n">ext</span> <span class="ow">is</span> <span class="ow">not</span> <span class="bp">None</span><span class="p">:</span>
+                <span class="c1"># Associate the extension with a particular reader</span>
+                <span class="c1"># TODO: Modify the Register code to be case-insensitive</span>
+                <span class="c1"># and remove the extra line below.</span>
+                <span class="k">try</span><span class="p">:</span>
+                    <span class="k">exec</span> <span class="s2">&quot;import </span><span class="si">%s</span><span class="s2">&quot;</span> <span class="o">%</span> <span class="n">reader</span>
+                    <span class="k">exec</span> <span class="s2">&quot;loader.associate_file_type(&#39;</span><span class="si">%s</span><span class="s2">&#39;, </span><span class="si">%s</span><span class="s2">)&quot;</span> <span class="o">%</span> <span class="p">(</span><span class="n">ext</span><span class="o">.</span><span class="n">lower</span><span class="p">(),</span>
+                                                                    <span class="n">reader</span><span class="p">)</span>
+                    <span class="k">exec</span> <span class="s2">&quot;loader.associate_file_type(&#39;</span><span class="si">%s</span><span class="s2">&#39;, </span><span class="si">%s</span><span class="s2">)&quot;</span> <span class="o">%</span> <span class="p">(</span><span class="n">ext</span><span class="o">.</span><span class="n">upper</span><span class="p">(),</span>
+                                                                    <span class="n">reader</span><span class="p">)</span>
+                <span class="k">except</span><span class="p">:</span>
+                    <span class="n">msg</span> <span class="o">=</span> <span class="s2">&quot;read_associations: skipping association&quot;</span>
+                    <span class="n">msg</span> <span class="o">+=</span> <span class="s2">&quot; for </span><span class="si">%s</span><span class="se">\n</span><span class="s2">  </span><span class="si">%s</span><span class="s2">&quot;</span> <span class="o">%</span> <span class="p">(</span><span class="n">ext</span><span class="o">.</span><span class="n">lower</span><span class="p">(),</span> <span class="n">sys</span><span class="o">.</span><span class="n">exc_value</span><span class="p">)</span>
+                    <span class="n">logging</span><span class="o">.</span><span class="n">error</span><span class="p">(</span><span class="n">msg</span><span class="p">)</span>
+    <span class="k">else</span><span class="p">:</span>
+        <span class="k">print</span> <span class="s2">&quot;Could not find reader association settings</span><span class="se">\n</span><span class="s2">  </span><span class="si">%s</span><span class="s2"> [</span><span class="si">%s</span><span class="s2">]&quot;</span> <span class="o">%</span> <span class="p">(</span><span class="n">__file__</span><span class="p">,</span> <span class="n">os</span><span class="o">.</span><span class="n">getcwd</span><span class="p">())</span></div>
+         
+         
+<div class="viewcode-block" id="register_readers"><a class="viewcode-back" href="../../../../../dev/api/sas.sascalc.dataloader.readers.html#sas.sascalc.dataloader.readers.associations.register_readers">[docs]</a><span class="k">def</span> <span class="nf">register_readers</span><span class="p">(</span><span class="n">registry_function</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Function called by the registry/loader object to register</span>
+<span class="sd">    all default readers using a call back function.</span>
+<span class="sd">    </span>
+<span class="sd">    :WARNING: this method is now obsolete</span>
+
+<span class="sd">    :param registry_function: function to be called to register each reader</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">logging</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="s2">&quot;register_readers is now obsolete: use read_associations()&quot;</span><span class="p">)</span>
+    <span class="kn">import</span> <span class="nn">abs_reader</span>
+    <span class="kn">import</span> <span class="nn">ascii_reader</span>
+    <span class="kn">import</span> <span class="nn">cansas_reader</span>
+    <span class="kn">import</span> <span class="nn">danse_reader</span>
+    <span class="kn">import</span> <span class="nn">hfir1d_reader</span>
+    <span class="kn">import</span> <span class="nn">IgorReader</span>
+    <span class="kn">import</span> <span class="nn">red2d_reader</span>
+    <span class="c1">#import tiff_reader</span>
+    <span class="kn">import</span> <span class="nn">nexus_reader</span>
+    <span class="kn">import</span> <span class="nn">sesans_reader</span>
+    <span class="kn">import</span> <span class="nn">cansas_reader_HDF5</span>
+    <span class="kn">import</span> <span class="nn">anton_paar_saxs_reader</span>
+    <span class="n">registry_function</span><span class="p">(</span><span class="n">sesans_reader</span><span class="p">)</span>
+    <span class="n">registry_function</span><span class="p">(</span><span class="n">abs_reader</span><span class="p">)</span>
+    <span class="n">registry_function</span><span class="p">(</span><span class="n">ascii_reader</span><span class="p">)</span>
+    <span class="n">registry_function</span><span class="p">(</span><span class="n">cansas_reader</span><span class="p">)</span>
+    <span class="n">registry_function</span><span class="p">(</span><span class="n">danse_reader</span><span class="p">)</span>
+    <span class="n">registry_function</span><span class="p">(</span><span class="n">hfir1d_reader</span><span class="p">)</span>
+    <span class="n">registry_function</span><span class="p">(</span><span class="n">IgorReader</span><span class="p">)</span>
+    <span class="n">registry_function</span><span class="p">(</span><span class="n">red2d_reader</span><span class="p">)</span>
+    <span class="c1">#registry_function(tiff_reader)</span>
+    <span class="n">registry_function</span><span class="p">(</span><span class="n">nexus_reader</span><span class="p">)</span>
+    <span class="n">registry_function</span><span class="p">(</span><span class="n">cansas_reader_HDF5</span><span class="p">)</span>
+    <span class="n">registry_function</span><span class="p">(</span><span class="n">anton_paar_saxs_reader</span><span class="p">)</span>
+    <span class="k">return</span> <span class="bp">True</span></div>
+</pre></div>
+
+          </div>
+        </div>
+      </div>
+      <div class="sphinxsidebar" role="navigation" aria-label="main navigation">
+        <div class="sphinxsidebarwrapper">
+<div id="searchbox" style="display: none" role="search">
+  <h3>Quick search</h3>
+    <form class="search" action="../../../../../search.html" method="get">
+      <input type="text" name="q" />
+      <input type="submit" value="Go" />
+      <input type="hidden" name="check_keywords" value="yes" />
+      <input type="hidden" name="area" value="default" />
+    </form>
+</div>
+<script type="text/javascript">$('#searchbox').show(0);</script>
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="related" role="navigation" aria-label="related navigation">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="../../../../../genindex.html" title="General Index"
+             >index</a></li>
+        <li class="right" >
+          <a href="../../../../../py-modindex.html" title="Python Module Index"
+             >modules</a> |</li>
+        <li class="nav-item nav-item-0"><a href="../../../../../index.html">SasView 4.0.0 documentation</a> &raquo;</li>
+          <li class="nav-item nav-item-1"><a href="../../../../index.html" >Module code</a> &raquo;</li>
+          <li class="nav-item nav-item-2"><a href="../readers.html" >sas.sascalc.dataloader.readers</a> &raquo;</li> 
+      </ul>
+    </div>
+    <div class="footer" role="contentinfo">
+        &copy; Copyright 2015, The SasView Project.
+      Created using <a href="http://sphinx-doc.org/">Sphinx</a> 1.4.
+    </div>
+  </body>
+</html>

@@ -1,0 +1,216 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+  "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+    
+    <title>sas.sasgui.perspectives.invariant.report_dialog &mdash; SasView 4.0.0 documentation</title>
+    
+    <link rel="stylesheet" href="../../../../../_static/classic.css" type="text/css" />
+    <link rel="stylesheet" href="../../../../../_static/pygments.css" type="text/css" />
+    
+    <script type="text/javascript">
+      var DOCUMENTATION_OPTIONS = {
+        URL_ROOT:    '../../../../../',
+        VERSION:     '4.0.0',
+        COLLAPSE_INDEX: false,
+        FILE_SUFFIX: '.html',
+        HAS_SOURCE:  true
+      };
+    </script>
+    <script type="text/javascript" src="../../../../../_static/jquery.js"></script>
+    <script type="text/javascript" src="../../../../../_static/underscore.js"></script>
+    <script type="text/javascript" src="../../../../../_static/doctools.js"></script>
+    <script type="text/javascript" src="https://cdn.mathjax.org/mathjax/latest/MathJax.js?config=TeX-AMS-MML_HTMLorMML"></script>
+    <link rel="top" title="SasView 4.0.0 documentation" href="../../../../../index.html" />
+    <link rel="up" title="sas.sasgui.perspectives.invariant" href="../invariant.html" /> 
+  </head>
+  <body role="document">
+    <div class="related" role="navigation" aria-label="related navigation">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="../../../../../genindex.html" title="General Index"
+             accesskey="I">index</a></li>
+        <li class="right" >
+          <a href="../../../../../py-modindex.html" title="Python Module Index"
+             >modules</a> |</li>
+        <li class="nav-item nav-item-0"><a href="../../../../../index.html">SasView 4.0.0 documentation</a> &raquo;</li>
+          <li class="nav-item nav-item-1"><a href="../../../../index.html" >Module code</a> &raquo;</li>
+          <li class="nav-item nav-item-2"><a href="../invariant.html" accesskey="U">sas.sasgui.perspectives.invariant</a> &raquo;</li> 
+      </ul>
+    </div>  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          <div class="body" role="main">
+            
+  <h1>Source code for sas.sasgui.perspectives.invariant.report_dialog</h1><div class="highlight"><pre>
+<span></span>
+<span class="c1">################################################################################</span>
+<span class="c1"># This software was developed by the University of Tennessee as part of the</span>
+<span class="c1"># Distributed Data Analysis of Neutron Scattering Experiments (DANSE)</span>
+<span class="c1"># project funded by the US National Science Foundation.</span>
+<span class="c1">#</span>
+<span class="c1"># See the license text in license.txt</span>
+<span class="c1">#</span>
+<span class="c1"># copyright 2009, University of Tennessee</span>
+<span class="c1">################################################################################</span>
+
+<span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">Dialog report panel to show and summarize the results of</span>
+<span class="sd">the invariant calculation.</span>
+<span class="sd">&quot;&quot;&quot;</span>
+<span class="kn">import</span> <span class="nn">wx</span>
+<span class="kn">import</span> <span class="nn">os</span>
+<span class="kn">import</span> <span class="nn">sys</span>
+<span class="kn">import</span> <span class="nn">logging</span>
+
+<span class="kn">from</span> <span class="nn">sas.sasgui.guiframe.report_dialog</span> <span class="kn">import</span> <span class="n">BaseReportDialog</span>
+
+<div class="viewcode-block" id="ReportDialog"><a class="viewcode-back" href="../../../../../dev/api/sas.sasgui.perspectives.invariant.html#sas.sasgui.perspectives.invariant.report_dialog.ReportDialog">[docs]</a><span class="k">class</span> <span class="nc">ReportDialog</span><span class="p">(</span><span class="n">BaseReportDialog</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    The report dialog box.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+
+    <span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">report_list</span><span class="p">,</span> <span class="o">*</span><span class="n">args</span><span class="p">,</span> <span class="o">**</span><span class="n">kwds</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Initialization. The parameters added to Dialog are:</span>
+
+<span class="sd">        :param report_list: list of html_str, text_str, image</span>
+<span class="sd">        from invariant_state</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="nb">super</span><span class="p">(</span><span class="n">ReportDialog</span><span class="p">,</span> <span class="bp">self</span><span class="p">)</span><span class="o">.</span><span class="n">__init__</span><span class="p">(</span><span class="n">report_list</span><span class="p">,</span> <span class="o">*</span><span class="n">args</span><span class="p">,</span> <span class="o">**</span><span class="n">kwds</span><span class="p">)</span>
+
+        <span class="c1"># title</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">SetTitle</span><span class="p">(</span><span class="s2">&quot;Report: Invariant computaion&quot;</span><span class="p">)</span>
+
+        <span class="c1"># put image path in the report string</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">report_html</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">report_list</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="o">%</span> <span class="s2">&quot;memory:img_inv.png&quot;</span>
+        <span class="c1"># layout</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_setup_layout</span><span class="p">()</span>
+
+<div class="viewcode-block" id="ReportDialog.onSave"><a class="viewcode-back" href="../../../../../dev/api/sas.sasgui.perspectives.invariant.html#sas.sasgui.perspectives.invariant.report_dialog.ReportDialog.onSave">[docs]</a>    <span class="k">def</span> <span class="nf">onSave</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">event</span><span class="o">=</span><span class="bp">None</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Save</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="c1"># todo: complete saving fig file and as a txt file</span>
+        <span class="n">dlg</span> <span class="o">=</span> <span class="n">wx</span><span class="o">.</span><span class="n">FileDialog</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="s2">&quot;Choose a file&quot;</span><span class="p">,</span>
+                            <span class="n">wildcard</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">wild_card</span><span class="p">,</span>
+                            <span class="n">style</span><span class="o">=</span><span class="n">wx</span><span class="o">.</span><span class="n">SAVE</span> <span class="o">|</span> <span class="n">wx</span><span class="o">.</span><span class="n">OVERWRITE_PROMPT</span> <span class="o">|</span> <span class="n">wx</span><span class="o">.</span><span class="n">CHANGE_DIR</span><span class="p">)</span>
+        <span class="n">dlg</span><span class="o">.</span><span class="n">SetFilterIndex</span><span class="p">(</span><span class="mi">0</span><span class="p">)</span>  <span class="c1"># Set .html files to be default</span>
+
+        <span class="k">if</span> <span class="n">dlg</span><span class="o">.</span><span class="n">ShowModal</span><span class="p">()</span> <span class="o">!=</span> <span class="n">wx</span><span class="o">.</span><span class="n">ID_OK</span><span class="p">:</span>
+            <span class="n">dlg</span><span class="o">.</span><span class="n">Destroy</span><span class="p">()</span>
+            <span class="k">return</span>
+
+        <span class="n">fName</span> <span class="o">=</span> <span class="n">dlg</span><span class="o">.</span><span class="n">GetPath</span><span class="p">()</span>
+        <span class="n">ext_num</span> <span class="o">=</span> <span class="n">dlg</span><span class="o">.</span><span class="n">GetFilterIndex</span><span class="p">()</span>
+        <span class="c1"># set file extensions</span>
+        <span class="k">if</span> <span class="n">ext_num</span> <span class="o">==</span> <span class="p">(</span><span class="mi">0</span> <span class="o">+</span> <span class="mi">2</span> <span class="o">*</span> <span class="bp">self</span><span class="o">.</span><span class="n">index_offset</span><span class="p">):</span>
+            <span class="c1"># TODO: Sort this case out</span>
+            <span class="n">ext</span> <span class="o">=</span> <span class="s1">&#39;.pdf&#39;</span>
+            <span class="n">img_ext</span> <span class="o">=</span> <span class="s1">&#39;_img.png&#39;</span>
+            <span class="n">fName</span> <span class="o">=</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">splitext</span><span class="p">(</span><span class="n">fName</span><span class="p">)[</span><span class="mi">0</span><span class="p">]</span> <span class="o">+</span> <span class="n">ext</span>
+            <span class="n">dlg</span><span class="o">.</span><span class="n">Destroy</span><span class="p">()</span>
+
+            <span class="c1"># pic (png) file path/name</span>
+            <span class="n">pic_fname</span> <span class="o">=</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">splitext</span><span class="p">(</span><span class="n">fName</span><span class="p">)[</span><span class="mi">0</span><span class="p">]</span> <span class="o">+</span> <span class="n">img_ext</span>
+            <span class="c1"># save the image for use with pdf writer</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">report_list</span><span class="p">[</span><span class="mi">2</span><span class="p">]</span><span class="o">.</span><span class="n">savefig</span><span class="p">(</span><span class="n">pic_fname</span><span class="p">)</span>
+
+            <span class="c1"># put the image file path in the html data</span>
+            <span class="n">html</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">report_list</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="o">%</span> <span class="nb">str</span><span class="p">(</span><span class="n">pic_fname</span><span class="p">)</span>
+
+            <span class="c1"># make/open file in case of absence</span>
+            <span class="n">f</span> <span class="o">=</span> <span class="nb">open</span><span class="p">(</span><span class="n">fName</span><span class="p">,</span> <span class="s1">&#39;w&#39;</span><span class="p">)</span>
+            <span class="n">f</span><span class="o">.</span><span class="n">close</span><span class="p">()</span>
+            <span class="c1"># write pdf as a pdf file</span>
+            <span class="n">pdf</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">HTML2PDF</span><span class="p">(</span><span class="n">data</span><span class="o">=</span><span class="n">html</span><span class="p">,</span> <span class="n">filename</span><span class="o">=</span><span class="n">fName</span><span class="p">)</span>
+
+            <span class="c1"># open pdf</span>
+            <span class="k">if</span> <span class="n">pdf</span><span class="p">:</span>
+                <span class="k">try</span><span class="p">:</span>
+                    <span class="c1"># Windows</span>
+                    <span class="n">os</span><span class="o">.</span><span class="n">startfile</span><span class="p">(</span><span class="nb">str</span><span class="p">(</span><span class="n">fName</span><span class="p">))</span>
+                <span class="k">except</span><span class="p">:</span>
+                    <span class="k">try</span><span class="p">:</span>
+                        <span class="c1"># Mac</span>
+                        <span class="n">os</span><span class="o">.</span><span class="n">system</span><span class="p">(</span><span class="s2">&quot;open </span><span class="si">%s</span><span class="s2">&quot;</span> <span class="o">%</span> <span class="n">fName</span><span class="p">)</span>
+                    <span class="k">except</span><span class="p">:</span>
+                        <span class="c1"># DO not open</span>
+                        <span class="n">logging</span><span class="o">.</span><span class="n">error</span><span class="p">(</span><span class="s2">&quot;Could not open file: </span><span class="si">%s</span><span class="s2">&quot;</span> <span class="o">%</span> <span class="n">sys</span><span class="o">.</span><span class="n">exc_value</span><span class="p">)</span>
+            <span class="c1"># delete image file</span>
+            <span class="n">os</span><span class="o">.</span><span class="n">remove</span><span class="p">(</span><span class="n">pic_fname</span><span class="p">)</span>
+            <span class="k">return</span>
+        <span class="k">elif</span> <span class="n">ext_num</span> <span class="o">==</span> <span class="p">(</span><span class="mi">1</span> <span class="o">-</span> <span class="bp">self</span><span class="o">.</span><span class="n">index_offset</span><span class="p">):</span>
+            <span class="n">ext</span> <span class="o">=</span> <span class="s1">&#39;.html&#39;</span>
+            <span class="n">img_ext</span> <span class="o">=</span> <span class="s1">&#39;_img4html.png&#39;</span>
+            <span class="n">report_frame</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">report_list</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
+        <span class="k">elif</span> <span class="n">ext_num</span> <span class="o">==</span> <span class="p">(</span><span class="mi">2</span> <span class="o">-</span> <span class="bp">self</span><span class="o">.</span><span class="n">index_offset</span><span class="p">):</span>
+            <span class="n">ext</span> <span class="o">=</span> <span class="s1">&#39;.txt&#39;</span>
+            <span class="c1"># changing the image extension actually changes the image</span>
+            <span class="c1"># format on saving</span>
+            <span class="n">img_ext</span> <span class="o">=</span> <span class="s1">&#39;_img4txt.pdf&#39;</span>
+            <span class="n">report</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">report_list</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="k">return</span>
+
+        <span class="c1"># file name</span>
+        <span class="n">fName</span> <span class="o">=</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">splitext</span><span class="p">(</span><span class="n">fName</span><span class="p">)[</span><span class="mi">0</span><span class="p">]</span> <span class="o">+</span> <span class="n">ext</span>
+        <span class="n">dlg</span><span class="o">.</span><span class="n">Destroy</span><span class="p">()</span>
+        <span class="c1"># pic (png) file path/name</span>
+        <span class="n">pic_fname</span> <span class="o">=</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">splitext</span><span class="p">(</span><span class="n">fName</span><span class="p">)[</span><span class="mi">0</span><span class="p">]</span> <span class="o">+</span> <span class="n">img_ext</span>
+        <span class="c1"># put the image path in html string</span>
+        <span class="k">if</span> <span class="n">ext_num</span> <span class="o">==</span> <span class="p">(</span><span class="mi">1</span> <span class="o">-</span> <span class="bp">self</span><span class="o">.</span><span class="n">index_offset</span><span class="p">):</span>
+            <span class="n">report</span> <span class="o">=</span> <span class="n">report_frame</span> <span class="o">%</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">basename</span><span class="p">(</span><span class="n">pic_fname</span><span class="p">)</span>
+
+        <span class="n">f</span> <span class="o">=</span> <span class="nb">open</span><span class="p">(</span><span class="n">fName</span><span class="p">,</span> <span class="s1">&#39;w&#39;</span><span class="p">)</span>
+        <span class="n">f</span><span class="o">.</span><span class="n">write</span><span class="p">(</span><span class="n">report</span><span class="p">)</span>
+        <span class="n">f</span><span class="o">.</span><span class="n">close</span><span class="p">()</span>
+        <span class="c1"># save png file using pic_fname</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">report_list</span><span class="p">[</span><span class="mi">2</span><span class="p">]</span><span class="o">.</span><span class="n">savefig</span><span class="p">(</span><span class="n">pic_fname</span><span class="p">)</span></div></div>
+</pre></div>
+
+          </div>
+        </div>
+      </div>
+      <div class="sphinxsidebar" role="navigation" aria-label="main navigation">
+        <div class="sphinxsidebarwrapper">
+<div id="searchbox" style="display: none" role="search">
+  <h3>Quick search</h3>
+    <form class="search" action="../../../../../search.html" method="get">
+      <input type="text" name="q" />
+      <input type="submit" value="Go" />
+      <input type="hidden" name="check_keywords" value="yes" />
+      <input type="hidden" name="area" value="default" />
+    </form>
+</div>
+<script type="text/javascript">$('#searchbox').show(0);</script>
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="related" role="navigation" aria-label="related navigation">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="../../../../../genindex.html" title="General Index"
+             >index</a></li>
+        <li class="right" >
+          <a href="../../../../../py-modindex.html" title="Python Module Index"
+             >modules</a> |</li>
+        <li class="nav-item nav-item-0"><a href="../../../../../index.html">SasView 4.0.0 documentation</a> &raquo;</li>
+          <li class="nav-item nav-item-1"><a href="../../../../index.html" >Module code</a> &raquo;</li>
+          <li class="nav-item nav-item-2"><a href="../invariant.html" >sas.sasgui.perspectives.invariant</a> &raquo;</li> 
+      </ul>
+    </div>
+    <div class="footer" role="contentinfo">
+        &copy; Copyright 2015, The SasView Project.
+      Created using <a href="http://sphinx-doc.org/">Sphinx</a> 1.4.
+    </div>
+  </body>
+</html>

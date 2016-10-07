@@ -1,0 +1,408 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+  "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+    
+    <title>sas.sascalc.calculator.BaseComponent &mdash; SasView 4.0.0 documentation</title>
+    
+    <link rel="stylesheet" href="../../../../_static/classic.css" type="text/css" />
+    <link rel="stylesheet" href="../../../../_static/pygments.css" type="text/css" />
+    
+    <script type="text/javascript">
+      var DOCUMENTATION_OPTIONS = {
+        URL_ROOT:    '../../../../',
+        VERSION:     '4.0.0',
+        COLLAPSE_INDEX: false,
+        FILE_SUFFIX: '.html',
+        HAS_SOURCE:  true
+      };
+    </script>
+    <script type="text/javascript" src="../../../../_static/jquery.js"></script>
+    <script type="text/javascript" src="../../../../_static/underscore.js"></script>
+    <script type="text/javascript" src="../../../../_static/doctools.js"></script>
+    <script type="text/javascript" src="https://cdn.mathjax.org/mathjax/latest/MathJax.js?config=TeX-AMS-MML_HTMLorMML"></script>
+    <link rel="top" title="SasView 4.0.0 documentation" href="../../../../index.html" />
+    <link rel="up" title="Module code" href="../../../index.html" /> 
+  </head>
+  <body role="document">
+    <div class="related" role="navigation" aria-label="related navigation">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="../../../../genindex.html" title="General Index"
+             accesskey="I">index</a></li>
+        <li class="right" >
+          <a href="../../../../py-modindex.html" title="Python Module Index"
+             >modules</a> |</li>
+        <li class="nav-item nav-item-0"><a href="../../../../index.html">SasView 4.0.0 documentation</a> &raquo;</li>
+          <li class="nav-item nav-item-1"><a href="../../../index.html" accesskey="U">Module code</a> &raquo;</li> 
+      </ul>
+    </div>  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          <div class="body" role="main">
+            
+  <h1>Source code for sas.sascalc.calculator.BaseComponent</h1><div class="highlight"><pre>
+<span></span><span class="ch">#!/usr/bin/env python</span>
+
+<span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">Provide base functionality for all model components</span>
+<span class="sd">&quot;&quot;&quot;</span>
+
+<span class="c1"># imports</span>
+<span class="kn">import</span> <span class="nn">copy</span>
+<span class="kn">from</span> <span class="nn">collections</span> <span class="kn">import</span> <span class="n">OrderedDict</span>
+
+<span class="kn">import</span> <span class="nn">numpy</span>
+<span class="c1">#TO DO: that about a way to make the parameter</span>
+<span class="c1">#is self return if it is fittable or not</span>
+
+<div class="viewcode-block" id="BaseComponent"><a class="viewcode-back" href="../../../../dev/api/sas.sascalc.calculator.html#sas.sascalc.calculator.BaseComponent.BaseComponent">[docs]</a><span class="k">class</span> <span class="nc">BaseComponent</span><span class="p">:</span>
+    <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Basic model component</span>
+
+<span class="sd">    Since version 0.5.0, basic operations are no longer supported.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+
+    <span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot; Initialization&quot;&quot;&quot;</span>
+
+        <span class="c1">## Name of the model</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">name</span> <span class="o">=</span> <span class="s2">&quot;BaseComponent&quot;</span>
+
+        <span class="c1">## Parameters to be accessed by client</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">params</span> <span class="o">=</span> <span class="p">{}</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">details</span> <span class="o">=</span> <span class="p">{}</span>
+        <span class="c1">## Dictionary used to store the dispersity/averaging</span>
+        <span class="c1">#  parameters of dispersed/averaged parameters.</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">dispersion</span> <span class="o">=</span> <span class="p">{}</span>
+        <span class="c1"># string containing information about the model such as the equation</span>
+        <span class="c1">#of the given model, exception or possible use</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">description</span> <span class="o">=</span> <span class="s1">&#39;&#39;</span>
+        <span class="c1">#list of parameter that can be fitted</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">fixed</span> <span class="o">=</span> <span class="p">[]</span>
+        <span class="c1">#list of non-fittable parameter</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">non_fittable</span> <span class="o">=</span> <span class="p">[]</span>
+        <span class="c1">## parameters with orientation</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">orientation_params</span> <span class="o">=</span> <span class="p">[]</span>
+        <span class="c1">## magnetic parameters</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">magnetic_params</span> <span class="o">=</span> <span class="p">[]</span>
+        <span class="c1">## store dispersity reference</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_persistency_dict</span> <span class="o">=</span> <span class="p">{}</span>
+        <span class="c1">## independent parameter name and unit [string]</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">input_name</span> <span class="o">=</span> <span class="s2">&quot;Q&quot;</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">input_unit</span> <span class="o">=</span> <span class="s2">&quot;A^{-1}&quot;</span>
+        <span class="c1">## output name and unit  [string]</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">output_name</span> <span class="o">=</span> <span class="s2">&quot;Intensity&quot;</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">output_unit</span> <span class="o">=</span> <span class="s2">&quot;cm^{-1}&quot;</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">is_multiplicity_model</span> <span class="o">=</span> <span class="bp">False</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">is_structure_factor</span> <span class="o">=</span> <span class="bp">False</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">is_form_factor</span> <span class="o">=</span> <span class="bp">False</span>
+
+    <span class="k">def</span> <span class="nf">__str__</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        :return: string representatio</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">name</span>
+
+<div class="viewcode-block" id="BaseComponent.is_fittable"><a class="viewcode-back" href="../../../../dev/api/sas.sascalc.calculator.html#sas.sascalc.calculator.BaseComponent.BaseComponent.is_fittable">[docs]</a>    <span class="k">def</span> <span class="nf">is_fittable</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">par_name</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Check if a given parameter is fittable or not</span>
+
+<span class="sd">        :param par_name: the parameter name to check</span>
+
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">return</span> <span class="n">par_name</span><span class="o">.</span><span class="n">lower</span><span class="p">()</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">fixed</span></div>
+        <span class="c1">#For the future</span>
+        <span class="c1">#return self.params[str(par_name)].is_fittable()</span>
+
+<div class="viewcode-block" id="BaseComponent.run"><a class="viewcode-back" href="../../../../dev/api/sas.sascalc.calculator.html#sas.sascalc.calculator.BaseComponent.BaseComponent.run">[docs]</a>    <span class="k">def</span> <span class="nf">run</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">x</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        run 1d</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">return</span> <span class="bp">NotImplemented</span></div>
+
+<div class="viewcode-block" id="BaseComponent.runXY"><a class="viewcode-back" href="../../../../dev/api/sas.sascalc.calculator.html#sas.sascalc.calculator.BaseComponent.BaseComponent.runXY">[docs]</a>    <span class="k">def</span> <span class="nf">runXY</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">x</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        run 2d</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">return</span> <span class="bp">NotImplemented</span></div>
+
+<div class="viewcode-block" id="BaseComponent.calculate_ER"><a class="viewcode-back" href="../../../../dev/api/sas.sascalc.calculator.html#sas.sascalc.calculator.BaseComponent.BaseComponent.calculate_ER">[docs]</a>    <span class="k">def</span> <span class="nf">calculate_ER</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Calculate effective radius</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">return</span> <span class="bp">NotImplemented</span></div>
+
+<div class="viewcode-block" id="BaseComponent.calculate_VR"><a class="viewcode-back" href="../../../../dev/api/sas.sascalc.calculator.html#sas.sascalc.calculator.BaseComponent.BaseComponent.calculate_VR">[docs]</a>    <span class="k">def</span> <span class="nf">calculate_VR</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Calculate volume fraction ratio</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">return</span> <span class="bp">NotImplemented</span></div>
+
+<div class="viewcode-block" id="BaseComponent.evalDistribution"><a class="viewcode-back" href="../../../../dev/api/sas.sascalc.calculator.html#sas.sascalc.calculator.BaseComponent.BaseComponent.evalDistribution">[docs]</a>    <span class="k">def</span> <span class="nf">evalDistribution</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">qdist</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Evaluate a distribution of q-values.</span>
+
+<span class="sd">        * For 1D, a numpy array is expected as input: ::</span>
+
+<span class="sd">            evalDistribution(q)</span>
+
+<span class="sd">          where q is a numpy array.</span>
+
+
+<span class="sd">        * For 2D, a list of numpy arrays are expected: [qx_prime,qy_prime],</span>
+<span class="sd">          where 1D arrays, ::</span>
+
+<span class="sd">              qx_prime = [ qx[0], qx[1], qx[2], ....]</span>
+
+<span class="sd">          and ::</span>
+
+<span class="sd">              qy_prime = [ qy[0], qy[1], qy[2], ....]</span>
+
+<span class="sd">        Then get ::</span>
+
+<span class="sd">            q = numpy.sqrt(qx_prime^2+qy_prime^2)</span>
+
+<span class="sd">        that is a qr in 1D array; ::</span>
+
+<span class="sd">            q = [q[0], q[1], q[2], ....]</span>
+
+<span class="sd">        .. note:: Due to 2D speed issue, no anisotropic scattering</span>
+<span class="sd">                  is supported for python models, thus C-models should have</span>
+<span class="sd">                  their own evalDistribution methods.</span>
+
+<span class="sd">        The method is then called the following way: ::</span>
+
+<span class="sd">            evalDistribution(q)</span>
+
+<span class="sd">        where q is a numpy array.</span>
+
+<span class="sd">        :param qdist: ndarray of scalar q-values or list [qx,qy] where qx,qy are 1D ndarrays</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">if</span> <span class="n">qdist</span><span class="o">.</span><span class="n">__class__</span><span class="o">.</span><span class="n">__name__</span> <span class="o">==</span> <span class="s1">&#39;list&#39;</span><span class="p">:</span>
+            <span class="c1"># Check whether we have a list of ndarrays [qx,qy]</span>
+            <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">qdist</span><span class="p">)</span><span class="o">!=</span><span class="mi">2</span> <span class="ow">or</span> \
+                <span class="n">qdist</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">__class__</span><span class="o">.</span><span class="n">__name__</span> <span class="o">!=</span> <span class="s1">&#39;ndarray&#39;</span> <span class="ow">or</span> \
+                <span class="n">qdist</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span><span class="o">.</span><span class="n">__class__</span><span class="o">.</span><span class="n">__name__</span> <span class="o">!=</span> <span class="s1">&#39;ndarray&#39;</span><span class="p">:</span>
+                <span class="n">msg</span> <span class="o">=</span> <span class="s2">&quot;evalDistribution expects a list of 2 ndarrays&quot;</span>
+                <span class="k">raise</span> <span class="ne">RuntimeError</span><span class="p">,</span> <span class="n">msg</span>
+
+            <span class="c1"># Extract qx and qy for code clarity</span>
+            <span class="n">qx</span> <span class="o">=</span> <span class="n">qdist</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
+            <span class="n">qy</span> <span class="o">=</span> <span class="n">qdist</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span>
+
+            <span class="c1"># calculate q_r component for 2D isotropic</span>
+            <span class="n">q</span> <span class="o">=</span> <span class="n">numpy</span><span class="o">.</span><span class="n">sqrt</span><span class="p">(</span><span class="n">qx</span><span class="o">**</span><span class="mi">2</span><span class="o">+</span><span class="n">qy</span><span class="o">**</span><span class="mi">2</span><span class="p">)</span>
+            <span class="c1"># vectorize the model function runXY</span>
+            <span class="n">v_model</span> <span class="o">=</span> <span class="n">numpy</span><span class="o">.</span><span class="n">vectorize</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">runXY</span><span class="p">,</span> <span class="n">otypes</span><span class="o">=</span><span class="p">[</span><span class="nb">float</span><span class="p">])</span>
+            <span class="c1"># calculate the scattering</span>
+            <span class="n">iq_array</span> <span class="o">=</span> <span class="n">v_model</span><span class="p">(</span><span class="n">q</span><span class="p">)</span>
+
+            <span class="k">return</span> <span class="n">iq_array</span>
+
+        <span class="k">elif</span> <span class="n">qdist</span><span class="o">.</span><span class="n">__class__</span><span class="o">.</span><span class="n">__name__</span> <span class="o">==</span> <span class="s1">&#39;ndarray&#39;</span><span class="p">:</span>
+            <span class="c1"># We have a simple 1D distribution of q-values</span>
+            <span class="n">v_model</span> <span class="o">=</span> <span class="n">numpy</span><span class="o">.</span><span class="n">vectorize</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">runXY</span><span class="p">,</span> <span class="n">otypes</span><span class="o">=</span><span class="p">[</span><span class="nb">float</span><span class="p">])</span>
+            <span class="n">iq_array</span> <span class="o">=</span> <span class="n">v_model</span><span class="p">(</span><span class="n">qdist</span><span class="p">)</span>
+            <span class="k">return</span> <span class="n">iq_array</span>
+
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">mesg</span> <span class="o">=</span> <span class="s2">&quot;evalDistribution is expecting an ndarray of scalar q-values&quot;</span>
+            <span class="n">mesg</span> <span class="o">+=</span> <span class="s2">&quot; or a list [qx,qy] where qx,qy are 2D ndarrays.&quot;</span>
+            <span class="k">raise</span> <span class="ne">RuntimeError</span><span class="p">,</span> <span class="n">mesg</span></div>
+
+
+
+<div class="viewcode-block" id="BaseComponent.clone"><a class="viewcode-back" href="../../../../dev/api/sas.sascalc.calculator.html#sas.sascalc.calculator.BaseComponent.BaseComponent.clone">[docs]</a>    <span class="k">def</span> <span class="nf">clone</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot; Returns a new object identical to the current object &quot;&quot;&quot;</span>
+        <span class="n">obj</span> <span class="o">=</span> <span class="n">copy</span><span class="o">.</span><span class="n">deepcopy</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_clone</span><span class="p">(</span><span class="n">obj</span><span class="p">)</span></div>
+
+    <span class="k">def</span> <span class="nf">_clone</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">obj</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Internal utility function to copy the internal</span>
+<span class="sd">        data members to a fresh copy.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">obj</span><span class="o">.</span><span class="n">params</span>     <span class="o">=</span> <span class="n">copy</span><span class="o">.</span><span class="n">deepcopy</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">params</span><span class="p">)</span>
+        <span class="n">obj</span><span class="o">.</span><span class="n">details</span>    <span class="o">=</span> <span class="n">copy</span><span class="o">.</span><span class="n">deepcopy</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">details</span><span class="p">)</span>
+        <span class="n">obj</span><span class="o">.</span><span class="n">dispersion</span> <span class="o">=</span> <span class="n">copy</span><span class="o">.</span><span class="n">deepcopy</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">dispersion</span><span class="p">)</span>
+        <span class="n">obj</span><span class="o">.</span><span class="n">_persistency_dict</span> <span class="o">=</span> <span class="n">copy</span><span class="o">.</span><span class="n">deepcopy</span><span class="p">(</span> <span class="bp">self</span><span class="o">.</span><span class="n">_persistency_dict</span><span class="p">)</span>
+        <span class="k">return</span> <span class="n">obj</span>
+
+<div class="viewcode-block" id="BaseComponent.set_dispersion"><a class="viewcode-back" href="../../../../dev/api/sas.sascalc.calculator.html#sas.sascalc.calculator.BaseComponent.BaseComponent.set_dispersion">[docs]</a>    <span class="k">def</span> <span class="nf">set_dispersion</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">parameter</span><span class="p">,</span> <span class="n">dispersion</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        model dispersions</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="c1">##Not Implemented</span>
+        <span class="k">return</span> <span class="bp">None</span></div>
+
+<div class="viewcode-block" id="BaseComponent.getProfile"><a class="viewcode-back" href="../../../../dev/api/sas.sascalc.calculator.html#sas.sascalc.calculator.BaseComponent.BaseComponent.getProfile">[docs]</a>    <span class="k">def</span> <span class="nf">getProfile</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Get SLD profile</span>
+
+<span class="sd">        : return: (z, beta) where z is a list of depth of the transition points</span>
+<span class="sd">                beta is a list of the corresponding SLD values</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="c1">#Not Implemented</span>
+        <span class="k">return</span> <span class="bp">None</span><span class="p">,</span> <span class="bp">None</span></div>
+
+<div class="viewcode-block" id="BaseComponent.setParam"><a class="viewcode-back" href="../../../../dev/api/sas.sascalc.calculator.html#sas.sascalc.calculator.BaseComponent.BaseComponent.setParam">[docs]</a>    <span class="k">def</span> <span class="nf">setParam</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">name</span><span class="p">,</span> <span class="n">value</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Set the value of a model parameter</span>
+
+<span class="sd">        :param name: name of the parameter</span>
+<span class="sd">        :param value: value of the parameter</span>
+
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="c1"># Look for dispersion parameters</span>
+        <span class="n">toks</span> <span class="o">=</span> <span class="n">name</span><span class="o">.</span><span class="n">split</span><span class="p">(</span><span class="s1">&#39;.&#39;</span><span class="p">)</span>
+        <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">toks</span><span class="p">)</span><span class="o">==</span><span class="mi">2</span><span class="p">:</span>
+            <span class="k">for</span> <span class="n">item</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">dispersion</span><span class="o">.</span><span class="n">keys</span><span class="p">():</span>
+                <span class="k">if</span> <span class="n">item</span><span class="o">.</span><span class="n">lower</span><span class="p">()</span><span class="o">==</span><span class="n">toks</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">lower</span><span class="p">():</span>
+                    <span class="k">for</span> <span class="n">par</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">dispersion</span><span class="p">[</span><span class="n">item</span><span class="p">]:</span>
+                        <span class="k">if</span> <span class="n">par</span><span class="o">.</span><span class="n">lower</span><span class="p">()</span> <span class="o">==</span> <span class="n">toks</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span><span class="o">.</span><span class="n">lower</span><span class="p">():</span>
+                            <span class="bp">self</span><span class="o">.</span><span class="n">dispersion</span><span class="p">[</span><span class="n">item</span><span class="p">][</span><span class="n">par</span><span class="p">]</span> <span class="o">=</span> <span class="n">value</span>
+                            <span class="k">return</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="c1"># Look for standard parameter</span>
+            <span class="k">for</span> <span class="n">item</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">params</span><span class="o">.</span><span class="n">keys</span><span class="p">():</span>
+                <span class="k">if</span> <span class="n">item</span><span class="o">.</span><span class="n">lower</span><span class="p">()</span><span class="o">==</span><span class="n">name</span><span class="o">.</span><span class="n">lower</span><span class="p">():</span>
+                    <span class="bp">self</span><span class="o">.</span><span class="n">params</span><span class="p">[</span><span class="n">item</span><span class="p">]</span> <span class="o">=</span> <span class="n">value</span>
+                    <span class="k">return</span>
+
+        <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">,</span> <span class="s2">&quot;Model does not contain parameter </span><span class="si">%s</span><span class="s2">&quot;</span> <span class="o">%</span> <span class="n">name</span></div>
+
+<div class="viewcode-block" id="BaseComponent.getParam"><a class="viewcode-back" href="../../../../dev/api/sas.sascalc.calculator.html#sas.sascalc.calculator.BaseComponent.BaseComponent.getParam">[docs]</a>    <span class="k">def</span> <span class="nf">getParam</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">name</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Set the value of a model parameter</span>
+<span class="sd">        :param name: name of the parameter</span>
+
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="c1"># Look for dispersion parameters</span>
+        <span class="n">toks</span> <span class="o">=</span> <span class="n">name</span><span class="o">.</span><span class="n">split</span><span class="p">(</span><span class="s1">&#39;.&#39;</span><span class="p">)</span>
+        <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">toks</span><span class="p">)</span><span class="o">==</span><span class="mi">2</span><span class="p">:</span>
+            <span class="k">for</span> <span class="n">item</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">dispersion</span><span class="o">.</span><span class="n">keys</span><span class="p">():</span>
+                <span class="k">if</span> <span class="n">item</span><span class="o">.</span><span class="n">lower</span><span class="p">()</span><span class="o">==</span><span class="n">toks</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">lower</span><span class="p">():</span>
+                    <span class="k">for</span> <span class="n">par</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">dispersion</span><span class="p">[</span><span class="n">item</span><span class="p">]:</span>
+                        <span class="k">if</span> <span class="n">par</span><span class="o">.</span><span class="n">lower</span><span class="p">()</span> <span class="o">==</span> <span class="n">toks</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span><span class="o">.</span><span class="n">lower</span><span class="p">():</span>
+                            <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">dispersion</span><span class="p">[</span><span class="n">item</span><span class="p">][</span><span class="n">par</span><span class="p">]</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="c1"># Look for standard parameter</span>
+            <span class="k">for</span> <span class="n">item</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">params</span><span class="o">.</span><span class="n">keys</span><span class="p">():</span>
+                <span class="k">if</span> <span class="n">item</span><span class="o">.</span><span class="n">lower</span><span class="p">()</span><span class="o">==</span><span class="n">name</span><span class="o">.</span><span class="n">lower</span><span class="p">():</span>
+                    <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">params</span><span class="p">[</span><span class="n">item</span><span class="p">]</span>
+
+        <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">,</span> <span class="s2">&quot;Model does not contain parameter </span><span class="si">%s</span><span class="s2">&quot;</span> <span class="o">%</span> <span class="n">name</span></div>
+
+<div class="viewcode-block" id="BaseComponent.getParamList"><a class="viewcode-back" href="../../../../dev/api/sas.sascalc.calculator.html#sas.sascalc.calculator.BaseComponent.BaseComponent.getParamList">[docs]</a>    <span class="k">def</span> <span class="nf">getParamList</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Return a list of all available parameters for the model</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="nb">list</span> <span class="o">=</span> <span class="n">_ordered_keys</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">params</span><span class="p">)</span>
+        <span class="c1"># WARNING: Extending the list with the dispersion parameters</span>
+        <span class="nb">list</span><span class="o">.</span><span class="n">extend</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">getDispParamList</span><span class="p">())</span>
+        <span class="k">return</span> <span class="nb">list</span></div>
+
+<div class="viewcode-block" id="BaseComponent.getDispParamList"><a class="viewcode-back" href="../../../../dev/api/sas.sascalc.calculator.html#sas.sascalc.calculator.BaseComponent.BaseComponent.getDispParamList">[docs]</a>    <span class="k">def</span> <span class="nf">getDispParamList</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Return a list of all available parameters for the model</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="nb">list</span> <span class="o">=</span> <span class="p">[]</span>
+        <span class="k">for</span> <span class="n">item</span> <span class="ow">in</span> <span class="n">_ordered_keys</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">dispersion</span><span class="p">):</span>
+            <span class="k">for</span> <span class="n">p</span> <span class="ow">in</span> <span class="n">_ordered_keys</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">dispersion</span><span class="p">[</span><span class="n">item</span><span class="p">]):</span>
+                <span class="k">if</span> <span class="n">p</span> <span class="ow">not</span> <span class="ow">in</span> <span class="p">[</span><span class="s1">&#39;type&#39;</span><span class="p">]:</span>
+                    <span class="nb">list</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="s1">&#39;</span><span class="si">%s</span><span class="s1">.</span><span class="si">%s</span><span class="s1">&#39;</span> <span class="o">%</span> <span class="p">(</span><span class="n">item</span><span class="o">.</span><span class="n">lower</span><span class="p">(),</span> <span class="n">p</span><span class="o">.</span><span class="n">lower</span><span class="p">()))</span>
+
+        <span class="k">return</span> <span class="nb">list</span></div>
+
+    <span class="c1"># Old-style methods that are no longer used</span>
+<div class="viewcode-block" id="BaseComponent.setParamWithToken"><a class="viewcode-back" href="../../../../dev/api/sas.sascalc.calculator.html#sas.sascalc.calculator.BaseComponent.BaseComponent.setParamWithToken">[docs]</a>    <span class="k">def</span> <span class="nf">setParamWithToken</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">name</span><span class="p">,</span> <span class="n">value</span><span class="p">,</span> <span class="n">token</span><span class="p">,</span> <span class="n">member</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        set Param With Token</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">return</span> <span class="bp">NotImplemented</span></div>
+<div class="viewcode-block" id="BaseComponent.getParamWithToken"><a class="viewcode-back" href="../../../../dev/api/sas.sascalc.calculator.html#sas.sascalc.calculator.BaseComponent.BaseComponent.getParamWithToken">[docs]</a>    <span class="k">def</span> <span class="nf">getParamWithToken</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">name</span><span class="p">,</span> <span class="n">token</span><span class="p">,</span> <span class="n">member</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        get Param With Token</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">return</span> <span class="bp">NotImplemented</span></div>
+
+<div class="viewcode-block" id="BaseComponent.getParamListWithToken"><a class="viewcode-back" href="../../../../dev/api/sas.sascalc.calculator.html#sas.sascalc.calculator.BaseComponent.BaseComponent.getParamListWithToken">[docs]</a>    <span class="k">def</span> <span class="nf">getParamListWithToken</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">token</span><span class="p">,</span> <span class="n">member</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        get Param List With Token</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">return</span> <span class="bp">NotImplemented</span></div>
+    <span class="k">def</span> <span class="nf">__add__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">other</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        add</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">,</span> <span class="s2">&quot;Model operation are no longer supported&quot;</span>
+    <span class="k">def</span> <span class="nf">__sub__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">other</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        sub</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">,</span> <span class="s2">&quot;Model operation are no longer supported&quot;</span>
+    <span class="k">def</span> <span class="nf">__mul__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">other</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        mul</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">,</span> <span class="s2">&quot;Model operation are no longer supported&quot;</span>
+    <span class="k">def</span> <span class="nf">__div__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">other</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        div</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">,</span> <span class="s2">&quot;Model operation are no longer supported&quot;</span></div>
+
+
+<span class="k">def</span> <span class="nf">_ordered_keys</span><span class="p">(</span><span class="n">d</span><span class="p">):</span>
+    <span class="n">keys</span> <span class="o">=</span> <span class="nb">list</span><span class="p">(</span><span class="n">d</span><span class="o">.</span><span class="n">keys</span><span class="p">())</span>
+    <span class="k">if</span> <span class="ow">not</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">d</span><span class="p">,</span> <span class="n">OrderedDict</span><span class="p">):</span>
+        <span class="n">keys</span><span class="o">.</span><span class="n">sort</span><span class="p">()</span>
+    <span class="k">return</span> <span class="n">keys</span>
+</pre></div>
+
+          </div>
+        </div>
+      </div>
+      <div class="sphinxsidebar" role="navigation" aria-label="main navigation">
+        <div class="sphinxsidebarwrapper">
+<div id="searchbox" style="display: none" role="search">
+  <h3>Quick search</h3>
+    <form class="search" action="../../../../search.html" method="get">
+      <input type="text" name="q" />
+      <input type="submit" value="Go" />
+      <input type="hidden" name="check_keywords" value="yes" />
+      <input type="hidden" name="area" value="default" />
+    </form>
+</div>
+<script type="text/javascript">$('#searchbox').show(0);</script>
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="related" role="navigation" aria-label="related navigation">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="../../../../genindex.html" title="General Index"
+             >index</a></li>
+        <li class="right" >
+          <a href="../../../../py-modindex.html" title="Python Module Index"
+             >modules</a> |</li>
+        <li class="nav-item nav-item-0"><a href="../../../../index.html">SasView 4.0.0 documentation</a> &raquo;</li>
+          <li class="nav-item nav-item-1"><a href="../../../index.html" >Module code</a> &raquo;</li> 
+      </ul>
+    </div>
+    <div class="footer" role="contentinfo">
+        &copy; Copyright 2015, The SasView Project.
+      Created using <a href="http://sphinx-doc.org/">Sphinx</a> 1.4.
+    </div>
+  </body>
+</html>

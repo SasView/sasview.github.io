@@ -1,0 +1,331 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+  "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+    
+    <title>sas.sasgui.perspectives.fitting.model_thread &mdash; SasView 4.0.0 documentation</title>
+    
+    <link rel="stylesheet" href="../../../../../_static/classic.css" type="text/css" />
+    <link rel="stylesheet" href="../../../../../_static/pygments.css" type="text/css" />
+    
+    <script type="text/javascript">
+      var DOCUMENTATION_OPTIONS = {
+        URL_ROOT:    '../../../../../',
+        VERSION:     '4.0.0',
+        COLLAPSE_INDEX: false,
+        FILE_SUFFIX: '.html',
+        HAS_SOURCE:  true
+      };
+    </script>
+    <script type="text/javascript" src="../../../../../_static/jquery.js"></script>
+    <script type="text/javascript" src="../../../../../_static/underscore.js"></script>
+    <script type="text/javascript" src="../../../../../_static/doctools.js"></script>
+    <script type="text/javascript" src="https://cdn.mathjax.org/mathjax/latest/MathJax.js?config=TeX-AMS-MML_HTMLorMML"></script>
+    <link rel="top" title="SasView 4.0.0 documentation" href="../../../../../index.html" />
+    <link rel="up" title="sas.sasgui.perspectives.fitting" href="../fitting.html" /> 
+  </head>
+  <body role="document">
+    <div class="related" role="navigation" aria-label="related navigation">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="../../../../../genindex.html" title="General Index"
+             accesskey="I">index</a></li>
+        <li class="right" >
+          <a href="../../../../../py-modindex.html" title="Python Module Index"
+             >modules</a> |</li>
+        <li class="nav-item nav-item-0"><a href="../../../../../index.html">SasView 4.0.0 documentation</a> &raquo;</li>
+          <li class="nav-item nav-item-1"><a href="../../../../index.html" >Module code</a> &raquo;</li>
+          <li class="nav-item nav-item-2"><a href="../fitting.html" accesskey="U">sas.sasgui.perspectives.fitting</a> &raquo;</li> 
+      </ul>
+    </div>  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          <div class="body" role="main">
+            
+  <h1>Source code for sas.sasgui.perspectives.fitting.model_thread</h1><div class="highlight"><pre>
+<span></span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Calculation thread for modeling</span>
+<span class="sd">&quot;&quot;&quot;</span>
+
+<span class="kn">import</span> <span class="nn">time</span>
+<span class="kn">import</span> <span class="nn">numpy</span>
+<span class="kn">import</span> <span class="nn">math</span>
+<span class="kn">from</span> <span class="nn">sas.sascalc.data_util.calcthread</span> <span class="kn">import</span> <span class="n">CalcThread</span>
+
+<div class="viewcode-block" id="Calc2D"><a class="viewcode-back" href="../../../../../dev/api/sas.sasgui.perspectives.fitting.html#sas.sasgui.perspectives.fitting.model_thread.Calc2D">[docs]</a><span class="k">class</span> <span class="nc">Calc2D</span><span class="p">(</span><span class="n">CalcThread</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Compute 2D model</span>
+<span class="sd">    This calculation assumes a 2-fold symmetry of the model</span>
+<span class="sd">    where points are computed for one half of the detector</span>
+<span class="sd">    and I(qx, qy) = I(-qx, -qy) is assumed.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">data</span><span class="p">,</span> <span class="n">model</span><span class="p">,</span> <span class="n">smearer</span><span class="p">,</span> <span class="n">qmin</span><span class="p">,</span> <span class="n">qmax</span><span class="p">,</span> <span class="n">page_id</span><span class="p">,</span>
+                 <span class="n">state</span><span class="o">=</span><span class="bp">None</span><span class="p">,</span>
+                 <span class="n">weight</span><span class="o">=</span><span class="bp">None</span><span class="p">,</span>
+                 <span class="n">fid</span><span class="o">=</span><span class="bp">None</span><span class="p">,</span>
+                 <span class="n">toggle_mode_on</span><span class="o">=</span><span class="bp">False</span><span class="p">,</span>
+                 <span class="n">completefn</span><span class="o">=</span><span class="bp">None</span><span class="p">,</span>
+                 <span class="n">updatefn</span><span class="o">=</span><span class="bp">None</span><span class="p">,</span>
+                 <span class="n">update_chisqr</span><span class="o">=</span><span class="bp">True</span><span class="p">,</span>
+                 <span class="n">source</span><span class="o">=</span><span class="s1">&#39;model&#39;</span><span class="p">,</span>
+                 <span class="n">yieldtime</span><span class="o">=</span><span class="mf">0.04</span><span class="p">,</span>
+                 <span class="n">worktime</span><span class="o">=</span><span class="mf">0.04</span><span class="p">,</span>
+                 <span class="n">exception_handler</span><span class="o">=</span><span class="bp">None</span><span class="p">,</span>
+                 <span class="p">):</span>
+        <span class="n">CalcThread</span><span class="o">.</span><span class="n">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">completefn</span><span class="p">,</span> <span class="n">updatefn</span><span class="p">,</span> <span class="n">yieldtime</span><span class="p">,</span> <span class="n">worktime</span><span class="p">,</span>
+                            <span class="n">exception_handler</span><span class="o">=</span><span class="n">exception_handler</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">qmin</span> <span class="o">=</span> <span class="n">qmin</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">qmax</span> <span class="o">=</span> <span class="n">qmax</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">weight</span> <span class="o">=</span> <span class="n">weight</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">fid</span> <span class="o">=</span> <span class="n">fid</span>
+        <span class="c1">#self.qstep = qstep</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">toggle_mode_on</span> <span class="o">=</span> <span class="n">toggle_mode_on</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">data</span> <span class="o">=</span> <span class="n">data</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">page_id</span> <span class="o">=</span> <span class="n">page_id</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">state</span> <span class="o">=</span> <span class="bp">None</span>
+        <span class="c1"># the model on to calculate</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">model</span> <span class="o">=</span> <span class="n">model</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">smearer</span> <span class="o">=</span> <span class="n">smearer</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">starttime</span> <span class="o">=</span> <span class="mi">0</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">update_chisqr</span> <span class="o">=</span> <span class="n">update_chisqr</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">source</span> <span class="o">=</span> <span class="n">source</span>
+
+<div class="viewcode-block" id="Calc2D.compute"><a class="viewcode-back" href="../../../../../dev/api/sas.sasgui.perspectives.fitting.html#sas.sasgui.perspectives.fitting.model_thread.Calc2D.compute">[docs]</a>    <span class="k">def</span> <span class="nf">compute</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Compute the data given a model function</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">starttime</span> <span class="o">=</span> <span class="n">time</span><span class="o">.</span><span class="n">time</span><span class="p">()</span>
+        <span class="c1"># Determine appropriate q range</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">qmin</span> <span class="o">==</span> <span class="bp">None</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">qmin</span> <span class="o">=</span> <span class="mi">0</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">qmax</span> <span class="o">==</span> <span class="bp">None</span><span class="p">:</span>
+            <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">data</span> <span class="o">!=</span> <span class="bp">None</span><span class="p">:</span>
+                <span class="n">newx</span> <span class="o">=</span> <span class="n">math</span><span class="o">.</span><span class="n">pow</span><span class="p">(</span><span class="nb">max</span><span class="p">(</span><span class="n">math</span><span class="o">.</span><span class="n">fabs</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">data</span><span class="o">.</span><span class="n">xmax</span><span class="p">),</span>
+                                   <span class="n">math</span><span class="o">.</span><span class="n">fabs</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">data</span><span class="o">.</span><span class="n">xmin</span><span class="p">)),</span> <span class="mi">2</span><span class="p">)</span>
+                <span class="n">newy</span> <span class="o">=</span> <span class="n">math</span><span class="o">.</span><span class="n">pow</span><span class="p">(</span><span class="nb">max</span><span class="p">(</span><span class="n">math</span><span class="o">.</span><span class="n">fabs</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">data</span><span class="o">.</span><span class="n">ymax</span><span class="p">),</span>
+                                   <span class="n">math</span><span class="o">.</span><span class="n">fabs</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">data</span><span class="o">.</span><span class="n">ymin</span><span class="p">)),</span> <span class="mi">2</span><span class="p">)</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">qmax</span> <span class="o">=</span> <span class="n">math</span><span class="o">.</span><span class="n">sqrt</span><span class="p">(</span><span class="n">newx</span> <span class="o">+</span> <span class="n">newy</span><span class="p">)</span>
+
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">data</span> <span class="ow">is</span> <span class="bp">None</span><span class="p">:</span>
+            <span class="n">msg</span> <span class="o">=</span> <span class="s2">&quot;Compute Calc2D receive data = </span><span class="si">%s</span><span class="s2">.</span><span class="se">\n</span><span class="s2">&quot;</span> <span class="o">%</span> <span class="nb">str</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">data</span><span class="p">)</span>
+            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">,</span> <span class="n">msg</span>
+
+        <span class="c1"># Define matrix where data will be plotted</span>
+        <span class="n">radius</span> <span class="o">=</span> <span class="n">numpy</span><span class="o">.</span><span class="n">sqrt</span><span class="p">((</span><span class="bp">self</span><span class="o">.</span><span class="n">data</span><span class="o">.</span><span class="n">qx_data</span> <span class="o">*</span> <span class="bp">self</span><span class="o">.</span><span class="n">data</span><span class="o">.</span><span class="n">qx_data</span><span class="p">)</span> <span class="o">+</span> \
+                    <span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">data</span><span class="o">.</span><span class="n">qy_data</span> <span class="o">*</span> <span class="bp">self</span><span class="o">.</span><span class="n">data</span><span class="o">.</span><span class="n">qy_data</span><span class="p">))</span>
+
+        <span class="c1"># For theory, qmax is based on 1d qmax </span>
+        <span class="c1"># so that must be mulitified by sqrt(2) to get actual max for 2d</span>
+        <span class="n">index_model</span> <span class="o">=</span> <span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">qmin</span> <span class="o">&lt;=</span> <span class="n">radius</span><span class="p">)</span> <span class="o">&amp;</span> <span class="p">(</span><span class="n">radius</span> <span class="o">&lt;=</span> <span class="bp">self</span><span class="o">.</span><span class="n">qmax</span><span class="p">)</span>
+        <span class="n">index_model</span> <span class="o">=</span> <span class="n">index_model</span> <span class="o">&amp;</span> <span class="bp">self</span><span class="o">.</span><span class="n">data</span><span class="o">.</span><span class="n">mask</span>
+        <span class="n">index_model</span> <span class="o">=</span> <span class="n">index_model</span> <span class="o">&amp;</span> <span class="n">numpy</span><span class="o">.</span><span class="n">isfinite</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">data</span><span class="o">.</span><span class="n">data</span><span class="p">)</span>
+
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">smearer</span> <span class="ow">is</span> <span class="ow">not</span> <span class="bp">None</span><span class="p">:</span>
+            <span class="c1"># Set smearer w/ data, model and index.</span>
+            <span class="n">fn</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">smearer</span>
+            <span class="n">fn</span><span class="o">.</span><span class="n">set_model</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">model</span><span class="p">)</span>
+            <span class="n">fn</span><span class="o">.</span><span class="n">set_index</span><span class="p">(</span><span class="n">index_model</span><span class="p">)</span>
+            <span class="c1"># Get necessary data from self.data and set the data for smearing</span>
+            <span class="n">fn</span><span class="o">.</span><span class="n">get_data</span><span class="p">()</span>
+            <span class="c1"># Calculate smeared Intensity</span>
+            <span class="c1">#(by Gaussian averaging): DataLoader/smearing2d/Smearer2D()</span>
+            <span class="n">value</span> <span class="o">=</span> <span class="n">fn</span><span class="o">.</span><span class="n">get_value</span><span class="p">()</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="c1"># calculation w/o smearing</span>
+            <span class="n">value</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">model</span><span class="o">.</span><span class="n">evalDistribution</span><span class="p">(</span>\
+                <span class="p">[</span><span class="bp">self</span><span class="o">.</span><span class="n">data</span><span class="o">.</span><span class="n">qx_data</span><span class="p">[</span><span class="n">index_model</span><span class="p">],</span>
+                 <span class="bp">self</span><span class="o">.</span><span class="n">data</span><span class="o">.</span><span class="n">qy_data</span><span class="p">[</span><span class="n">index_model</span><span class="p">]])</span>
+        <span class="n">output</span> <span class="o">=</span> <span class="n">numpy</span><span class="o">.</span><span class="n">zeros</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">data</span><span class="o">.</span><span class="n">qx_data</span><span class="p">))</span>
+        <span class="c1"># output default is None</span>
+        <span class="c1"># This method is to distinguish between masked</span>
+        <span class="c1">#point(nan) and data point = 0.</span>
+        <span class="n">output</span> <span class="o">=</span> <span class="n">output</span> <span class="o">/</span> <span class="n">output</span>
+        <span class="c1"># set value for self.mask==True, else still None to Plottools</span>
+        <span class="n">output</span><span class="p">[</span><span class="n">index_model</span><span class="p">]</span> <span class="o">=</span> <span class="n">value</span>
+        <span class="n">elapsed</span> <span class="o">=</span> <span class="n">time</span><span class="o">.</span><span class="n">time</span><span class="p">()</span> <span class="o">-</span> <span class="bp">self</span><span class="o">.</span><span class="n">starttime</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">complete</span><span class="p">(</span><span class="n">image</span><span class="o">=</span><span class="n">output</span><span class="p">,</span>
+                       <span class="n">data</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">data</span><span class="p">,</span>
+                       <span class="n">page_id</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">page_id</span><span class="p">,</span>
+                       <span class="n">model</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">model</span><span class="p">,</span>
+                       <span class="n">state</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">state</span><span class="p">,</span>
+                       <span class="n">toggle_mode_on</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">toggle_mode_on</span><span class="p">,</span>
+                       <span class="n">elapsed</span><span class="o">=</span><span class="n">elapsed</span><span class="p">,</span>
+                       <span class="n">index</span><span class="o">=</span><span class="n">index_model</span><span class="p">,</span>
+                       <span class="n">fid</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">fid</span><span class="p">,</span>
+                       <span class="n">qmin</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">qmin</span><span class="p">,</span>
+                       <span class="n">qmax</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">qmax</span><span class="p">,</span>
+                       <span class="n">weight</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">weight</span><span class="p">,</span>
+                       <span class="c1">#qstep=self.qstep,</span>
+                       <span class="n">update_chisqr</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">update_chisqr</span><span class="p">,</span>
+                       <span class="n">source</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">source</span><span class="p">)</span></div></div>
+
+
+<div class="viewcode-block" id="Calc1D"><a class="viewcode-back" href="../../../../../dev/api/sas.sasgui.perspectives.fitting.html#sas.sasgui.perspectives.fitting.model_thread.Calc1D">[docs]</a><span class="k">class</span> <span class="nc">Calc1D</span><span class="p">(</span><span class="n">CalcThread</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Compute 1D data</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">model</span><span class="p">,</span>
+                 <span class="n">page_id</span><span class="p">,</span>
+                 <span class="n">data</span><span class="p">,</span>
+                 <span class="n">fid</span><span class="o">=</span><span class="bp">None</span><span class="p">,</span>
+                 <span class="n">qmin</span><span class="o">=</span><span class="bp">None</span><span class="p">,</span>
+                 <span class="n">qmax</span><span class="o">=</span><span class="bp">None</span><span class="p">,</span>
+                 <span class="n">weight</span><span class="o">=</span><span class="bp">None</span><span class="p">,</span>
+                 <span class="n">smearer</span><span class="o">=</span><span class="bp">None</span><span class="p">,</span>
+                 <span class="n">toggle_mode_on</span><span class="o">=</span><span class="bp">False</span><span class="p">,</span>
+                 <span class="n">state</span><span class="o">=</span><span class="bp">None</span><span class="p">,</span>
+                 <span class="n">completefn</span><span class="o">=</span><span class="bp">None</span><span class="p">,</span>
+                 <span class="n">update_chisqr</span><span class="o">=</span><span class="bp">True</span><span class="p">,</span>
+                 <span class="n">source</span><span class="o">=</span><span class="s1">&#39;model&#39;</span><span class="p">,</span>
+                 <span class="n">updatefn</span><span class="o">=</span><span class="bp">None</span><span class="p">,</span>
+                 <span class="n">yieldtime</span><span class="o">=</span><span class="mf">0.01</span><span class="p">,</span>
+                 <span class="n">worktime</span><span class="o">=</span><span class="mf">0.01</span><span class="p">,</span>
+                 <span class="n">exception_handler</span><span class="o">=</span><span class="bp">None</span><span class="p">,</span>
+                 <span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">CalcThread</span><span class="o">.</span><span class="n">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">completefn</span><span class="p">,</span> <span class="n">updatefn</span><span class="p">,</span> <span class="n">yieldtime</span><span class="p">,</span> <span class="n">worktime</span><span class="p">,</span>
+                            <span class="n">exception_handler</span><span class="o">=</span><span class="n">exception_handler</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">fid</span> <span class="o">=</span> <span class="n">fid</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">data</span> <span class="o">=</span> <span class="n">data</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">qmin</span> <span class="o">=</span> <span class="n">qmin</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">qmax</span> <span class="o">=</span> <span class="n">qmax</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">model</span> <span class="o">=</span> <span class="n">model</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">weight</span> <span class="o">=</span> <span class="n">weight</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">toggle_mode_on</span> <span class="o">=</span> <span class="n">toggle_mode_on</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">state</span> <span class="o">=</span> <span class="n">state</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">page_id</span> <span class="o">=</span> <span class="n">page_id</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">smearer</span> <span class="o">=</span> <span class="n">smearer</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">starttime</span> <span class="o">=</span> <span class="mi">0</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">update_chisqr</span> <span class="o">=</span> <span class="n">update_chisqr</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">source</span> <span class="o">=</span> <span class="n">source</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">out</span> <span class="o">=</span> <span class="bp">None</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">index</span> <span class="o">=</span> <span class="bp">None</span>
+
+<div class="viewcode-block" id="Calc1D.compute"><a class="viewcode-back" href="../../../../../dev/api/sas.sasgui.perspectives.fitting.html#sas.sasgui.perspectives.fitting.model_thread.Calc1D.compute">[docs]</a>    <span class="k">def</span> <span class="nf">compute</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Compute model 1d value given qmin , qmax , x value</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">starttime</span> <span class="o">=</span> <span class="n">time</span><span class="o">.</span><span class="n">time</span><span class="p">()</span>
+        <span class="n">output</span> <span class="o">=</span> <span class="n">numpy</span><span class="o">.</span><span class="n">zeros</span><span class="p">((</span><span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">data</span><span class="o">.</span><span class="n">x</span><span class="p">)))</span>
+        <span class="n">index</span> <span class="o">=</span> <span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">qmin</span> <span class="o">&lt;=</span> <span class="bp">self</span><span class="o">.</span><span class="n">data</span><span class="o">.</span><span class="n">x</span><span class="p">)</span> <span class="o">&amp;</span> <span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">data</span><span class="o">.</span><span class="n">x</span> <span class="o">&lt;=</span> <span class="bp">self</span><span class="o">.</span><span class="n">qmax</span><span class="p">)</span>
+
+        <span class="c1">##smearer the ouput of the plot</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">smearer</span> <span class="ow">is</span> <span class="ow">not</span> <span class="bp">None</span><span class="p">:</span>
+            <span class="n">first_bin</span><span class="p">,</span> <span class="n">last_bin</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">smearer</span><span class="o">.</span><span class="n">get_bin_range</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">qmin</span><span class="p">,</span>
+                                                             <span class="bp">self</span><span class="o">.</span><span class="n">qmax</span><span class="p">)</span>
+            <span class="n">mask</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">data</span><span class="o">.</span><span class="n">x</span><span class="p">[</span><span class="n">first_bin</span><span class="p">:</span><span class="n">last_bin</span><span class="o">+</span><span class="mi">1</span><span class="p">]</span>
+            <span class="n">output</span><span class="p">[</span><span class="n">first_bin</span><span class="p">:</span><span class="n">last_bin</span><span class="o">+</span><span class="mi">1</span><span class="p">]</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">model</span><span class="o">.</span><span class="n">evalDistribution</span><span class="p">(</span><span class="n">mask</span><span class="p">)</span>
+            <span class="n">output</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">smearer</span><span class="p">(</span><span class="n">output</span><span class="p">,</span> <span class="n">first_bin</span><span class="p">,</span> <span class="n">last_bin</span><span class="p">)</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">output</span><span class="p">[</span><span class="n">index</span><span class="p">]</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">model</span><span class="o">.</span><span class="n">evalDistribution</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">data</span><span class="o">.</span><span class="n">x</span><span class="p">[</span><span class="n">index</span><span class="p">])</span>
+
+        <span class="n">elapsed</span> <span class="o">=</span> <span class="n">time</span><span class="o">.</span><span class="n">time</span><span class="p">()</span> <span class="o">-</span> <span class="bp">self</span><span class="o">.</span><span class="n">starttime</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">complete</span><span class="p">(</span><span class="n">x</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">data</span><span class="o">.</span><span class="n">x</span><span class="p">[</span><span class="n">index</span><span class="p">],</span> <span class="n">y</span><span class="o">=</span><span class="n">output</span><span class="p">[</span><span class="n">index</span><span class="p">],</span>
+                      <span class="n">page_id</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">page_id</span><span class="p">,</span>
+                      <span class="n">state</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">state</span><span class="p">,</span>
+                      <span class="n">weight</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">weight</span><span class="p">,</span>
+                      <span class="n">fid</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">fid</span><span class="p">,</span>
+                      <span class="n">toggle_mode_on</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">toggle_mode_on</span><span class="p">,</span>
+                      <span class="n">elapsed</span><span class="o">=</span><span class="n">elapsed</span><span class="p">,</span> <span class="n">index</span><span class="o">=</span><span class="n">index</span><span class="p">,</span> <span class="n">model</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">model</span><span class="p">,</span>
+                      <span class="n">data</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">data</span><span class="p">,</span>
+                      <span class="n">update_chisqr</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">update_chisqr</span><span class="p">,</span>
+                      <span class="n">source</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">source</span><span class="p">)</span></div>
+
+<div class="viewcode-block" id="Calc1D.results"><a class="viewcode-back" href="../../../../../dev/api/sas.sasgui.perspectives.fitting.html#sas.sasgui.perspectives.fitting.model_thread.Calc1D.results">[docs]</a>    <span class="k">def</span> <span class="nf">results</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Send resuts of the computation</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">return</span> <span class="p">[</span><span class="bp">self</span><span class="o">.</span><span class="n">out</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">index</span><span class="p">]</span></div></div>
+
+<span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">Example: ::</span>
+
+<span class="sd">    class CalcCommandline:</span>
+<span class="sd">        def __init__(self, n=20000):</span>
+<span class="sd">            #print thread.get_ident()</span>
+<span class="sd">            from sas.models.CylinderModel import CylinderModel</span>
+
+<span class="sd">            model = CylinderModel()</span>
+
+
+<span class="sd">            print model.runXY([0.01, 0.02])</span>
+
+<span class="sd">            qmax = 0.01</span>
+<span class="sd">            qstep = 0.0001</span>
+<span class="sd">            self.done = False</span>
+
+<span class="sd">            x = numpy.arange(-qmax, qmax+qstep*0.01, qstep)</span>
+<span class="sd">            y = numpy.arange(-qmax, qmax+qstep*0.01, qstep)</span>
+
+
+<span class="sd">            calc_thread_2D = Calc2D(x, y, None, model.clone(),None,</span>
+<span class="sd">                                    -qmax, qmax,qstep,</span>
+<span class="sd">                                            completefn=self.complete,</span>
+<span class="sd">                                            updatefn=self.update ,</span>
+<span class="sd">                                            yieldtime=0.0)</span>
+
+<span class="sd">            calc_thread_2D.queue()</span>
+<span class="sd">            calc_thread_2D.ready(2.5)</span>
+
+<span class="sd">            while not self.done:</span>
+<span class="sd">                time.sleep(1)</span>
+
+<span class="sd">        def update(self,output):</span>
+<span class="sd">            print &quot;update&quot;</span>
+
+<span class="sd">        def complete(self, image, data, model, elapsed, qmin, qmax,index, qstep ):</span>
+<span class="sd">            print &quot;complete&quot;</span>
+<span class="sd">            self.done = True</span>
+
+<span class="sd">    if __name__ == &quot;__main__&quot;:</span>
+<span class="sd">        CalcCommandline()</span>
+<span class="sd">&quot;&quot;&quot;</span>
+</pre></div>
+
+          </div>
+        </div>
+      </div>
+      <div class="sphinxsidebar" role="navigation" aria-label="main navigation">
+        <div class="sphinxsidebarwrapper">
+<div id="searchbox" style="display: none" role="search">
+  <h3>Quick search</h3>
+    <form class="search" action="../../../../../search.html" method="get">
+      <input type="text" name="q" />
+      <input type="submit" value="Go" />
+      <input type="hidden" name="check_keywords" value="yes" />
+      <input type="hidden" name="area" value="default" />
+    </form>
+</div>
+<script type="text/javascript">$('#searchbox').show(0);</script>
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="related" role="navigation" aria-label="related navigation">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="../../../../../genindex.html" title="General Index"
+             >index</a></li>
+        <li class="right" >
+          <a href="../../../../../py-modindex.html" title="Python Module Index"
+             >modules</a> |</li>
+        <li class="nav-item nav-item-0"><a href="../../../../../index.html">SasView 4.0.0 documentation</a> &raquo;</li>
+          <li class="nav-item nav-item-1"><a href="../../../../index.html" >Module code</a> &raquo;</li>
+          <li class="nav-item nav-item-2"><a href="../fitting.html" >sas.sasgui.perspectives.fitting</a> &raquo;</li> 
+      </ul>
+    </div>
+    <div class="footer" role="contentinfo">
+        &copy; Copyright 2015, The SasView Project.
+      Created using <a href="http://sphinx-doc.org/">Sphinx</a> 1.4.
+    </div>
+  </body>
+</html>
