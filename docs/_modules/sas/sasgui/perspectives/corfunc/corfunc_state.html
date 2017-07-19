@@ -1,0 +1,454 @@
+
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+  "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+    
+    <title>sas.sasgui.perspectives.corfunc.corfunc_state &#8212; SasView 4.1.1 documentation</title>
+    
+    <link rel="stylesheet" href="../../../../../_static/classic.css" type="text/css" />
+    <link rel="stylesheet" href="../../../../../_static/pygments.css" type="text/css" />
+    
+    <script type="text/javascript">
+      var DOCUMENTATION_OPTIONS = {
+        URL_ROOT:    '../../../../../',
+        VERSION:     '4.1.1',
+        COLLAPSE_INDEX: false,
+        FILE_SUFFIX: '.html',
+        HAS_SOURCE:  true,
+        SOURCELINK_SUFFIX: '.txt'
+      };
+    </script>
+    <script type="text/javascript" src="../../../../../_static/jquery.js"></script>
+    <script type="text/javascript" src="../../../../../_static/underscore.js"></script>
+    <script type="text/javascript" src="../../../../../_static/doctools.js"></script>
+    <script type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.1/MathJax.js?config=TeX-MML-AM_CHTML"></script>
+    <link rel="index" title="Index" href="../../../../../genindex.html" />
+    <link rel="search" title="Search" href="../../../../../search.html" /> 
+  </head>
+  <body>
+    <div class="related" role="navigation" aria-label="related navigation">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="../../../../../genindex.html" title="General Index"
+             accesskey="I">index</a></li>
+        <li class="right" >
+          <a href="../../../../../py-modindex.html" title="Python Module Index"
+             >modules</a> |</li>
+        <li class="nav-item nav-item-0"><a href="../../../../../index.html">SasView 4.1.1 documentation</a> &#187;</li>
+          <li class="nav-item nav-item-1"><a href="../../../../index.html" accesskey="U">Module code</a> &#187;</li> 
+      </ul>
+    </div>  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          <div class="body" role="main">
+            
+  <h1>Source code for sas.sasgui.perspectives.corfunc.corfunc_state</h1><div class="highlight"><pre>
+<span></span><span class="kn">import</span> <span class="nn">time</span>
+<span class="kn">import</span> <span class="nn">sys</span>
+<span class="kn">import</span> <span class="nn">os</span>
+<span class="kn">import</span> <span class="nn">logging</span>
+<span class="kn">import</span> <span class="nn">sas.sascalc.dataloader</span>
+<span class="kn">from</span> <span class="nn">lxml</span> <span class="k">import</span> <span class="n">etree</span>
+<span class="kn">from</span> <span class="nn">sas.sascalc.dataloader.readers.cansas_reader</span> <span class="k">import</span> <span class="n">Reader</span> <span class="k">as</span> <span class="n">CansasReader</span>
+<span class="kn">from</span> <span class="nn">sas.sascalc.dataloader.readers.cansas_reader</span> <span class="k">import</span> <span class="n">get_content</span>
+<span class="kn">from</span> <span class="nn">sas.sasgui.guiframe.utils</span> <span class="k">import</span> <span class="n">format_number</span>
+<span class="kn">from</span> <span class="nn">sas.sasgui.guiframe.gui_style</span> <span class="k">import</span> <span class="n">GUIFRAME_ID</span>
+<span class="kn">from</span> <span class="nn">sas.sasgui.guiframe.dataFitting</span> <span class="k">import</span> <span class="n">Data1D</span>
+<span class="kn">from</span> <span class="nn">sas.sascalc.dataloader.data_info</span> <span class="k">import</span> <span class="n">Data1D</span> <span class="k">as</span> <span class="n">LoaderData1D</span>
+<span class="kn">from</span> <span class="nn">sas.sascalc.dataloader.loader</span> <span class="k">import</span> <span class="n">Loader</span>
+
+<span class="n">CORNODE_NAME</span> <span class="o">=</span> <span class="s1">&#39;corfunc&#39;</span>
+<span class="n">CANSAS_NS</span> <span class="o">=</span> <span class="s1">&#39;cansas1d/1.0&#39;</span>
+
+<span class="c1"># The default state</span>
+<span class="n">DEFAULT_STATE</span> <span class="o">=</span> <span class="p">{</span>
+    <span class="s1">&#39;qmin_tcl&#39;</span><span class="p">:</span> <span class="kc">None</span><span class="p">,</span>
+    <span class="s1">&#39;qmax1_tcl&#39;</span><span class="p">:</span> <span class="kc">None</span><span class="p">,</span>
+    <span class="s1">&#39;qmax2_tcl&#39;</span><span class="p">:</span> <span class="kc">None</span><span class="p">,</span>
+    <span class="s1">&#39;background_tcl&#39;</span><span class="p">:</span> <span class="kc">None</span>
+<span class="p">}</span>
+
+<span class="c1"># List of output parameters, used by __str__</span>
+<span class="n">output_list</span> <span class="o">=</span> <span class="p">[</span>
+    <span class="p">[</span><span class="s1">&#39;max&#39;</span><span class="p">,</span> <span class="s2">&quot;Long Period (A): &quot;</span><span class="p">],</span>
+    <span class="p">[</span><span class="s1">&#39;Lc&#39;</span><span class="p">,</span> <span class="s2">&quot;Average Hard Block Thickness (A): &quot;</span><span class="p">],</span>
+    <span class="p">[</span><span class="s1">&#39;dtr&#39;</span><span class="p">,</span> <span class="s2">&quot;Average Interface Thickness (A): &quot;</span><span class="p">],</span>
+    <span class="p">[</span><span class="s1">&#39;d0&#39;</span><span class="p">,</span> <span class="s2">&quot;Average Core Thickness: &quot;</span><span class="p">],</span>
+    <span class="p">[</span><span class="s1">&#39;A&#39;</span><span class="p">,</span> <span class="s2">&quot;PolyDispersity: &quot;</span><span class="p">],</span>
+    <span class="p">[</span><span class="s1">&#39;fill&#39;</span><span class="p">,</span> <span class="s2">&quot;Filling Fraction: &quot;</span><span class="p">]</span>
+<span class="p">]</span>
+
+<div class="viewcode-block" id="CorfuncState"><a class="viewcode-back" href="../../../../../dev/api/sas.sasgui.perspectives.corfunc.html#sas.sasgui.perspectives.corfunc.corfunc_state.CorfuncState">[docs]</a><span class="k">class</span> <span class="nc">CorfuncState</span><span class="p">(</span><span class="nb">object</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Stores information about the state of CorfuncPanel</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+
+    <span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="c1"># Inputs</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">file</span> <span class="o">=</span> <span class="kc">None</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">data</span> <span class="o">=</span> <span class="kc">None</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">qmin</span> <span class="o">=</span> <span class="kc">None</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">qmax</span> <span class="o">=</span> <span class="p">[</span><span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">]</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">background</span> <span class="o">=</span> <span class="kc">None</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">outputs</span> <span class="o">=</span> <span class="p">{}</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">is_extrapolated</span> <span class="o">=</span> <span class="kc">False</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">transform_type</span> <span class="o">=</span> <span class="s1">&#39;fourier&#39;</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">is_transformed</span> <span class="o">=</span> <span class="kc">False</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">saved_state</span> <span class="o">=</span> <span class="n">DEFAULT_STATE</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">timestamp</span> <span class="o">=</span> <span class="n">time</span><span class="o">.</span><span class="n">time</span><span class="p">()</span>
+
+        <span class="c1"># Raw Data</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">q</span> <span class="o">=</span> <span class="kc">None</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">iq</span> <span class="o">=</span> <span class="kc">None</span>
+        <span class="c1"># TODO: Add extrapolated data and transformed data (when implemented)</span>
+
+    <span class="k">def</span> <span class="nf">__str__</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Pretty print the state</span>
+
+<span class="sd">        :return: A string representing the state</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">state</span> <span class="o">=</span> <span class="s2">&quot;File:         </span><span class="si">{}</span><span class="se">\n</span><span class="s2">&quot;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">file</span><span class="p">)</span>
+        <span class="n">state</span> <span class="o">+=</span> <span class="s2">&quot;Timestamp:    </span><span class="si">{}</span><span class="se">\n</span><span class="s2">&quot;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">timestamp</span><span class="p">)</span>
+        <span class="n">state</span> <span class="o">+=</span> <span class="s2">&quot;Qmin:         </span><span class="si">{}</span><span class="se">\n</span><span class="s2">&quot;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="nb">str</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">qmin</span><span class="p">))</span>
+        <span class="n">state</span> <span class="o">+=</span> <span class="s2">&quot;Qmax:         </span><span class="si">{}</span><span class="se">\n</span><span class="s2">&quot;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="nb">str</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">qmax</span><span class="p">))</span>
+        <span class="n">state</span> <span class="o">+=</span> <span class="s2">&quot;Background:   </span><span class="si">{}</span><span class="se">\n</span><span class="s2">&quot;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="nb">str</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">background</span><span class="p">))</span>
+
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">outputs</span> <span class="o">!=</span> <span class="p">{}</span> <span class="ow">and</span> <span class="bp">self</span><span class="o">.</span><span class="n">outputs</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="n">state</span> <span class="o">+=</span> <span class="s2">&quot;</span><span class="se">\n</span><span class="s2">Outputs:</span><span class="se">\n</span><span class="s2">&quot;</span>
+            <span class="k">for</span> <span class="n">key</span><span class="p">,</span> <span class="n">value</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">outputs</span><span class="o">.</span><span class="n">iteritems</span><span class="p">():</span>
+                <span class="n">name</span> <span class="o">=</span> <span class="n">output_list</span><span class="p">[</span><span class="n">key</span><span class="p">][</span><span class="mi">1</span><span class="p">]</span>
+                <span class="n">state</span> <span class="o">+=</span> <span class="s2">&quot;</span><span class="si">{}</span><span class="s2">: </span><span class="si">{}</span><span class="se">\n</span><span class="s2">&quot;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">name</span><span class="p">,</span> <span class="nb">str</span><span class="p">(</span><span class="n">value</span><span class="p">))</span>
+
+        <span class="k">return</span> <span class="n">state</span>
+
+<div class="viewcode-block" id="CorfuncState.set_saved_state"><a class="viewcode-back" href="../../../../../dev/api/sas.sasgui.perspectives.corfunc.html#sas.sasgui.perspectives.corfunc.corfunc_state.CorfuncState.set_saved_state">[docs]</a>    <span class="k">def</span> <span class="nf">set_saved_state</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">name</span><span class="p">,</span> <span class="n">value</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Set a value in the current state.</span>
+
+<span class="sd">        :param name: The name of the parameter to set</span>
+<span class="sd">        :param value: The value to set the parameter to</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">saved_state</span><span class="p">[</span><span class="n">name</span><span class="p">]</span> <span class="o">=</span> <span class="n">value</span>
+        <span class="k">if</span> <span class="n">name</span> <span class="o">==</span> <span class="s1">&#39;qmin_tcl&#39;</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">qmin</span> <span class="o">=</span> <span class="n">value</span>
+        <span class="k">elif</span> <span class="n">name</span> <span class="o">==</span> <span class="s1">&#39;qmax1_tcl&#39;</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">qmax</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="o">=</span> <span class="n">value</span>
+        <span class="k">elif</span> <span class="n">name</span> <span class="o">==</span> <span class="s1">&#39;qmax2_tcl&#39;</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">qmax</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span> <span class="o">=</span> <span class="n">value</span>
+        <span class="k">elif</span> <span class="n">name</span> <span class="o">==</span> <span class="s1">&#39;background_tcl&#39;</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">background</span> <span class="o">=</span> <span class="n">value</span></div>
+
+<div class="viewcode-block" id="CorfuncState.toXML"><a class="viewcode-back" href="../../../../../dev/api/sas.sasgui.perspectives.corfunc.html#sas.sasgui.perspectives.corfunc.corfunc_state.CorfuncState.toXML">[docs]</a>    <span class="k">def</span> <span class="nf">toXML</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">filename</span><span class="o">=</span><span class="s1">&#39;corfunc_state.crf&#39;</span><span class="p">,</span> <span class="n">doc</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">entry_node</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Writes the state of the CorfuncPanel panel to file, as XML.</span>
+
+<span class="sd">        Compatible with standalone writing, or appending to an</span>
+<span class="sd">        already existing XML document. In that case, the XML document</span>
+<span class="sd">        is required. An optional entry node in the XML document</span>
+<span class="sd">        may also be given.</span>
+
+<span class="sd">        :param file: file to write to</span>
+<span class="sd">        :param doc: XML document object [optional]</span>
+<span class="sd">        :param entry_node: XML node within the XML document at which</span>
+<span class="sd">            we will append the data [optional]</span>
+
+<span class="sd">        :return: None if no doc is provided, modified XML document if doc!=None</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="kn">from</span> <span class="nn">xml.dom.minidom</span> <span class="k">import</span> <span class="n">getDOMImplementation</span>
+
+        <span class="n">top_element</span> <span class="o">=</span> <span class="kc">None</span>
+        <span class="n">new_doc</span> <span class="o">=</span> <span class="kc">None</span>
+        <span class="k">if</span> <span class="n">doc</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="c1"># Create a new XML document</span>
+            <span class="n">impl</span> <span class="o">=</span> <span class="n">getDOMImplementation</span><span class="p">()</span>
+            <span class="n">doc_type</span> <span class="o">=</span> <span class="n">impl</span><span class="o">.</span><span class="n">createDocumentType</span><span class="p">(</span><span class="n">CORNODE_NAME</span><span class="p">,</span> <span class="s2">&quot;1.0&quot;</span><span class="p">,</span> <span class="s2">&quot;1.0&quot;</span><span class="p">)</span>
+            <span class="n">new_doc</span> <span class="o">=</span> <span class="n">impl</span><span class="o">.</span><span class="n">createDocument</span><span class="p">(</span><span class="kc">None</span><span class="p">,</span> <span class="n">CORNODE_NAME</span><span class="p">,</span> <span class="n">doc_type</span><span class="p">)</span>
+            <span class="n">top_element</span> <span class="o">=</span> <span class="n">new_doc</span><span class="o">.</span><span class="n">documentElement</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="c1"># Create a new element in the document provided</span>
+            <span class="n">top_element</span> <span class="o">=</span> <span class="n">doc</span><span class="o">.</span><span class="n">createElement</span><span class="p">(</span><span class="n">CORNODE_NAME</span><span class="p">)</span>
+            <span class="k">if</span> <span class="n">entry_node</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+                <span class="n">doc</span><span class="o">.</span><span class="n">documentElement</span><span class="o">.</span><span class="n">appendChild</span><span class="p">(</span><span class="n">top_element</span><span class="p">)</span>
+            <span class="k">else</span><span class="p">:</span>
+                <span class="n">entry_node</span><span class="o">.</span><span class="n">appendChild</span><span class="p">(</span><span class="n">top_element</span><span class="p">)</span>
+            <span class="n">new_doc</span> <span class="o">=</span> <span class="n">doc</span>
+
+        <span class="c1"># Version</span>
+        <span class="n">attr</span> <span class="o">=</span> <span class="n">new_doc</span><span class="o">.</span><span class="n">createAttribute</span><span class="p">(</span><span class="s2">&quot;version&quot;</span><span class="p">)</span>
+        <span class="n">attr</span><span class="o">.</span><span class="n">nodeValue</span> <span class="o">=</span> <span class="s1">&#39;1.0&#39;</span>
+        <span class="n">top_element</span><span class="o">.</span><span class="n">setAttributeNode</span><span class="p">(</span><span class="n">attr</span><span class="p">)</span>
+
+        <span class="c1"># Filename</span>
+        <span class="n">element</span> <span class="o">=</span> <span class="n">new_doc</span><span class="o">.</span><span class="n">createElement</span><span class="p">(</span><span class="s2">&quot;filename&quot;</span><span class="p">)</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">file</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span> <span class="ow">and</span> <span class="bp">self</span><span class="o">.</span><span class="n">file</span> <span class="o">!=</span> <span class="s1">&#39;&#39;</span><span class="p">:</span>
+            <span class="n">element</span><span class="o">.</span><span class="n">appendChild</span><span class="p">(</span><span class="n">new_doc</span><span class="o">.</span><span class="n">createTextNode</span><span class="p">(</span><span class="nb">str</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">file</span><span class="p">)))</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">element</span><span class="o">.</span><span class="n">appendChild</span><span class="p">(</span><span class="n">new_doc</span><span class="o">.</span><span class="n">createTextNode</span><span class="p">(</span><span class="nb">str</span><span class="p">(</span><span class="n">filename</span><span class="p">)))</span>
+        <span class="n">top_element</span><span class="o">.</span><span class="n">appendChild</span><span class="p">(</span><span class="n">element</span><span class="p">)</span>
+
+        <span class="c1"># Timestamp</span>
+        <span class="n">element</span> <span class="o">=</span> <span class="n">new_doc</span><span class="o">.</span><span class="n">createElement</span><span class="p">(</span><span class="s2">&quot;timestamp&quot;</span><span class="p">)</span>
+        <span class="c1"># Pretty printed format</span>
+        <span class="n">element</span><span class="o">.</span><span class="n">appendChild</span><span class="p">(</span><span class="n">new_doc</span><span class="o">.</span><span class="n">createTextNode</span><span class="p">(</span><span class="n">time</span><span class="o">.</span><span class="n">ctime</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">timestamp</span><span class="p">)))</span>
+        <span class="n">attr</span> <span class="o">=</span> <span class="n">new_doc</span><span class="o">.</span><span class="n">createAttribute</span><span class="p">(</span><span class="s2">&quot;epoch&quot;</span><span class="p">)</span>
+        <span class="c1"># Epoch value (used in self.fromXML)</span>
+        <span class="n">attr</span><span class="o">.</span><span class="n">nodeValue</span> <span class="o">=</span> <span class="nb">str</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">timestamp</span><span class="p">)</span>
+        <span class="n">element</span><span class="o">.</span><span class="n">setAttributeNode</span><span class="p">(</span><span class="n">attr</span><span class="p">)</span>
+        <span class="n">top_element</span><span class="o">.</span><span class="n">appendChild</span><span class="p">(</span><span class="n">element</span><span class="p">)</span>
+
+        <span class="c1"># Current state</span>
+        <span class="n">state</span> <span class="o">=</span> <span class="n">new_doc</span><span class="o">.</span><span class="n">createElement</span><span class="p">(</span><span class="s2">&quot;state&quot;</span><span class="p">)</span>
+        <span class="n">top_element</span><span class="o">.</span><span class="n">appendChild</span><span class="p">(</span><span class="n">state</span><span class="p">)</span>
+        <span class="k">for</span> <span class="n">name</span><span class="p">,</span> <span class="n">value</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">saved_state</span><span class="o">.</span><span class="n">iteritems</span><span class="p">():</span>
+            <span class="n">element</span> <span class="o">=</span> <span class="n">new_doc</span><span class="o">.</span><span class="n">createElement</span><span class="p">(</span><span class="n">name</span><span class="p">)</span>
+            <span class="n">element</span><span class="o">.</span><span class="n">appendChild</span><span class="p">(</span><span class="n">new_doc</span><span class="o">.</span><span class="n">createTextNode</span><span class="p">(</span><span class="nb">str</span><span class="p">(</span><span class="n">value</span><span class="p">)))</span>
+            <span class="n">state</span><span class="o">.</span><span class="n">appendChild</span><span class="p">(</span><span class="n">element</span><span class="p">)</span>
+
+        <span class="c1"># Whether or not the extrapolate &amp; transform buttons have been clicked</span>
+        <span class="n">element</span> <span class="o">=</span> <span class="n">new_doc</span><span class="o">.</span><span class="n">createElement</span><span class="p">(</span><span class="s2">&quot;is_extrapolated&quot;</span><span class="p">)</span>
+        <span class="n">top_element</span><span class="o">.</span><span class="n">appendChild</span><span class="p">(</span><span class="n">element</span><span class="p">)</span>
+        <span class="n">element</span><span class="o">.</span><span class="n">appendChild</span><span class="p">(</span><span class="n">new_doc</span><span class="o">.</span><span class="n">createTextNode</span><span class="p">(</span><span class="nb">str</span><span class="p">(</span><span class="nb">int</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">is_extrapolated</span><span class="p">))))</span>
+
+        <span class="n">element</span> <span class="o">=</span> <span class="n">new_doc</span><span class="o">.</span><span class="n">createElement</span><span class="p">(</span><span class="s2">&quot;is_transformed&quot;</span><span class="p">)</span>
+        <span class="n">top_element</span><span class="o">.</span><span class="n">appendChild</span><span class="p">(</span><span class="n">element</span><span class="p">)</span>
+        <span class="n">element</span><span class="o">.</span><span class="n">appendChild</span><span class="p">(</span><span class="n">new_doc</span><span class="o">.</span><span class="n">createTextNode</span><span class="p">(</span><span class="nb">str</span><span class="p">(</span><span class="nb">int</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">is_transformed</span><span class="p">))))</span>
+
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">is_transformed</span><span class="p">:</span>
+            <span class="n">element</span> <span class="o">=</span> <span class="n">new_doc</span><span class="o">.</span><span class="n">createElement</span><span class="p">(</span><span class="s2">&quot;transform_type&quot;</span><span class="p">)</span>
+            <span class="n">top_element</span><span class="o">.</span><span class="n">appendChild</span><span class="p">(</span><span class="n">element</span><span class="p">)</span>
+            <span class="n">element</span><span class="o">.</span><span class="n">appendChild</span><span class="p">(</span><span class="n">new_doc</span><span class="o">.</span><span class="n">createTextNode</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">transform_type</span><span class="p">))</span>
+
+        <span class="c1"># Output parameters</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">outputs</span> <span class="o">!=</span> <span class="p">{}</span> <span class="ow">and</span> <span class="bp">self</span><span class="o">.</span><span class="n">outputs</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="n">output</span> <span class="o">=</span> <span class="n">new_doc</span><span class="o">.</span><span class="n">createElement</span><span class="p">(</span><span class="s2">&quot;output&quot;</span><span class="p">)</span>
+            <span class="n">top_element</span><span class="o">.</span><span class="n">appendChild</span><span class="p">(</span><span class="n">output</span><span class="p">)</span>
+            <span class="k">for</span> <span class="n">key</span><span class="p">,</span> <span class="n">value</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">outputs</span><span class="o">.</span><span class="n">iteritems</span><span class="p">():</span>
+                <span class="n">element</span> <span class="o">=</span> <span class="n">new_doc</span><span class="o">.</span><span class="n">createElement</span><span class="p">(</span><span class="n">key</span><span class="p">)</span>
+                <span class="n">element</span><span class="o">.</span><span class="n">appendChild</span><span class="p">(</span><span class="n">new_doc</span><span class="o">.</span><span class="n">createTextNode</span><span class="p">(</span><span class="nb">str</span><span class="p">(</span><span class="n">value</span><span class="p">)))</span>
+                <span class="n">output</span><span class="o">.</span><span class="n">appendChild</span><span class="p">(</span><span class="n">element</span><span class="p">)</span>
+
+        <span class="c1"># Save the file or return the original document with the state</span>
+        <span class="c1"># data appended</span>
+        <span class="k">if</span> <span class="n">doc</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="n">fd</span> <span class="o">=</span> <span class="nb">open</span><span class="p">(</span><span class="n">filename</span><span class="p">,</span> <span class="s1">&#39;w&#39;</span><span class="p">)</span>
+            <span class="n">fd</span><span class="o">.</span><span class="n">write</span><span class="p">(</span><span class="n">new_doc</span><span class="o">.</span><span class="n">toprettyxml</span><span class="p">())</span>
+            <span class="n">fd</span><span class="o">.</span><span class="n">close</span><span class="p">()</span>
+            <span class="k">return</span> <span class="kc">None</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="k">return</span> <span class="n">new_doc</span></div>
+
+
+<div class="viewcode-block" id="CorfuncState.fromXML"><a class="viewcode-back" href="../../../../../dev/api/sas.sasgui.perspectives.corfunc.html#sas.sasgui.perspectives.corfunc.corfunc_state.CorfuncState.fromXML">[docs]</a>    <span class="k">def</span> <span class="nf">fromXML</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">node</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Load corfunc states from a file</span>
+
+<span class="sd">        :param node: node of an XML document to read from (optional)</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">if</span> <span class="n">node</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">&#39;version&#39;</span><span class="p">)</span> <span class="ow">and</span> <span class="n">node</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">&#39;version&#39;</span><span class="p">)</span> <span class="o">==</span> <span class="s1">&#39;1.0&#39;</span><span class="p">:</span>
+            <span class="c1"># Parse filename</span>
+            <span class="n">entry</span> <span class="o">=</span> <span class="n">get_content</span><span class="p">(</span><span class="s1">&#39;ns:filename&#39;</span><span class="p">,</span> <span class="n">node</span><span class="p">)</span>
+            <span class="k">if</span> <span class="n">entry</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">file</span> <span class="o">=</span> <span class="n">entry</span><span class="o">.</span><span class="n">text</span><span class="o">.</span><span class="n">strip</span><span class="p">()</span>
+
+            <span class="c1"># Parse timestamp</span>
+            <span class="n">entry</span> <span class="o">=</span> <span class="n">get_content</span><span class="p">(</span><span class="s1">&#39;ns:timestamp&#39;</span><span class="p">,</span> <span class="n">node</span><span class="p">)</span>
+            <span class="k">if</span> <span class="n">entry</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span> <span class="ow">and</span> <span class="n">entry</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">&#39;epoch&#39;</span><span class="p">):</span>
+                <span class="k">try</span><span class="p">:</span>
+                    <span class="bp">self</span><span class="o">.</span><span class="n">timestamp</span> <span class="o">=</span> <span class="p">(</span><span class="n">entry</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">&#39;epoch&#39;</span><span class="p">))</span>
+                <span class="k">except</span><span class="p">:</span>
+                    <span class="n">msg</span> <span class="o">=</span> <span class="p">(</span><span class="s2">&quot;CorfuncState.fromXML: Could not read timestamp&quot;</span><span class="p">,</span>
+                        <span class="s2">&quot;</span><span class="se">\n</span><span class="si">{}</span><span class="s2">&quot;</span><span class="p">)</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">sys</span><span class="o">.</span><span class="n">exc_value</span><span class="p">)</span>
+                    <span class="n">logging</span><span class="o">.</span><span class="n">error</span><span class="p">(</span><span class="n">msg</span><span class="p">)</span>
+
+            <span class="c1"># Parse current state</span>
+            <span class="n">entry</span> <span class="o">=</span> <span class="n">get_content</span><span class="p">(</span><span class="s1">&#39;ns:state&#39;</span><span class="p">,</span> <span class="n">node</span><span class="p">)</span>
+            <span class="k">if</span> <span class="n">entry</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+                <span class="k">for</span> <span class="n">item</span> <span class="ow">in</span> <span class="n">DEFAULT_STATE</span><span class="o">.</span><span class="n">iterkeys</span><span class="p">():</span>
+                    <span class="n">input_field</span> <span class="o">=</span> <span class="n">get_content</span><span class="p">(</span><span class="s2">&quot;ns:</span><span class="si">{}</span><span class="s2">&quot;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">item</span><span class="p">),</span> <span class="n">entry</span><span class="p">)</span>
+                    <span class="k">if</span> <span class="n">input_field</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+                        <span class="k">try</span><span class="p">:</span>
+                            <span class="n">value</span> <span class="o">=</span> <span class="nb">float</span><span class="p">(</span><span class="n">input_field</span><span class="o">.</span><span class="n">text</span><span class="o">.</span><span class="n">strip</span><span class="p">())</span>
+                        <span class="k">except</span><span class="p">:</span>
+                            <span class="n">value</span> <span class="o">=</span> <span class="kc">None</span>
+                        <span class="bp">self</span><span class="o">.</span><span class="n">set_saved_state</span><span class="p">(</span><span class="n">name</span><span class="o">=</span><span class="n">item</span><span class="p">,</span> <span class="n">value</span><span class="o">=</span><span class="n">value</span><span class="p">)</span>
+
+            <span class="c1"># Parse is_extrapolated and is_transformed</span>
+            <span class="n">entry</span> <span class="o">=</span> <span class="n">get_content</span><span class="p">(</span><span class="s1">&#39;ns:is_extrapolated&#39;</span><span class="p">,</span> <span class="n">node</span><span class="p">)</span>
+            <span class="k">if</span> <span class="n">entry</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">is_extrapolated</span> <span class="o">=</span> <span class="nb">bool</span><span class="p">(</span><span class="nb">int</span><span class="p">(</span><span class="n">entry</span><span class="o">.</span><span class="n">text</span><span class="o">.</span><span class="n">strip</span><span class="p">()))</span>
+            <span class="n">entry</span> <span class="o">=</span> <span class="n">get_content</span><span class="p">(</span><span class="s1">&#39;ns:is_transformed&#39;</span><span class="p">,</span> <span class="n">node</span><span class="p">)</span>
+            <span class="k">if</span> <span class="n">entry</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">is_transformed</span> <span class="o">=</span> <span class="nb">bool</span><span class="p">(</span><span class="nb">int</span><span class="p">(</span><span class="n">entry</span><span class="o">.</span><span class="n">text</span><span class="o">.</span><span class="n">strip</span><span class="p">()))</span>
+                <span class="n">entry</span> <span class="o">=</span> <span class="n">get_content</span><span class="p">(</span><span class="s1">&#39;ns:transform_type&#39;</span><span class="p">,</span> <span class="n">node</span><span class="p">)</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">transform_type</span> <span class="o">=</span> <span class="n">entry</span><span class="o">.</span><span class="n">text</span><span class="o">.</span><span class="n">strip</span><span class="p">()</span>
+
+            <span class="c1"># Parse outputs</span>
+            <span class="n">entry</span> <span class="o">=</span> <span class="n">get_content</span><span class="p">(</span><span class="s1">&#39;ns:output&#39;</span><span class="p">,</span> <span class="n">node</span><span class="p">)</span>
+            <span class="k">if</span> <span class="n">entry</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+                <span class="k">for</span> <span class="n">item</span> <span class="ow">in</span> <span class="n">output_list</span><span class="p">:</span>
+                    <span class="n">parameter</span> <span class="o">=</span> <span class="n">get_content</span><span class="p">(</span><span class="s2">&quot;ns:</span><span class="si">{}</span><span class="s2">&quot;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">item</span><span class="p">[</span><span class="mi">0</span><span class="p">]),</span> <span class="n">entry</span><span class="p">)</span>
+                    <span class="k">if</span> <span class="n">parameter</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+                        <span class="bp">self</span><span class="o">.</span><span class="n">outputs</span><span class="p">[</span><span class="n">item</span><span class="p">[</span><span class="mi">0</span><span class="p">]]</span> <span class="o">=</span> <span class="nb">float</span><span class="p">(</span><span class="n">parameter</span><span class="o">.</span><span class="n">text</span><span class="o">.</span><span class="n">strip</span><span class="p">())</span></div></div>
+
+
+
+<div class="viewcode-block" id="Reader"><a class="viewcode-back" href="../../../../../dev/api/sas.sasgui.perspectives.corfunc.html#sas.sasgui.perspectives.corfunc.corfunc_state.Reader">[docs]</a><span class="k">class</span> <span class="nc">Reader</span><span class="p">(</span><span class="n">CansasReader</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Reads a CanSAS file containing the state of a CorfuncPanel</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+
+    <span class="n">type_name</span> <span class="o">=</span> <span class="s2">&quot;Corfunc&quot;</span>
+
+    <span class="nb">type</span> <span class="o">=</span> <span class="p">[</span><span class="s2">&quot;Corfunc file (*.crf)|*.crf&quot;</span><span class="p">,</span>
+            <span class="s2">&quot;SASView file (*.svs)|*.svs&quot;</span><span class="p">]</span>
+
+    <span class="n">ext</span> <span class="o">=</span> <span class="p">[</span><span class="s1">&#39;.crf&#39;</span><span class="p">,</span> <span class="s1">&#39;.CRF&#39;</span><span class="p">,</span> <span class="s1">&#39;.svs&#39;</span><span class="p">,</span> <span class="s1">&#39;.SVS&#39;</span><span class="p">]</span>
+
+    <span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">callback</span><span class="p">):</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">callback</span> <span class="o">=</span> <span class="n">callback</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">state</span> <span class="o">=</span> <span class="kc">None</span>
+
+<div class="viewcode-block" id="Reader.read"><a class="viewcode-back" href="../../../../../dev/api/sas.sasgui.perspectives.corfunc.html#sas.sasgui.perspectives.corfunc.corfunc_state.Reader.read">[docs]</a>    <span class="k">def</span> <span class="nf">read</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">path</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Load data and corfunc information frmo a CanSAS file.</span>
+
+<span class="sd">        :param path: The file path to read from</span>
+<span class="sd">        :return: Data1D object, a list of Data1D objects, or None</span>
+<span class="sd">        :raise IOError: When the file can&#39;t be found</span>
+<span class="sd">        :raise IOError: When the file is an invalid file type</span>
+<span class="sd">        :raise ValueError: When the length of the data vectors are inconsistent</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">output</span> <span class="o">=</span> <span class="p">[]</span>
+        <span class="k">if</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">isfile</span><span class="p">(</span><span class="n">path</span><span class="p">):</span>
+            <span class="c1"># Load file</span>
+            <span class="n">basename</span> <span class="o">=</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">basename</span><span class="p">(</span><span class="n">path</span><span class="p">)</span>
+            <span class="n">root</span><span class="p">,</span> <span class="n">ext</span> <span class="o">=</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">splitext</span><span class="p">(</span><span class="n">basename</span><span class="p">)</span>
+            <span class="k">if</span> <span class="ow">not</span> <span class="n">ext</span><span class="o">.</span><span class="n">lower</span><span class="p">()</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">ext</span><span class="p">:</span>
+                <span class="k">raise</span> <span class="ne">IOError</span><span class="p">,</span> <span class="s2">&quot;</span><span class="si">{}</span><span class="s2"> is not a supported file type&quot;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">ext</span><span class="p">)</span>
+            <span class="n">tree</span> <span class="o">=</span> <span class="n">etree</span><span class="o">.</span><span class="n">parse</span><span class="p">(</span><span class="n">path</span><span class="p">,</span> <span class="n">parser</span><span class="o">=</span><span class="n">etree</span><span class="o">.</span><span class="n">ETCompatXMLParser</span><span class="p">())</span>
+            <span class="n">root</span> <span class="o">=</span> <span class="n">tree</span><span class="o">.</span><span class="n">getroot</span><span class="p">()</span>
+            <span class="n">entry_list</span> <span class="o">=</span> <span class="n">root</span><span class="o">.</span><span class="n">xpath</span><span class="p">(</span><span class="s1">&#39;/ns:SASroot/ns:SASentry&#39;</span><span class="p">,</span>
+                <span class="n">namespaces</span><span class="o">=</span><span class="p">{</span><span class="s1">&#39;ns&#39;</span><span class="p">:</span> <span class="n">CANSAS_NS</span><span class="p">})</span>
+            <span class="k">for</span> <span class="n">entry</span> <span class="ow">in</span> <span class="n">entry_list</span><span class="p">:</span>
+                <span class="n">sas_entry</span><span class="p">,</span> <span class="n">_</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_parse_entry</span><span class="p">(</span><span class="n">entry</span><span class="p">)</span>
+                <span class="n">corstate</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_parse_state</span><span class="p">(</span><span class="n">entry</span><span class="p">)</span>
+
+                <span class="k">if</span> <span class="n">corstate</span> <span class="o">!=</span> <span class="kc">None</span><span class="p">:</span>
+                    <span class="n">sas_entry</span><span class="o">.</span><span class="n">meta_data</span><span class="p">[</span><span class="s1">&#39;corstate&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="n">corstate</span>
+                    <span class="n">sas_entry</span><span class="o">.</span><span class="n">filename</span> <span class="o">=</span> <span class="n">corstate</span><span class="o">.</span><span class="n">file</span>
+                    <span class="n">output</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">sas_entry</span><span class="p">)</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="c1"># File not found</span>
+            <span class="n">msg</span> <span class="o">=</span> <span class="s2">&quot;</span><span class="si">{}</span><span class="s2"> is not a valid file path or doesn&#39;t exist&quot;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">path</span><span class="p">)</span>
+            <span class="k">raise</span> <span class="ne">IOError</span><span class="p">,</span> <span class="n">msg</span>
+
+        <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">output</span><span class="p">)</span> <span class="o">==</span> <span class="mi">0</span><span class="p">:</span>
+            <span class="k">return</span> <span class="kc">None</span>
+        <span class="k">elif</span> <span class="nb">len</span><span class="p">(</span><span class="n">output</span><span class="p">)</span> <span class="o">==</span> <span class="mi">1</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">callback</span><span class="p">(</span><span class="n">output</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">meta_data</span><span class="p">[</span><span class="s1">&#39;corstate&#39;</span><span class="p">],</span> <span class="n">datainfo</span><span class="o">=</span><span class="n">output</span><span class="p">[</span><span class="mi">0</span><span class="p">])</span>
+            <span class="k">return</span> <span class="n">output</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="k">return</span> <span class="n">output</span></div>
+
+<div class="viewcode-block" id="Reader.write"><a class="viewcode-back" href="../../../../../dev/api/sas.sasgui.perspectives.corfunc.html#sas.sasgui.perspectives.corfunc.corfunc_state.Reader.write">[docs]</a>    <span class="k">def</span> <span class="nf">write</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">filename</span><span class="p">,</span> <span class="n">datainfo</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">state</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Write the content of a Data1D as a CanSAS file.</span>
+
+<span class="sd">        : param filename: Name of the file to write</span>
+<span class="sd">        : param datainfo: Data1D object</span>
+<span class="sd">        : param state: CorfuncState object</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="c1"># Prepare datainfo</span>
+        <span class="k">if</span> <span class="n">datainfo</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="n">datainfo</span> <span class="o">=</span> <span class="n">Data1D</span><span class="p">(</span><span class="n">x</span><span class="o">=</span><span class="p">[],</span> <span class="n">y</span><span class="o">=</span><span class="p">[])</span>
+        <span class="k">elif</span> <span class="ow">not</span> <span class="p">(</span><span class="nb">isinstance</span><span class="p">(</span><span class="n">datainfo</span><span class="p">,</span> <span class="n">Data1D</span><span class="p">)</span> <span class="ow">or</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">datainfo</span><span class="p">,</span> <span class="n">LoaderData1D</span><span class="p">)):</span>
+            <span class="n">msg</span> <span class="o">=</span> <span class="p">(</span><span class="s2">&quot;The CanSAS writer expects a Data1D instance. </span><span class="si">{}</span><span class="s2"> was &quot;</span>
+                <span class="s2">&quot;provided&quot;</span><span class="p">)</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">datainfo</span><span class="o">.</span><span class="vm">__class__</span><span class="o">.</span><span class="vm">__name__</span><span class="p">)</span>
+            <span class="k">raise</span> <span class="ne">RuntimeError</span><span class="p">,</span> <span class="n">msg</span>
+        <span class="k">if</span> <span class="n">datainfo</span><span class="o">.</span><span class="n">title</span> <span class="ow">is</span> <span class="kc">None</span> <span class="ow">or</span> <span class="n">datainfo</span><span class="o">.</span><span class="n">title</span> <span class="o">==</span> <span class="s1">&#39;&#39;</span><span class="p">:</span>
+            <span class="n">datainfo</span><span class="o">.</span><span class="n">title</span> <span class="o">=</span> <span class="n">datainfo</span><span class="o">.</span><span class="n">name</span>
+        <span class="k">if</span> <span class="n">datainfo</span><span class="o">.</span><span class="n">run_name</span> <span class="o">==</span> <span class="kc">None</span> <span class="ow">or</span> <span class="n">datainfo</span><span class="o">.</span><span class="n">run_name</span> <span class="o">==</span> <span class="s1">&#39;&#39;</span><span class="p">:</span>
+            <span class="n">datainfo</span><span class="o">.</span><span class="n">run</span> <span class="o">=</span> <span class="p">[</span><span class="nb">str</span><span class="p">(</span><span class="n">datainfo</span><span class="o">.</span><span class="n">name</span><span class="p">)]</span>
+            <span class="n">datainfo</span><span class="o">.</span><span class="n">run_name</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="o">=</span> <span class="n">datainfo</span><span class="o">.</span><span class="n">name</span>
+
+        <span class="c1"># Create the XMl doc</span>
+        <span class="n">doc</span><span class="p">,</span> <span class="n">sasentry</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_to_xml_doc</span><span class="p">(</span><span class="n">datainfo</span><span class="p">)</span>
+        <span class="k">if</span> <span class="n">state</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="n">doc</span> <span class="o">=</span> <span class="n">state</span><span class="o">.</span><span class="n">toXML</span><span class="p">(</span><span class="n">doc</span><span class="o">=</span><span class="n">doc</span><span class="p">,</span> <span class="n">entry_node</span><span class="o">=</span><span class="n">sasentry</span><span class="p">)</span>
+
+        <span class="c1"># Write the XML doc to a file</span>
+        <span class="n">fd</span> <span class="o">=</span> <span class="nb">open</span><span class="p">(</span><span class="n">filename</span><span class="p">,</span> <span class="s1">&#39;w&#39;</span><span class="p">)</span>
+        <span class="n">fd</span><span class="o">.</span><span class="n">write</span><span class="p">(</span><span class="n">doc</span><span class="o">.</span><span class="n">toprettyxml</span><span class="p">())</span>
+        <span class="n">fd</span><span class="o">.</span><span class="n">close</span><span class="p">()</span></div>
+
+<div class="viewcode-block" id="Reader.get_state"><a class="viewcode-back" href="../../../../../dev/api/sas.sasgui.perspectives.corfunc.html#sas.sasgui.perspectives.corfunc.corfunc_state.Reader.get_state">[docs]</a>    <span class="k">def</span> <span class="nf">get_state</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">state</span></div>
+
+
+    <span class="k">def</span> <span class="nf">_parse_state</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">entry</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Read state data from an XML node</span>
+
+<span class="sd">        :param entry: The XML node to read from</span>
+<span class="sd">        :return: CorfuncState object</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">state</span> <span class="o">=</span> <span class="kc">None</span>
+        <span class="k">try</span><span class="p">:</span>
+            <span class="n">nodes</span> <span class="o">=</span> <span class="n">entry</span><span class="o">.</span><span class="n">xpath</span><span class="p">(</span><span class="s1">&#39;ns:</span><span class="si">{}</span><span class="s1">&#39;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">CORNODE_NAME</span><span class="p">),</span>
+                <span class="n">namespaces</span><span class="o">=</span><span class="p">{</span><span class="s1">&#39;ns&#39;</span><span class="p">:</span> <span class="n">CANSAS_NS</span><span class="p">})</span>
+            <span class="k">if</span> <span class="n">nodes</span> <span class="o">!=</span> <span class="p">[]:</span>
+                <span class="n">state</span> <span class="o">=</span> <span class="n">CorfuncState</span><span class="p">()</span>
+                <span class="n">state</span><span class="o">.</span><span class="n">fromXML</span><span class="p">(</span><span class="n">nodes</span><span class="p">[</span><span class="mi">0</span><span class="p">])</span>
+        <span class="k">except</span><span class="p">:</span>
+            <span class="n">msg</span> <span class="o">=</span> <span class="s2">&quot;XML document does not contain CorfuncState information</span><span class="se">\n</span><span class="si">{}</span><span class="s2">&quot;</span>
+            <span class="n">msg</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">sys</span><span class="o">.</span><span class="n">exc_value</span><span class="p">)</span>
+            <span class="n">logging</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="n">msg</span><span class="p">)</span>
+        <span class="k">return</span> <span class="n">state</span></div>
+</pre></div>
+
+          </div>
+        </div>
+      </div>
+      <div class="sphinxsidebar" role="navigation" aria-label="main navigation">
+        <div class="sphinxsidebarwrapper">
+<div id="searchbox" style="display: none" role="search">
+  <h3>Quick search</h3>
+    <form class="search" action="../../../../../search.html" method="get">
+      <div><input type="text" name="q" /></div>
+      <div><input type="submit" value="Go" /></div>
+      <input type="hidden" name="check_keywords" value="yes" />
+      <input type="hidden" name="area" value="default" />
+    </form>
+</div>
+<script type="text/javascript">$('#searchbox').show(0);</script>
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="related" role="navigation" aria-label="related navigation">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="../../../../../genindex.html" title="General Index"
+             >index</a></li>
+        <li class="right" >
+          <a href="../../../../../py-modindex.html" title="Python Module Index"
+             >modules</a> |</li>
+        <li class="nav-item nav-item-0"><a href="../../../../../index.html">SasView 4.1.1 documentation</a> &#187;</li>
+          <li class="nav-item nav-item-1"><a href="../../../../index.html" >Module code</a> &#187;</li> 
+      </ul>
+    </div>
+    <div class="footer" role="contentinfo">
+        &#169; Copyright 2017, The SasView Project.
+      Created using <a href="http://sphinx-doc.org/">Sphinx</a> 1.6.2.
+    </div>
+  </body>
+</html>

@@ -1,0 +1,755 @@
+
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+  "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+    
+    <title>sas.sasgui.perspectives.file_converter.converter_panel &#8212; SasView 4.1.1 documentation</title>
+    
+    <link rel="stylesheet" href="../../../../../_static/classic.css" type="text/css" />
+    <link rel="stylesheet" href="../../../../../_static/pygments.css" type="text/css" />
+    
+    <script type="text/javascript">
+      var DOCUMENTATION_OPTIONS = {
+        URL_ROOT:    '../../../../../',
+        VERSION:     '4.1.1',
+        COLLAPSE_INDEX: false,
+        FILE_SUFFIX: '.html',
+        HAS_SOURCE:  true,
+        SOURCELINK_SUFFIX: '.txt'
+      };
+    </script>
+    <script type="text/javascript" src="../../../../../_static/jquery.js"></script>
+    <script type="text/javascript" src="../../../../../_static/underscore.js"></script>
+    <script type="text/javascript" src="../../../../../_static/doctools.js"></script>
+    <script type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.1/MathJax.js?config=TeX-MML-AM_CHTML"></script>
+    <link rel="index" title="Index" href="../../../../../genindex.html" />
+    <link rel="search" title="Search" href="../../../../../search.html" /> 
+  </head>
+  <body>
+    <div class="related" role="navigation" aria-label="related navigation">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="../../../../../genindex.html" title="General Index"
+             accesskey="I">index</a></li>
+        <li class="right" >
+          <a href="../../../../../py-modindex.html" title="Python Module Index"
+             >modules</a> |</li>
+        <li class="nav-item nav-item-0"><a href="../../../../../index.html">SasView 4.1.1 documentation</a> &#187;</li>
+          <li class="nav-item nav-item-1"><a href="../../../../index.html" accesskey="U">Module code</a> &#187;</li> 
+      </ul>
+    </div>  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          <div class="body" role="main">
+            
+  <h1>Source code for sas.sasgui.perspectives.file_converter.converter_panel</h1><div class="highlight"><pre>
+<span></span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">This module provides a GUI for the file converter</span>
+<span class="sd">&quot;&quot;&quot;</span>
+
+<span class="kn">import</span> <span class="nn">wx</span>
+<span class="kn">import</span> <span class="nn">sys</span>
+<span class="kn">import</span> <span class="nn">os</span>
+<span class="kn">import</span> <span class="nn">numpy</span> <span class="k">as</span> <span class="nn">np</span>
+<span class="kn">from</span> <span class="nn">wx.lib.scrolledpanel</span> <span class="k">import</span> <span class="n">ScrolledPanel</span>
+<span class="kn">from</span> <span class="nn">sas.sasgui.guiframe.panel_base</span> <span class="k">import</span> <span class="n">PanelBase</span>
+<span class="kn">from</span> <span class="nn">sas.sasgui.perspectives.calculator</span> <span class="k">import</span> <span class="n">calculator_widgets</span> <span class="k">as</span> <span class="n">widget</span>
+<span class="kn">from</span> <span class="nn">sas.sasgui.perspectives.file_converter.converter_widgets</span> <span class="k">import</span> <span class="n">FileInput</span>
+<span class="kn">from</span> <span class="nn">sas.sasgui.perspectives.file_converter.meta_panels</span> <span class="k">import</span> <span class="n">MetadataWindow</span>
+<span class="kn">from</span> <span class="nn">sas.sasgui.perspectives.file_converter.meta_panels</span> <span class="k">import</span> <span class="n">DetectorPanel</span>
+<span class="kn">from</span> <span class="nn">sas.sasgui.perspectives.file_converter.meta_panels</span> <span class="k">import</span> <span class="n">SamplePanel</span>
+<span class="kn">from</span> <span class="nn">sas.sasgui.perspectives.file_converter.meta_panels</span> <span class="k">import</span> <span class="n">SourcePanel</span>
+<span class="kn">from</span> <span class="nn">sas.sasgui.perspectives.file_converter.frame_select_dialog</span> <span class="k">import</span> <span class="n">FrameSelectDialog</span>
+<span class="kn">from</span> <span class="nn">sas.sasgui.guiframe.events</span> <span class="k">import</span> <span class="n">StatusEvent</span>
+<span class="kn">from</span> <span class="nn">sas.sasgui.guiframe.documentation_window</span> <span class="k">import</span> <span class="n">DocumentationWindow</span>
+<span class="kn">from</span> <span class="nn">sas.sasgui.guiframe.dataFitting</span> <span class="k">import</span> <span class="n">Data1D</span>
+<span class="kn">from</span> <span class="nn">sas.sascalc.dataloader.data_info</span> <span class="k">import</span> <span class="n">Data2D</span>
+<span class="kn">from</span> <span class="nn">sas.sasgui.guiframe.utils</span> <span class="k">import</span> <span class="n">check_float</span>
+<span class="kn">from</span> <span class="nn">sas.sascalc.file_converter.cansas_writer</span> <span class="k">import</span> <span class="n">CansasWriter</span>
+<span class="kn">from</span> <span class="nn">sas.sascalc.file_converter.otoko_loader</span> <span class="k">import</span> <span class="n">OTOKOLoader</span>
+<span class="kn">from</span> <span class="nn">sas.sascalc.file_converter.bsl_loader</span> <span class="k">import</span> <span class="n">BSLLoader</span>
+<span class="kn">from</span> <span class="nn">sas.sascalc.file_converter.nxcansas_writer</span> <span class="k">import</span> <span class="n">NXcanSASWriter</span>
+<span class="kn">from</span> <span class="nn">sas.sascalc.dataloader.data_info</span> <span class="k">import</span> <span class="n">Detector</span>
+<span class="kn">from</span> <span class="nn">sas.sascalc.dataloader.data_info</span> <span class="k">import</span> <span class="n">Sample</span>
+<span class="kn">from</span> <span class="nn">sas.sascalc.dataloader.data_info</span> <span class="k">import</span> <span class="n">Source</span>
+<span class="kn">from</span> <span class="nn">sas.sascalc.dataloader.data_info</span> <span class="k">import</span> <span class="n">Vector</span>
+
+<span class="c1"># Panel size</span>
+<span class="k">if</span> <span class="n">sys</span><span class="o">.</span><span class="n">platform</span><span class="o">.</span><span class="n">count</span><span class="p">(</span><span class="s2">&quot;win32&quot;</span><span class="p">)</span> <span class="o">&gt;</span> <span class="mi">0</span><span class="p">:</span>
+    <span class="n">PANEL_TOP</span> <span class="o">=</span> <span class="mi">0</span>
+    <span class="n">_STATICBOX_WIDTH</span> <span class="o">=</span> <span class="mi">410</span>
+    <span class="n">_BOX_WIDTH</span> <span class="o">=</span> <span class="mi">200</span>
+    <span class="n">PANEL_SIZE</span> <span class="o">=</span> <span class="mi">480</span>
+    <span class="n">FONT_VARIANT</span> <span class="o">=</span> <span class="mi">0</span>
+<span class="k">else</span><span class="p">:</span>
+    <span class="n">PANEL_TOP</span> <span class="o">=</span> <span class="mi">60</span>
+    <span class="n">_STATICBOX_WIDTH</span> <span class="o">=</span> <span class="mi">430</span>
+    <span class="n">_BOX_WIDTH</span> <span class="o">=</span> <span class="mi">200</span>
+    <span class="n">PANEL_SIZE</span> <span class="o">=</span> <span class="mi">500</span>
+    <span class="n">FONT_VARIANT</span> <span class="o">=</span> <span class="mi">1</span>
+
+<div class="viewcode-block" id="ConverterPanel"><a class="viewcode-back" href="../../../../../dev/api/sas.sasgui.perspectives.file_converter.html#sas.sasgui.perspectives.file_converter.converter_panel.ConverterPanel">[docs]</a><span class="k">class</span> <span class="nc">ConverterPanel</span><span class="p">(</span><span class="n">ScrolledPanel</span><span class="p">,</span> <span class="n">PanelBase</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    This class provides the File Converter GUI</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+
+    <span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">parent</span><span class="p">,</span> <span class="n">base</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="o">*</span><span class="n">args</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
+        <span class="n">ScrolledPanel</span><span class="o">.</span><span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">parent</span><span class="p">,</span> <span class="o">*</span><span class="n">args</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">)</span>
+        <span class="n">PanelBase</span><span class="o">.</span><span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">SetupScrolling</span><span class="p">()</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">SetWindowVariant</span><span class="p">(</span><span class="n">variant</span><span class="o">=</span><span class="n">FONT_VARIANT</span><span class="p">)</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">base</span> <span class="o">=</span> <span class="n">base</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">parent</span> <span class="o">=</span> <span class="n">parent</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">meta_frames</span> <span class="o">=</span> <span class="p">[]</span>
+
+        <span class="c1"># GUI inputs</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">q_input</span> <span class="o">=</span> <span class="kc">None</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">iq_input</span> <span class="o">=</span> <span class="kc">None</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">output</span> <span class="o">=</span> <span class="kc">None</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">radiation_input</span> <span class="o">=</span> <span class="kc">None</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">convert_btn</span> <span class="o">=</span> <span class="kc">None</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">metadata_section</span> <span class="o">=</span> <span class="kc">None</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">data_type</span> <span class="o">=</span> <span class="s2">&quot;ascii&quot;</span>
+
+        <span class="c1"># Metadata values</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">title</span> <span class="o">=</span> <span class="s1">&#39;&#39;</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">run</span> <span class="o">=</span> <span class="s1">&#39;&#39;</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">run_name</span> <span class="o">=</span> <span class="s1">&#39;&#39;</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">instrument</span> <span class="o">=</span> <span class="s1">&#39;&#39;</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">detector</span> <span class="o">=</span> <span class="n">Detector</span><span class="p">()</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">sample</span> <span class="o">=</span> <span class="n">Sample</span><span class="p">()</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">source</span> <span class="o">=</span> <span class="n">Source</span><span class="p">()</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">properties</span> <span class="o">=</span> <span class="p">[</span><span class="s1">&#39;title&#39;</span><span class="p">,</span> <span class="s1">&#39;run&#39;</span><span class="p">,</span> <span class="s1">&#39;run_name&#39;</span><span class="p">,</span> <span class="s1">&#39;instrument&#39;</span><span class="p">]</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">detector</span><span class="o">.</span><span class="n">name</span> <span class="o">=</span> <span class="s1">&#39;&#39;</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">source</span><span class="o">.</span><span class="n">radiation</span> <span class="o">=</span> <span class="s1">&#39;neutron&#39;</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">_do_layout</span><span class="p">()</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">SetAutoLayout</span><span class="p">(</span><span class="kc">True</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">Layout</span><span class="p">()</span>
+
+<div class="viewcode-block" id="ConverterPanel.convert_to_cansas"><a class="viewcode-back" href="../../../../../dev/api/sas.sasgui.perspectives.file_converter.html#sas.sasgui.perspectives.file_converter.converter_panel.ConverterPanel.convert_to_cansas">[docs]</a>    <span class="k">def</span> <span class="nf">convert_to_cansas</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">frame_data</span><span class="p">,</span> <span class="n">filepath</span><span class="p">,</span> <span class="n">single_file</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Saves an array of Data1D objects to a single CanSAS file with multiple</span>
+<span class="sd">        &lt;SasData&gt; elements, or to multiple CanSAS files, each with one</span>
+<span class="sd">        &lt;SasData&gt; element.</span>
+
+<span class="sd">        :param frame_data: If single_file is true, an array of Data1D objects.</span>
+<span class="sd">        If single_file is false, a dictionary of the form frame_number: Data1D.</span>
+<span class="sd">        :param filepath: Where to save the CanSAS file</span>
+<span class="sd">        :param single_file: If true, array is saved as a single file, if false,</span>
+<span class="sd">        each item in the array is saved to it&#39;s own file</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">writer</span> <span class="o">=</span> <span class="n">CansasWriter</span><span class="p">()</span>
+        <span class="n">entry_attrs</span> <span class="o">=</span> <span class="kc">None</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">run_name</span> <span class="o">!=</span> <span class="s1">&#39;&#39;</span><span class="p">:</span>
+            <span class="n">entry_attrs</span> <span class="o">=</span> <span class="p">{</span> <span class="s1">&#39;name&#39;</span><span class="p">:</span> <span class="bp">self</span><span class="o">.</span><span class="n">run_name</span> <span class="p">}</span>
+
+        <span class="k">if</span> <span class="n">single_file</span><span class="p">:</span>
+            <span class="n">writer</span><span class="o">.</span><span class="n">write</span><span class="p">(</span><span class="n">filepath</span><span class="p">,</span> <span class="n">frame_data</span><span class="p">,</span>
+                <span class="n">sasentry_attrs</span><span class="o">=</span><span class="n">entry_attrs</span><span class="p">)</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="c1"># Folder and base filename</span>
+            <span class="p">[</span><span class="n">group_path</span><span class="p">,</span> <span class="n">group_name</span><span class="p">]</span> <span class="o">=</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">split</span><span class="p">(</span><span class="n">filepath</span><span class="p">)</span>
+            <span class="n">ext</span> <span class="o">=</span> <span class="s2">&quot;.&quot;</span> <span class="o">+</span> <span class="n">group_name</span><span class="o">.</span><span class="n">split</span><span class="p">(</span><span class="s1">&#39;.&#39;</span><span class="p">)[</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span> <span class="c1"># File extension</span>
+            <span class="k">for</span> <span class="n">frame_number</span><span class="p">,</span> <span class="n">frame_data</span> <span class="ow">in</span> <span class="n">frame_data</span><span class="o">.</span><span class="n">iteritems</span><span class="p">():</span>
+                <span class="c1"># Append frame number to base filename</span>
+                <span class="n">filename</span> <span class="o">=</span> <span class="n">group_name</span><span class="o">.</span><span class="n">replace</span><span class="p">(</span><span class="n">ext</span><span class="p">,</span> <span class="nb">str</span><span class="p">(</span><span class="n">frame_number</span><span class="p">)</span><span class="o">+</span><span class="n">ext</span><span class="p">)</span>
+                <span class="n">destination</span> <span class="o">=</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">group_path</span><span class="p">,</span> <span class="n">filename</span><span class="p">)</span>
+                <span class="n">writer</span><span class="o">.</span><span class="n">write</span><span class="p">(</span><span class="n">destination</span><span class="p">,</span> <span class="p">[</span><span class="n">frame_data</span><span class="p">],</span>
+                    <span class="n">sasentry_attrs</span><span class="o">=</span><span class="n">entry_attrs</span><span class="p">)</span></div>
+
+<div class="viewcode-block" id="ConverterPanel.extract_ascii_data"><a class="viewcode-back" href="../../../../../dev/api/sas.sasgui.perspectives.file_converter.html#sas.sasgui.perspectives.file_converter.converter_panel.ConverterPanel.extract_ascii_data">[docs]</a>    <span class="k">def</span> <span class="nf">extract_ascii_data</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">filename</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Extracts data from a single-column ASCII file</span>
+
+<span class="sd">        :param filename: The file to load data from</span>
+<span class="sd">        :return: A numpy array containing the extracted data</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">try</span><span class="p">:</span>
+            <span class="n">data</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">loadtxt</span><span class="p">(</span><span class="n">filename</span><span class="p">,</span> <span class="n">dtype</span><span class="o">=</span><span class="nb">str</span><span class="p">)</span>
+        <span class="k">except</span><span class="p">:</span>
+            <span class="n">is_bsl</span> <span class="o">=</span> <span class="kc">False</span>
+            <span class="c1"># Check if file is a BSL or OTOKO header file</span>
+            <span class="n">f</span> <span class="o">=</span> <span class="nb">open</span><span class="p">(</span><span class="n">filename</span><span class="p">,</span> <span class="s1">&#39;r&#39;</span><span class="p">)</span>
+            <span class="n">f</span><span class="o">.</span><span class="n">readline</span><span class="p">()</span>
+            <span class="n">f</span><span class="o">.</span><span class="n">readline</span><span class="p">()</span>
+            <span class="n">bsl_metadata</span> <span class="o">=</span> <span class="n">f</span><span class="o">.</span><span class="n">readline</span><span class="p">()</span><span class="o">.</span><span class="n">strip</span><span class="p">()</span><span class="o">.</span><span class="n">split</span><span class="p">()</span>
+            <span class="n">f</span><span class="o">.</span><span class="n">close</span><span class="p">()</span>
+            <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">bsl_metadata</span><span class="p">)</span> <span class="o">==</span> <span class="mi">10</span><span class="p">:</span>
+                <span class="n">msg</span> <span class="o">=</span> <span class="p">(</span><span class="s2">&quot;Error parsing ASII data. </span><span class="si">{}</span><span class="s2"> looks like a BSL or OTOKO &quot;</span>
+                    <span class="s2">&quot;header file.&quot;</span><span class="p">)</span>
+                <span class="k">raise</span> <span class="ne">Exception</span><span class="p">(</span><span class="n">msg</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">split</span><span class="p">(</span><span class="n">filename</span><span class="p">)[</span><span class="o">-</span><span class="mi">1</span><span class="p">]))</span>
+
+        <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">data</span><span class="o">.</span><span class="n">shape</span><span class="p">)</span> <span class="o">!=</span> <span class="mi">1</span><span class="p">:</span>
+            <span class="n">msg</span> <span class="o">=</span> <span class="s2">&quot;Error reading </span><span class="si">{}</span><span class="s2">: Only one column of data is allowed&quot;</span>
+            <span class="k">raise</span> <span class="ne">Exception</span><span class="p">(</span><span class="n">msg</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">filename</span><span class="o">.</span><span class="n">split</span><span class="p">(</span><span class="s1">&#39;</span><span class="se">\\</span><span class="s1">&#39;</span><span class="p">)[</span><span class="o">-</span><span class="mi">1</span><span class="p">]))</span>
+
+        <span class="n">is_float</span> <span class="o">=</span> <span class="kc">True</span>
+        <span class="k">try</span><span class="p">:</span>
+            <span class="nb">float</span><span class="p">(</span><span class="n">data</span><span class="p">[</span><span class="mi">0</span><span class="p">])</span>
+        <span class="k">except</span><span class="p">:</span>
+            <span class="n">is_float</span> <span class="o">=</span> <span class="kc">False</span>
+
+        <span class="k">if</span> <span class="ow">not</span> <span class="n">is_float</span><span class="p">:</span>
+            <span class="n">end_char</span> <span class="o">=</span> <span class="n">data</span><span class="p">[</span><span class="mi">0</span><span class="p">][</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span>
+            <span class="c1"># If lines end with comma or semi-colon, trim the last character</span>
+            <span class="k">if</span> <span class="n">end_char</span> <span class="o">==</span> <span class="s1">&#39;,&#39;</span> <span class="ow">or</span> <span class="n">end_char</span> <span class="o">==</span> <span class="s1">&#39;;&#39;</span><span class="p">:</span>
+                <span class="n">data</span> <span class="o">=</span> <span class="nb">map</span><span class="p">(</span><span class="k">lambda</span> <span class="n">s</span><span class="p">:</span> <span class="n">s</span><span class="p">[</span><span class="mi">0</span><span class="p">:</span><span class="o">-</span><span class="mi">1</span><span class="p">],</span> <span class="n">data</span><span class="p">)</span>
+            <span class="k">else</span><span class="p">:</span>
+                <span class="n">msg</span> <span class="o">=</span> <span class="p">(</span><span class="s2">&quot;Error reading </span><span class="si">{}</span><span class="s2">: Lines must end with a digit, comma &quot;</span>
+                    <span class="s2">&quot;or semi-colon&quot;</span><span class="p">)</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">filename</span><span class="o">.</span><span class="n">split</span><span class="p">(</span><span class="s1">&#39;</span><span class="se">\\</span><span class="s1">&#39;</span><span class="p">)[</span><span class="o">-</span><span class="mi">1</span><span class="p">])</span>
+                <span class="k">raise</span> <span class="ne">Exception</span><span class="p">(</span><span class="n">msg</span><span class="p">)</span>
+
+        <span class="k">return</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">(</span><span class="n">data</span><span class="p">,</span> <span class="n">dtype</span><span class="o">=</span><span class="n">np</span><span class="o">.</span><span class="n">float32</span><span class="p">)</span></div>
+
+<div class="viewcode-block" id="ConverterPanel.extract_otoko_data"><a class="viewcode-back" href="../../../../../dev/api/sas.sasgui.perspectives.file_converter.html#sas.sasgui.perspectives.file_converter.converter_panel.ConverterPanel.extract_otoko_data">[docs]</a>    <span class="k">def</span> <span class="nf">extract_otoko_data</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">filename</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Extracts data from a 1D OTOKO file</span>
+
+<span class="sd">        :param filename: The OTOKO file to load the data from</span>
+<span class="sd">        :return: A numpy array containing the extracted data</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">loader</span> <span class="o">=</span> <span class="n">OTOKOLoader</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">q_input</span><span class="o">.</span><span class="n">GetPath</span><span class="p">(),</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">iq_input</span><span class="o">.</span><span class="n">GetPath</span><span class="p">())</span>
+        <span class="n">otoko_data</span> <span class="o">=</span> <span class="n">loader</span><span class="o">.</span><span class="n">load_otoko_data</span><span class="p">()</span>
+        <span class="n">qdata</span> <span class="o">=</span> <span class="n">otoko_data</span><span class="o">.</span><span class="n">q_axis</span><span class="o">.</span><span class="n">data</span>
+        <span class="n">iqdata</span> <span class="o">=</span> <span class="n">otoko_data</span><span class="o">.</span><span class="n">data_axis</span><span class="o">.</span><span class="n">data</span>
+        <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">qdata</span><span class="p">)</span> <span class="o">&gt;</span> <span class="mi">1</span><span class="p">:</span>
+            <span class="n">msg</span> <span class="o">=</span> <span class="p">(</span><span class="s2">&quot;Q-Axis file has multiple frames. Only 1 frame is &quot;</span>
+                <span class="s2">&quot;allowed for the Q-Axis&quot;</span><span class="p">)</span>
+            <span class="n">wx</span><span class="o">.</span><span class="n">PostEvent</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">parent</span><span class="o">.</span><span class="n">manager</span><span class="o">.</span><span class="n">parent</span><span class="p">,</span>
+                <span class="n">StatusEvent</span><span class="p">(</span><span class="n">status</span><span class="o">=</span><span class="n">msg</span><span class="p">,</span> <span class="n">info</span><span class="o">=</span><span class="s2">&quot;error&quot;</span><span class="p">))</span>
+            <span class="k">return</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">qdata</span> <span class="o">=</span> <span class="n">qdata</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
+
+        <span class="k">return</span> <span class="n">qdata</span><span class="p">,</span> <span class="n">iqdata</span></div>
+
+<div class="viewcode-block" id="ConverterPanel.extract_bsl_data"><a class="viewcode-back" href="../../../../../dev/api/sas.sasgui.perspectives.file_converter.html#sas.sasgui.perspectives.file_converter.converter_panel.ConverterPanel.extract_bsl_data">[docs]</a>    <span class="k">def</span> <span class="nf">extract_bsl_data</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">filename</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Extracts data from a 2D BSL file</span>
+
+<span class="sd">        :param filename: The header file to extract the data from</span>
+<span class="sd">        :return x_data: A 1D array containing all the x coordinates of the data</span>
+<span class="sd">        :return y_data: A 1D array containing all the y coordinates of the data</span>
+<span class="sd">        :return frame_data: A dictionary of the form frame_number: data, where</span>
+<span class="sd">        data is a 2D numpy array containing the intensity data</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">loader</span> <span class="o">=</span> <span class="n">BSLLoader</span><span class="p">(</span><span class="n">filename</span><span class="p">)</span>
+        <span class="n">frames</span> <span class="o">=</span> <span class="p">[</span><span class="mi">0</span><span class="p">]</span>
+        <span class="n">should_continue</span> <span class="o">=</span> <span class="kc">True</span>
+
+        <span class="k">if</span> <span class="n">loader</span><span class="o">.</span><span class="n">n_frames</span> <span class="o">&gt;</span> <span class="mi">1</span><span class="p">:</span>
+            <span class="n">params</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">ask_frame_range</span><span class="p">(</span><span class="n">loader</span><span class="o">.</span><span class="n">n_frames</span><span class="p">)</span>
+            <span class="n">frames</span> <span class="o">=</span> <span class="n">params</span><span class="p">[</span><span class="s1">&#39;frames&#39;</span><span class="p">]</span>
+            <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">frames</span><span class="p">)</span> <span class="o">==</span> <span class="mi">0</span><span class="p">:</span>
+                <span class="n">should_continue</span> <span class="o">=</span> <span class="kc">False</span>
+        <span class="k">elif</span> <span class="n">loader</span><span class="o">.</span><span class="n">n_rasters</span> <span class="o">==</span> <span class="mi">1</span> <span class="ow">and</span> <span class="n">loader</span><span class="o">.</span><span class="n">n_frames</span> <span class="o">==</span> <span class="mi">1</span><span class="p">:</span>
+            <span class="n">message</span> <span class="o">=</span> <span class="p">(</span><span class="s2">&quot;The selected file is an OTOKO file. Please select the &quot;</span>
+            <span class="s2">&quot;&#39;OTOKO 1D&#39; option if you wish to convert it.&quot;</span><span class="p">)</span>
+            <span class="n">dlg</span> <span class="o">=</span> <span class="n">wx</span><span class="o">.</span><span class="n">MessageDialog</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span>
+            <span class="n">message</span><span class="p">,</span>
+            <span class="s1">&#39;Error!&#39;</span><span class="p">,</span>
+            <span class="n">wx</span><span class="o">.</span><span class="n">OK</span> <span class="o">|</span> <span class="n">wx</span><span class="o">.</span><span class="n">ICON_WARNING</span><span class="p">)</span>
+            <span class="n">dlg</span><span class="o">.</span><span class="n">ShowModal</span><span class="p">()</span>
+            <span class="n">should_continue</span> <span class="o">=</span> <span class="kc">False</span>
+            <span class="n">dlg</span><span class="o">.</span><span class="n">Destroy</span><span class="p">()</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">message</span> <span class="o">=</span> <span class="p">(</span><span class="s2">&quot;The selected data file only has 1 frame, it might be&quot;</span>
+                <span class="s2">&quot; a multi-frame OTOKO file.</span><span class="se">\n</span><span class="s2">Continue conversion?&quot;</span><span class="p">)</span>
+            <span class="n">dlg</span> <span class="o">=</span> <span class="n">wx</span><span class="o">.</span><span class="n">MessageDialog</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span>
+            <span class="n">message</span><span class="p">,</span>
+            <span class="s1">&#39;Warning!&#39;</span><span class="p">,</span>
+            <span class="n">wx</span><span class="o">.</span><span class="n">YES_NO</span> <span class="o">|</span> <span class="n">wx</span><span class="o">.</span><span class="n">ICON_WARNING</span><span class="p">)</span>
+            <span class="n">should_continue</span> <span class="o">=</span> <span class="p">(</span><span class="n">dlg</span><span class="o">.</span><span class="n">ShowModal</span><span class="p">()</span> <span class="o">==</span> <span class="n">wx</span><span class="o">.</span><span class="n">ID_YES</span><span class="p">)</span>
+            <span class="n">dlg</span><span class="o">.</span><span class="n">Destroy</span><span class="p">()</span>
+
+        <span class="k">if</span> <span class="ow">not</span> <span class="n">should_continue</span><span class="p">:</span>
+            <span class="k">return</span> <span class="kc">None</span>
+
+        <span class="n">frame_data</span> <span class="o">=</span> <span class="n">loader</span><span class="o">.</span><span class="n">load_frames</span><span class="p">(</span><span class="n">frames</span><span class="p">)</span>
+
+        <span class="k">return</span> <span class="n">frame_data</span></div>
+
+<div class="viewcode-block" id="ConverterPanel.ask_frame_range"><a class="viewcode-back" href="../../../../../dev/api/sas.sasgui.perspectives.file_converter.html#sas.sasgui.perspectives.file_converter.converter_panel.ConverterPanel.ask_frame_range">[docs]</a>    <span class="k">def</span> <span class="nf">ask_frame_range</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">n_frames</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Display a dialog asking the user to input the range of frames they</span>
+<span class="sd">        would like to export</span>
+
+<span class="sd">        :param n_frames: How many frames the loaded data file has</span>
+<span class="sd">        :return: A dictionary containing the parameters input by the user</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">valid_input</span> <span class="o">=</span> <span class="kc">False</span>
+        <span class="n">_</span><span class="p">,</span> <span class="n">ext</span> <span class="o">=</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">splitext</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">output</span><span class="o">.</span><span class="n">GetPath</span><span class="p">())</span>
+        <span class="n">show_single_btn</span> <span class="o">=</span> <span class="p">(</span><span class="n">ext</span> <span class="o">==</span> <span class="s1">&#39;.h5&#39;</span><span class="p">)</span>
+        <span class="n">dlg</span> <span class="o">=</span> <span class="n">FrameSelectDialog</span><span class="p">(</span><span class="n">n_frames</span><span class="p">,</span> <span class="n">show_single_btn</span><span class="p">)</span>
+        <span class="n">frames</span> <span class="o">=</span> <span class="kc">None</span>
+        <span class="n">increment</span> <span class="o">=</span> <span class="kc">None</span>
+        <span class="n">single_file</span> <span class="o">=</span> <span class="kc">True</span>
+        <span class="k">while</span> <span class="ow">not</span> <span class="n">valid_input</span><span class="p">:</span>
+            <span class="k">if</span> <span class="n">dlg</span><span class="o">.</span><span class="n">ShowModal</span><span class="p">()</span> <span class="o">==</span> <span class="n">wx</span><span class="o">.</span><span class="n">ID_OK</span><span class="p">:</span>
+                <span class="n">msg</span> <span class="o">=</span> <span class="s2">&quot;&quot;</span>
+                <span class="k">try</span><span class="p">:</span>
+                    <span class="n">first_frame</span> <span class="o">=</span> <span class="nb">int</span><span class="p">(</span><span class="n">dlg</span><span class="o">.</span><span class="n">first_input</span><span class="o">.</span><span class="n">GetValue</span><span class="p">())</span>
+                    <span class="n">last_frame</span> <span class="o">=</span> <span class="nb">int</span><span class="p">(</span><span class="n">dlg</span><span class="o">.</span><span class="n">last_input</span><span class="o">.</span><span class="n">GetValue</span><span class="p">())</span>
+                    <span class="n">increment</span> <span class="o">=</span> <span class="nb">int</span><span class="p">(</span><span class="n">dlg</span><span class="o">.</span><span class="n">increment_input</span><span class="o">.</span><span class="n">GetValue</span><span class="p">())</span>
+                    <span class="k">if</span> <span class="ow">not</span> <span class="n">show_single_btn</span><span class="p">:</span>
+                        <span class="n">single_file</span> <span class="o">=</span> <span class="n">dlg</span><span class="o">.</span><span class="n">single_btn</span><span class="o">.</span><span class="n">GetValue</span><span class="p">()</span>
+
+                    <span class="k">if</span> <span class="n">last_frame</span> <span class="o">&lt;</span> <span class="mi">0</span> <span class="ow">or</span> <span class="n">first_frame</span> <span class="o">&lt;</span> <span class="mi">0</span><span class="p">:</span>
+                        <span class="n">msg</span> <span class="o">=</span> <span class="s2">&quot;Frame values must be positive&quot;</span>
+                    <span class="k">elif</span> <span class="n">increment</span> <span class="o">&lt;</span> <span class="mi">1</span><span class="p">:</span>
+                        <span class="n">msg</span> <span class="o">=</span> <span class="s2">&quot;Increment must be greater than or equal to 1&quot;</span>
+                    <span class="k">elif</span> <span class="n">first_frame</span> <span class="o">&gt;</span> <span class="n">last_frame</span><span class="p">:</span>
+                        <span class="n">msg</span> <span class="o">=</span> <span class="s2">&quot;First frame must be less than last frame&quot;</span>
+                    <span class="k">elif</span> <span class="n">last_frame</span> <span class="o">&gt;=</span> <span class="n">n_frames</span><span class="p">:</span>
+                        <span class="n">msg</span> <span class="o">=</span> <span class="s2">&quot;Last frame must be less than </span><span class="si">{}</span><span class="s2">&quot;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">n_frames</span><span class="p">)</span>
+                    <span class="k">else</span><span class="p">:</span>
+                        <span class="n">valid_input</span> <span class="o">=</span> <span class="kc">True</span>
+                <span class="k">except</span><span class="p">:</span>
+                    <span class="n">valid_input</span> <span class="o">=</span> <span class="kc">False</span>
+                    <span class="n">msg</span> <span class="o">=</span> <span class="s2">&quot;Please enter valid integer values&quot;</span>
+
+                <span class="k">if</span> <span class="ow">not</span> <span class="n">valid_input</span><span class="p">:</span>
+                    <span class="n">wx</span><span class="o">.</span><span class="n">PostEvent</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">parent</span><span class="o">.</span><span class="n">manager</span><span class="o">.</span><span class="n">parent</span><span class="p">,</span>
+                        <span class="n">StatusEvent</span><span class="p">(</span><span class="n">status</span><span class="o">=</span><span class="n">msg</span><span class="p">))</span>
+            <span class="k">else</span><span class="p">:</span>
+                <span class="k">return</span> <span class="p">{</span> <span class="s1">&#39;frames&#39;</span><span class="p">:</span> <span class="p">[],</span> <span class="s1">&#39;inc&#39;</span><span class="p">:</span> <span class="kc">None</span><span class="p">,</span> <span class="s1">&#39;file&#39;</span><span class="p">:</span> <span class="n">single_file</span> <span class="p">}</span>
+        <span class="n">frames</span> <span class="o">=</span> <span class="nb">range</span><span class="p">(</span><span class="n">first_frame</span><span class="p">,</span> <span class="n">last_frame</span> <span class="o">+</span> <span class="mi">1</span><span class="p">,</span> <span class="n">increment</span><span class="p">)</span>
+        <span class="k">return</span> <span class="p">{</span> <span class="s1">&#39;frames&#39;</span><span class="p">:</span> <span class="n">frames</span><span class="p">,</span> <span class="s1">&#39;inc&#39;</span><span class="p">:</span> <span class="n">increment</span><span class="p">,</span> <span class="s1">&#39;file&#39;</span><span class="p">:</span> <span class="n">single_file</span> <span class="p">}</span></div>
+
+<div class="viewcode-block" id="ConverterPanel.get_metadata"><a class="viewcode-back" href="../../../../../dev/api/sas.sasgui.perspectives.file_converter.html#sas.sasgui.perspectives.file_converter.converter_panel.ConverterPanel.get_metadata">[docs]</a>    <span class="k">def</span> <span class="nf">get_metadata</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="c1"># Prepare the metadata for writing to a file</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">run</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">run</span> <span class="o">=</span> <span class="p">[]</span>
+        <span class="k">elif</span> <span class="ow">not</span> <span class="nb">isinstance</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">run</span><span class="p">,</span> <span class="nb">list</span><span class="p">):</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">run</span> <span class="o">=</span> <span class="p">[</span><span class="bp">self</span><span class="o">.</span><span class="n">run</span><span class="p">]</span>
+
+        <span class="n">run_name</span> <span class="o">=</span> <span class="kc">None</span>
+        <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">run</span><span class="p">)</span> <span class="o">&gt;</span> <span class="mi">0</span><span class="p">:</span>
+            <span class="n">run_number</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">run</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
+            <span class="n">run_name</span> <span class="o">=</span> <span class="p">{</span> <span class="n">run_number</span><span class="p">:</span> <span class="bp">self</span><span class="o">.</span><span class="n">run_name</span> <span class="p">}</span>
+
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">title</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">title</span> <span class="o">=</span> <span class="s1">&#39;&#39;</span>
+
+        <span class="n">metadata</span> <span class="o">=</span> <span class="p">{</span>
+            <span class="s1">&#39;title&#39;</span><span class="p">:</span> <span class="bp">self</span><span class="o">.</span><span class="n">title</span><span class="p">,</span>
+            <span class="s1">&#39;run&#39;</span><span class="p">:</span> <span class="bp">self</span><span class="o">.</span><span class="n">run</span><span class="p">,</span>
+            <span class="s1">&#39;run_name&#39;</span><span class="p">:</span> <span class="n">run_name</span><span class="p">,</span>
+            <span class="s1">&#39;instrument&#39;</span><span class="p">:</span> <span class="bp">self</span><span class="o">.</span><span class="n">instrument</span><span class="p">,</span>
+            <span class="s1">&#39;detector&#39;</span><span class="p">:</span> <span class="p">[</span><span class="bp">self</span><span class="o">.</span><span class="n">detector</span><span class="p">],</span>
+            <span class="s1">&#39;sample&#39;</span><span class="p">:</span> <span class="bp">self</span><span class="o">.</span><span class="n">sample</span><span class="p">,</span>
+            <span class="s1">&#39;source&#39;</span><span class="p">:</span> <span class="bp">self</span><span class="o">.</span><span class="n">source</span>
+        <span class="p">}</span>
+
+        <span class="k">return</span> <span class="n">metadata</span></div>
+
+<div class="viewcode-block" id="ConverterPanel.convert_1d_data"><a class="viewcode-back" href="../../../../../dev/api/sas.sasgui.perspectives.file_converter.html#sas.sasgui.perspectives.file_converter.converter_panel.ConverterPanel.convert_1d_data">[docs]</a>    <span class="k">def</span> <span class="nf">convert_1d_data</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">qdata</span><span class="p">,</span> <span class="n">iqdata</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Formats a 1D array of q_axis data and a 2D array of I axis data (where</span>
+<span class="sd">        each row of iqdata is a separate row), into an array of Data1D objects</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">frames</span> <span class="o">=</span> <span class="p">[]</span>
+        <span class="n">increment</span> <span class="o">=</span> <span class="mi">1</span>
+        <span class="n">single_file</span> <span class="o">=</span> <span class="kc">True</span>
+        <span class="n">n_frames</span> <span class="o">=</span> <span class="n">iqdata</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
+        <span class="c1"># Standard file has 3 frames: SAS, calibration and WAS</span>
+        <span class="k">if</span> <span class="n">n_frames</span> <span class="o">&gt;</span> <span class="mi">3</span><span class="p">:</span>
+            <span class="c1"># File has multiple frames - ask the user which ones they want to</span>
+            <span class="c1"># export</span>
+            <span class="n">params</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">ask_frame_range</span><span class="p">(</span><span class="n">n_frames</span><span class="p">)</span>
+            <span class="n">frames</span> <span class="o">=</span> <span class="n">params</span><span class="p">[</span><span class="s1">&#39;frames&#39;</span><span class="p">]</span>
+            <span class="n">increment</span> <span class="o">=</span> <span class="n">params</span><span class="p">[</span><span class="s1">&#39;inc&#39;</span><span class="p">]</span>
+            <span class="n">single_file</span> <span class="o">=</span> <span class="n">params</span><span class="p">[</span><span class="s1">&#39;file&#39;</span><span class="p">]</span>
+            <span class="k">if</span> <span class="n">frames</span> <span class="o">==</span> <span class="p">[]:</span> <span class="k">return</span>
+        <span class="k">else</span><span class="p">:</span> <span class="c1"># Only interested in SAS data</span>
+            <span class="n">frames</span> <span class="o">=</span> <span class="p">[</span><span class="mi">0</span><span class="p">]</span>
+
+        <span class="n">output_path</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">output</span><span class="o">.</span><span class="n">GetPath</span><span class="p">()</span>
+        <span class="n">metadata</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">get_metadata</span><span class="p">()</span>
+
+        <span class="n">frame_data</span> <span class="o">=</span> <span class="p">{}</span>
+        <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="n">frames</span><span class="p">:</span>
+            <span class="n">data</span> <span class="o">=</span> <span class="n">Data1D</span><span class="p">(</span><span class="n">x</span><span class="o">=</span><span class="n">qdata</span><span class="p">,</span> <span class="n">y</span><span class="o">=</span><span class="n">iqdata</span><span class="p">[</span><span class="n">i</span><span class="p">])</span>
+            <span class="n">frame_data</span><span class="p">[</span><span class="n">i</span><span class="p">]</span> <span class="o">=</span> <span class="n">data</span>
+        <span class="k">if</span> <span class="n">single_file</span><span class="p">:</span>
+            <span class="c1"># Only need to set metadata on first Data1D object</span>
+            <span class="n">frame_data</span> <span class="o">=</span> <span class="n">frame_data</span><span class="o">.</span><span class="n">values</span><span class="p">()</span> <span class="c1"># Don&#39;t need to know frame numbers</span>
+            <span class="n">frame_data</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">filename</span> <span class="o">=</span> <span class="n">output_path</span><span class="o">.</span><span class="n">split</span><span class="p">(</span><span class="s1">&#39;</span><span class="se">\\</span><span class="s1">&#39;</span><span class="p">)[</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span>
+            <span class="k">for</span> <span class="n">key</span><span class="p">,</span> <span class="n">value</span> <span class="ow">in</span> <span class="n">metadata</span><span class="o">.</span><span class="n">iteritems</span><span class="p">():</span>
+                <span class="nb">setattr</span><span class="p">(</span><span class="n">frame_data</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span> <span class="n">key</span><span class="p">,</span> <span class="n">value</span><span class="p">)</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="c1"># Need to set metadata for all Data1D objects</span>
+            <span class="k">for</span> <span class="n">datainfo</span> <span class="ow">in</span> <span class="n">frame_data</span><span class="o">.</span><span class="n">values</span><span class="p">():</span>
+                <span class="n">datainfo</span><span class="o">.</span><span class="n">filename</span> <span class="o">=</span> <span class="n">output_path</span><span class="o">.</span><span class="n">split</span><span class="p">(</span><span class="s1">&#39;</span><span class="se">\\</span><span class="s1">&#39;</span><span class="p">)[</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span>
+                <span class="k">for</span> <span class="n">key</span><span class="p">,</span> <span class="n">value</span> <span class="ow">in</span> <span class="n">metadata</span><span class="o">.</span><span class="n">iteritems</span><span class="p">():</span>
+                    <span class="nb">setattr</span><span class="p">(</span><span class="n">datainfo</span><span class="p">,</span> <span class="n">key</span><span class="p">,</span> <span class="n">value</span><span class="p">)</span>
+
+        <span class="n">_</span><span class="p">,</span> <span class="n">ext</span> <span class="o">=</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">splitext</span><span class="p">(</span><span class="n">output_path</span><span class="p">)</span>
+        <span class="k">if</span> <span class="n">ext</span> <span class="o">==</span> <span class="s1">&#39;.xml&#39;</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">convert_to_cansas</span><span class="p">(</span><span class="n">frame_data</span><span class="p">,</span> <span class="n">output_path</span><span class="p">,</span> <span class="n">single_file</span><span class="p">)</span>
+        <span class="k">else</span><span class="p">:</span> <span class="c1"># ext == &#39;.h5&#39;</span>
+            <span class="n">w</span> <span class="o">=</span> <span class="n">NXcanSASWriter</span><span class="p">()</span>
+            <span class="n">w</span><span class="o">.</span><span class="n">write</span><span class="p">(</span><span class="n">frame_data</span><span class="p">,</span> <span class="n">output_path</span><span class="p">)</span></div>
+
+<div class="viewcode-block" id="ConverterPanel.on_convert"><a class="viewcode-back" href="../../../../../dev/api/sas.sasgui.perspectives.file_converter.html#sas.sasgui.perspectives.file_converter.converter_panel.ConverterPanel.on_convert">[docs]</a>    <span class="k">def</span> <span class="nf">on_convert</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">event</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Called when the Convert button is clicked&quot;&quot;&quot;</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="bp">self</span><span class="o">.</span><span class="n">validate_inputs</span><span class="p">():</span>
+            <span class="k">return</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">sample</span><span class="o">.</span><span class="n">ID</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">title</span>
+
+        <span class="k">try</span><span class="p">:</span>
+            <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">data_type</span> <span class="o">==</span> <span class="s1">&#39;ascii&#39;</span><span class="p">:</span>
+                <span class="n">qdata</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">extract_ascii_data</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">q_input</span><span class="o">.</span><span class="n">GetPath</span><span class="p">())</span>
+                <span class="n">iqdata</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">([</span><span class="bp">self</span><span class="o">.</span><span class="n">extract_ascii_data</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">iq_input</span><span class="o">.</span><span class="n">GetPath</span><span class="p">())])</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">convert_1d_data</span><span class="p">(</span><span class="n">qdata</span><span class="p">,</span> <span class="n">iqdata</span><span class="p">)</span>
+            <span class="k">elif</span> <span class="bp">self</span><span class="o">.</span><span class="n">data_type</span> <span class="o">==</span> <span class="s1">&#39;otoko&#39;</span><span class="p">:</span>
+                <span class="n">qdata</span><span class="p">,</span> <span class="n">iqdata</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">extract_otoko_data</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">q_input</span><span class="o">.</span><span class="n">GetPath</span><span class="p">())</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">convert_1d_data</span><span class="p">(</span><span class="n">qdata</span><span class="p">,</span> <span class="n">iqdata</span><span class="p">)</span>
+            <span class="k">else</span><span class="p">:</span> <span class="c1"># self.data_type == &#39;bsl&#39;</span>
+                <span class="n">dataset</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">extract_bsl_data</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">iq_input</span><span class="o">.</span><span class="n">GetPath</span><span class="p">())</span>
+                <span class="k">if</span> <span class="n">dataset</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+                    <span class="c1"># Cancelled by user</span>
+                    <span class="k">return</span>
+
+                <span class="n">metadata</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">get_metadata</span><span class="p">()</span>
+                <span class="k">for</span> <span class="n">key</span><span class="p">,</span> <span class="n">value</span> <span class="ow">in</span> <span class="n">metadata</span><span class="o">.</span><span class="n">iteritems</span><span class="p">():</span>
+                    <span class="nb">setattr</span><span class="p">(</span><span class="n">dataset</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span> <span class="n">key</span><span class="p">,</span> <span class="n">value</span><span class="p">)</span>
+
+                <span class="n">w</span> <span class="o">=</span> <span class="n">NXcanSASWriter</span><span class="p">()</span>
+                <span class="n">w</span><span class="o">.</span><span class="n">write</span><span class="p">(</span><span class="n">dataset</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">output</span><span class="o">.</span><span class="n">GetPath</span><span class="p">())</span>
+        <span class="k">except</span> <span class="ne">Exception</span> <span class="k">as</span> <span class="n">ex</span><span class="p">:</span>
+            <span class="n">msg</span> <span class="o">=</span> <span class="nb">str</span><span class="p">(</span><span class="n">ex</span><span class="p">)</span>
+            <span class="n">wx</span><span class="o">.</span><span class="n">PostEvent</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">parent</span><span class="o">.</span><span class="n">manager</span><span class="o">.</span><span class="n">parent</span><span class="p">,</span>
+                <span class="n">StatusEvent</span><span class="p">(</span><span class="n">status</span><span class="o">=</span><span class="n">msg</span><span class="p">,</span> <span class="n">info</span><span class="o">=</span><span class="s1">&#39;error&#39;</span><span class="p">))</span>
+            <span class="k">return</span>
+
+        <span class="n">wx</span><span class="o">.</span><span class="n">PostEvent</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">parent</span><span class="o">.</span><span class="n">manager</span><span class="o">.</span><span class="n">parent</span><span class="p">,</span>
+            <span class="n">StatusEvent</span><span class="p">(</span><span class="n">status</span><span class="o">=</span><span class="s2">&quot;Conversion completed.&quot;</span><span class="p">))</span></div>
+
+<div class="viewcode-block" id="ConverterPanel.on_help"><a class="viewcode-back" href="../../../../../dev/api/sas.sasgui.perspectives.file_converter.html#sas.sasgui.perspectives.file_converter.converter_panel.ConverterPanel.on_help">[docs]</a>    <span class="k">def</span> <span class="nf">on_help</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">event</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Show the File Converter documentation</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">tree_location</span> <span class="o">=</span> <span class="p">(</span><span class="s2">&quot;user/sasgui/perspectives/file_converter/&quot;</span>
+            <span class="s2">&quot;file_converter_help.html&quot;</span><span class="p">)</span>
+        <span class="n">doc_viewer</span> <span class="o">=</span> <span class="n">DocumentationWindow</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="o">-</span><span class="mi">1</span><span class="p">,</span> <span class="n">tree_location</span><span class="p">,</span>
+            <span class="s2">&quot;&quot;</span><span class="p">,</span> <span class="s2">&quot;File Converter Help&quot;</span><span class="p">)</span></div>
+
+<div class="viewcode-block" id="ConverterPanel.validate_inputs"><a class="viewcode-back" href="../../../../../dev/api/sas.sasgui.perspectives.file_converter.html#sas.sasgui.perspectives.file_converter.converter_panel.ConverterPanel.validate_inputs">[docs]</a>    <span class="k">def</span> <span class="nf">validate_inputs</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="n">msg</span> <span class="o">=</span> <span class="s2">&quot;You must select a&quot;</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">q_input</span><span class="o">.</span><span class="n">GetPath</span><span class="p">()</span> <span class="o">==</span> <span class="s1">&#39;&#39;</span> <span class="ow">and</span> <span class="bp">self</span><span class="o">.</span><span class="n">data_type</span> <span class="o">!=</span> <span class="s1">&#39;bsl&#39;</span><span class="p">:</span>
+            <span class="n">msg</span> <span class="o">+=</span> <span class="s2">&quot; Q Axis input file.&quot;</span>
+        <span class="k">elif</span> <span class="bp">self</span><span class="o">.</span><span class="n">iq_input</span><span class="o">.</span><span class="n">GetPath</span><span class="p">()</span> <span class="o">==</span> <span class="s1">&#39;&#39;</span><span class="p">:</span>
+            <span class="n">msg</span> <span class="o">+=</span> <span class="s2">&quot;n Intensity input file.&quot;</span>
+        <span class="k">elif</span> <span class="bp">self</span><span class="o">.</span><span class="n">output</span><span class="o">.</span><span class="n">GetPath</span><span class="p">()</span> <span class="o">==</span> <span class="s1">&#39;&#39;</span><span class="p">:</span>
+            <span class="n">msg</span> <span class="o">+=</span> <span class="s2">&quot; destination for the converted file.&quot;</span>
+        <span class="k">if</span> <span class="n">msg</span> <span class="o">!=</span> <span class="s2">&quot;You must select a&quot;</span><span class="p">:</span>
+            <span class="n">wx</span><span class="o">.</span><span class="n">PostEvent</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">parent</span><span class="o">.</span><span class="n">manager</span><span class="o">.</span><span class="n">parent</span><span class="p">,</span>
+                <span class="n">StatusEvent</span><span class="p">(</span><span class="n">status</span><span class="o">=</span><span class="n">msg</span><span class="p">,</span> <span class="n">info</span><span class="o">=</span><span class="s1">&#39;error&#39;</span><span class="p">))</span>
+            <span class="k">return</span>
+
+        <span class="k">return</span> <span class="kc">True</span></div>
+
+<div class="viewcode-block" id="ConverterPanel.show_detector_window"><a class="viewcode-back" href="../../../../../dev/api/sas.sasgui.perspectives.file_converter.html#sas.sasgui.perspectives.file_converter.converter_panel.ConverterPanel.show_detector_window">[docs]</a>    <span class="k">def</span> <span class="nf">show_detector_window</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">event</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Show the window for inputting Detector metadata</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">meta_frames</span> <span class="o">!=</span> <span class="p">[]:</span>
+            <span class="k">for</span> <span class="n">frame</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">meta_frames</span><span class="p">:</span>
+                <span class="n">frame</span><span class="o">.</span><span class="n">panel</span><span class="o">.</span><span class="n">on_close</span><span class="p">()</span>
+        <span class="n">detector_frame</span> <span class="o">=</span> <span class="n">MetadataWindow</span><span class="p">(</span><span class="n">DetectorPanel</span><span class="p">,</span>
+            <span class="n">parent</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">parent</span><span class="o">.</span><span class="n">manager</span><span class="o">.</span><span class="n">parent</span><span class="p">,</span> <span class="n">manager</span><span class="o">=</span><span class="bp">self</span><span class="p">,</span>
+            <span class="n">metadata</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">detector</span><span class="p">,</span> <span class="n">title</span><span class="o">=</span><span class="s1">&#39;Detector Metadata&#39;</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">meta_frames</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">detector_frame</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">parent</span><span class="o">.</span><span class="n">manager</span><span class="o">.</span><span class="n">put_icon</span><span class="p">(</span><span class="n">detector_frame</span><span class="p">)</span>
+        <span class="n">detector_frame</span><span class="o">.</span><span class="n">Show</span><span class="p">(</span><span class="kc">True</span><span class="p">)</span></div>
+
+<div class="viewcode-block" id="ConverterPanel.show_sample_window"><a class="viewcode-back" href="../../../../../dev/api/sas.sasgui.perspectives.file_converter.html#sas.sasgui.perspectives.file_converter.converter_panel.ConverterPanel.show_sample_window">[docs]</a>    <span class="k">def</span> <span class="nf">show_sample_window</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">event</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Show the window for inputting Sample metadata</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">meta_frames</span> <span class="o">!=</span> <span class="p">[]:</span>
+            <span class="k">for</span> <span class="n">frame</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">meta_frames</span><span class="p">:</span>
+                <span class="n">frame</span><span class="o">.</span><span class="n">panel</span><span class="o">.</span><span class="n">on_close</span><span class="p">()</span>
+        <span class="n">sample_frame</span> <span class="o">=</span> <span class="n">MetadataWindow</span><span class="p">(</span><span class="n">SamplePanel</span><span class="p">,</span>
+            <span class="n">parent</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">parent</span><span class="o">.</span><span class="n">manager</span><span class="o">.</span><span class="n">parent</span><span class="p">,</span> <span class="n">manager</span><span class="o">=</span><span class="bp">self</span><span class="p">,</span>
+            <span class="n">metadata</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">sample</span><span class="p">,</span> <span class="n">title</span><span class="o">=</span><span class="s1">&#39;Sample Metadata&#39;</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">meta_frames</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">sample_frame</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">parent</span><span class="o">.</span><span class="n">manager</span><span class="o">.</span><span class="n">put_icon</span><span class="p">(</span><span class="n">sample_frame</span><span class="p">)</span>
+        <span class="n">sample_frame</span><span class="o">.</span><span class="n">Show</span><span class="p">(</span><span class="kc">True</span><span class="p">)</span></div>
+
+<div class="viewcode-block" id="ConverterPanel.show_source_window"><a class="viewcode-back" href="../../../../../dev/api/sas.sasgui.perspectives.file_converter.html#sas.sasgui.perspectives.file_converter.converter_panel.ConverterPanel.show_source_window">[docs]</a>    <span class="k">def</span> <span class="nf">show_source_window</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">event</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Show the window for inputting Source metadata</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">meta_frames</span> <span class="o">!=</span> <span class="p">[]:</span>
+            <span class="k">for</span> <span class="n">frame</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">meta_frames</span><span class="p">:</span>
+                <span class="n">frame</span><span class="o">.</span><span class="n">panel</span><span class="o">.</span><span class="n">on_close</span><span class="p">()</span>
+        <span class="n">source_frame</span> <span class="o">=</span> <span class="n">MetadataWindow</span><span class="p">(</span><span class="n">SourcePanel</span><span class="p">,</span>
+            <span class="n">parent</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">parent</span><span class="o">.</span><span class="n">manager</span><span class="o">.</span><span class="n">parent</span><span class="p">,</span> <span class="n">manager</span><span class="o">=</span><span class="bp">self</span><span class="p">,</span>
+            <span class="n">metadata</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">source</span><span class="p">,</span> <span class="n">title</span><span class="o">=</span><span class="s2">&quot;Source Metadata&quot;</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">meta_frames</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">source_frame</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">parent</span><span class="o">.</span><span class="n">manager</span><span class="o">.</span><span class="n">put_icon</span><span class="p">(</span><span class="n">source_frame</span><span class="p">)</span>
+        <span class="n">source_frame</span><span class="o">.</span><span class="n">Show</span><span class="p">(</span><span class="kc">True</span><span class="p">)</span></div>
+
+<div class="viewcode-block" id="ConverterPanel.on_collapsible_pane"><a class="viewcode-back" href="../../../../../dev/api/sas.sasgui.perspectives.file_converter.html#sas.sasgui.perspectives.file_converter.converter_panel.ConverterPanel.on_collapsible_pane">[docs]</a>    <span class="k">def</span> <span class="nf">on_collapsible_pane</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">event</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Resize the scrollable area to fit the metadata pane when it&#39;s</span>
+<span class="sd">        collapsed or expanded</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">Freeze</span><span class="p">()</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">SetupScrolling</span><span class="p">()</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">parent</span><span class="o">.</span><span class="n">Layout</span><span class="p">()</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">Thaw</span><span class="p">()</span></div>
+
+<div class="viewcode-block" id="ConverterPanel.datatype_changed"><a class="viewcode-back" href="../../../../../dev/api/sas.sasgui.perspectives.file_converter.html#sas.sasgui.perspectives.file_converter.converter_panel.ConverterPanel.datatype_changed">[docs]</a>    <span class="k">def</span> <span class="nf">datatype_changed</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">event</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Update the UI and self.data_type when a data type radio button is</span>
+<span class="sd">        pressed</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">event</span><span class="o">.</span><span class="n">Skip</span><span class="p">()</span>
+        <span class="n">dtype</span> <span class="o">=</span> <span class="n">event</span><span class="o">.</span><span class="n">GetEventObject</span><span class="p">()</span><span class="o">.</span><span class="n">GetName</span><span class="p">()</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">data_type</span> <span class="o">=</span> <span class="n">dtype</span>
+        <span class="k">if</span> <span class="n">dtype</span> <span class="o">==</span> <span class="s1">&#39;bsl&#39;</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">q_input</span><span class="o">.</span><span class="n">SetPath</span><span class="p">(</span><span class="s2">&quot;&quot;</span><span class="p">)</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">q_input</span><span class="o">.</span><span class="n">Disable</span><span class="p">()</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">output</span><span class="o">.</span><span class="n">SetWildcard</span><span class="p">(</span><span class="s2">&quot;NXcanSAS HDF5 File (*.h5)|*.h5&quot;</span><span class="p">)</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">q_input</span><span class="o">.</span><span class="n">Enable</span><span class="p">()</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">radiation_input</span><span class="o">.</span><span class="n">Enable</span><span class="p">()</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">metadata_section</span><span class="o">.</span><span class="n">Enable</span><span class="p">()</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">output</span><span class="o">.</span><span class="n">SetWildcard</span><span class="p">(</span><span class="s2">&quot;CanSAS 1D (*.xml)|*.xml|NXcanSAS HDF5 File (*.h5)|*.h5&quot;</span><span class="p">)</span></div>
+
+<div class="viewcode-block" id="ConverterPanel.radiationtype_changed"><a class="viewcode-back" href="../../../../../dev/api/sas.sasgui.perspectives.file_converter.html#sas.sasgui.perspectives.file_converter.converter_panel.ConverterPanel.radiationtype_changed">[docs]</a>    <span class="k">def</span> <span class="nf">radiationtype_changed</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">event</span><span class="p">):</span>
+        <span class="n">event</span><span class="o">.</span><span class="n">Skip</span><span class="p">()</span>
+        <span class="n">rtype</span> <span class="o">=</span> <span class="n">event</span><span class="o">.</span><span class="n">GetEventObject</span><span class="p">()</span><span class="o">.</span><span class="n">GetValue</span><span class="p">()</span><span class="o">.</span><span class="n">lower</span><span class="p">()</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">source</span><span class="o">.</span><span class="n">radiation</span> <span class="o">=</span> <span class="n">rtype</span></div>
+
+<div class="viewcode-block" id="ConverterPanel.metadata_changed"><a class="viewcode-back" href="../../../../../dev/api/sas.sasgui.perspectives.file_converter.html#sas.sasgui.perspectives.file_converter.converter_panel.ConverterPanel.metadata_changed">[docs]</a>    <span class="k">def</span> <span class="nf">metadata_changed</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">event</span><span class="p">):</span>
+        <span class="n">event</span><span class="o">.</span><span class="n">Skip</span><span class="p">()</span>
+        <span class="n">textbox</span> <span class="o">=</span> <span class="n">event</span><span class="o">.</span><span class="n">GetEventObject</span><span class="p">()</span>
+        <span class="n">attr</span> <span class="o">=</span> <span class="n">textbox</span><span class="o">.</span><span class="n">GetName</span><span class="p">()</span>
+        <span class="n">value</span> <span class="o">=</span> <span class="n">textbox</span><span class="o">.</span><span class="n">GetValue</span><span class="p">()</span><span class="o">.</span><span class="n">strip</span><span class="p">()</span>
+
+        <span class="nb">setattr</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">attr</span><span class="p">,</span> <span class="n">value</span><span class="p">)</span></div>
+
+
+    <span class="k">def</span> <span class="nf">_do_layout</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="n">vbox</span> <span class="o">=</span> <span class="n">wx</span><span class="o">.</span><span class="n">BoxSizer</span><span class="p">(</span><span class="n">wx</span><span class="o">.</span><span class="n">VERTICAL</span><span class="p">)</span>
+
+        <span class="n">instructions</span> <span class="o">=</span> <span class="p">(</span>
+        <span class="s2">&quot;Select linked single column 1D ASCII files containing the Q-axis and &quot;</span>
+        <span class="s2">&quot;Intensity-axis data, or 1D BSL/OTOKO files, or a 2D BSL/OTOKO file, &quot;</span>
+        <span class="s2">&quot;then choose where to save the converted file, and click Convert.</span><span class="se">\n</span><span class="s2">&quot;</span>
+        <span class="s2">&quot;1D ASCII and BSL/OTOKO files can be converted to CanSAS (XML) or &quot;</span>
+        <span class="s2">&quot;NXcanSAS (HDF5) formats. 2D BSL/OTOKO files can only be converted to &quot;</span>
+        <span class="s2">&quot;the NXcanSAS format.</span><span class="se">\n</span><span class="s2">&quot;</span>
+        <span class="s2">&quot;Metadata can be optionally added for the CanSAS XML format.&quot;</span>
+        <span class="p">)</span>
+
+        <span class="n">instruction_label</span> <span class="o">=</span> <span class="n">wx</span><span class="o">.</span><span class="n">StaticText</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="o">-</span><span class="mi">1</span><span class="p">,</span> <span class="n">instructions</span><span class="p">,</span>
+            <span class="n">size</span><span class="o">=</span><span class="p">(</span><span class="n">_STATICBOX_WIDTH</span><span class="o">+</span><span class="mi">40</span><span class="p">,</span> <span class="o">-</span><span class="mi">1</span><span class="p">))</span>
+        <span class="n">instruction_label</span><span class="o">.</span><span class="n">Wrap</span><span class="p">(</span><span class="n">_STATICBOX_WIDTH</span><span class="o">+</span><span class="mi">40</span><span class="p">)</span>
+        <span class="n">vbox</span><span class="o">.</span><span class="n">Add</span><span class="p">(</span><span class="n">instruction_label</span><span class="p">,</span> <span class="n">flag</span><span class="o">=</span><span class="n">wx</span><span class="o">.</span><span class="n">TOP</span> <span class="o">|</span> <span class="n">wx</span><span class="o">.</span><span class="n">LEFT</span> <span class="o">|</span> <span class="n">wx</span><span class="o">.</span><span class="n">RIGHT</span><span class="p">,</span> <span class="n">border</span><span class="o">=</span><span class="mi">5</span><span class="p">)</span>
+
+        <span class="n">section</span> <span class="o">=</span> <span class="n">wx</span><span class="o">.</span><span class="n">StaticBox</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="o">-</span><span class="mi">1</span><span class="p">)</span>
+        <span class="n">section_sizer</span> <span class="o">=</span> <span class="n">wx</span><span class="o">.</span><span class="n">StaticBoxSizer</span><span class="p">(</span><span class="n">section</span><span class="p">,</span> <span class="n">wx</span><span class="o">.</span><span class="n">VERTICAL</span><span class="p">)</span>
+        <span class="n">section_sizer</span><span class="o">.</span><span class="n">SetMinSize</span><span class="p">((</span><span class="n">_STATICBOX_WIDTH</span><span class="p">,</span> <span class="o">-</span><span class="mi">1</span><span class="p">))</span>
+
+        <span class="n">input_grid</span> <span class="o">=</span> <span class="n">wx</span><span class="o">.</span><span class="n">GridBagSizer</span><span class="p">(</span><span class="mi">5</span><span class="p">,</span> <span class="mi">5</span><span class="p">)</span>
+
+        <span class="n">y</span> <span class="o">=</span> <span class="mi">0</span>
+
+        <span class="n">data_type_label</span> <span class="o">=</span> <span class="n">wx</span><span class="o">.</span><span class="n">StaticText</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="o">-</span><span class="mi">1</span><span class="p">,</span> <span class="s2">&quot;Input Format: &quot;</span><span class="p">)</span>
+        <span class="n">input_grid</span><span class="o">.</span><span class="n">Add</span><span class="p">(</span><span class="n">data_type_label</span><span class="p">,</span> <span class="p">(</span><span class="n">y</span><span class="p">,</span><span class="mi">0</span><span class="p">),</span> <span class="p">(</span><span class="mi">1</span><span class="p">,</span><span class="mi">1</span><span class="p">),</span>
+            <span class="n">wx</span><span class="o">.</span><span class="n">ALIGN_CENTER_VERTICAL</span><span class="p">,</span> <span class="mi">5</span><span class="p">)</span>
+        <span class="n">radio_sizer</span> <span class="o">=</span> <span class="n">wx</span><span class="o">.</span><span class="n">BoxSizer</span><span class="p">(</span><span class="n">wx</span><span class="o">.</span><span class="n">HORIZONTAL</span><span class="p">)</span>
+        <span class="n">ascii_btn</span> <span class="o">=</span> <span class="n">wx</span><span class="o">.</span><span class="n">RadioButton</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="o">-</span><span class="mi">1</span><span class="p">,</span> <span class="s2">&quot;ASCII&quot;</span><span class="p">,</span> <span class="n">name</span><span class="o">=</span><span class="s2">&quot;ascii&quot;</span><span class="p">,</span>
+            <span class="n">style</span><span class="o">=</span><span class="n">wx</span><span class="o">.</span><span class="n">RB_GROUP</span><span class="p">)</span>
+        <span class="n">ascii_btn</span><span class="o">.</span><span class="n">Bind</span><span class="p">(</span><span class="n">wx</span><span class="o">.</span><span class="n">EVT_RADIOBUTTON</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">datatype_changed</span><span class="p">)</span>
+        <span class="n">radio_sizer</span><span class="o">.</span><span class="n">Add</span><span class="p">(</span><span class="n">ascii_btn</span><span class="p">)</span>
+        <span class="n">otoko_btn</span> <span class="o">=</span> <span class="n">wx</span><span class="o">.</span><span class="n">RadioButton</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="o">-</span><span class="mi">1</span><span class="p">,</span> <span class="s2">&quot;BSL 1D&quot;</span><span class="p">,</span> <span class="n">name</span><span class="o">=</span><span class="s2">&quot;otoko&quot;</span><span class="p">)</span>
+        <span class="n">otoko_btn</span><span class="o">.</span><span class="n">Bind</span><span class="p">(</span><span class="n">wx</span><span class="o">.</span><span class="n">EVT_RADIOBUTTON</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">datatype_changed</span><span class="p">)</span>
+        <span class="n">radio_sizer</span><span class="o">.</span><span class="n">Add</span><span class="p">(</span><span class="n">otoko_btn</span><span class="p">)</span>
+        <span class="n">input_grid</span><span class="o">.</span><span class="n">Add</span><span class="p">(</span><span class="n">radio_sizer</span><span class="p">,</span> <span class="p">(</span><span class="n">y</span><span class="p">,</span><span class="mi">1</span><span class="p">),</span> <span class="p">(</span><span class="mi">1</span><span class="p">,</span><span class="mi">1</span><span class="p">),</span> <span class="n">wx</span><span class="o">.</span><span class="n">ALL</span><span class="p">,</span> <span class="mi">5</span><span class="p">)</span>
+        <span class="n">bsl_btn</span> <span class="o">=</span> <span class="n">wx</span><span class="o">.</span><span class="n">RadioButton</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="o">-</span><span class="mi">1</span><span class="p">,</span> <span class="s2">&quot;BSL 2D&quot;</span><span class="p">,</span> <span class="n">name</span><span class="o">=</span><span class="s2">&quot;bsl&quot;</span><span class="p">)</span>
+        <span class="n">bsl_btn</span><span class="o">.</span><span class="n">Bind</span><span class="p">(</span><span class="n">wx</span><span class="o">.</span><span class="n">EVT_RADIOBUTTON</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">datatype_changed</span><span class="p">)</span>
+        <span class="n">radio_sizer</span><span class="o">.</span><span class="n">Add</span><span class="p">(</span><span class="n">bsl_btn</span><span class="p">)</span>
+        <span class="n">y</span> <span class="o">+=</span> <span class="mi">1</span>
+
+        <span class="n">q_label</span> <span class="o">=</span> <span class="n">wx</span><span class="o">.</span><span class="n">StaticText</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="o">-</span><span class="mi">1</span><span class="p">,</span> <span class="s2">&quot;Q-Axis Data: &quot;</span><span class="p">)</span>
+        <span class="n">input_grid</span><span class="o">.</span><span class="n">Add</span><span class="p">(</span><span class="n">q_label</span><span class="p">,</span> <span class="p">(</span><span class="n">y</span><span class="p">,</span><span class="mi">0</span><span class="p">),</span> <span class="p">(</span><span class="mi">1</span><span class="p">,</span><span class="mi">1</span><span class="p">),</span> <span class="n">wx</span><span class="o">.</span><span class="n">ALIGN_CENTER_VERTICAL</span><span class="p">,</span> <span class="mi">5</span><span class="p">)</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">q_input</span> <span class="o">=</span> <span class="n">wx</span><span class="o">.</span><span class="n">FilePickerCtrl</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="o">-</span><span class="mi">1</span><span class="p">,</span>
+            <span class="n">size</span><span class="o">=</span><span class="p">(</span><span class="n">_STATICBOX_WIDTH</span><span class="o">-</span><span class="mi">80</span><span class="p">,</span> <span class="o">-</span><span class="mi">1</span><span class="p">),</span>
+            <span class="n">message</span><span class="o">=</span><span class="s2">&quot;Chose the Q-Axis data file.&quot;</span><span class="p">,</span>
+            <span class="n">style</span><span class="o">=</span><span class="n">wx</span><span class="o">.</span><span class="n">FLP_USE_TEXTCTRL</span> <span class="o">|</span> <span class="n">wx</span><span class="o">.</span><span class="n">FLP_CHANGE_DIR</span><span class="p">)</span>
+        <span class="n">input_grid</span><span class="o">.</span><span class="n">Add</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">q_input</span><span class="p">,</span> <span class="p">(</span><span class="n">y</span><span class="p">,</span><span class="mi">1</span><span class="p">),</span> <span class="p">(</span><span class="mi">1</span><span class="p">,</span><span class="mi">1</span><span class="p">),</span> <span class="n">wx</span><span class="o">.</span><span class="n">ALL</span><span class="p">,</span> <span class="mi">5</span><span class="p">)</span>
+        <span class="n">y</span> <span class="o">+=</span> <span class="mi">1</span>
+
+        <span class="n">iq_label</span> <span class="o">=</span> <span class="n">wx</span><span class="o">.</span><span class="n">StaticText</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="o">-</span><span class="mi">1</span><span class="p">,</span> <span class="s2">&quot;Intensity-Axis Data: &quot;</span><span class="p">)</span>
+        <span class="n">input_grid</span><span class="o">.</span><span class="n">Add</span><span class="p">(</span><span class="n">iq_label</span><span class="p">,</span> <span class="p">(</span><span class="n">y</span><span class="p">,</span><span class="mi">0</span><span class="p">),</span> <span class="p">(</span><span class="mi">1</span><span class="p">,</span><span class="mi">1</span><span class="p">),</span> <span class="n">wx</span><span class="o">.</span><span class="n">ALIGN_CENTER_VERTICAL</span><span class="p">,</span> <span class="mi">5</span><span class="p">)</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">iq_input</span> <span class="o">=</span> <span class="n">wx</span><span class="o">.</span><span class="n">FilePickerCtrl</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="o">-</span><span class="mi">1</span><span class="p">,</span>
+            <span class="n">size</span><span class="o">=</span><span class="p">(</span><span class="n">_STATICBOX_WIDTH</span><span class="o">-</span><span class="mi">80</span><span class="p">,</span> <span class="o">-</span><span class="mi">1</span><span class="p">),</span>
+            <span class="n">message</span><span class="o">=</span><span class="s2">&quot;Chose the Intensity-Axis data file.&quot;</span><span class="p">,</span>
+            <span class="n">style</span><span class="o">=</span><span class="n">wx</span><span class="o">.</span><span class="n">FLP_USE_TEXTCTRL</span> <span class="o">|</span> <span class="n">wx</span><span class="o">.</span><span class="n">FLP_CHANGE_DIR</span><span class="p">)</span>
+        <span class="n">input_grid</span><span class="o">.</span><span class="n">Add</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">iq_input</span><span class="p">,</span> <span class="p">(</span><span class="n">y</span><span class="p">,</span><span class="mi">1</span><span class="p">),</span> <span class="p">(</span><span class="mi">1</span><span class="p">,</span><span class="mi">1</span><span class="p">),</span> <span class="n">wx</span><span class="o">.</span><span class="n">ALL</span><span class="p">,</span> <span class="mi">5</span><span class="p">)</span>
+        <span class="n">y</span> <span class="o">+=</span> <span class="mi">1</span>
+
+        <span class="n">radiation_label</span> <span class="o">=</span> <span class="n">wx</span><span class="o">.</span><span class="n">StaticText</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="o">-</span><span class="mi">1</span><span class="p">,</span> <span class="s2">&quot;Radiation Type: &quot;</span><span class="p">)</span>
+        <span class="n">input_grid</span><span class="o">.</span><span class="n">Add</span><span class="p">(</span><span class="n">radiation_label</span><span class="p">,</span> <span class="p">(</span><span class="n">y</span><span class="p">,</span><span class="mi">0</span><span class="p">),</span> <span class="p">(</span><span class="mi">1</span><span class="p">,</span><span class="mi">1</span><span class="p">),</span> <span class="n">wx</span><span class="o">.</span><span class="n">ALIGN_CENTER_VERTICAL</span><span class="p">,</span> <span class="mi">5</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">radiation_input</span> <span class="o">=</span> <span class="n">wx</span><span class="o">.</span><span class="n">ComboBox</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="o">-</span><span class="mi">1</span><span class="p">,</span>
+            <span class="n">choices</span><span class="o">=</span><span class="p">[</span><span class="s2">&quot;Neutron&quot;</span><span class="p">,</span> <span class="s2">&quot;X-Ray&quot;</span><span class="p">,</span> <span class="s2">&quot;Muon&quot;</span><span class="p">,</span> <span class="s2">&quot;Electron&quot;</span><span class="p">],</span>
+            <span class="n">name</span><span class="o">=</span><span class="s2">&quot;radiation&quot;</span><span class="p">,</span> <span class="n">style</span><span class="o">=</span><span class="n">wx</span><span class="o">.</span><span class="n">CB_READONLY</span><span class="p">,</span> <span class="n">value</span><span class="o">=</span><span class="s2">&quot;Neutron&quot;</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">radiation_input</span><span class="o">.</span><span class="n">Bind</span><span class="p">(</span><span class="n">wx</span><span class="o">.</span><span class="n">EVT_COMBOBOX</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">radiationtype_changed</span><span class="p">)</span>
+        <span class="n">input_grid</span><span class="o">.</span><span class="n">Add</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">radiation_input</span><span class="p">,</span> <span class="p">(</span><span class="n">y</span><span class="p">,</span><span class="mi">1</span><span class="p">),</span> <span class="p">(</span><span class="mi">1</span><span class="p">,</span><span class="mi">1</span><span class="p">),</span> <span class="n">wx</span><span class="o">.</span><span class="n">ALL</span><span class="p">,</span> <span class="mi">5</span><span class="p">)</span>
+        <span class="n">y</span> <span class="o">+=</span> <span class="mi">1</span>
+
+        <span class="n">output_label</span> <span class="o">=</span> <span class="n">wx</span><span class="o">.</span><span class="n">StaticText</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="o">-</span><span class="mi">1</span><span class="p">,</span> <span class="s2">&quot;Output File: &quot;</span><span class="p">)</span>
+        <span class="n">input_grid</span><span class="o">.</span><span class="n">Add</span><span class="p">(</span><span class="n">output_label</span><span class="p">,</span> <span class="p">(</span><span class="n">y</span><span class="p">,</span><span class="mi">0</span><span class="p">),</span> <span class="p">(</span><span class="mi">1</span><span class="p">,</span><span class="mi">1</span><span class="p">),</span> <span class="n">wx</span><span class="o">.</span><span class="n">ALIGN_CENTER_VERTICAL</span><span class="p">,</span> <span class="mi">5</span><span class="p">)</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">output</span> <span class="o">=</span> <span class="n">FileInput</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span>
+            <span class="n">wildcard</span><span class="o">=</span><span class="s2">&quot;CanSAS 1D (*.xml)|*.xml|NXcanSAS HDF5 File (*.h5)|*.h5&quot;</span><span class="p">)</span>
+        <span class="n">input_grid</span><span class="o">.</span><span class="n">Add</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">output</span><span class="o">.</span><span class="n">GetCtrl</span><span class="p">(),</span> <span class="p">(</span><span class="n">y</span><span class="p">,</span><span class="mi">1</span><span class="p">),</span> <span class="p">(</span><span class="mi">1</span><span class="p">,</span><span class="mi">1</span><span class="p">),</span> <span class="n">wx</span><span class="o">.</span><span class="n">EXPAND</span> <span class="o">|</span> <span class="n">wx</span><span class="o">.</span><span class="n">ALL</span><span class="p">,</span> <span class="mi">5</span><span class="p">)</span>
+        <span class="n">y</span> <span class="o">+=</span> <span class="mi">1</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">convert_btn</span> <span class="o">=</span> <span class="n">wx</span><span class="o">.</span><span class="n">Button</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">wx</span><span class="o">.</span><span class="n">ID_OK</span><span class="p">,</span> <span class="s2">&quot;Stop Converstion&quot;</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">convert_btn</span><span class="o">.</span><span class="n">SetLabel</span><span class="p">(</span><span class="s2">&quot;Convert&quot;</span><span class="p">)</span>
+        <span class="n">input_grid</span><span class="o">.</span><span class="n">Add</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">convert_btn</span><span class="p">,</span> <span class="p">(</span><span class="n">y</span><span class="p">,</span><span class="mi">0</span><span class="p">),</span> <span class="p">(</span><span class="mi">1</span><span class="p">,</span><span class="mi">1</span><span class="p">),</span> <span class="n">wx</span><span class="o">.</span><span class="n">ALL</span><span class="p">,</span> <span class="mi">5</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">convert_btn</span><span class="o">.</span><span class="n">Bind</span><span class="p">(</span><span class="n">wx</span><span class="o">.</span><span class="n">EVT_BUTTON</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">on_convert</span><span class="p">)</span>
+
+        <span class="n">help_btn</span> <span class="o">=</span> <span class="n">wx</span><span class="o">.</span><span class="n">Button</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="o">-</span><span class="mi">1</span><span class="p">,</span> <span class="s2">&quot;HELP&quot;</span><span class="p">)</span>
+        <span class="n">input_grid</span><span class="o">.</span><span class="n">Add</span><span class="p">(</span><span class="n">help_btn</span><span class="p">,</span> <span class="p">(</span><span class="n">y</span><span class="p">,</span><span class="mi">1</span><span class="p">),</span> <span class="p">(</span><span class="mi">1</span><span class="p">,</span><span class="mi">1</span><span class="p">),</span> <span class="n">wx</span><span class="o">.</span><span class="n">ALL</span><span class="p">,</span> <span class="mi">5</span><span class="p">)</span>
+        <span class="n">help_btn</span><span class="o">.</span><span class="n">Bind</span><span class="p">(</span><span class="n">wx</span><span class="o">.</span><span class="n">EVT_BUTTON</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">on_help</span><span class="p">)</span>
+
+        <span class="n">section_sizer</span><span class="o">.</span><span class="n">Add</span><span class="p">(</span><span class="n">input_grid</span><span class="p">)</span>
+
+        <span class="n">vbox</span><span class="o">.</span><span class="n">Add</span><span class="p">(</span><span class="n">section_sizer</span><span class="p">,</span> <span class="n">flag</span><span class="o">=</span><span class="n">wx</span><span class="o">.</span><span class="n">ALL</span><span class="p">,</span> <span class="n">border</span><span class="o">=</span><span class="mi">5</span><span class="p">)</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">metadata_section</span> <span class="o">=</span> <span class="n">wx</span><span class="o">.</span><span class="n">CollapsiblePane</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="o">-</span><span class="mi">1</span><span class="p">,</span> <span class="s2">&quot;Metadata&quot;</span><span class="p">,</span>
+            <span class="n">size</span><span class="o">=</span><span class="p">(</span><span class="n">_STATICBOX_WIDTH</span><span class="o">+</span><span class="mi">40</span><span class="p">,</span> <span class="o">-</span><span class="mi">1</span><span class="p">),</span> <span class="n">style</span><span class="o">=</span><span class="n">wx</span><span class="o">.</span><span class="n">WS_EX_VALIDATE_RECURSIVELY</span><span class="p">)</span>
+        <span class="n">metadata_pane</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">metadata_section</span><span class="o">.</span><span class="n">GetPane</span><span class="p">()</span>
+        <span class="n">metadata_grid</span> <span class="o">=</span> <span class="n">wx</span><span class="o">.</span><span class="n">GridBagSizer</span><span class="p">(</span><span class="mi">5</span><span class="p">,</span> <span class="mi">5</span><span class="p">)</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">metadata_section</span><span class="o">.</span><span class="n">Bind</span><span class="p">(</span><span class="n">wx</span><span class="o">.</span><span class="n">EVT_COLLAPSIBLEPANE_CHANGED</span><span class="p">,</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">on_collapsible_pane</span><span class="p">)</span>
+
+        <span class="n">y</span> <span class="o">=</span> <span class="mi">0</span>
+        <span class="k">for</span> <span class="n">item</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">properties</span><span class="p">:</span>
+            <span class="c1"># Capitalise each word</span>
+            <span class="n">label_txt</span> <span class="o">=</span> <span class="s2">&quot; &quot;</span><span class="o">.</span><span class="n">join</span><span class="p">(</span>
+                <span class="p">[</span><span class="n">s</span><span class="o">.</span><span class="n">capitalize</span><span class="p">()</span> <span class="k">for</span> <span class="n">s</span> <span class="ow">in</span> <span class="n">item</span><span class="o">.</span><span class="n">replace</span><span class="p">(</span><span class="s1">&#39;_&#39;</span><span class="p">,</span> <span class="s1">&#39; &#39;</span><span class="p">)</span><span class="o">.</span><span class="n">split</span><span class="p">(</span><span class="s1">&#39; &#39;</span><span class="p">)])</span>
+            <span class="k">if</span> <span class="n">item</span> <span class="o">==</span> <span class="s1">&#39;run&#39;</span><span class="p">:</span>
+                <span class="n">label_txt</span> <span class="o">=</span> <span class="s2">&quot;Run Number&quot;</span>
+            <span class="n">label</span> <span class="o">=</span> <span class="n">wx</span><span class="o">.</span><span class="n">StaticText</span><span class="p">(</span><span class="n">metadata_pane</span><span class="p">,</span> <span class="o">-</span><span class="mi">1</span><span class="p">,</span> <span class="n">label_txt</span><span class="p">,</span>
+                <span class="n">style</span><span class="o">=</span><span class="n">wx</span><span class="o">.</span><span class="n">ALIGN_CENTER_VERTICAL</span><span class="p">)</span>
+            <span class="n">input_box</span> <span class="o">=</span> <span class="n">wx</span><span class="o">.</span><span class="n">TextCtrl</span><span class="p">(</span><span class="n">metadata_pane</span><span class="p">,</span> <span class="n">name</span><span class="o">=</span><span class="n">item</span><span class="p">,</span>
+                <span class="n">size</span><span class="o">=</span><span class="p">(</span><span class="n">_STATICBOX_WIDTH</span><span class="o">-</span><span class="mi">80</span><span class="p">,</span> <span class="o">-</span><span class="mi">1</span><span class="p">))</span>
+            <span class="n">input_box</span><span class="o">.</span><span class="n">Bind</span><span class="p">(</span><span class="n">wx</span><span class="o">.</span><span class="n">EVT_TEXT</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">metadata_changed</span><span class="p">)</span>
+            <span class="n">metadata_grid</span><span class="o">.</span><span class="n">Add</span><span class="p">(</span><span class="n">label</span><span class="p">,</span> <span class="p">(</span><span class="n">y</span><span class="p">,</span><span class="mi">0</span><span class="p">),</span> <span class="p">(</span><span class="mi">1</span><span class="p">,</span><span class="mi">1</span><span class="p">),</span>
+                <span class="n">wx</span><span class="o">.</span><span class="n">ALL</span> <span class="o">|</span> <span class="n">wx</span><span class="o">.</span><span class="n">ALIGN_CENTER_VERTICAL</span><span class="p">,</span> <span class="mi">5</span><span class="p">)</span>
+            <span class="n">metadata_grid</span><span class="o">.</span><span class="n">Add</span><span class="p">(</span><span class="n">input_box</span><span class="p">,</span> <span class="p">(</span><span class="n">y</span><span class="p">,</span><span class="mi">1</span><span class="p">),</span> <span class="p">(</span><span class="mi">1</span><span class="p">,</span><span class="mi">2</span><span class="p">),</span> <span class="n">wx</span><span class="o">.</span><span class="n">EXPAND</span><span class="p">)</span>
+            <span class="n">y</span> <span class="o">+=</span> <span class="mi">1</span>
+
+        <span class="n">detector_label</span> <span class="o">=</span> <span class="n">wx</span><span class="o">.</span><span class="n">StaticText</span><span class="p">(</span><span class="n">metadata_pane</span><span class="p">,</span> <span class="o">-</span><span class="mi">1</span><span class="p">,</span>
+            <span class="s2">&quot;Detector:&quot;</span><span class="p">)</span>
+        <span class="n">metadata_grid</span><span class="o">.</span><span class="n">Add</span><span class="p">(</span><span class="n">detector_label</span><span class="p">,</span> <span class="p">(</span><span class="n">y</span><span class="p">,</span> <span class="mi">0</span><span class="p">),</span> <span class="p">(</span><span class="mi">1</span><span class="p">,</span><span class="mi">1</span><span class="p">),</span> <span class="n">wx</span><span class="o">.</span><span class="n">ALL</span> <span class="o">|</span> <span class="n">wx</span><span class="o">.</span><span class="n">EXPAND</span><span class="p">,</span> <span class="mi">5</span><span class="p">)</span>
+        <span class="n">detector_btn</span> <span class="o">=</span> <span class="n">wx</span><span class="o">.</span><span class="n">Button</span><span class="p">(</span><span class="n">metadata_pane</span><span class="p">,</span> <span class="o">-</span><span class="mi">1</span><span class="p">,</span> <span class="s2">&quot;Enter Detector Metadata&quot;</span><span class="p">)</span>
+        <span class="n">metadata_grid</span><span class="o">.</span><span class="n">Add</span><span class="p">(</span><span class="n">detector_btn</span><span class="p">,</span> <span class="p">(</span><span class="n">y</span><span class="p">,</span> <span class="mi">1</span><span class="p">),</span> <span class="p">(</span><span class="mi">1</span><span class="p">,</span><span class="mi">1</span><span class="p">),</span> <span class="n">wx</span><span class="o">.</span><span class="n">ALL</span> <span class="o">|</span> <span class="n">wx</span><span class="o">.</span><span class="n">EXPAND</span><span class="p">,</span> <span class="mi">5</span><span class="p">)</span>
+        <span class="n">detector_btn</span><span class="o">.</span><span class="n">Bind</span><span class="p">(</span><span class="n">wx</span><span class="o">.</span><span class="n">EVT_BUTTON</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">show_detector_window</span><span class="p">)</span>
+        <span class="n">y</span> <span class="o">+=</span> <span class="mi">1</span>
+
+        <span class="n">sample_label</span> <span class="o">=</span> <span class="n">wx</span><span class="o">.</span><span class="n">StaticText</span><span class="p">(</span><span class="n">metadata_pane</span><span class="p">,</span> <span class="o">-</span><span class="mi">1</span><span class="p">,</span> <span class="s2">&quot;Sample: &quot;</span><span class="p">)</span>
+        <span class="n">metadata_grid</span><span class="o">.</span><span class="n">Add</span><span class="p">(</span><span class="n">sample_label</span><span class="p">,</span> <span class="p">(</span><span class="n">y</span><span class="p">,</span><span class="mi">0</span><span class="p">),</span> <span class="p">(</span><span class="mi">1</span><span class="p">,</span><span class="mi">1</span><span class="p">),</span> <span class="n">wx</span><span class="o">.</span><span class="n">ALL</span> <span class="o">|</span> <span class="n">wx</span><span class="o">.</span><span class="n">EXPAND</span><span class="p">,</span> <span class="mi">5</span><span class="p">)</span>
+        <span class="n">sample_btn</span> <span class="o">=</span> <span class="n">wx</span><span class="o">.</span><span class="n">Button</span><span class="p">(</span><span class="n">metadata_pane</span><span class="p">,</span> <span class="o">-</span><span class="mi">1</span><span class="p">,</span> <span class="s2">&quot;Enter Sample Metadata&quot;</span><span class="p">)</span>
+        <span class="n">metadata_grid</span><span class="o">.</span><span class="n">Add</span><span class="p">(</span><span class="n">sample_btn</span><span class="p">,</span> <span class="p">(</span><span class="n">y</span><span class="p">,</span><span class="mi">1</span><span class="p">),</span> <span class="p">(</span><span class="mi">1</span><span class="p">,</span><span class="mi">1</span><span class="p">),</span> <span class="n">wx</span><span class="o">.</span><span class="n">ALL</span> <span class="o">|</span> <span class="n">wx</span><span class="o">.</span><span class="n">EXPAND</span><span class="p">,</span> <span class="mi">5</span><span class="p">)</span>
+        <span class="n">sample_btn</span><span class="o">.</span><span class="n">Bind</span><span class="p">(</span><span class="n">wx</span><span class="o">.</span><span class="n">EVT_BUTTON</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">show_sample_window</span><span class="p">)</span>
+        <span class="n">y</span> <span class="o">+=</span> <span class="mi">1</span>
+
+        <span class="n">source_label</span> <span class="o">=</span> <span class="n">wx</span><span class="o">.</span><span class="n">StaticText</span><span class="p">(</span><span class="n">metadata_pane</span><span class="p">,</span> <span class="o">-</span><span class="mi">1</span><span class="p">,</span> <span class="s2">&quot;Source: &quot;</span><span class="p">)</span>
+        <span class="n">metadata_grid</span><span class="o">.</span><span class="n">Add</span><span class="p">(</span><span class="n">source_label</span><span class="p">,</span> <span class="p">(</span><span class="n">y</span><span class="p">,</span><span class="mi">0</span><span class="p">),</span> <span class="p">(</span><span class="mi">1</span><span class="p">,</span><span class="mi">1</span><span class="p">),</span> <span class="n">wx</span><span class="o">.</span><span class="n">ALL</span> <span class="o">|</span> <span class="n">wx</span><span class="o">.</span><span class="n">EXPAND</span><span class="p">,</span> <span class="mi">5</span><span class="p">)</span>
+        <span class="n">source_btn</span> <span class="o">=</span> <span class="n">wx</span><span class="o">.</span><span class="n">Button</span><span class="p">(</span><span class="n">metadata_pane</span><span class="p">,</span> <span class="o">-</span><span class="mi">1</span><span class="p">,</span> <span class="s2">&quot;Enter Source Metadata&quot;</span><span class="p">)</span>
+        <span class="n">source_btn</span><span class="o">.</span><span class="n">Bind</span><span class="p">(</span><span class="n">wx</span><span class="o">.</span><span class="n">EVT_BUTTON</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">show_source_window</span><span class="p">)</span>
+        <span class="n">metadata_grid</span><span class="o">.</span><span class="n">Add</span><span class="p">(</span><span class="n">source_btn</span><span class="p">,</span> <span class="p">(</span><span class="n">y</span><span class="p">,</span><span class="mi">1</span><span class="p">),</span> <span class="p">(</span><span class="mi">1</span><span class="p">,</span><span class="mi">1</span><span class="p">),</span> <span class="n">wx</span><span class="o">.</span><span class="n">ALL</span> <span class="o">|</span> <span class="n">wx</span><span class="o">.</span><span class="n">EXPAND</span><span class="p">,</span> <span class="mi">5</span><span class="p">)</span>
+        <span class="n">y</span> <span class="o">+=</span> <span class="mi">1</span>
+
+        <span class="n">metadata_pane</span><span class="o">.</span><span class="n">SetSizer</span><span class="p">(</span><span class="n">metadata_grid</span><span class="p">)</span>
+
+        <span class="n">vbox</span><span class="o">.</span><span class="n">Add</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">metadata_section</span><span class="p">,</span> <span class="n">proportion</span><span class="o">=</span><span class="mi">0</span><span class="p">,</span> <span class="n">flag</span><span class="o">=</span><span class="n">wx</span><span class="o">.</span><span class="n">ALL</span><span class="p">,</span> <span class="n">border</span><span class="o">=</span><span class="mi">5</span><span class="p">)</span>
+
+        <span class="n">vbox</span><span class="o">.</span><span class="n">Fit</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">SetSizer</span><span class="p">(</span><span class="n">vbox</span><span class="p">)</span></div>
+
+<div class="viewcode-block" id="ConverterWindow"><a class="viewcode-back" href="../../../../../dev/api/sas.sasgui.perspectives.file_converter.html#sas.sasgui.perspectives.file_converter.converter_panel.ConverterWindow">[docs]</a><span class="k">class</span> <span class="nc">ConverterWindow</span><span class="p">(</span><span class="n">widget</span><span class="o">.</span><span class="n">CHILD_FRAME</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;Displays ConverterPanel&quot;&quot;&quot;</span>
+
+    <span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">parent</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">title</span><span class="o">=</span><span class="s1">&#39;File Converter&#39;</span><span class="p">,</span> <span class="n">base</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
+        <span class="n">manager</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">size</span><span class="o">=</span><span class="p">(</span><span class="n">PANEL_SIZE</span> <span class="o">*</span> <span class="mf">1.05</span><span class="p">,</span> <span class="n">PANEL_SIZE</span> <span class="o">/</span> <span class="mf">1.1</span><span class="p">),</span>
+        <span class="o">*</span><span class="n">args</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
+        <span class="n">kwargs</span><span class="p">[</span><span class="s1">&#39;title&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="n">title</span>
+        <span class="n">kwargs</span><span class="p">[</span><span class="s1">&#39;size&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="n">size</span>
+        <span class="n">widget</span><span class="o">.</span><span class="n">CHILD_FRAME</span><span class="o">.</span><span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">parent</span><span class="p">,</span> <span class="o">*</span><span class="n">args</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">)</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">manager</span> <span class="o">=</span> <span class="n">manager</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">panel</span> <span class="o">=</span> <span class="n">ConverterPanel</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">base</span><span class="o">=</span><span class="kc">None</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">Bind</span><span class="p">(</span><span class="n">wx</span><span class="o">.</span><span class="n">EVT_CLOSE</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">on_close</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">SetPosition</span><span class="p">((</span><span class="n">wx</span><span class="o">.</span><span class="n">LEFT</span><span class="p">,</span> <span class="n">PANEL_TOP</span><span class="p">))</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">Show</span><span class="p">(</span><span class="kc">True</span><span class="p">)</span>
+
+<div class="viewcode-block" id="ConverterWindow.on_close"><a class="viewcode-back" href="../../../../../dev/api/sas.sasgui.perspectives.file_converter.html#sas.sasgui.perspectives.file_converter.converter_panel.ConverterWindow.on_close">[docs]</a>    <span class="k">def</span> <span class="nf">on_close</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">event</span><span class="p">):</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">manager</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">manager</span><span class="o">.</span><span class="n">converter_frame</span> <span class="o">=</span> <span class="kc">None</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">Destroy</span><span class="p">()</span></div></div>
+</pre></div>
+
+          </div>
+        </div>
+      </div>
+      <div class="sphinxsidebar" role="navigation" aria-label="main navigation">
+        <div class="sphinxsidebarwrapper">
+<div id="searchbox" style="display: none" role="search">
+  <h3>Quick search</h3>
+    <form class="search" action="../../../../../search.html" method="get">
+      <div><input type="text" name="q" /></div>
+      <div><input type="submit" value="Go" /></div>
+      <input type="hidden" name="check_keywords" value="yes" />
+      <input type="hidden" name="area" value="default" />
+    </form>
+</div>
+<script type="text/javascript">$('#searchbox').show(0);</script>
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="related" role="navigation" aria-label="related navigation">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="../../../../../genindex.html" title="General Index"
+             >index</a></li>
+        <li class="right" >
+          <a href="../../../../../py-modindex.html" title="Python Module Index"
+             >modules</a> |</li>
+        <li class="nav-item nav-item-0"><a href="../../../../../index.html">SasView 4.1.1 documentation</a> &#187;</li>
+          <li class="nav-item nav-item-1"><a href="../../../../index.html" >Module code</a> &#187;</li> 
+      </ul>
+    </div>
+    <div class="footer" role="contentinfo">
+        &#169; Copyright 2017, The SasView Project.
+      Created using <a href="http://sphinx-doc.org/">Sphinx</a> 1.6.2.
+    </div>
+  </body>
+</html>
