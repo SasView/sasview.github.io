@@ -1,0 +1,366 @@
+
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+  "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+    
+    <title>sas.sascalc.corfunc.corfunc_calculator &#8212; SasView 4.1.1 documentation</title>
+    
+    <link rel="stylesheet" href="../../../../_static/classic.css" type="text/css" />
+    <link rel="stylesheet" href="../../../../_static/pygments.css" type="text/css" />
+    
+    <script type="text/javascript">
+      var DOCUMENTATION_OPTIONS = {
+        URL_ROOT:    '../../../../',
+        VERSION:     '4.1.1',
+        COLLAPSE_INDEX: false,
+        FILE_SUFFIX: '.html',
+        HAS_SOURCE:  true,
+        SOURCELINK_SUFFIX: '.txt'
+      };
+    </script>
+    <script type="text/javascript" src="../../../../_static/jquery.js"></script>
+    <script type="text/javascript" src="../../../../_static/underscore.js"></script>
+    <script type="text/javascript" src="../../../../_static/doctools.js"></script>
+    <script type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.1/MathJax.js?config=TeX-MML-AM_CHTML"></script>
+    <link rel="index" title="Index" href="../../../../genindex.html" />
+    <link rel="search" title="Search" href="../../../../search.html" /> 
+  </head>
+  <body>
+    <div class="related" role="navigation" aria-label="related navigation">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="../../../../genindex.html" title="General Index"
+             accesskey="I">index</a></li>
+        <li class="right" >
+          <a href="../../../../py-modindex.html" title="Python Module Index"
+             >modules</a> |</li>
+        <li class="nav-item nav-item-0"><a href="../../../../index.html">SasView 4.1.1 documentation</a> &#187;</li>
+          <li class="nav-item nav-item-1"><a href="../../../index.html" accesskey="U">Module code</a> &#187;</li> 
+      </ul>
+    </div>  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          <div class="body" role="main">
+            
+  <h1>Source code for sas.sascalc.corfunc.corfunc_calculator</h1><div class="highlight"><pre>
+<span></span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">This module implements corfunc</span>
+<span class="sd">&quot;&quot;&quot;</span>
+<span class="kn">import</span> <span class="nn">warnings</span>
+<span class="kn">import</span> <span class="nn">numpy</span> <span class="k">as</span> <span class="nn">np</span>
+<span class="kn">from</span> <span class="nn">scipy.optimize</span> <span class="k">import</span> <span class="n">curve_fit</span>
+<span class="kn">from</span> <span class="nn">scipy.interpolate</span> <span class="k">import</span> <span class="n">interp1d</span>
+<span class="kn">from</span> <span class="nn">scipy.fftpack</span> <span class="k">import</span> <span class="n">dct</span>
+<span class="kn">from</span> <span class="nn">scipy.signal</span> <span class="k">import</span> <span class="n">argrelextrema</span>
+<span class="kn">from</span> <span class="nn">numpy.linalg</span> <span class="k">import</span> <span class="n">lstsq</span>
+<span class="kn">from</span> <span class="nn">sas.sascalc.dataloader.data_info</span> <span class="k">import</span> <span class="n">Data1D</span>
+<span class="kn">from</span> <span class="nn">sas.sascalc.corfunc.transform_thread</span> <span class="k">import</span> <span class="n">FourierThread</span>
+<span class="kn">from</span> <span class="nn">sas.sascalc.corfunc.transform_thread</span> <span class="k">import</span> <span class="n">HilbertThread</span>
+
+<div class="viewcode-block" id="CorfuncCalculator"><a class="viewcode-back" href="../../../../dev/api/sas.sascalc.corfunc.html#sas.sascalc.corfunc.corfunc_calculator.CorfuncCalculator">[docs]</a><span class="k">class</span> <span class="nc">CorfuncCalculator</span><span class="p">(</span><span class="nb">object</span><span class="p">):</span>
+
+    <span class="k">class</span> <span class="nc">_Interpolator</span><span class="p">(</span><span class="nb">object</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Interpolates between curve f and curve g over the range start:stop and</span>
+<span class="sd">        caches the result of the function when it&#39;s called</span>
+
+<span class="sd">        :param f: The first curve to interpolate</span>
+<span class="sd">        :param g: The second curve to interpolate</span>
+<span class="sd">        :param start: The value at which to start the interpolation</span>
+<span class="sd">        :param stop: The value at which to stop the interpolation</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">f</span><span class="p">,</span> <span class="n">g</span><span class="p">,</span> <span class="n">start</span><span class="p">,</span> <span class="n">stop</span><span class="p">):</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">f</span> <span class="o">=</span> <span class="n">f</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">g</span> <span class="o">=</span> <span class="n">g</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">start</span> <span class="o">=</span> <span class="n">start</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">stop</span> <span class="o">=</span> <span class="n">stop</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_lastx</span> <span class="o">=</span> <span class="p">[]</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_lasty</span> <span class="o">=</span> <span class="p">[]</span>
+
+        <span class="k">def</span> <span class="nf">__call__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">x</span><span class="p">):</span>
+            <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">_lastx</span> <span class="o">==</span> <span class="p">[]</span> <span class="ow">or</span> <span class="n">x</span><span class="o">.</span><span class="n">tolist</span><span class="p">()</span> <span class="o">!=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_lastx</span><span class="o">.</span><span class="n">tolist</span><span class="p">():</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">_lasty</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_smoothed_function</span><span class="p">(</span><span class="n">x</span><span class="p">)</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">_lastx</span> <span class="o">=</span> <span class="n">x</span>
+            <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_lasty</span>
+
+        <span class="k">def</span> <span class="nf">_smoothed_function</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span><span class="n">x</span><span class="p">):</span>
+            <span class="n">ys</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">zeros</span><span class="p">(</span><span class="n">x</span><span class="o">.</span><span class="n">shape</span><span class="p">)</span>
+            <span class="n">ys</span><span class="p">[</span><span class="n">x</span> <span class="o">&lt;=</span> <span class="bp">self</span><span class="o">.</span><span class="n">start</span><span class="p">]</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">f</span><span class="p">(</span><span class="n">x</span><span class="p">[</span><span class="n">x</span> <span class="o">&lt;=</span> <span class="bp">self</span><span class="o">.</span><span class="n">start</span><span class="p">])</span>
+            <span class="n">ys</span><span class="p">[</span><span class="n">x</span> <span class="o">&gt;=</span> <span class="bp">self</span><span class="o">.</span><span class="n">stop</span><span class="p">]</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">g</span><span class="p">(</span><span class="n">x</span><span class="p">[</span><span class="n">x</span> <span class="o">&gt;=</span> <span class="bp">self</span><span class="o">.</span><span class="n">stop</span><span class="p">])</span>
+            <span class="k">with</span> <span class="n">warnings</span><span class="o">.</span><span class="n">catch_warnings</span><span class="p">():</span>
+                <span class="c1"># Ignore divide by zero error</span>
+                <span class="n">warnings</span><span class="o">.</span><span class="n">simplefilter</span><span class="p">(</span><span class="s1">&#39;ignore&#39;</span><span class="p">)</span>
+                <span class="n">h</span> <span class="o">=</span> <span class="mi">1</span><span class="o">/</span><span class="p">(</span><span class="mi">1</span><span class="o">+</span><span class="p">(</span><span class="n">x</span><span class="o">-</span><span class="bp">self</span><span class="o">.</span><span class="n">stop</span><span class="p">)</span><span class="o">**</span><span class="mi">2</span><span class="o">/</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">start</span><span class="o">-</span><span class="n">x</span><span class="p">)</span><span class="o">**</span><span class="mi">2</span><span class="p">)</span>
+            <span class="n">mask</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">logical_and</span><span class="p">(</span><span class="n">x</span> <span class="o">&gt;</span> <span class="bp">self</span><span class="o">.</span><span class="n">start</span><span class="p">,</span> <span class="n">x</span> <span class="o">&lt;</span> <span class="bp">self</span><span class="o">.</span><span class="n">stop</span><span class="p">)</span>
+            <span class="n">ys</span><span class="p">[</span><span class="n">mask</span><span class="p">]</span> <span class="o">=</span> <span class="n">h</span><span class="p">[</span><span class="n">mask</span><span class="p">]</span><span class="o">*</span><span class="bp">self</span><span class="o">.</span><span class="n">g</span><span class="p">(</span><span class="n">x</span><span class="p">[</span><span class="n">mask</span><span class="p">])</span><span class="o">+</span><span class="p">(</span><span class="mi">1</span><span class="o">-</span><span class="n">h</span><span class="p">[</span><span class="n">mask</span><span class="p">])</span><span class="o">*</span><span class="bp">self</span><span class="o">.</span><span class="n">f</span><span class="p">(</span><span class="n">x</span><span class="p">[</span><span class="n">mask</span><span class="p">])</span>
+            <span class="k">return</span> <span class="n">ys</span>
+
+
+    <span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">data</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">lowerq</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">upperq</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">scale</span><span class="o">=</span><span class="mi">1</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Initialize the class.</span>
+
+<span class="sd">        :param data: Data of the type DataLoader.Data1D</span>
+<span class="sd">        :param lowerq: The Q value to use as the boundary for</span>
+<span class="sd">            Guinier extrapolation</span>
+<span class="sd">        :param upperq: A tuple of the form (lower, upper).</span>
+<span class="sd">            Values between lower and upper will be used for Porod extrapolation</span>
+<span class="sd">        :param scale: Scaling factor for I(q)</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_data</span> <span class="o">=</span> <span class="kc">None</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">set_data</span><span class="p">(</span><span class="n">data</span><span class="p">,</span> <span class="n">scale</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">lowerq</span> <span class="o">=</span> <span class="n">lowerq</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">upperq</span> <span class="o">=</span> <span class="n">upperq</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">background</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">compute_background</span><span class="p">()</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_transform_thread</span> <span class="o">=</span> <span class="kc">None</span>
+
+<div class="viewcode-block" id="CorfuncCalculator.set_data"><a class="viewcode-back" href="../../../../dev/api/sas.sascalc.corfunc.html#sas.sascalc.corfunc.corfunc_calculator.CorfuncCalculator.set_data">[docs]</a>    <span class="k">def</span> <span class="nf">set_data</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">data</span><span class="p">,</span> <span class="n">scale</span><span class="o">=</span><span class="mi">1</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Prepares the data for analysis</span>
+
+<span class="sd">        :return: new_data = data * scale - background</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">if</span> <span class="n">data</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="k">return</span>
+        <span class="c1"># Only process data of the class Data1D</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="nb">issubclass</span><span class="p">(</span><span class="n">data</span><span class="o">.</span><span class="vm">__class__</span><span class="p">,</span> <span class="n">Data1D</span><span class="p">):</span>
+            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">,</span> <span class="s2">&quot;Data must be of the type DataLoader.Data1D&quot;</span>
+
+        <span class="c1"># Prepare the data</span>
+        <span class="n">new_data</span> <span class="o">=</span> <span class="n">Data1D</span><span class="p">(</span><span class="n">x</span><span class="o">=</span><span class="n">data</span><span class="o">.</span><span class="n">x</span><span class="p">,</span> <span class="n">y</span><span class="o">=</span><span class="n">data</span><span class="o">.</span><span class="n">y</span><span class="p">)</span>
+        <span class="n">new_data</span> <span class="o">*=</span> <span class="n">scale</span>
+
+        <span class="c1"># Ensure the errors are set correctly</span>
+        <span class="k">if</span> <span class="n">new_data</span><span class="o">.</span><span class="n">dy</span> <span class="ow">is</span> <span class="kc">None</span> <span class="ow">or</span> <span class="nb">len</span><span class="p">(</span><span class="n">new_data</span><span class="o">.</span><span class="n">x</span><span class="p">)</span> <span class="o">!=</span> <span class="nb">len</span><span class="p">(</span><span class="n">new_data</span><span class="o">.</span><span class="n">dy</span><span class="p">)</span> <span class="ow">or</span> \
+            <span class="p">(</span><span class="nb">min</span><span class="p">(</span><span class="n">new_data</span><span class="o">.</span><span class="n">dy</span><span class="p">)</span> <span class="o">==</span> <span class="mi">0</span> <span class="ow">and</span> <span class="nb">max</span><span class="p">(</span><span class="n">new_data</span><span class="o">.</span><span class="n">dy</span><span class="p">)</span> <span class="o">==</span> <span class="mi">0</span><span class="p">):</span>
+            <span class="n">new_data</span><span class="o">.</span><span class="n">dy</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">ones</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">new_data</span><span class="o">.</span><span class="n">x</span><span class="p">))</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">_data</span> <span class="o">=</span> <span class="n">new_data</span></div>
+
+<div class="viewcode-block" id="CorfuncCalculator.compute_background"><a class="viewcode-back" href="../../../../dev/api/sas.sascalc.corfunc.html#sas.sascalc.corfunc.corfunc_calculator.CorfuncCalculator.compute_background">[docs]</a>    <span class="k">def</span> <span class="nf">compute_background</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">upperq</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Compute the background level from the Porod region of the data</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">_data</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span> <span class="k">return</span> <span class="mi">0</span>
+        <span class="k">elif</span> <span class="n">upperq</span> <span class="ow">is</span> <span class="kc">None</span> <span class="ow">and</span> <span class="bp">self</span><span class="o">.</span><span class="n">upperq</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span> <span class="n">upperq</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">upperq</span>
+        <span class="k">elif</span> <span class="n">upperq</span> <span class="ow">is</span> <span class="kc">None</span> <span class="ow">and</span> <span class="bp">self</span><span class="o">.</span><span class="n">upperq</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span> <span class="k">return</span> <span class="mi">0</span>
+        <span class="n">q</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_data</span><span class="o">.</span><span class="n">x</span>
+        <span class="n">mask</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">logical_and</span><span class="p">(</span><span class="n">q</span> <span class="o">&gt;</span> <span class="n">upperq</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span> <span class="n">q</span> <span class="o">&lt;</span> <span class="n">upperq</span><span class="p">[</span><span class="mi">1</span><span class="p">])</span>
+        <span class="n">_</span><span class="p">,</span> <span class="n">_</span><span class="p">,</span> <span class="n">bg</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_fit_porod</span><span class="p">(</span><span class="n">q</span><span class="p">[</span><span class="n">mask</span><span class="p">],</span> <span class="bp">self</span><span class="o">.</span><span class="n">_data</span><span class="o">.</span><span class="n">y</span><span class="p">[</span><span class="n">mask</span><span class="p">])</span>
+
+        <span class="k">return</span> <span class="n">bg</span></div>
+
+<div class="viewcode-block" id="CorfuncCalculator.compute_extrapolation"><a class="viewcode-back" href="../../../../dev/api/sas.sascalc.corfunc.html#sas.sascalc.corfunc.corfunc_calculator.CorfuncCalculator.compute_extrapolation">[docs]</a>    <span class="k">def</span> <span class="nf">compute_extrapolation</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Extrapolate and interpolate scattering data</span>
+
+<span class="sd">        :return: The extrapolated data</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">q</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_data</span><span class="o">.</span><span class="n">x</span>
+        <span class="n">iq</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_data</span><span class="o">.</span><span class="n">y</span>
+
+        <span class="n">params</span><span class="p">,</span> <span class="n">s2</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_fit_data</span><span class="p">(</span><span class="n">q</span><span class="p">,</span> <span class="n">iq</span><span class="p">)</span>
+        <span class="n">qs</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">arange</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="n">q</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span><span class="o">*</span><span class="mi">100</span><span class="p">,</span> <span class="p">(</span><span class="n">q</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span><span class="o">-</span><span class="n">q</span><span class="p">[</span><span class="mi">0</span><span class="p">]))</span>
+        <span class="n">iqs</span> <span class="o">=</span> <span class="n">s2</span><span class="p">(</span><span class="n">qs</span><span class="p">)</span>
+
+        <span class="n">extrapolation</span> <span class="o">=</span> <span class="n">Data1D</span><span class="p">(</span><span class="n">qs</span><span class="p">,</span> <span class="n">iqs</span><span class="p">)</span>
+
+        <span class="k">return</span> <span class="n">params</span><span class="p">,</span> <span class="n">extrapolation</span></div>
+
+<div class="viewcode-block" id="CorfuncCalculator.compute_transform"><a class="viewcode-back" href="../../../../dev/api/sas.sascalc.corfunc.html#sas.sascalc.corfunc.corfunc_calculator.CorfuncCalculator.compute_transform">[docs]</a>    <span class="k">def</span> <span class="nf">compute_transform</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">extrapolation</span><span class="p">,</span> <span class="n">trans_type</span><span class="p">,</span> <span class="n">background</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
+        <span class="n">completefn</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">updatefn</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Transform an extrapolated scattering curve into a correlation function.</span>
+
+<span class="sd">        :param extrapolation: The extrapolated data</span>
+<span class="sd">        :param background: The background value (if not provided, previously</span>
+<span class="sd">            calculated value will be used)</span>
+<span class="sd">        :param completefn: The function to call when the transform calculation</span>
+<span class="sd">            is complete`</span>
+<span class="sd">        :param updatefn: The function to call to update the GUI with the status</span>
+<span class="sd">            of the transform calculation</span>
+<span class="sd">        :return: The transformed data</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">_transform_thread</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">_transform_thread</span><span class="o">.</span><span class="n">isrunning</span><span class="p">():</span> <span class="k">return</span>
+
+        <span class="k">if</span> <span class="n">background</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span> <span class="n">background</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">background</span>
+
+        <span class="k">if</span> <span class="n">trans_type</span> <span class="o">==</span> <span class="s1">&#39;fourier&#39;</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_transform_thread</span> <span class="o">=</span> <span class="n">FourierThread</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_data</span><span class="p">,</span> <span class="n">extrapolation</span><span class="p">,</span>
+            <span class="n">background</span><span class="p">,</span> <span class="n">completefn</span><span class="o">=</span><span class="n">completefn</span><span class="p">,</span> <span class="n">updatefn</span><span class="o">=</span><span class="n">updatefn</span><span class="p">)</span>
+        <span class="k">elif</span> <span class="n">trans_type</span> <span class="o">==</span> <span class="s1">&#39;hilbert&#39;</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_transform_thread</span> <span class="o">=</span> <span class="n">HilbertThread</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_data</span><span class="p">,</span> <span class="n">extrapolation</span><span class="p">,</span>
+            <span class="n">background</span><span class="p">,</span> <span class="n">completefn</span><span class="o">=</span><span class="n">completefn</span><span class="p">,</span> <span class="n">updatefn</span><span class="o">=</span><span class="n">updatefn</span><span class="p">)</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">err</span> <span class="o">=</span> <span class="p">(</span><span class="s2">&quot;Incorrect transform type supplied, must be &#39;fourier&#39;&quot;</span><span class="p">,</span>
+                <span class="s2">&quot; or &#39;hilbert&#39;&quot;</span><span class="p">)</span>
+            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">,</span> <span class="n">err</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">_transform_thread</span><span class="o">.</span><span class="n">queue</span><span class="p">()</span></div>
+
+<div class="viewcode-block" id="CorfuncCalculator.transform_isrunning"><a class="viewcode-back" href="../../../../dev/api/sas.sascalc.corfunc.html#sas.sascalc.corfunc.corfunc_calculator.CorfuncCalculator.transform_isrunning">[docs]</a>    <span class="k">def</span> <span class="nf">transform_isrunning</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">_transform_thread</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span> <span class="k">return</span> <span class="kc">False</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_transform_thread</span><span class="o">.</span><span class="n">isrunning</span><span class="p">()</span></div>
+
+<div class="viewcode-block" id="CorfuncCalculator.stop_transform"><a class="viewcode-back" href="../../../../dev/api/sas.sascalc.corfunc.html#sas.sascalc.corfunc.corfunc_calculator.CorfuncCalculator.stop_transform">[docs]</a>    <span class="k">def</span> <span class="nf">stop_transform</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">_transform_thread</span><span class="o">.</span><span class="n">isrunning</span><span class="p">():</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_transform_thread</span><span class="o">.</span><span class="n">stop</span><span class="p">()</span></div>
+
+<div class="viewcode-block" id="CorfuncCalculator.extract_parameters"><a class="viewcode-back" href="../../../../dev/api/sas.sascalc.corfunc.html#sas.sascalc.corfunc.corfunc_calculator.CorfuncCalculator.extract_parameters">[docs]</a>    <span class="k">def</span> <span class="nf">extract_parameters</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">transformed_data</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Extract the interesting measurements from a correlation function</span>
+<span class="sd">        :param transformed_data: Fourier transformation of the</span>
+<span class="sd">            extrapolated data</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="c1"># Calculate indexes of maxima and minima</span>
+        <span class="n">x</span> <span class="o">=</span> <span class="n">transformed_data</span><span class="o">.</span><span class="n">x</span>
+        <span class="n">y</span> <span class="o">=</span> <span class="n">transformed_data</span><span class="o">.</span><span class="n">y</span>
+        <span class="n">maxs</span> <span class="o">=</span> <span class="n">argrelextrema</span><span class="p">(</span><span class="n">y</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">greater</span><span class="p">)[</span><span class="mi">0</span><span class="p">]</span>
+        <span class="n">mins</span> <span class="o">=</span> <span class="n">argrelextrema</span><span class="p">(</span><span class="n">y</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">less</span><span class="p">)[</span><span class="mi">0</span><span class="p">]</span>
+
+        <span class="c1"># If there are no maxima, return None</span>
+        <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">maxs</span><span class="p">)</span> <span class="o">==</span> <span class="mi">0</span><span class="p">:</span>
+            <span class="k">return</span> <span class="kc">None</span>
+
+        <span class="n">GammaMin</span> <span class="o">=</span> <span class="n">y</span><span class="p">[</span><span class="n">mins</span><span class="p">[</span><span class="mi">0</span><span class="p">]]</span>  <span class="c1"># The value at the first minimum</span>
+
+        <span class="n">ddy</span> <span class="o">=</span> <span class="p">(</span><span class="n">y</span><span class="p">[:</span><span class="o">-</span><span class="mi">2</span><span class="p">]</span><span class="o">+</span><span class="n">y</span><span class="p">[</span><span class="mi">2</span><span class="p">:]</span><span class="o">-</span><span class="mi">2</span><span class="o">*</span><span class="n">y</span><span class="p">[</span><span class="mi">1</span><span class="p">:</span><span class="o">-</span><span class="mi">1</span><span class="p">])</span><span class="o">/</span><span class="p">(</span><span class="n">x</span><span class="p">[</span><span class="mi">2</span><span class="p">:]</span><span class="o">-</span><span class="n">x</span><span class="p">[:</span><span class="o">-</span><span class="mi">2</span><span class="p">])</span><span class="o">**</span><span class="mi">2</span>  <span class="c1"># 2nd derivative of y</span>
+        <span class="n">dy</span> <span class="o">=</span> <span class="p">(</span><span class="n">y</span><span class="p">[</span><span class="mi">2</span><span class="p">:]</span><span class="o">-</span><span class="n">y</span><span class="p">[:</span><span class="o">-</span><span class="mi">2</span><span class="p">])</span><span class="o">/</span><span class="p">(</span><span class="n">x</span><span class="p">[</span><span class="mi">2</span><span class="p">:]</span><span class="o">-</span><span class="n">x</span><span class="p">[:</span><span class="o">-</span><span class="mi">2</span><span class="p">])</span>  <span class="c1"># 1st derivative of y</span>
+        <span class="c1"># Find where the second derivative goes to zero</span>
+        <span class="n">zeros</span> <span class="o">=</span> <span class="n">argrelextrema</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">abs</span><span class="p">(</span><span class="n">ddy</span><span class="p">),</span> <span class="n">np</span><span class="o">.</span><span class="n">less</span><span class="p">)[</span><span class="mi">0</span><span class="p">]</span>
+        <span class="c1"># locate the first inflection point</span>
+        <span class="n">linear_point</span> <span class="o">=</span> <span class="n">zeros</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
+
+        <span class="c1"># Try to calculate slope around linear_point using 80 data points</span>
+        <span class="n">lower</span> <span class="o">=</span> <span class="n">linear_point</span> <span class="o">-</span> <span class="mi">40</span>
+        <span class="n">upper</span> <span class="o">=</span> <span class="n">linear_point</span> <span class="o">+</span> <span class="mi">40</span>
+
+        <span class="c1"># If too few data points to the left, use linear_point*2 data points</span>
+        <span class="k">if</span> <span class="n">lower</span> <span class="o">&lt;</span> <span class="mi">0</span><span class="p">:</span>
+            <span class="n">lower</span> <span class="o">=</span> <span class="mi">0</span>
+            <span class="n">upper</span> <span class="o">=</span> <span class="n">linear_point</span> <span class="o">*</span> <span class="mi">2</span>
+        <span class="c1"># If too few to right, use 2*(dy.size - linear_point) data points</span>
+        <span class="k">elif</span> <span class="n">upper</span> <span class="o">&gt;</span> <span class="nb">len</span><span class="p">(</span><span class="n">dy</span><span class="p">):</span>
+            <span class="n">upper</span> <span class="o">=</span> <span class="nb">len</span><span class="p">(</span><span class="n">dy</span><span class="p">)</span>
+            <span class="n">width</span> <span class="o">=</span> <span class="nb">len</span><span class="p">(</span><span class="n">dy</span><span class="p">)</span> <span class="o">-</span> <span class="n">linear_point</span>
+            <span class="n">lower</span> <span class="o">=</span> <span class="mi">2</span><span class="o">*</span><span class="n">linear_point</span> <span class="o">-</span> <span class="n">dy</span><span class="o">.</span><span class="n">size</span>
+
+        <span class="n">m</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">mean</span><span class="p">(</span><span class="n">dy</span><span class="p">[</span><span class="n">lower</span><span class="p">:</span><span class="n">upper</span><span class="p">])</span>  <span class="c1"># Linear slope</span>
+        <span class="n">b</span> <span class="o">=</span> <span class="n">y</span><span class="p">[</span><span class="mi">1</span><span class="p">:</span><span class="o">-</span><span class="mi">1</span><span class="p">][</span><span class="n">linear_point</span><span class="p">]</span><span class="o">-</span><span class="n">m</span><span class="o">*</span><span class="n">x</span><span class="p">[</span><span class="mi">1</span><span class="p">:</span><span class="o">-</span><span class="mi">1</span><span class="p">][</span><span class="n">linear_point</span><span class="p">]</span>  <span class="c1"># Linear intercept</span>
+
+        <span class="n">Lc</span> <span class="o">=</span> <span class="p">(</span><span class="n">GammaMin</span><span class="o">-</span><span class="n">b</span><span class="p">)</span><span class="o">/</span><span class="n">m</span>  <span class="c1"># Hard block thickness</span>
+
+        <span class="c1"># Find the data points where the graph is linear to within 1%</span>
+        <span class="n">mask</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">where</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">abs</span><span class="p">((</span><span class="n">y</span><span class="o">-</span><span class="p">(</span><span class="n">m</span><span class="o">*</span><span class="n">x</span><span class="o">+</span><span class="n">b</span><span class="p">))</span><span class="o">/</span><span class="n">y</span><span class="p">)</span> <span class="o">&lt;</span> <span class="mf">0.01</span><span class="p">)[</span><span class="mi">0</span><span class="p">]</span>
+        <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">mask</span><span class="p">)</span> <span class="o">==</span> <span class="mi">0</span><span class="p">:</span>  <span class="c1"># Return garbage for bad fits</span>
+            <span class="k">return</span> <span class="p">{</span> <span class="s1">&#39;max&#39;</span><span class="p">:</span> <span class="bp">self</span><span class="o">.</span><span class="n">_round_sig_figs</span><span class="p">(</span><span class="n">x</span><span class="p">[</span><span class="n">maxs</span><span class="p">[</span><span class="mi">0</span><span class="p">]],</span> <span class="mi">6</span><span class="p">)</span> <span class="p">}</span>
+        <span class="n">dtr</span> <span class="o">=</span> <span class="n">x</span><span class="p">[</span><span class="n">mask</span><span class="p">[</span><span class="mi">0</span><span class="p">]]</span>  <span class="c1"># Beginning of Linear Section</span>
+        <span class="n">d0</span> <span class="o">=</span> <span class="n">x</span><span class="p">[</span><span class="n">mask</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">]]</span>  <span class="c1"># End of Linear Section</span>
+        <span class="n">GammaMax</span> <span class="o">=</span> <span class="n">y</span><span class="p">[</span><span class="n">mask</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">]]</span>
+        <span class="n">A</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">abs</span><span class="p">(</span><span class="n">GammaMin</span><span class="o">/</span><span class="n">GammaMax</span><span class="p">)</span>  <span class="c1"># Normalized depth of minimum</span>
+
+        <span class="n">params</span> <span class="o">=</span> <span class="p">{</span>
+            <span class="s1">&#39;max&#39;</span><span class="p">:</span> <span class="n">x</span><span class="p">[</span><span class="n">maxs</span><span class="p">[</span><span class="mi">0</span><span class="p">]],</span>
+            <span class="s1">&#39;dtr&#39;</span><span class="p">:</span> <span class="n">dtr</span><span class="p">,</span>
+            <span class="s1">&#39;Lc&#39;</span><span class="p">:</span> <span class="n">Lc</span><span class="p">,</span>
+            <span class="s1">&#39;d0&#39;</span><span class="p">:</span> <span class="n">d0</span><span class="p">,</span>
+            <span class="s1">&#39;A&#39;</span><span class="p">:</span> <span class="n">A</span><span class="p">,</span>
+            <span class="s1">&#39;fill&#39;</span><span class="p">:</span> <span class="n">Lc</span><span class="o">/</span><span class="n">x</span><span class="p">[</span><span class="n">maxs</span><span class="p">[</span><span class="mi">0</span><span class="p">]]</span>
+        <span class="p">}</span>
+
+        <span class="k">return</span> <span class="n">params</span></div>
+
+
+    <span class="k">def</span> <span class="nf">_porod</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">q</span><span class="p">,</span> <span class="n">K</span><span class="p">,</span> <span class="n">sigma</span><span class="p">,</span> <span class="n">bg</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Equation for the Porod region of the data&quot;&quot;&quot;</span>
+        <span class="k">return</span> <span class="n">bg</span> <span class="o">+</span> <span class="p">(</span><span class="n">K</span><span class="o">*</span><span class="n">q</span><span class="o">**</span><span class="p">(</span><span class="o">-</span><span class="mi">4</span><span class="p">))</span><span class="o">*</span><span class="n">np</span><span class="o">.</span><span class="n">exp</span><span class="p">(</span><span class="o">-</span><span class="n">q</span><span class="o">**</span><span class="mi">2</span><span class="o">*</span><span class="n">sigma</span><span class="o">**</span><span class="mi">2</span><span class="p">)</span>
+
+    <span class="k">def</span> <span class="nf">_fit_guinier</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">q</span><span class="p">,</span> <span class="n">iq</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Fit the Guinier region of the curve&quot;&quot;&quot;</span>
+        <span class="n">A</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">vstack</span><span class="p">([</span><span class="n">q</span><span class="o">**</span><span class="mi">2</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">ones</span><span class="p">(</span><span class="n">q</span><span class="o">.</span><span class="n">shape</span><span class="p">)])</span><span class="o">.</span><span class="n">T</span>
+        <span class="k">return</span> <span class="n">lstsq</span><span class="p">(</span><span class="n">A</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">log</span><span class="p">(</span><span class="n">iq</span><span class="p">))</span>
+
+    <span class="k">def</span> <span class="nf">_fit_porod</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">q</span><span class="p">,</span> <span class="n">iq</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Fit the Porod region of the curve&quot;&quot;&quot;</span>
+        <span class="n">fitp</span> <span class="o">=</span> <span class="n">curve_fit</span><span class="p">(</span><span class="k">lambda</span> <span class="n">q</span><span class="p">,</span> <span class="n">k</span><span class="p">,</span> <span class="n">sig</span><span class="p">,</span> <span class="n">bg</span><span class="p">:</span> <span class="bp">self</span><span class="o">.</span><span class="n">_porod</span><span class="p">(</span><span class="n">q</span><span class="p">,</span> <span class="n">k</span><span class="p">,</span> <span class="n">sig</span><span class="p">,</span> <span class="n">bg</span><span class="p">)</span><span class="o">*</span><span class="n">q</span><span class="o">**</span><span class="mi">2</span><span class="p">,</span>
+                         <span class="n">q</span><span class="p">,</span> <span class="n">iq</span><span class="o">*</span><span class="n">q</span><span class="o">**</span><span class="mi">2</span><span class="p">,</span> <span class="n">bounds</span><span class="o">=</span><span class="p">([</span><span class="o">-</span><span class="n">np</span><span class="o">.</span><span class="n">inf</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="o">-</span><span class="n">np</span><span class="o">.</span><span class="n">inf</span><span class="p">],</span> <span class="p">[</span><span class="n">np</span><span class="o">.</span><span class="n">inf</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">inf</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">inf</span><span class="p">]))[</span><span class="mi">0</span><span class="p">]</span>
+        <span class="n">k</span><span class="p">,</span> <span class="n">sigma</span><span class="p">,</span> <span class="n">bg</span> <span class="o">=</span> <span class="n">fitp</span>
+        <span class="k">return</span> <span class="n">k</span><span class="p">,</span> <span class="n">sigma</span><span class="p">,</span> <span class="n">bg</span>
+
+    <span class="k">def</span> <span class="nf">_fit_data</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">q</span><span class="p">,</span> <span class="n">iq</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Given a data set, extrapolate out to large q with Porod and</span>
+<span class="sd">        to q=0 with Guinier</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">mask</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">logical_and</span><span class="p">(</span><span class="n">q</span> <span class="o">&gt;</span> <span class="bp">self</span><span class="o">.</span><span class="n">upperq</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span> <span class="n">q</span> <span class="o">&lt;</span> <span class="bp">self</span><span class="o">.</span><span class="n">upperq</span><span class="p">[</span><span class="mi">1</span><span class="p">])</span>
+
+        <span class="c1"># Returns an array where the 1st and 2nd elements are the values of k</span>
+        <span class="c1"># and sigma for the best-fit Porod function</span>
+        <span class="n">k</span><span class="p">,</span> <span class="n">sigma</span><span class="p">,</span> <span class="n">_</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_fit_porod</span><span class="p">(</span><span class="n">q</span><span class="p">[</span><span class="n">mask</span><span class="p">],</span> <span class="n">iq</span><span class="p">[</span><span class="n">mask</span><span class="p">])</span>
+        <span class="n">bg</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">background</span>
+
+        <span class="c1"># Smooths between the best-fit porod function and the data to produce a</span>
+        <span class="c1"># better fitting curve</span>
+        <span class="n">data</span> <span class="o">=</span> <span class="n">interp1d</span><span class="p">(</span><span class="n">q</span><span class="p">,</span> <span class="n">iq</span><span class="p">)</span>
+        <span class="n">s1</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_Interpolator</span><span class="p">(</span><span class="n">data</span><span class="p">,</span>
+            <span class="k">lambda</span> <span class="n">x</span><span class="p">:</span> <span class="bp">self</span><span class="o">.</span><span class="n">_porod</span><span class="p">(</span><span class="n">x</span><span class="p">,</span> <span class="n">k</span><span class="p">,</span> <span class="n">sigma</span><span class="p">,</span> <span class="n">bg</span><span class="p">),</span> <span class="bp">self</span><span class="o">.</span><span class="n">upperq</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span> <span class="n">q</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">])</span>
+
+        <span class="n">mask</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">logical_and</span><span class="p">(</span><span class="n">q</span> <span class="o">&lt;</span> <span class="bp">self</span><span class="o">.</span><span class="n">lowerq</span><span class="p">,</span> <span class="mi">0</span> <span class="o">&lt;</span> <span class="n">q</span><span class="p">)</span>
+
+        <span class="c1"># Returns parameters for the best-fit Guinier function</span>
+        <span class="n">g</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_fit_guinier</span><span class="p">(</span><span class="n">q</span><span class="p">[</span><span class="n">mask</span><span class="p">],</span> <span class="n">iq</span><span class="p">[</span><span class="n">mask</span><span class="p">])[</span><span class="mi">0</span><span class="p">]</span>
+
+        <span class="c1"># Smooths between the best-fit Guinier function and the Porod curve</span>
+        <span class="n">s2</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_Interpolator</span><span class="p">((</span><span class="k">lambda</span> <span class="n">x</span><span class="p">:</span> <span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">exp</span><span class="p">(</span><span class="n">g</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span><span class="o">+</span><span class="n">g</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="o">*</span><span class="n">x</span><span class="o">**</span><span class="mi">2</span><span class="p">))),</span> <span class="n">s1</span><span class="p">,</span> <span class="n">q</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">lowerq</span><span class="p">)</span>
+
+        <span class="n">params</span> <span class="o">=</span> <span class="p">{</span><span class="s1">&#39;A&#39;</span><span class="p">:</span> <span class="n">g</span><span class="p">[</span><span class="mi">1</span><span class="p">],</span> <span class="s1">&#39;B&#39;</span><span class="p">:</span> <span class="n">g</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span> <span class="s1">&#39;K&#39;</span><span class="p">:</span> <span class="n">k</span><span class="p">,</span> <span class="s1">&#39;sigma&#39;</span><span class="p">:</span> <span class="n">sigma</span><span class="p">}</span>
+
+        <span class="k">return</span> <span class="n">params</span><span class="p">,</span> <span class="n">s2</span></div>
+</pre></div>
+
+          </div>
+        </div>
+      </div>
+      <div class="sphinxsidebar" role="navigation" aria-label="main navigation">
+        <div class="sphinxsidebarwrapper">
+<div id="searchbox" style="display: none" role="search">
+  <h3>Quick search</h3>
+    <form class="search" action="../../../../search.html" method="get">
+      <div><input type="text" name="q" /></div>
+      <div><input type="submit" value="Go" /></div>
+      <input type="hidden" name="check_keywords" value="yes" />
+      <input type="hidden" name="area" value="default" />
+    </form>
+</div>
+<script type="text/javascript">$('#searchbox').show(0);</script>
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="related" role="navigation" aria-label="related navigation">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="../../../../genindex.html" title="General Index"
+             >index</a></li>
+        <li class="right" >
+          <a href="../../../../py-modindex.html" title="Python Module Index"
+             >modules</a> |</li>
+        <li class="nav-item nav-item-0"><a href="../../../../index.html">SasView 4.1.1 documentation</a> &#187;</li>
+          <li class="nav-item nav-item-1"><a href="../../../index.html" >Module code</a> &#187;</li> 
+      </ul>
+    </div>
+    <div class="footer" role="contentinfo">
+        &#169; Copyright 2017, The SasView Project.
+      Created using <a href="http://sphinx-doc.org/">Sphinx</a> 1.6.2.
+    </div>
+  </body>
+</html>

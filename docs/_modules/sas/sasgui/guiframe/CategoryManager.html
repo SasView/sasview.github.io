@@ -1,12 +1,12 @@
+
 <!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
   "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
-
 
 <html xmlns="http://www.w3.org/1999/xhtml">
   <head>
     <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
     
-    <title>sas.sasgui.guiframe.CategoryManager &mdash; SasView 4.0.0 documentation</title>
+    <title>sas.sasgui.guiframe.CategoryManager &#8212; SasView 4.1.1 documentation</title>
     
     <link rel="stylesheet" href="../../../../_static/classic.css" type="text/css" />
     <link rel="stylesheet" href="../../../../_static/pygments.css" type="text/css" />
@@ -14,20 +14,21 @@
     <script type="text/javascript">
       var DOCUMENTATION_OPTIONS = {
         URL_ROOT:    '../../../../',
-        VERSION:     '4.0.0',
+        VERSION:     '4.1.1',
         COLLAPSE_INDEX: false,
         FILE_SUFFIX: '.html',
-        HAS_SOURCE:  true
+        HAS_SOURCE:  true,
+        SOURCELINK_SUFFIX: '.txt'
       };
     </script>
     <script type="text/javascript" src="../../../../_static/jquery.js"></script>
     <script type="text/javascript" src="../../../../_static/underscore.js"></script>
     <script type="text/javascript" src="../../../../_static/doctools.js"></script>
-    <script type="text/javascript" src="https://cdn.mathjax.org/mathjax/latest/MathJax.js?config=TeX-AMS-MML_HTMLorMML"></script>
-    <link rel="top" title="SasView 4.0.0 documentation" href="../../../../index.html" />
-    <link rel="up" title="sas.sasgui.guiframe" href="../guiframe.html" /> 
+    <script type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.1/MathJax.js?config=TeX-MML-AM_CHTML"></script>
+    <link rel="index" title="Index" href="../../../../genindex.html" />
+    <link rel="search" title="Search" href="../../../../search.html" /> 
   </head>
-  <body role="document">
+  <body>
     <div class="related" role="navigation" aria-label="related navigation">
       <h3>Navigation</h3>
       <ul>
@@ -37,9 +38,9 @@
         <li class="right" >
           <a href="../../../../py-modindex.html" title="Python Module Index"
              >modules</a> |</li>
-        <li class="nav-item nav-item-0"><a href="../../../../index.html">SasView 4.0.0 documentation</a> &raquo;</li>
-          <li class="nav-item nav-item-1"><a href="../../../index.html" >Module code</a> &raquo;</li>
-          <li class="nav-item nav-item-2"><a href="../guiframe.html" accesskey="U">sas.sasgui.guiframe</a> &raquo;</li> 
+        <li class="nav-item nav-item-0"><a href="../../../../index.html">SasView 4.1.1 documentation</a> &#187;</li>
+          <li class="nav-item nav-item-1"><a href="../../../index.html" >Module code</a> &#187;</li>
+          <li class="nav-item nav-item-2"><a href="../guiframe.html" accesskey="U">sas.sasgui.guiframe</a> &#187;</li> 
       </ul>
     </div>  
 
@@ -63,11 +64,12 @@
 <span class="kn">import</span> <span class="nn">wx</span>
 <span class="kn">import</span> <span class="nn">sys</span>
 <span class="kn">import</span> <span class="nn">os</span>
-<span class="kn">from</span> <span class="nn">wx.lib.mixins.listctrl</span> <span class="kn">import</span> <span class="n">CheckListCtrlMixin</span><span class="p">,</span> <span class="n">ListCtrlAutoWidthMixin</span>
-<span class="kn">from</span> <span class="nn">collections</span> <span class="kn">import</span> <span class="n">defaultdict</span>
+<span class="kn">import</span> <span class="nn">logging</span>
+<span class="kn">from</span> <span class="nn">wx.lib.mixins.listctrl</span> <span class="k">import</span> <span class="n">CheckListCtrlMixin</span><span class="p">,</span> <span class="n">ListCtrlAutoWidthMixin</span>
+<span class="kn">from</span> <span class="nn">collections</span> <span class="k">import</span> <span class="n">defaultdict</span>
 <span class="kn">import</span> <span class="nn">json</span>
-<span class="kn">from</span> <span class="nn">sas.sasgui.guiframe.events</span> <span class="kn">import</span> <span class="n">ChangeCategoryEvent</span>
-<span class="kn">from</span> <span class="nn">sas.sasgui.guiframe.CategoryInstaller</span> <span class="kn">import</span> <span class="n">CategoryInstaller</span>
+<span class="kn">from</span> <span class="nn">sas.sasgui.guiframe.events</span> <span class="k">import</span> <span class="n">ChangeCategoryEvent</span>
+<span class="kn">from</span> <span class="nn">sas.sasgui.guiframe.CategoryInstaller</span> <span class="k">import</span> <span class="n">CategoryInstaller</span>
 <span class="n">IS_MAC</span> <span class="o">=</span> <span class="p">(</span><span class="n">sys</span><span class="o">.</span><span class="n">platform</span> <span class="o">==</span> <span class="s1">&#39;darwin&#39;</span><span class="p">)</span>
 
 <span class="sd">&quot;&quot;&quot; Notes</span>
@@ -110,10 +112,10 @@
 <span class="sd">        :param callback_func: A function to be called when</span>
 <span class="sd">        an element is clicked</span>
 <span class="sd">        &quot;&quot;&quot;</span>
-        <span class="n">wx</span><span class="o">.</span><span class="n">ListCtrl</span><span class="o">.</span><span class="n">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">parent</span><span class="p">,</span> <span class="o">-</span><span class="mi">1</span><span class="p">,</span> <span class="n">style</span><span class="o">=</span><span class="n">wx</span><span class="o">.</span><span class="n">LC_REPORT</span> \
+        <span class="n">wx</span><span class="o">.</span><span class="n">ListCtrl</span><span class="o">.</span><span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">parent</span><span class="p">,</span> <span class="o">-</span><span class="mi">1</span><span class="p">,</span> <span class="n">style</span><span class="o">=</span><span class="n">wx</span><span class="o">.</span><span class="n">LC_REPORT</span> \
                                  <span class="o">|</span> <span class="n">wx</span><span class="o">.</span><span class="n">SUNKEN_BORDER</span><span class="p">)</span>
-        <span class="n">CheckListCtrlMixin</span><span class="o">.</span><span class="n">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span>
-        <span class="n">ListCtrlAutoWidthMixin</span><span class="o">.</span><span class="n">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span>
+        <span class="n">CheckListCtrlMixin</span><span class="o">.</span><span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span>
+        <span class="n">ListCtrlAutoWidthMixin</span><span class="o">.</span><span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span>
 
         <span class="bp">self</span><span class="o">.</span><span class="n">callback_func</span> <span class="o">=</span> <span class="n">callback_func</span>
         
@@ -142,7 +144,7 @@
 <span class="sd">        &quot;&quot;&quot;</span>
         
         <span class="c1"># make sure the category file is where it should be</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">performance_blocking</span> <span class="o">=</span> <span class="bp">False</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">performance_blocking</span> <span class="o">=</span> <span class="kc">False</span>
 
         <span class="c1"># get the current status of model categorization (from the dictionary)</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">master_category_dict</span> <span class="o">=</span> <span class="n">defaultdict</span><span class="p">(</span><span class="nb">list</span><span class="p">)</span>
@@ -155,7 +157,7 @@
         <span class="c1"># the right_pane (vbox sizer) which houses the current model/category </span>
         <span class="c1">#list)</span>
         <span class="c1">#     Comments added June 14, 2015 -PDB</span>
-        <span class="n">wx</span><span class="o">.</span><span class="n">Frame</span><span class="o">.</span><span class="n">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">parent</span><span class="p">,</span> <span class="n">win_id</span><span class="p">,</span> <span class="n">title</span><span class="p">,</span> <span class="n">size</span><span class="o">=</span><span class="p">(</span><span class="mi">660</span><span class="p">,</span> <span class="mi">400</span><span class="p">))</span>
+        <span class="n">wx</span><span class="o">.</span><span class="n">Frame</span><span class="o">.</span><span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">parent</span><span class="p">,</span> <span class="n">win_id</span><span class="p">,</span> <span class="n">title</span><span class="p">,</span> <span class="n">size</span><span class="o">=</span><span class="p">(</span><span class="mi">660</span><span class="p">,</span> <span class="mi">400</span><span class="p">))</span>
 
         <span class="n">panel</span> <span class="o">=</span> <span class="n">wx</span><span class="o">.</span><span class="n">Panel</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="o">-</span><span class="mi">1</span><span class="p">)</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">parent</span> <span class="o">=</span> <span class="n">parent</span>
@@ -232,11 +234,11 @@
         <span class="n">hbox</span><span class="o">.</span><span class="n">Add</span><span class="p">((</span><span class="mi">3</span><span class="p">,</span> <span class="o">-</span><span class="mi">1</span><span class="p">))</span>
 
         <span class="n">panel</span><span class="o">.</span><span class="n">SetSizer</span><span class="p">(</span><span class="n">hbox</span><span class="p">)</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">performance_blocking</span> <span class="o">=</span> <span class="bp">True</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">performance_blocking</span> <span class="o">=</span> <span class="kc">True</span>
 
 
         <span class="bp">self</span><span class="o">.</span><span class="n">Centre</span><span class="p">()</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">Show</span><span class="p">(</span><span class="bp">True</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">Show</span><span class="p">(</span><span class="kc">True</span><span class="p">)</span>
 
         <span class="c1"># gui stuff finished</span>
 
@@ -303,27 +305,27 @@
         <span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">        Callback for &#39;enable all&#39;</span>
 <span class="sd">        &quot;&quot;&quot;</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">performance_blocking</span> <span class="o">=</span> <span class="bp">False</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">performance_blocking</span> <span class="o">=</span> <span class="kc">False</span>
         <span class="n">num</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">cat_list</span><span class="o">.</span><span class="n">GetItemCount</span><span class="p">()</span>
         <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">num</span><span class="p">):</span>
             <span class="bp">self</span><span class="o">.</span><span class="n">cat_list</span><span class="o">.</span><span class="n">CheckItem</span><span class="p">(</span><span class="n">i</span><span class="p">)</span>
         <span class="k">for</span> <span class="n">model</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">model_enabled_dict</span><span class="p">:</span>
-            <span class="bp">self</span><span class="o">.</span><span class="n">model_enabled_dict</span><span class="p">[</span><span class="n">model</span><span class="p">]</span> <span class="o">=</span> <span class="bp">True</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">model_enabled_dict</span><span class="p">[</span><span class="n">model</span><span class="p">]</span> <span class="o">=</span> <span class="kc">True</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">_regenerate_master_dict</span><span class="p">()</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">performance_blocking</span> <span class="o">=</span> <span class="bp">True</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">performance_blocking</span> <span class="o">=</span> <span class="kc">True</span>
 
     <span class="k">def</span> <span class="nf">_on_deselectall</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">event</span><span class="p">):</span>
         <span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">        Callback for &#39;disable all&#39;</span>
 <span class="sd">        &quot;&quot;&quot;</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">performance_blocking</span> <span class="o">=</span> <span class="bp">False</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">performance_blocking</span> <span class="o">=</span> <span class="kc">False</span>
         <span class="n">num</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">cat_list</span><span class="o">.</span><span class="n">GetItemCount</span><span class="p">()</span>
         <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">num</span><span class="p">):</span>
-            <span class="bp">self</span><span class="o">.</span><span class="n">cat_list</span><span class="o">.</span><span class="n">CheckItem</span><span class="p">(</span><span class="n">i</span><span class="p">,</span> <span class="bp">False</span><span class="p">)</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">cat_list</span><span class="o">.</span><span class="n">CheckItem</span><span class="p">(</span><span class="n">i</span><span class="p">,</span> <span class="kc">False</span><span class="p">)</span>
         <span class="k">for</span> <span class="n">model</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">model_enabled_dict</span><span class="p">:</span>
-            <span class="bp">self</span><span class="o">.</span><span class="n">model_enabled_dict</span><span class="p">[</span><span class="n">model</span><span class="p">]</span> <span class="o">=</span> <span class="bp">False</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">model_enabled_dict</span><span class="p">[</span><span class="n">model</span><span class="p">]</span> <span class="o">=</span> <span class="kc">False</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">_regenerate_master_dict</span><span class="p">()</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">performance_blocking</span> <span class="o">=</span> <span class="bp">True</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">performance_blocking</span> <span class="o">=</span> <span class="kc">True</span>
 
     <span class="k">def</span> <span class="nf">_on_apply</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">event</span><span class="p">):</span>
         <span class="sd">&quot;&quot;&quot;</span>
@@ -348,7 +350,7 @@
                 <span class="k">if</span> <span class="ow">not</span> <span class="n">IS_MAC</span><span class="p">:</span>
                     <span class="bp">self</span><span class="o">.</span><span class="n">dial_ok</span><span class="p">(</span><span class="n">modify_dialog</span><span class="p">,</span> <span class="n">selected_model</span><span class="p">)</span>
 
-<div class="viewcode-block" id="CategoryManager.dial_ok"><a class="viewcode-back" href="../../../../dev/api/sas.sasgui.guiframe.html#sas.sasgui.guiframe.CategoryManager.CategoryManager.dial_ok">[docs]</a>    <span class="k">def</span> <span class="nf">dial_ok</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">dialog</span><span class="o">=</span><span class="bp">None</span><span class="p">,</span> <span class="n">model</span><span class="o">=</span><span class="bp">None</span><span class="p">):</span>
+<div class="viewcode-block" id="CategoryManager.dial_ok"><a class="viewcode-back" href="../../../../dev/api/sas.sasgui.guiframe.html#sas.sasgui.guiframe.CategoryManager.CategoryManager.dial_ok">[docs]</a>    <span class="k">def</span> <span class="nf">dial_ok</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">dialog</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">model</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
         <span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">        modify_dialog onclose</span>
 <span class="sd">        &quot;&quot;&quot;</span>
@@ -385,7 +387,7 @@
 
         <span class="c1">#import documentation window here to avoid circular imports</span>
         <span class="c1">#if put at top of file with rest of imports.</span>
-        <span class="kn">from</span> <span class="nn">documentation_window</span> <span class="kn">import</span> <span class="n">DocumentationWindow</span>
+        <span class="kn">from</span> <span class="nn">documentation_window</span> <span class="k">import</span> <span class="n">DocumentationWindow</span>
 
         <span class="n">_TreeLocation</span> <span class="o">=</span> <span class="s2">&quot;user/sasgui/perspectives/fitting/fitting_help.html&quot;</span>
         <span class="n">_PageAnchor</span> <span class="o">=</span> <span class="s2">&quot;#category-manager&quot;</span>
@@ -416,19 +418,13 @@
 <span class="sd">        Read in categorization info from file</span>
 <span class="sd">        &quot;&quot;&quot;</span>
         <span class="k">try</span><span class="p">:</span>
-            <span class="nb">file</span> <span class="o">=</span> <span class="n">CategoryInstaller</span><span class="o">.</span><span class="n">get_user_file</span><span class="p">()</span>
-            <span class="k">if</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">isfile</span><span class="p">(</span><span class="nb">file</span><span class="p">):</span>
-                <span class="n">cat_file</span> <span class="o">=</span> <span class="nb">open</span><span class="p">(</span><span class="nb">file</span><span class="p">,</span> <span class="s1">&#39;rb&#39;</span><span class="p">)</span>
-<span class="c1">#               self.master_category_dict = pickle.load(cat_file)</span>
-                <span class="bp">self</span><span class="o">.</span><span class="n">master_category_dict</span> <span class="o">=</span> <span class="n">json</span><span class="o">.</span><span class="n">load</span><span class="p">(</span><span class="n">cat_file</span><span class="p">)</span>
-            <span class="k">else</span><span class="p">:</span>
-                <span class="n">cat_file</span> <span class="o">=</span> <span class="nb">open</span><span class="p">(</span><span class="n">CategoryInstaller</span><span class="o">.</span><span class="n">get_default_file</span><span class="p">(),</span> <span class="s1">&#39;rb&#39;</span><span class="p">)</span>
-<span class="c1">#        		self.master_category_dict = pickle.load(cat_file)</span>
-                <span class="bp">self</span><span class="o">.</span><span class="n">master_category_dict</span> <span class="o">=</span> <span class="n">json</span><span class="o">.</span><span class="n">load</span><span class="p">(</span><span class="n">cat_file</span><span class="p">)</span>
-            <span class="n">cat_file</span><span class="o">.</span><span class="n">close</span><span class="p">()</span>
+            <span class="n">cat_file</span> <span class="o">=</span> <span class="n">CategoryInstaller</span><span class="o">.</span><span class="n">get_user_file</span><span class="p">()</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">master_category_dict</span> <span class="o">=</span> <span class="p">{}</span>
+            <span class="k">if</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">isfile</span><span class="p">(</span><span class="n">cat_file</span><span class="p">):</span>
+                <span class="k">with</span> <span class="nb">open</span><span class="p">(</span><span class="n">cat_file</span><span class="p">,</span> <span class="s1">&#39;rb&#39;</span><span class="p">)</span> <span class="k">as</span> <span class="n">f</span><span class="p">:</span>
+                    <span class="bp">self</span><span class="o">.</span><span class="n">master_category_dict</span> <span class="o">=</span> <span class="n">json</span><span class="o">.</span><span class="n">load</span><span class="p">(</span><span class="n">f</span><span class="p">)</span>
         <span class="k">except</span> <span class="ne">IOError</span><span class="p">:</span>
-            <span class="k">print</span> <span class="s1">&#39;Problem reading in category file. Please review&#39;</span>
-
+            <span class="n">logging</span><span class="o">.</span><span class="n">error</span><span class="p">(</span><span class="s1">&#39;Problem reading in category file.&#39;</span><span class="p">)</span>
 
         <span class="bp">self</span><span class="o">.</span><span class="n">_regenerate_model_dict</span><span class="p">()</span>
 
@@ -482,7 +478,7 @@
 <span class="sd">        :param cat_list: List of all categories</span>
 <span class="sd">        :param current_cats: List of categories applied to current model</span>
 <span class="sd">        &quot;&quot;&quot;</span>
-        <span class="n">wx</span><span class="o">.</span><span class="n">Dialog</span><span class="o">.</span><span class="n">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">parent</span><span class="p">,</span> <span class="n">title</span> <span class="o">=</span> <span class="s1">&#39;Change Category: &#39;</span><span class="o">+</span><span class="n">title</span><span class="p">,</span> <span class="n">size</span><span class="o">=</span><span class="p">(</span><span class="mi">485</span><span class="p">,</span> <span class="mi">425</span><span class="p">))</span>
+        <span class="n">wx</span><span class="o">.</span><span class="n">Dialog</span><span class="o">.</span><span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">parent</span><span class="p">,</span> <span class="n">title</span> <span class="o">=</span> <span class="s1">&#39;Change Category: &#39;</span><span class="o">+</span><span class="n">title</span><span class="p">,</span> <span class="n">size</span><span class="o">=</span><span class="p">(</span><span class="mi">485</span><span class="p">,</span> <span class="mi">425</span><span class="p">))</span>
 
         <span class="bp">self</span><span class="o">.</span><span class="n">current_cats</span> <span class="o">=</span> <span class="n">current_cats</span>
         <span class="k">if</span> <span class="nb">str</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">current_cats</span><span class="p">[</span><span class="mi">0</span><span class="p">])</span> <span class="o">==</span> <span class="s1">&#39;Uncategorized&#39;</span><span class="p">:</span>
@@ -521,7 +517,7 @@
 
         <span class="bp">self</span><span class="o">.</span><span class="n">existing_check</span><span class="o">.</span><span class="n">Bind</span><span class="p">(</span><span class="n">wx</span><span class="o">.</span><span class="n">EVT_RADIOBUTTON</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">on_existing</span><span class="p">)</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">new_check</span><span class="o">.</span><span class="n">Bind</span><span class="p">(</span><span class="n">wx</span><span class="o">.</span><span class="n">EVT_RADIOBUTTON</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">on_newcat</span><span class="p">)</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">existing_check</span><span class="o">.</span><span class="n">SetValue</span><span class="p">(</span><span class="bp">True</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">existing_check</span><span class="o">.</span><span class="n">SetValue</span><span class="p">(</span><span class="kc">True</span><span class="p">)</span>
 
         <span class="n">vbox</span><span class="o">.</span><span class="n">Add</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">cat_text</span><span class="p">,</span> <span class="n">flag</span> <span class="o">=</span> <span class="n">wx</span><span class="o">.</span><span class="n">LEFT</span> <span class="o">|</span> <span class="n">wx</span><span class="o">.</span><span class="n">TOP</span> <span class="o">|</span> <span class="n">wx</span><span class="o">.</span><span class="n">ALIGN_LEFT</span><span class="p">,</span> 
                  <span class="n">border</span> <span class="o">=</span> <span class="mi">10</span><span class="p">)</span>
@@ -551,7 +547,7 @@
         <span class="bp">self</span><span class="o">.</span><span class="n">new_text</span><span class="o">.</span><span class="n">Disable</span><span class="p">()</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">SetSizer</span><span class="p">(</span><span class="n">vbox</span><span class="p">)</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">Centre</span><span class="p">()</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">Show</span><span class="p">(</span><span class="bp">True</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">Show</span><span class="p">(</span><span class="kc">True</span><span class="p">)</span>
         <span class="k">if</span> <span class="n">IS_MAC</span><span class="p">:</span>
             <span class="bp">self</span><span class="o">.</span><span class="n">ok_button</span><span class="o">.</span><span class="n">Bind</span><span class="p">(</span><span class="n">wx</span><span class="o">.</span><span class="n">EVT_BUTTON</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">on_ok_mac</span><span class="p">)</span>
 
@@ -628,16 +624,16 @@
             <span class="n">ret</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="nb">str</span><span class="p">(</span><span class="n">cat</span><span class="p">))</span>
         <span class="k">return</span> <span class="n">ret</span></div></div>
 
-<span class="k">if</span> <span class="n">__name__</span> <span class="o">==</span> <span class="s1">&#39;__main__&#39;</span><span class="p">:</span>
+<span class="k">if</span> <span class="vm">__name__</span> <span class="o">==</span> <span class="s1">&#39;__main__&#39;</span><span class="p">:</span>
         
     
     <span class="k">if</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">sys</span><span class="o">.</span><span class="n">argv</span><span class="p">)</span> <span class="o">&gt;</span> <span class="mi">1</span><span class="p">):</span>
         <span class="n">app</span> <span class="o">=</span> <span class="n">wx</span><span class="o">.</span><span class="n">App</span><span class="p">()</span>
-        <span class="n">CategoryManager</span><span class="p">(</span><span class="bp">None</span><span class="p">,</span> <span class="o">-</span><span class="mi">1</span><span class="p">,</span> <span class="s1">&#39;Category Manager&#39;</span><span class="p">,</span> <span class="n">sys</span><span class="o">.</span><span class="n">argv</span><span class="p">[</span><span class="mi">1</span><span class="p">])</span>
+        <span class="n">CategoryManager</span><span class="p">(</span><span class="kc">None</span><span class="p">,</span> <span class="o">-</span><span class="mi">1</span><span class="p">,</span> <span class="s1">&#39;Category Manager&#39;</span><span class="p">,</span> <span class="n">sys</span><span class="o">.</span><span class="n">argv</span><span class="p">[</span><span class="mi">1</span><span class="p">])</span>
         <span class="n">app</span><span class="o">.</span><span class="n">MainLoop</span><span class="p">()</span>
     <span class="k">else</span><span class="p">:</span>
         <span class="n">app</span> <span class="o">=</span> <span class="n">wx</span><span class="o">.</span><span class="n">App</span><span class="p">()</span>
-        <span class="n">CategoryManager</span><span class="p">(</span><span class="bp">None</span><span class="p">,</span> <span class="o">-</span><span class="mi">1</span><span class="p">,</span> <span class="s1">&#39;Category Manager&#39;</span><span class="p">,</span> <span class="n">sys</span><span class="o">.</span><span class="n">argv</span><span class="p">[</span><span class="mi">1</span><span class="p">])</span>
+        <span class="n">CategoryManager</span><span class="p">(</span><span class="kc">None</span><span class="p">,</span> <span class="o">-</span><span class="mi">1</span><span class="p">,</span> <span class="s1">&#39;Category Manager&#39;</span><span class="p">,</span> <span class="n">sys</span><span class="o">.</span><span class="n">argv</span><span class="p">[</span><span class="mi">1</span><span class="p">])</span>
         <span class="n">app</span><span class="o">.</span><span class="n">MainLoop</span><span class="p">()</span>
 
 </pre></div>
@@ -650,8 +646,8 @@
 <div id="searchbox" style="display: none" role="search">
   <h3>Quick search</h3>
     <form class="search" action="../../../../search.html" method="get">
-      <input type="text" name="q" />
-      <input type="submit" value="Go" />
+      <div><input type="text" name="q" /></div>
+      <div><input type="submit" value="Go" /></div>
       <input type="hidden" name="check_keywords" value="yes" />
       <input type="hidden" name="area" value="default" />
     </form>
@@ -670,14 +666,14 @@
         <li class="right" >
           <a href="../../../../py-modindex.html" title="Python Module Index"
              >modules</a> |</li>
-        <li class="nav-item nav-item-0"><a href="../../../../index.html">SasView 4.0.0 documentation</a> &raquo;</li>
-          <li class="nav-item nav-item-1"><a href="../../../index.html" >Module code</a> &raquo;</li>
-          <li class="nav-item nav-item-2"><a href="../guiframe.html" >sas.sasgui.guiframe</a> &raquo;</li> 
+        <li class="nav-item nav-item-0"><a href="../../../../index.html">SasView 4.1.1 documentation</a> &#187;</li>
+          <li class="nav-item nav-item-1"><a href="../../../index.html" >Module code</a> &#187;</li>
+          <li class="nav-item nav-item-2"><a href="../guiframe.html" >sas.sasgui.guiframe</a> &#187;</li> 
       </ul>
     </div>
     <div class="footer" role="contentinfo">
-        &copy; Copyright 2015, The SasView Project.
-      Created using <a href="http://sphinx-doc.org/">Sphinx</a> 1.4.
+        &#169; Copyright 2017, The SasView Project.
+      Created using <a href="http://sphinx-doc.org/">Sphinx</a> 1.6.2.
     </div>
   </body>
 </html>

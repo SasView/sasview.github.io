@@ -1,0 +1,82 @@
+.. _adsorbed-layer:
+
+adsorbed_layer
+=======================================================
+
+Scattering from an adsorbed layer on particles
+
+=============== ===================================== ============ =============
+Parameter       Description                           Units        Default value
+=============== ===================================== ============ =============
+scale           Source intensity                      None                     1
+background      Source background                     |cm^-1|              0.001
+second_moment   Second moment of polymer distribution |Ang|                   23
+adsorbed_amount Adsorbed amount of polymer            |mg/m^2|               1.9
+density_shell   Bulk density of polymer in the shell  |g/cm^3|               0.7
+radius          Core particle radius                  |Ang|                  500
+volfraction     Core particle volume fraction         None                  0.14
+sld_shell       Polymer shell SLD                     |1e-6Ang^-2|           1.5
+sld_solvent     Solvent SLD                           |1e-6Ang^-2|           6.3
+=============== ===================================== ============ =============
+
+The returned value is scaled to units of |cm^-1| |sr^-1|, absolute scale.
+
+
+**Definition**
+
+This model describes the scattering from a layer of surfactant or polymer
+adsorbed on large, smooth, notionally spherical particles under the conditions
+that (i) the particles (cores) are contrast-matched to the dispersion medium,
+(ii) $S(Q) \sim 1$ (ie, the particle volume fraction is dilute), (iii) the
+particle radius is >> layer thickness (ie, the interface is locally flat),
+and (iv) scattering from excess unadsorbed adsorbate in the bulk medium is
+absent or has been corrected for.
+
+Unlike many other core-shell models, this model does not assume any form
+for the density distribution of the adsorbed species normal to the interface
+(cf, a core-shell model normally assumes the density distribution to be a
+homogeneous step-function). For comparison, if the thickness of a (traditional
+core-shell like) step function distribution is $t$, the second moment about
+the mean of the density distribution (ie, the distance of the centre-of-mass
+of the distribution from the interface), $\sigma = \sqrt{t^2/12}$.
+
+.. math::
+
+     I(q) = \text{scale} \cdot (\rho_\text{poly}-\rho_\text{solvent})^2
+         \left[
+             \frac{6\pi\phi_\text{core}}{Q^2}
+             \frac{\Gamma^2}{\delta_\text{poly}^2R_\text{core}}
+             \exp(-Q^2\sigma^2)
+         \right] + \text{background}
+
+where *scale* is a scale factor, $\rho_\text{poly}$ is the sld of the
+polymer (or surfactant) layer, $\rho_\text{solv}$ is the sld of the
+solvent/medium and cores, $\phi_\text{core}$ is the volume fraction of
+the core particles, $\delta_\text{poly}$ is the bulk density of the
+polymer, $\Gamma$ is the adsorbed amount, and $\sigma$ is the second
+moment of the thickness distribution.
+
+Note that all parameters except $\sigma$ are correlated so fitting more
+than one of these parameters will generally fail. Also note that unlike
+other shape models, no volume normalization is applied to this model (the
+calculation is exact).
+
+The code for this model is based originally on a a fortran implementation by
+Steve King at ISIS in the SANDRA package c. 1990.
+
+
+.. figure:: img/adsorbed_layer_autogenfig.png
+
+    1D plot corresponding to the default parameters of the model.
+
+**References**
+
+.. [#] S King, P Griffiths, J Hone, and T Cosgrove, *SANS from Adsorbed Polymer
+   Layers*, *Macromol. Symp.*, 190 (2002) 33-42.
+
+**Authorship and Verification**
+
+* **Author:** Jae-Hi Cho **Date:** pre 2010
+* **Last Modified by:** Paul Kienzle **Date:** April 14, 2016
+* **Last Reviewed by:** Steve King **Date:** March 18, 2016
+
