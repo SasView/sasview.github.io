@@ -1,0 +1,833 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+  "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+    
+    <title>sas.sasgui.guiframe.local_perspectives.plotting.masking &mdash; SasView 4.1.2 documentation</title>
+    
+    <link rel="stylesheet" href="../../../../../../_static/classic.css" type="text/css" />
+    <link rel="stylesheet" href="../../../../../../_static/pygments.css" type="text/css" />
+    
+    <script type="text/javascript">
+      var DOCUMENTATION_OPTIONS = {
+        URL_ROOT:    '../../../../../../',
+        VERSION:     '4.1.2',
+        COLLAPSE_INDEX: false,
+        FILE_SUFFIX: '.html',
+        HAS_SOURCE:  true
+      };
+    </script>
+    <script type="text/javascript" src="../../../../../../_static/jquery.js"></script>
+    <script type="text/javascript" src="../../../../../../_static/underscore.js"></script>
+    <script type="text/javascript" src="../../../../../../_static/doctools.js"></script>
+    <script type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.1/MathJax.js?config=TeX-MML-AM_CHTML"></script>
+    <link rel="top" title="SasView 4.1.2 documentation" href="../../../../../../index.html" />
+    <link rel="up" title="sas.sasgui.guiframe" href="../../../guiframe.html" /> 
+  </head>
+  <body role="document">
+    <div class="related" role="navigation" aria-label="related navigation">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="../../../../../../genindex.html" title="General Index"
+             accesskey="I">index</a></li>
+        <li class="right" >
+          <a href="../../../../../../py-modindex.html" title="Python Module Index"
+             >modules</a> |</li>
+        <li class="nav-item nav-item-0"><a href="../../../../../../index.html">SasView 4.1.2 documentation</a> &raquo;</li>
+          <li class="nav-item nav-item-1"><a href="../../../../../index.html" >Module code</a> &raquo;</li>
+          <li class="nav-item nav-item-2"><a href="../../../guiframe.html" accesskey="U">sas.sasgui.guiframe</a> &raquo;</li> 
+      </ul>
+    </div>  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          <div class="body" role="main">
+            
+  <h1>Source code for sas.sasgui.guiframe.local_perspectives.plotting.masking</h1><div class="highlight"><pre>
+<span></span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Mask editor</span>
+<span class="sd">&quot;&quot;&quot;</span>
+<span class="c1">################################################################################</span>
+<span class="c1"># This software was developed by the University of Tennessee as part of the</span>
+<span class="c1"># Distributed Data Analysis of Neutron Scattering Experiments (DANSE)</span>
+<span class="c1"># project funded by the US National Science Foundation.</span>
+<span class="c1">#</span>
+<span class="c1"># If you use DANSE applications to do scientific research that leads to</span>
+<span class="c1"># publication, we ask that you acknowledge the use of the software with the</span>
+<span class="c1"># following sentence:</span>
+<span class="c1">#</span>
+<span class="c1"># This work benefited from DANSE software developed under NSF award DMR-0520547.</span>
+<span class="c1">#</span>
+<span class="c1"># copyright 2008, University of Tennessee</span>
+<span class="c1">################################################################################</span>
+
+
+<span class="c1"># #Todo: cleaning up, improving the maskplotpanel initialization, and testing.</span>
+<span class="kn">import</span> <span class="nn">wx</span>
+<span class="kn">import</span> <span class="nn">sys</span>
+<span class="kn">import</span> <span class="nn">time</span>
+<span class="kn">import</span> <span class="nn">matplotlib.cm</span> <span class="kn">as</span> <span class="nn">cm</span>
+<span class="kn">import</span> <span class="nn">math</span>
+<span class="kn">import</span> <span class="nn">copy</span>
+<span class="kn">import</span> <span class="nn">numpy</span>
+<span class="kn">from</span> <span class="nn">sas.sasgui.plottools.PlotPanel</span> <span class="kn">import</span> <span class="n">PlotPanel</span>
+<span class="kn">from</span> <span class="nn">sas.sasgui.plottools.plottables</span> <span class="kn">import</span> <span class="n">Graph</span>
+<span class="kn">from</span> <span class="nn">binder</span> <span class="kn">import</span> <span class="n">BindArtist</span>
+<span class="kn">from</span> <span class="nn">sas.sasgui.guiframe.dataFitting</span> <span class="kn">import</span> <span class="n">Data1D</span><span class="p">,</span> <span class="n">Data2D</span>
+<span class="kn">from</span> <span class="nn">boxMask</span> <span class="kn">import</span> <span class="n">BoxMask</span>
+<span class="kn">from</span> <span class="nn">sector_mask</span> <span class="kn">import</span> <span class="n">SectorMask</span>
+<span class="kn">from</span> <span class="nn">AnnulusSlicer</span> <span class="kn">import</span> <span class="n">CircularMask</span>
+
+<span class="kn">from</span> <span class="nn">sas.sasgui.guiframe.events</span> <span class="kn">import</span> <span class="n">SlicerEvent</span>
+<span class="kn">from</span> <span class="nn">sas.sasgui.guiframe.events</span> <span class="kn">import</span> <span class="n">StatusEvent</span>
+<span class="kn">from</span> <span class="nn">functools</span> <span class="kn">import</span> <span class="n">partial</span>
+
+<span class="p">(</span><span class="n">InternalEvent</span><span class="p">,</span> <span class="n">EVT_INTERNAL</span><span class="p">)</span> <span class="o">=</span> <span class="n">wx</span><span class="o">.</span><span class="n">lib</span><span class="o">.</span><span class="n">newevent</span><span class="o">.</span><span class="n">NewEvent</span><span class="p">()</span>
+
+<span class="n">DEFAULT_CMAP</span> <span class="o">=</span> <span class="n">cm</span><span class="o">.</span><span class="n">get_cmap</span><span class="p">(</span><span class="s1">&#39;jet&#39;</span><span class="p">)</span>
+<span class="n">_BOX_WIDTH</span> <span class="o">=</span> <span class="mi">76</span>
+<span class="n">_SCALE</span> <span class="o">=</span> <span class="mf">1e-6</span>
+<span class="n">_STATICBOX_WIDTH</span> <span class="o">=</span> <span class="mi">380</span>
+
+<span class="c1"># SLD panel size</span>
+<span class="k">if</span> <span class="n">sys</span><span class="o">.</span><span class="n">platform</span><span class="o">.</span><span class="n">count</span><span class="p">(</span><span class="s2">&quot;win32&quot;</span><span class="p">)</span> <span class="o">&gt;</span> <span class="mi">0</span><span class="p">:</span>
+    <span class="n">PANEL_SIZE</span> <span class="o">=</span> <span class="mi">350</span>
+    <span class="n">FONT_VARIANT</span> <span class="o">=</span> <span class="mi">0</span>
+<span class="k">else</span><span class="p">:</span>
+    <span class="n">PANEL_SIZE</span> <span class="o">=</span> <span class="mi">300</span>
+    <span class="n">FONT_VARIANT</span> <span class="o">=</span> <span class="mi">1</span>
+
+<span class="kn">from</span> <span class="nn">sas.sascalc.data_util.calcthread</span> <span class="kn">import</span> <span class="n">CalcThread</span>
+
+<div class="viewcode-block" id="CalcPlot"><a class="viewcode-back" href="../../../../../../dev/api/sas.sasgui.guiframe.local_perspectives.plotting.html#sas.sasgui.guiframe.local_perspectives.plotting.masking.CalcPlot">[docs]</a><span class="k">class</span> <span class="nc">CalcPlot</span><span class="p">(</span><span class="n">CalcThread</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Compute Resolution</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span>
+                 <span class="nb">id</span><span class="o">=-</span><span class="mi">1</span><span class="p">,</span>
+                 <span class="n">panel</span><span class="o">=</span><span class="bp">None</span><span class="p">,</span>
+                 <span class="n">image</span><span class="o">=</span><span class="bp">None</span><span class="p">,</span>
+                 <span class="n">completefn</span><span class="o">=</span><span class="bp">None</span><span class="p">,</span>
+                 <span class="n">updatefn</span><span class="o">=</span><span class="bp">None</span><span class="p">,</span>
+                 <span class="n">elapsed</span><span class="o">=</span><span class="mi">0</span><span class="p">,</span>
+                 <span class="n">yieldtime</span><span class="o">=</span><span class="mf">0.01</span><span class="p">,</span>
+                 <span class="n">worktime</span><span class="o">=</span><span class="mf">0.01</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">CalcThread</span><span class="o">.</span><span class="n">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">completefn</span><span class="p">,</span> <span class="n">updatefn</span><span class="p">,</span> <span class="n">yieldtime</span><span class="p">,</span> <span class="n">worktime</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">starttime</span> <span class="o">=</span> <span class="mi">0</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">id</span> <span class="o">=</span> <span class="nb">id</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">panel</span> <span class="o">=</span> <span class="n">panel</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">image</span> <span class="o">=</span> <span class="n">image</span>
+
+<div class="viewcode-block" id="CalcPlot.compute"><a class="viewcode-back" href="../../../../../../dev/api/sas.sasgui.guiframe.local_perspectives.plotting.html#sas.sasgui.guiframe.local_perspectives.plotting.masking.CalcPlot.compute">[docs]</a>    <span class="k">def</span> <span class="nf">compute</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        excuting computation</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">elapsed</span> <span class="o">=</span> <span class="n">time</span><span class="o">.</span><span class="n">time</span><span class="p">()</span> <span class="o">-</span> <span class="bp">self</span><span class="o">.</span><span class="n">starttime</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">complete</span><span class="p">(</span><span class="n">panel</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">panel</span><span class="p">,</span> <span class="n">image</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">image</span><span class="p">,</span> <span class="n">elapsed</span><span class="o">=</span><span class="n">elapsed</span><span class="p">)</span></div></div>
+
+
+<div class="viewcode-block" id="MaskPanel"><a class="viewcode-back" href="../../../../../../dev/api/sas.sasgui.guiframe.local_perspectives.plotting.html#sas.sasgui.guiframe.local_perspectives.plotting.masking.MaskPanel">[docs]</a><span class="k">class</span> <span class="nc">MaskPanel</span><span class="p">(</span><span class="n">wx</span><span class="o">.</span><span class="n">Dialog</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Provides the Mask Editor GUI.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="c1"># # Internal nickname for the window, used by the AUI manager</span>
+    <span class="n">window_name</span> <span class="o">=</span> <span class="s2">&quot;Mask Editor&quot;</span>
+    <span class="c1"># # Name to appear on the window title bar</span>
+    <span class="n">window_caption</span> <span class="o">=</span> <span class="s2">&quot;Mask Editor&quot;</span>
+    <span class="c1"># # Flag to tell the AUI manager to put this panel in the center pane</span>
+    <span class="n">CENTER_PANE</span> <span class="o">=</span> <span class="bp">True</span>
+    <span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">parent</span><span class="o">=</span><span class="bp">None</span><span class="p">,</span> <span class="n">base</span><span class="o">=</span><span class="bp">None</span><span class="p">,</span>
+                 <span class="n">data</span><span class="o">=</span><span class="bp">None</span><span class="p">,</span> <span class="nb">id</span><span class="o">=-</span><span class="mi">1</span><span class="p">,</span> <span class="o">*</span><span class="n">args</span><span class="p">,</span> <span class="o">**</span><span class="n">kwds</span><span class="p">):</span>
+        <span class="n">kwds</span><span class="p">[</span><span class="s2">&quot;style&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">wx</span><span class="o">.</span><span class="n">DEFAULT_DIALOG_STYLE</span>
+        <span class="n">kwds</span><span class="p">[</span><span class="s2">&quot;size&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">wx</span><span class="o">.</span><span class="n">Size</span><span class="p">(</span><span class="n">_STATICBOX_WIDTH</span> <span class="o">*</span> <span class="mf">0.8</span><span class="p">,</span> <span class="n">PANEL_SIZE</span><span class="p">)</span>
+        <span class="n">wx</span><span class="o">.</span><span class="n">Dialog</span><span class="o">.</span><span class="n">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">parent</span><span class="p">,</span> <span class="nb">id</span><span class="o">=</span><span class="nb">id</span><span class="p">,</span> <span class="o">*</span><span class="n">args</span><span class="p">,</span> <span class="o">**</span><span class="n">kwds</span><span class="p">)</span>
+
+        <span class="k">if</span> <span class="n">data</span> <span class="o">!=</span> <span class="bp">None</span><span class="p">:</span>
+            <span class="c1"># Font size</span>
+            <span class="n">kwds</span> <span class="o">=</span> <span class="p">[]</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">SetWindowVariant</span><span class="p">(</span><span class="n">variant</span><span class="o">=</span><span class="n">FONT_VARIANT</span><span class="p">)</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">SetTitle</span><span class="p">(</span><span class="s2">&quot;Mask Editor for &quot;</span> <span class="o">+</span> <span class="n">data</span><span class="o">.</span><span class="n">name</span><span class="p">)</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">parent</span> <span class="o">=</span> <span class="n">base</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">data</span> <span class="o">=</span> <span class="n">data</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">str</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">data</span><span class="o">.</span><span class="n">__str__</span><span class="p">()</span>
+            <span class="c1"># # mask for 2D</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">mask</span> <span class="o">=</span> <span class="n">data</span><span class="o">.</span><span class="n">mask</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">default_mask</span> <span class="o">=</span> <span class="n">copy</span><span class="o">.</span><span class="n">deepcopy</span><span class="p">(</span><span class="n">data</span><span class="o">.</span><span class="n">mask</span><span class="p">)</span>
+            <span class="c1"># # masked data from GUI</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">slicer_mask</span> <span class="o">=</span> <span class="bp">None</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">slicer</span> <span class="o">=</span> <span class="bp">None</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">slicer_z</span> <span class="o">=</span> <span class="mi">5</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">data</span><span class="o">.</span><span class="n">interactive</span> <span class="o">=</span> <span class="bp">True</span>
+            <span class="c1"># # when 2 data have the same id override the 1 st plotted</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">name</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">data</span><span class="o">.</span><span class="n">name</span>
+            <span class="c1"># Panel for 2D plot</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">plotpanel</span> <span class="o">=</span> <span class="n">Maskplotpanel</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="o">-</span><span class="mi">1</span><span class="p">,</span>
+                                           <span class="n">style</span><span class="o">=</span><span class="n">wx</span><span class="o">.</span><span class="n">TRANSPARENT_WINDOW</span><span class="p">)</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">cmap</span> <span class="o">=</span> <span class="n">DEFAULT_CMAP</span>
+            <span class="c1"># # Create Artist and bind it</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">subplot</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">plotpanel</span><span class="o">.</span><span class="n">subplot</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">connect</span> <span class="o">=</span> <span class="n">BindArtist</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">subplot</span><span class="o">.</span><span class="n">figure</span><span class="p">)</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_setup_layout</span><span class="p">()</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">newplot</span> <span class="o">=</span> <span class="n">Data2D</span><span class="p">(</span><span class="n">image</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">data</span><span class="o">.</span><span class="n">data</span><span class="p">)</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">newplot</span><span class="o">.</span><span class="n">setValues</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">data</span><span class="p">)</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">plotpanel</span><span class="o">.</span><span class="n">add_image</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">newplot</span><span class="p">)</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_update_mask</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">mask</span><span class="p">)</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">Centre</span><span class="p">()</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">Layout</span><span class="p">()</span>
+            <span class="c1"># bind evt_close to _draw in fitpage</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">Bind</span><span class="p">(</span><span class="n">wx</span><span class="o">.</span><span class="n">EVT_CLOSE</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">OnClose</span><span class="p">)</span>
+
+<div class="viewcode-block" id="MaskPanel.ShowMessage"><a class="viewcode-back" href="../../../../../../dev/api/sas.sasgui.guiframe.local_perspectives.plotting.html#sas.sasgui.guiframe.local_perspectives.plotting.masking.MaskPanel.ShowMessage">[docs]</a>    <span class="k">def</span> <span class="nf">ShowMessage</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">msg</span><span class="o">=</span><span class="s1">&#39;&#39;</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Show error message when mask covers whole data area</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">mssg</span> <span class="o">=</span> <span class="s1">&#39;Erase, redraw or clear the mask. </span><span class="se">\n\r</span><span class="s1">&#39;</span>
+        <span class="n">mssg</span> <span class="o">+=</span> <span class="s1">&#39;The data range can not be completely masked... </span><span class="se">\n\r</span><span class="s1">&#39;</span>
+        <span class="n">mssg</span> <span class="o">+=</span> <span class="n">msg</span>
+        <span class="n">wx</span><span class="o">.</span><span class="n">MessageBox</span><span class="p">(</span><span class="n">mssg</span><span class="p">,</span> <span class="s1">&#39;Error&#39;</span><span class="p">,</span> <span class="n">wx</span><span class="o">.</span><span class="n">OK</span> <span class="o">|</span> <span class="n">wx</span><span class="o">.</span><span class="n">ICON_ERROR</span><span class="p">)</span></div>
+
+    <span class="k">def</span> <span class="nf">_setup_layout</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Set up the layout</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">note</span> <span class="o">=</span> <span class="s2">&quot;Note: This masking applies</span><span class="se">\n</span><span class="s2">     only to </span><span class="si">%s</span><span class="s2">.&quot;</span> <span class="o">%</span> <span class="bp">self</span><span class="o">.</span><span class="n">data</span><span class="o">.</span><span class="n">name</span>
+        <span class="n">note_txt</span> <span class="o">=</span> <span class="n">wx</span><span class="o">.</span><span class="n">StaticText</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="o">-</span><span class="mi">1</span><span class="p">,</span> <span class="n">note</span><span class="p">)</span>
+        <span class="n">note_txt</span><span class="o">.</span><span class="n">SetForegroundColour</span><span class="p">(</span><span class="n">wx</span><span class="o">.</span><span class="n">RED</span><span class="p">)</span>
+        <span class="n">shape</span> <span class="o">=</span> <span class="s2">&quot;Select a Shape for Masking:&quot;</span>
+        <span class="c1">#  panel</span>
+        <span class="n">sizer</span> <span class="o">=</span> <span class="n">wx</span><span class="o">.</span><span class="n">GridBagSizer</span><span class="p">(</span><span class="mi">10</span><span class="p">,</span> <span class="mi">10</span><span class="p">)</span>
+        <span class="c1">#---------inputs----------------</span>
+        <span class="n">shape_txt</span> <span class="o">=</span> <span class="n">wx</span><span class="o">.</span><span class="n">StaticText</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="o">-</span><span class="mi">1</span><span class="p">,</span> <span class="n">shape</span><span class="p">)</span>
+        <span class="n">sizer</span><span class="o">.</span><span class="n">Add</span><span class="p">(</span><span class="n">shape_txt</span><span class="p">,</span> <span class="p">(</span><span class="mi">1</span><span class="p">,</span> <span class="mi">1</span><span class="p">),</span> <span class="n">flag</span><span class="o">=</span><span class="n">wx</span><span class="o">.</span><span class="n">TOP</span> <span class="o">|</span> <span class="n">wx</span><span class="o">.</span><span class="n">LEFT</span> <span class="o">|</span> <span class="n">wx</span><span class="o">.</span><span class="n">BOTTOM</span><span class="p">,</span> <span class="n">border</span><span class="o">=</span><span class="mi">5</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">innersector_rb</span> <span class="o">=</span> <span class="n">wx</span><span class="o">.</span><span class="n">RadioButton</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="o">-</span><span class="mi">1</span><span class="p">,</span> <span class="s2">&quot;Double Wings&quot;</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">Bind</span><span class="p">(</span><span class="n">wx</span><span class="o">.</span><span class="n">EVT_RADIOBUTTON</span><span class="p">,</span> <span class="n">partial</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_on_mask</span><span class="p">,</span> <span class="n">slicer</span><span class="o">=</span><span class="n">SectorMask</span><span class="p">,</span> <span class="n">inside</span><span class="o">=</span><span class="bp">True</span><span class="p">),</span>
+                  <span class="nb">id</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">innersector_rb</span><span class="o">.</span><span class="n">GetId</span><span class="p">())</span>
+        <span class="n">sizer</span><span class="o">.</span><span class="n">Add</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">innersector_rb</span><span class="p">,</span> <span class="p">(</span><span class="mi">2</span><span class="p">,</span> <span class="mi">1</span><span class="p">),</span>
+                  <span class="n">flag</span><span class="o">=</span><span class="n">wx</span><span class="o">.</span><span class="n">RIGHT</span> <span class="o">|</span> <span class="n">wx</span><span class="o">.</span><span class="n">BOTTOM</span><span class="p">,</span> <span class="n">border</span><span class="o">=</span><span class="mi">5</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">innercircle_rb</span> <span class="o">=</span> <span class="n">wx</span><span class="o">.</span><span class="n">RadioButton</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="o">-</span><span class="mi">1</span><span class="p">,</span> <span class="s2">&quot;Circular Disk&quot;</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">Bind</span><span class="p">(</span><span class="n">wx</span><span class="o">.</span><span class="n">EVT_RADIOBUTTON</span><span class="p">,</span> <span class="n">partial</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_on_mask</span><span class="p">,</span> <span class="n">slicer</span><span class="o">=</span><span class="n">CircularMask</span><span class="p">,</span> <span class="n">inside</span><span class="o">=</span><span class="bp">True</span><span class="p">),</span>
+                  <span class="nb">id</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">innercircle_rb</span><span class="o">.</span><span class="n">GetId</span><span class="p">())</span>
+        <span class="n">sizer</span><span class="o">.</span><span class="n">Add</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">innercircle_rb</span><span class="p">,</span> <span class="p">(</span><span class="mi">3</span><span class="p">,</span> <span class="mi">1</span><span class="p">),</span>
+                  <span class="n">flag</span><span class="o">=</span><span class="n">wx</span><span class="o">.</span><span class="n">RIGHT</span> <span class="o">|</span> <span class="n">wx</span><span class="o">.</span><span class="n">BOTTOM</span><span class="p">,</span> <span class="n">border</span><span class="o">=</span><span class="mi">5</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">innerbox_rb</span> <span class="o">=</span> <span class="n">wx</span><span class="o">.</span><span class="n">RadioButton</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="o">-</span><span class="mi">1</span><span class="p">,</span> <span class="s2">&quot;Rectangular Disk&quot;</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">Bind</span><span class="p">(</span><span class="n">wx</span><span class="o">.</span><span class="n">EVT_RADIOBUTTON</span><span class="p">,</span> <span class="n">partial</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_on_mask</span><span class="p">,</span> <span class="n">slicer</span><span class="o">=</span><span class="n">BoxMask</span><span class="p">,</span> <span class="n">inside</span><span class="o">=</span><span class="bp">True</span><span class="p">),</span>
+                  <span class="nb">id</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">innerbox_rb</span><span class="o">.</span><span class="n">GetId</span><span class="p">())</span>
+        <span class="n">sizer</span><span class="o">.</span><span class="n">Add</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">innerbox_rb</span><span class="p">,</span> <span class="p">(</span><span class="mi">4</span><span class="p">,</span> <span class="mi">1</span><span class="p">),</span> <span class="n">flag</span><span class="o">=</span><span class="n">wx</span><span class="o">.</span><span class="n">RIGHT</span> <span class="o">|</span> <span class="n">wx</span><span class="o">.</span><span class="n">BOTTOM</span><span class="p">,</span> <span class="n">border</span><span class="o">=</span><span class="mi">5</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">outersector_rb</span> <span class="o">=</span> <span class="n">wx</span><span class="o">.</span><span class="n">RadioButton</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="o">-</span><span class="mi">1</span><span class="p">,</span> <span class="s2">&quot;Double Wing Window&quot;</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">Bind</span><span class="p">(</span><span class="n">wx</span><span class="o">.</span><span class="n">EVT_RADIOBUTTON</span><span class="p">,</span> <span class="n">partial</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_on_mask</span><span class="p">,</span> <span class="n">slicer</span><span class="o">=</span><span class="n">SectorMask</span><span class="p">,</span> <span class="n">inside</span><span class="o">=</span><span class="bp">False</span><span class="p">),</span>
+                  <span class="nb">id</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">outersector_rb</span><span class="o">.</span><span class="n">GetId</span><span class="p">())</span>
+        <span class="n">sizer</span><span class="o">.</span><span class="n">Add</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">outersector_rb</span><span class="p">,</span> <span class="p">(</span><span class="mi">5</span><span class="p">,</span> <span class="mi">1</span><span class="p">),</span>
+                  <span class="n">flag</span><span class="o">=</span><span class="n">wx</span><span class="o">.</span><span class="n">RIGHT</span> <span class="o">|</span> <span class="n">wx</span><span class="o">.</span><span class="n">BOTTOM</span><span class="p">,</span> <span class="n">border</span><span class="o">=</span><span class="mi">5</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">outercircle_rb</span> <span class="o">=</span> <span class="n">wx</span><span class="o">.</span><span class="n">RadioButton</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="o">-</span><span class="mi">1</span><span class="p">,</span> <span class="s2">&quot;Circular Window&quot;</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">Bind</span><span class="p">(</span><span class="n">wx</span><span class="o">.</span><span class="n">EVT_RADIOBUTTON</span><span class="p">,</span> <span class="n">partial</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_on_mask</span><span class="p">,</span> <span class="n">slicer</span><span class="o">=</span><span class="n">CircularMask</span><span class="p">,</span> <span class="n">inside</span><span class="o">=</span><span class="bp">False</span><span class="p">),</span>
+                  <span class="nb">id</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">outercircle_rb</span><span class="o">.</span><span class="n">GetId</span><span class="p">())</span>
+        <span class="n">sizer</span><span class="o">.</span><span class="n">Add</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">outercircle_rb</span><span class="p">,</span> <span class="p">(</span><span class="mi">6</span><span class="p">,</span> <span class="mi">1</span><span class="p">),</span>
+                  <span class="n">flag</span><span class="o">=</span><span class="n">wx</span><span class="o">.</span><span class="n">RIGHT</span> <span class="o">|</span> <span class="n">wx</span><span class="o">.</span><span class="n">BOTTOM</span><span class="p">,</span> <span class="n">border</span><span class="o">=</span><span class="mi">5</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">outerbox_rb</span> <span class="o">=</span> <span class="n">wx</span><span class="o">.</span><span class="n">RadioButton</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="o">-</span><span class="mi">1</span><span class="p">,</span> <span class="s2">&quot;Rectangular Window&quot;</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">Bind</span><span class="p">(</span><span class="n">wx</span><span class="o">.</span><span class="n">EVT_RADIOBUTTON</span><span class="p">,</span> <span class="n">partial</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_on_mask</span><span class="p">,</span> <span class="n">slicer</span><span class="o">=</span><span class="n">BoxMask</span><span class="p">,</span> <span class="n">inside</span><span class="o">=</span><span class="bp">False</span><span class="p">),</span>
+                  <span class="nb">id</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">outerbox_rb</span><span class="o">.</span><span class="n">GetId</span><span class="p">())</span>
+        <span class="n">sizer</span><span class="o">.</span><span class="n">Add</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">outerbox_rb</span><span class="p">,</span> <span class="p">(</span><span class="mi">7</span><span class="p">,</span> <span class="mi">1</span><span class="p">),</span> <span class="n">flag</span><span class="o">=</span><span class="n">wx</span><span class="o">.</span><span class="n">RIGHT</span> <span class="o">|</span> <span class="n">wx</span><span class="o">.</span><span class="n">BOTTOM</span><span class="p">,</span> <span class="n">border</span><span class="o">=</span><span class="mi">5</span><span class="p">)</span>
+        <span class="n">sizer</span><span class="o">.</span><span class="n">Add</span><span class="p">(</span><span class="n">note_txt</span><span class="p">,</span> <span class="p">(</span><span class="mi">8</span><span class="p">,</span> <span class="mi">1</span><span class="p">),</span> <span class="n">flag</span><span class="o">=</span><span class="n">wx</span><span class="o">.</span><span class="n">RIGHT</span> <span class="o">|</span> <span class="n">wx</span><span class="o">.</span><span class="n">BOTTOM</span><span class="p">,</span> <span class="n">border</span><span class="o">=</span><span class="mi">5</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">innercircle_rb</span><span class="o">.</span><span class="n">SetValue</span><span class="p">(</span><span class="bp">False</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">outercircle_rb</span><span class="o">.</span><span class="n">SetValue</span><span class="p">(</span><span class="bp">False</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">innerbox_rb</span><span class="o">.</span><span class="n">SetValue</span><span class="p">(</span><span class="bp">False</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">outerbox_rb</span><span class="o">.</span><span class="n">SetValue</span><span class="p">(</span><span class="bp">False</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">innersector_rb</span><span class="o">.</span><span class="n">SetValue</span><span class="p">(</span><span class="bp">False</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">outersector_rb</span><span class="o">.</span><span class="n">SetValue</span><span class="p">(</span><span class="bp">False</span><span class="p">)</span>
+        <span class="n">sizer</span><span class="o">.</span><span class="n">Add</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">plotpanel</span><span class="p">,</span> <span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="mi">2</span><span class="p">),</span> <span class="p">(</span><span class="mi">13</span><span class="p">,</span> <span class="mi">13</span><span class="p">),</span>
+                  <span class="n">wx</span><span class="o">.</span><span class="n">EXPAND</span> <span class="o">|</span> <span class="n">wx</span><span class="o">.</span><span class="n">LEFT</span> <span class="o">|</span> <span class="n">wx</span><span class="o">.</span><span class="n">RIGHT</span><span class="p">,</span> <span class="mi">15</span><span class="p">)</span>
+
+        <span class="c1">#-----Buttons------------1</span>
+        <span class="n">id_button</span> <span class="o">=</span> <span class="n">wx</span><span class="o">.</span><span class="n">NewId</span><span class="p">()</span>
+        <span class="n">button_add</span> <span class="o">=</span> <span class="n">wx</span><span class="o">.</span><span class="n">Button</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">id_button</span><span class="p">,</span> <span class="s2">&quot;Add&quot;</span><span class="p">)</span>
+        <span class="n">button_add</span><span class="o">.</span><span class="n">SetToolTipString</span><span class="p">(</span><span class="s2">&quot;Add the mask drawn.&quot;</span><span class="p">)</span>
+        <span class="n">button_add</span><span class="o">.</span><span class="n">Bind</span><span class="p">(</span><span class="n">wx</span><span class="o">.</span><span class="n">EVT_BUTTON</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">_on_add_mask</span><span class="p">,</span> <span class="nb">id</span><span class="o">=</span><span class="n">button_add</span><span class="o">.</span><span class="n">GetId</span><span class="p">())</span>
+        <span class="n">sizer</span><span class="o">.</span><span class="n">Add</span><span class="p">(</span><span class="n">button_add</span><span class="p">,</span> <span class="p">(</span><span class="mi">13</span><span class="p">,</span> <span class="mi">7</span><span class="p">))</span>
+        <span class="n">id_button</span> <span class="o">=</span> <span class="n">wx</span><span class="o">.</span><span class="n">NewId</span><span class="p">()</span>
+        <span class="n">button_erase</span> <span class="o">=</span> <span class="n">wx</span><span class="o">.</span><span class="n">Button</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">id_button</span><span class="p">,</span> <span class="s2">&quot;Erase&quot;</span><span class="p">)</span>
+        <span class="n">button_erase</span><span class="o">.</span><span class="n">SetToolTipString</span><span class="p">(</span><span class="s2">&quot;Erase the mask drawn.&quot;</span><span class="p">)</span>
+        <span class="n">button_erase</span><span class="o">.</span><span class="n">Bind</span><span class="p">(</span><span class="n">wx</span><span class="o">.</span><span class="n">EVT_BUTTON</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">_on_erase_mask</span><span class="p">,</span>
+                          <span class="nb">id</span><span class="o">=</span><span class="n">button_erase</span><span class="o">.</span><span class="n">GetId</span><span class="p">())</span>
+        <span class="n">sizer</span><span class="o">.</span><span class="n">Add</span><span class="p">(</span><span class="n">button_erase</span><span class="p">,</span> <span class="p">(</span><span class="mi">13</span><span class="p">,</span> <span class="mi">8</span><span class="p">))</span>
+        <span class="n">id_button</span> <span class="o">=</span> <span class="n">wx</span><span class="o">.</span><span class="n">NewId</span><span class="p">()</span>
+        <span class="n">button_reset</span> <span class="o">=</span> <span class="n">wx</span><span class="o">.</span><span class="n">Button</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">id_button</span><span class="p">,</span> <span class="s2">&quot;Reset&quot;</span><span class="p">)</span>
+        <span class="n">button_reset</span><span class="o">.</span><span class="n">SetToolTipString</span><span class="p">(</span><span class="s2">&quot;Reset the mask.&quot;</span><span class="p">)</span>
+        <span class="n">button_reset</span><span class="o">.</span><span class="n">Bind</span><span class="p">(</span><span class="n">wx</span><span class="o">.</span><span class="n">EVT_BUTTON</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">_on_reset_mask</span><span class="p">,</span>
+                          <span class="nb">id</span><span class="o">=</span><span class="n">button_reset</span><span class="o">.</span><span class="n">GetId</span><span class="p">())</span>
+        <span class="n">sizer</span><span class="o">.</span><span class="n">Add</span><span class="p">(</span><span class="n">button_reset</span><span class="p">,</span> <span class="p">(</span><span class="mi">13</span><span class="p">,</span> <span class="mi">9</span><span class="p">),</span> <span class="n">flag</span><span class="o">=</span><span class="n">wx</span><span class="o">.</span><span class="n">RIGHT</span> <span class="o">|</span> <span class="n">wx</span><span class="o">.</span><span class="n">BOTTOM</span><span class="p">,</span> <span class="n">border</span><span class="o">=</span><span class="mi">15</span><span class="p">)</span>
+        <span class="n">id_button</span> <span class="o">=</span> <span class="n">wx</span><span class="o">.</span><span class="n">NewId</span><span class="p">()</span>
+        <span class="n">button_reset</span> <span class="o">=</span> <span class="n">wx</span><span class="o">.</span><span class="n">Button</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">id_button</span><span class="p">,</span> <span class="s2">&quot;Clear&quot;</span><span class="p">)</span>
+        <span class="n">button_reset</span><span class="o">.</span><span class="n">SetToolTipString</span><span class="p">(</span><span class="s2">&quot;Clear all mask.&quot;</span><span class="p">)</span>
+        <span class="n">button_reset</span><span class="o">.</span><span class="n">Bind</span><span class="p">(</span><span class="n">wx</span><span class="o">.</span><span class="n">EVT_BUTTON</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">_on_clear_mask</span><span class="p">,</span>
+                          <span class="nb">id</span><span class="o">=</span><span class="n">button_reset</span><span class="o">.</span><span class="n">GetId</span><span class="p">())</span>
+        <span class="n">sizer</span><span class="o">.</span><span class="n">Add</span><span class="p">(</span><span class="n">button_reset</span><span class="p">,</span> <span class="p">(</span><span class="mi">13</span><span class="p">,</span> <span class="mi">10</span><span class="p">),</span> <span class="n">flag</span><span class="o">=</span><span class="n">wx</span><span class="o">.</span><span class="n">RIGHT</span> <span class="o">|</span> <span class="n">wx</span><span class="o">.</span><span class="n">BOTTOM</span><span class="p">,</span> <span class="n">border</span><span class="o">=</span><span class="mi">15</span><span class="p">)</span>
+        <span class="n">sizer</span><span class="o">.</span><span class="n">AddGrowableCol</span><span class="p">(</span><span class="mi">3</span><span class="p">)</span>
+        <span class="n">sizer</span><span class="o">.</span><span class="n">AddGrowableRow</span><span class="p">(</span><span class="mi">2</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">SetSizerAndFit</span><span class="p">(</span><span class="n">sizer</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">Centre</span><span class="p">()</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">Show</span><span class="p">(</span><span class="bp">True</span><span class="p">)</span>
+
+    <span class="k">def</span> <span class="nf">_on_mask</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">event</span><span class="o">=</span><span class="bp">None</span><span class="p">,</span> <span class="n">slicer</span><span class="o">=</span><span class="n">BoxMask</span><span class="p">,</span> <span class="n">inside</span><span class="o">=</span><span class="bp">True</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">            Draw a slicer and use it as mask</span>
+<span class="sd">            :param event: wx event</span>
+<span class="sd">            :param slicer: Slicer class to use</span>
+<span class="sd">            :param inside: whether we mask what&#39;s inside or outside the slicer</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="c1"># get ready for next evt</span>
+        <span class="n">event</span><span class="o">.</span><span class="n">Skip</span><span class="p">()</span>
+        <span class="c1"># from boxMask import BoxMask</span>
+        <span class="k">if</span> <span class="n">event</span> <span class="o">!=</span> <span class="bp">None</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_on_clear_slicer</span><span class="p">(</span><span class="n">event</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">slicer_z</span> <span class="o">+=</span> <span class="mi">1</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">slicer</span> <span class="o">=</span> <span class="n">slicer</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">subplot</span><span class="p">,</span>
+                             <span class="n">zorder</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">slicer_z</span><span class="p">,</span> <span class="n">side</span><span class="o">=</span><span class="n">inside</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">subplot</span><span class="o">.</span><span class="n">set_ylim</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">data</span><span class="o">.</span><span class="n">ymin</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">data</span><span class="o">.</span><span class="n">ymax</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">subplot</span><span class="o">.</span><span class="n">set_xlim</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">data</span><span class="o">.</span><span class="n">xmin</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">data</span><span class="o">.</span><span class="n">xmax</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">update</span><span class="p">()</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">slicer_mask</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">slicer</span><span class="o">.</span><span class="n">update</span><span class="p">()</span>
+
+    <span class="k">def</span> <span class="nf">_on_add_mask</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">event</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Add new mask to old mask</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="bp">self</span><span class="o">.</span><span class="n">slicer</span> <span class="o">==</span> <span class="bp">None</span><span class="p">:</span>
+            <span class="n">data</span> <span class="o">=</span> <span class="n">Data2D</span><span class="p">()</span>
+            <span class="n">data</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">data</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">slicer_mask</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">slicer</span><span class="o">.</span><span class="n">update</span><span class="p">()</span>
+            <span class="n">data</span><span class="o">.</span><span class="n">mask</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">data</span><span class="o">.</span><span class="n">mask</span> <span class="o">&amp;</span> <span class="bp">self</span><span class="o">.</span><span class="n">slicer_mask</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_check_display_mask</span><span class="p">(</span><span class="n">data</span><span class="o">.</span><span class="n">mask</span><span class="p">,</span> <span class="n">event</span><span class="p">)</span>
+
+    <span class="k">def</span> <span class="nf">_check_display_mask</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">mask</span><span class="p">,</span> <span class="n">event</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        check if the mask valid and update the plot</span>
+
+<span class="sd">        :param mask: mask data</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="c1"># # Redraw the current image</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_update_mask</span><span class="p">(</span><span class="n">mask</span><span class="p">)</span>
+
+    <span class="k">def</span> <span class="nf">_on_erase_mask</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">event</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Erase new mask from old mask</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="bp">self</span><span class="o">.</span><span class="n">slicer</span> <span class="o">==</span> <span class="bp">None</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">slicer_mask</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">slicer</span><span class="o">.</span><span class="n">update</span><span class="p">()</span>
+            <span class="n">mask</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">data</span><span class="o">.</span><span class="n">mask</span>
+            <span class="n">mask</span><span class="p">[</span><span class="bp">self</span><span class="o">.</span><span class="n">slicer_mask</span> <span class="o">==</span> <span class="bp">False</span><span class="p">]</span> <span class="o">=</span> <span class="bp">True</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_check_display_mask</span><span class="p">(</span><span class="n">mask</span><span class="p">,</span> <span class="n">event</span><span class="p">)</span>
+
+    <span class="k">def</span> <span class="nf">_on_reset_mask</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">event</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Reset mask to the original mask</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">slicer_z</span> <span class="o">+=</span> <span class="mi">1</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">slicer</span> <span class="o">=</span> <span class="n">BoxMask</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">subplot</span><span class="p">,</span>
+                              <span class="n">zorder</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">slicer_z</span><span class="p">,</span> <span class="n">side</span><span class="o">=</span><span class="bp">True</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">subplot</span><span class="o">.</span><span class="n">set_ylim</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">data</span><span class="o">.</span><span class="n">ymin</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">data</span><span class="o">.</span><span class="n">ymax</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">subplot</span><span class="o">.</span><span class="n">set_xlim</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">data</span><span class="o">.</span><span class="n">xmin</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">data</span><span class="o">.</span><span class="n">xmax</span><span class="p">)</span>
+        <span class="n">mask</span> <span class="o">=</span> <span class="n">copy</span><span class="o">.</span><span class="n">deepcopy</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">default_mask</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">data</span><span class="o">.</span><span class="n">mask</span> <span class="o">=</span> <span class="n">mask</span>
+        <span class="c1"># update mask plot</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_check_display_mask</span><span class="p">(</span><span class="n">mask</span><span class="p">,</span> <span class="n">event</span><span class="p">)</span>
+
+    <span class="k">def</span> <span class="nf">_on_clear_mask</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">event</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Clear mask</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">slicer_z</span> <span class="o">+=</span> <span class="mi">1</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">slicer</span> <span class="o">=</span> <span class="n">BoxMask</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">subplot</span><span class="p">,</span>
+                              <span class="n">zorder</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">slicer_z</span><span class="p">,</span> <span class="n">side</span><span class="o">=</span><span class="bp">True</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">subplot</span><span class="o">.</span><span class="n">set_ylim</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">data</span><span class="o">.</span><span class="n">ymin</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">data</span><span class="o">.</span><span class="n">ymax</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">subplot</span><span class="o">.</span><span class="n">set_xlim</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">data</span><span class="o">.</span><span class="n">xmin</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">data</span><span class="o">.</span><span class="n">xmax</span><span class="p">)</span>
+        <span class="n">mask</span> <span class="o">=</span> <span class="n">numpy</span><span class="o">.</span><span class="n">ones</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">data</span><span class="o">.</span><span class="n">mask</span><span class="p">),</span> <span class="n">dtype</span><span class="o">=</span><span class="nb">bool</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">data</span><span class="o">.</span><span class="n">mask</span> <span class="o">=</span> <span class="n">mask</span>
+        <span class="c1"># update mask plot</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_check_display_mask</span><span class="p">(</span><span class="n">mask</span><span class="p">,</span> <span class="n">event</span><span class="p">)</span>
+
+    <span class="k">def</span> <span class="nf">_on_clear_slicer</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">event</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Clear the slicer on the plot</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="bp">self</span><span class="o">.</span><span class="n">slicer</span> <span class="o">==</span> <span class="bp">None</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">slicer</span><span class="o">.</span><span class="n">clear</span><span class="p">()</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">subplot</span><span class="o">.</span><span class="n">figure</span><span class="o">.</span><span class="n">canvas</span><span class="o">.</span><span class="n">draw</span><span class="p">()</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">slicer</span> <span class="o">=</span> <span class="bp">None</span>
+
+<div class="viewcode-block" id="MaskPanel.update"><a class="viewcode-back" href="../../../../../../dev/api/sas.sasgui.guiframe.local_perspectives.plotting.html#sas.sasgui.guiframe.local_perspectives.plotting.masking.MaskPanel.update">[docs]</a>    <span class="k">def</span> <span class="nf">update</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">draw</span><span class="o">=</span><span class="bp">True</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Respond to changes in the model by recalculating the</span>
+<span class="sd">        profiles and resetting the widgets.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">plotpanel</span><span class="o">.</span><span class="n">draw</span><span class="p">()</span></div>
+
+    <span class="k">def</span> <span class="nf">_set_mask</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">mask</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Set mask</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">data</span><span class="o">.</span><span class="n">mask</span> <span class="o">=</span> <span class="n">mask</span>
+
+<div class="viewcode-block" id="MaskPanel.set_plot_unfocus"><a class="viewcode-back" href="../../../../../../dev/api/sas.sasgui.guiframe.local_perspectives.plotting.html#sas.sasgui.guiframe.local_perspectives.plotting.masking.MaskPanel.set_plot_unfocus">[docs]</a>    <span class="k">def</span> <span class="nf">set_plot_unfocus</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Not implemented</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">pass</span></div>
+
+    <span class="k">def</span> <span class="nf">_update_mask</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">mask</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Respond to changes in masking</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="c1"># the case of liitle numbers of True points</span>
+        <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">mask</span><span class="p">[</span><span class="n">mask</span><span class="p">])</span> <span class="o">&lt;</span> <span class="mi">10</span> <span class="ow">and</span> <span class="bp">self</span><span class="o">.</span><span class="n">data</span> <span class="o">!=</span> <span class="bp">None</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">ShowMessage</span><span class="p">()</span>
+            <span class="n">mask</span> <span class="o">=</span> <span class="n">copy</span><span class="o">.</span><span class="n">deepcopy</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">mask</span><span class="p">)</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">data</span><span class="o">.</span><span class="n">mask</span> <span class="o">=</span> <span class="n">mask</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">mask</span> <span class="o">=</span> <span class="n">mask</span>
+        <span class="c1"># make temperary data to plot</span>
+        <span class="n">temp_mask</span> <span class="o">=</span> <span class="n">numpy</span><span class="o">.</span><span class="n">zeros</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">mask</span><span class="p">))</span>
+        <span class="n">temp_data</span> <span class="o">=</span> <span class="n">copy</span><span class="o">.</span><span class="n">deepcopy</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">data</span><span class="p">)</span>
+        <span class="c1"># temp_data default is None</span>
+        <span class="c1"># This method is to distinguish between masked point and data point = 0.</span>
+        <span class="n">temp_mask</span> <span class="o">=</span> <span class="n">temp_mask</span> <span class="o">/</span> <span class="n">temp_mask</span>
+        <span class="n">temp_mask</span><span class="p">[</span><span class="n">mask</span><span class="p">]</span> <span class="o">=</span> <span class="n">temp_data</span><span class="o">.</span><span class="n">data</span><span class="p">[</span><span class="n">mask</span><span class="p">]</span>
+        <span class="c1"># set temp_data value for self.mask==True, else still None</span>
+        <span class="c1"># temp_mask[mask] = temp_data[mask]</span>
+
+        <span class="c1"># TODO: refactor this horrible logic</span>
+        <span class="n">temp_data</span><span class="o">.</span><span class="n">data</span><span class="p">[</span><span class="n">mask</span> <span class="o">==</span> <span class="bp">False</span><span class="p">]</span> <span class="o">=</span> <span class="n">temp_mask</span><span class="p">[</span><span class="n">mask</span> <span class="o">==</span> <span class="bp">False</span><span class="p">]</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">plotpanel</span><span class="o">.</span><span class="n">clear</span><span class="p">()</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">slicer</span> <span class="o">!=</span> <span class="bp">None</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">slicer</span><span class="o">.</span><span class="n">clear</span><span class="p">()</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">slicer</span> <span class="o">=</span> <span class="bp">None</span>
+        <span class="c1"># Post slicer None event</span>
+        <span class="n">event</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_getEmptySlicerEvent</span><span class="p">()</span>
+        <span class="n">wx</span><span class="o">.</span><span class="n">PostEvent</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">event</span><span class="p">)</span>
+
+        <span class="c1"># #use this method</span>
+        <span class="c1"># set zmax and zmin to plot: Fix it w/ data.</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">plotpanel</span><span class="o">.</span><span class="n">scale</span> <span class="o">==</span> <span class="s1">&#39;log_{10}&#39;</span><span class="p">:</span>
+            <span class="n">zmax</span> <span class="o">=</span> <span class="n">math</span><span class="o">.</span><span class="n">log10</span><span class="p">(</span><span class="nb">max</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">data</span><span class="o">.</span><span class="n">data</span><span class="p">[</span><span class="bp">self</span><span class="o">.</span><span class="n">data</span><span class="o">.</span><span class="n">data</span> <span class="o">&gt;</span> <span class="mi">0</span><span class="p">]))</span>
+            <span class="n">zmin</span> <span class="o">=</span> <span class="n">math</span><span class="o">.</span><span class="n">log10</span><span class="p">(</span><span class="nb">min</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">data</span><span class="o">.</span><span class="n">data</span><span class="p">[</span><span class="bp">self</span><span class="o">.</span><span class="n">data</span><span class="o">.</span><span class="n">data</span> <span class="o">&gt;</span> <span class="mi">0</span><span class="p">]))</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">zmax</span> <span class="o">=</span> <span class="nb">max</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">data</span><span class="o">.</span><span class="n">data</span><span class="p">[</span><span class="bp">self</span><span class="o">.</span><span class="n">data</span><span class="o">.</span><span class="n">data</span> <span class="o">&gt;</span> <span class="mi">0</span><span class="p">])</span>
+            <span class="n">zmin</span> <span class="o">=</span> <span class="nb">min</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">data</span><span class="o">.</span><span class="n">data</span><span class="p">[</span><span class="bp">self</span><span class="o">.</span><span class="n">data</span><span class="o">.</span><span class="n">data</span> <span class="o">&gt;</span> <span class="mi">0</span><span class="p">])</span>
+        <span class="c1"># plot</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">plotpanel</span><span class="o">.</span><span class="n">image</span><span class="p">(</span><span class="n">data</span><span class="o">=</span><span class="n">temp_mask</span><span class="p">,</span>
+                             <span class="n">qx_data</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">data</span><span class="o">.</span><span class="n">qx_data</span><span class="p">,</span>
+                             <span class="n">qy_data</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">data</span><span class="o">.</span><span class="n">qy_data</span><span class="p">,</span>
+                             <span class="n">xmin</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">data</span><span class="o">.</span><span class="n">xmin</span><span class="p">,</span>
+                             <span class="n">xmax</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">data</span><span class="o">.</span><span class="n">xmax</span><span class="p">,</span>
+                             <span class="n">ymin</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">data</span><span class="o">.</span><span class="n">ymin</span><span class="p">,</span>
+                             <span class="n">ymax</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">data</span><span class="o">.</span><span class="n">ymax</span><span class="p">,</span>
+                             <span class="n">zmin</span><span class="o">=</span><span class="n">zmin</span><span class="p">,</span>
+                             <span class="n">zmax</span><span class="o">=</span><span class="n">zmax</span><span class="p">,</span>
+                             <span class="n">cmap</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">cmap</span><span class="p">,</span>
+                             <span class="n">color</span><span class="o">=</span><span class="mi">0</span><span class="p">,</span> <span class="n">symbol</span><span class="o">=</span><span class="mi">0</span><span class="p">,</span> <span class="n">label</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">data</span><span class="o">.</span><span class="n">name</span><span class="p">)</span>
+        <span class="c1"># axis labels</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">plotpanel</span><span class="o">.</span><span class="n">axes</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">set_xlabel</span><span class="p">(</span><span class="s1">&#39;$</span><span class="se">\\</span><span class="s1">rm{Q}_{x}(A^{-1})$&#39;</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">plotpanel</span><span class="o">.</span><span class="n">axes</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">set_ylabel</span><span class="p">(</span><span class="s1">&#39;$</span><span class="se">\\</span><span class="s1">rm{Q}_{y}(A^{-1})$&#39;</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">plotpanel</span><span class="o">.</span><span class="n">render</span><span class="p">()</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">plotpanel</span><span class="o">.</span><span class="n">subplot</span><span class="o">.</span><span class="n">figure</span><span class="o">.</span><span class="n">canvas</span><span class="o">.</span><span class="n">draw_idle</span><span class="p">()</span>
+
+    <span class="k">def</span> <span class="nf">_getEmptySlicerEvent</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        create an empty slicervent</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">innerbox_rb</span><span class="o">.</span><span class="n">SetValue</span><span class="p">(</span><span class="bp">False</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">outerbox_rb</span><span class="o">.</span><span class="n">SetValue</span><span class="p">(</span><span class="bp">False</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">innersector_rb</span><span class="o">.</span><span class="n">SetValue</span><span class="p">(</span><span class="bp">False</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">outersector_rb</span><span class="o">.</span><span class="n">SetValue</span><span class="p">(</span><span class="bp">False</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">innercircle_rb</span><span class="o">.</span><span class="n">SetValue</span><span class="p">(</span><span class="bp">False</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">outercircle_rb</span><span class="o">.</span><span class="n">SetValue</span><span class="p">(</span><span class="bp">False</span><span class="p">)</span>
+        <span class="k">return</span> <span class="n">SlicerEvent</span><span class="p">(</span><span class="nb">type</span><span class="o">=</span><span class="bp">None</span><span class="p">,</span>
+                           <span class="n">params</span><span class="o">=</span><span class="bp">None</span><span class="p">,</span>
+                           <span class="n">obj_class</span><span class="o">=</span><span class="bp">None</span><span class="p">)</span>
+
+    <span class="k">def</span> <span class="nf">_draw_model</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">event</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">         on_close, update the model2d plot</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">pass</span>
+
+<div class="viewcode-block" id="MaskPanel.freeze_axes"><a class="viewcode-back" href="../../../../../../dev/api/sas.sasgui.guiframe.local_perspectives.plotting.html#sas.sasgui.guiframe.local_perspectives.plotting.masking.MaskPanel.freeze_axes">[docs]</a>    <span class="k">def</span> <span class="nf">freeze_axes</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        freeze axes</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">plotpanel</span><span class="o">.</span><span class="n">axes_frozen</span> <span class="o">=</span> <span class="bp">True</span></div>
+
+<div class="viewcode-block" id="MaskPanel.thaw_axes"><a class="viewcode-back" href="../../../../../../dev/api/sas.sasgui.guiframe.local_perspectives.plotting.html#sas.sasgui.guiframe.local_perspectives.plotting.masking.MaskPanel.thaw_axes">[docs]</a>    <span class="k">def</span> <span class="nf">thaw_axes</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        thaw axes</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">plotpanel</span><span class="o">.</span><span class="n">axes_frozen</span> <span class="o">=</span> <span class="bp">False</span></div>
+
+<div class="viewcode-block" id="MaskPanel.onMouseMotion"><a class="viewcode-back" href="../../../../../../dev/api/sas.sasgui.guiframe.local_perspectives.plotting.html#sas.sasgui.guiframe.local_perspectives.plotting.masking.MaskPanel.onMouseMotion">[docs]</a>    <span class="k">def</span> <span class="nf">onMouseMotion</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">event</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        onMotion event</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">pass</span></div>
+
+<div class="viewcode-block" id="MaskPanel.onWheel"><a class="viewcode-back" href="../../../../../../dev/api/sas.sasgui.guiframe.local_perspectives.plotting.html#sas.sasgui.guiframe.local_perspectives.plotting.masking.MaskPanel.onWheel">[docs]</a>    <span class="k">def</span> <span class="nf">onWheel</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">event</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        on wheel event</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">pass</span></div>
+
+<div class="viewcode-block" id="MaskPanel.OnClose"><a class="viewcode-back" href="../../../../../../dev/api/sas.sasgui.guiframe.local_perspectives.plotting.html#sas.sasgui.guiframe.local_perspectives.plotting.masking.MaskPanel.OnClose">[docs]</a>    <span class="k">def</span> <span class="nf">OnClose</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">event</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">            Processing close event</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">try</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">parent</span><span class="o">.</span><span class="n">_draw_masked_model</span><span class="p">(</span><span class="n">event</span><span class="p">)</span>
+        <span class="k">except</span><span class="p">:</span>
+            <span class="c1"># when called by data panel</span>
+            <span class="n">event</span><span class="o">.</span><span class="n">Skip</span><span class="p">()</span>
+            <span class="k">pass</span></div></div>
+
+<div class="viewcode-block" id="FloatPanel"><a class="viewcode-back" href="../../../../../../dev/api/sas.sasgui.guiframe.local_perspectives.plotting.html#sas.sasgui.guiframe.local_perspectives.plotting.masking.FloatPanel">[docs]</a><span class="k">class</span> <span class="nc">FloatPanel</span><span class="p">(</span><span class="n">wx</span><span class="o">.</span><span class="n">Dialog</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Provides the Mask Editor GUI.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="c1"># # Internal nickname for the window, used by the AUI manager</span>
+    <span class="n">window_name</span> <span class="o">=</span> <span class="s2">&quot;Plot&quot;</span>
+    <span class="c1"># # Name to appear on the window title bar</span>
+    <span class="n">window_caption</span> <span class="o">=</span> <span class="s2">&quot;Plot&quot;</span>
+    <span class="c1"># # Flag to tell the AUI manager to put this panel in the center pane</span>
+    <span class="n">CENTER_PANE</span> <span class="o">=</span> <span class="bp">False</span>
+    <span class="n">ID</span> <span class="o">=</span> <span class="n">wx</span><span class="o">.</span><span class="n">NewId</span><span class="p">()</span>
+    <span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">parent</span><span class="o">=</span><span class="bp">None</span><span class="p">,</span> <span class="n">base</span><span class="o">=</span><span class="bp">None</span><span class="p">,</span>
+                 <span class="n">data</span><span class="o">=</span><span class="bp">None</span><span class="p">,</span> <span class="n">dimension</span><span class="o">=</span><span class="mi">1</span><span class="p">,</span> <span class="nb">id</span><span class="o">=</span><span class="n">ID</span><span class="p">,</span> <span class="o">*</span><span class="n">args</span><span class="p">,</span> <span class="o">**</span><span class="n">kwds</span><span class="p">):</span>
+        <span class="n">kwds</span><span class="p">[</span><span class="s2">&quot;style&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">wx</span><span class="o">.</span><span class="n">DEFAULT_DIALOG_STYLE</span>
+        <span class="n">kwds</span><span class="p">[</span><span class="s2">&quot;size&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">wx</span><span class="o">.</span><span class="n">Size</span><span class="p">(</span><span class="n">PANEL_SIZE</span> <span class="o">*</span> <span class="mf">1.5</span><span class="p">,</span> <span class="n">PANEL_SIZE</span> <span class="o">*</span> <span class="mf">1.5</span><span class="p">)</span>
+        <span class="n">wx</span><span class="o">.</span><span class="n">Dialog</span><span class="o">.</span><span class="n">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">parent</span><span class="p">,</span> <span class="nb">id</span><span class="o">=</span><span class="nb">id</span><span class="p">,</span> <span class="o">*</span><span class="n">args</span><span class="p">,</span> <span class="o">**</span><span class="n">kwds</span><span class="p">)</span>
+
+        <span class="k">if</span> <span class="n">data</span> <span class="o">!=</span> <span class="bp">None</span><span class="p">:</span>
+            <span class="c1"># Font size</span>
+            <span class="n">kwds</span> <span class="o">=</span> <span class="p">[]</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">SetWindowVariant</span><span class="p">(</span><span class="n">variant</span><span class="o">=</span><span class="n">FONT_VARIANT</span><span class="p">)</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">SetTitle</span><span class="p">(</span><span class="s2">&quot;Plot &quot;</span> <span class="o">+</span> <span class="n">data</span><span class="o">.</span><span class="n">name</span><span class="p">)</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">parent</span> <span class="o">=</span> <span class="n">base</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">data</span> <span class="o">=</span> <span class="n">data</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">str</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">data</span><span class="o">.</span><span class="n">__str__</span><span class="p">()</span>
+            <span class="c1"># # when 2 data have the same id override the 1 st plotted</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">name</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">data</span><span class="o">.</span><span class="n">name</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">dimension</span> <span class="o">=</span> <span class="n">dimension</span>
+            <span class="c1"># Panel for 2D plot</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">plotpanel</span> <span class="o">=</span> <span class="n">Maskplotpanel</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="o">-</span><span class="mi">1</span><span class="p">,</span> <span class="n">dimension</span><span class="p">,</span>
+                                           <span class="n">style</span><span class="o">=</span><span class="n">wx</span><span class="o">.</span><span class="n">TRANSPARENT_WINDOW</span><span class="p">)</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">plotpanel</span><span class="o">.</span><span class="n">_SetInitialSize</span><span class="p">()</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">plotpanel</span><span class="o">.</span><span class="n">prevXtrans</span> <span class="o">=</span> <span class="s2">&quot;x&quot;</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">plotpanel</span><span class="o">.</span><span class="n">prevYtrans</span> <span class="o">=</span> <span class="s2">&quot;y&quot;</span>
+
+            <span class="bp">self</span><span class="o">.</span><span class="n">cmap</span> <span class="o">=</span> <span class="n">DEFAULT_CMAP</span>
+            <span class="c1"># # Create Artist and bind it</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">subplot</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">plotpanel</span><span class="o">.</span><span class="n">subplot</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_setup_layout</span><span class="p">()</span>
+            <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">dimension</span> <span class="o">==</span> <span class="mi">1</span><span class="p">:</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">newplot</span> <span class="o">=</span> <span class="n">Data1D</span><span class="p">(</span><span class="n">x</span><span class="o">=</span><span class="n">data</span><span class="o">.</span><span class="n">x</span><span class="p">,</span> <span class="n">y</span><span class="o">=</span><span class="n">data</span><span class="o">.</span><span class="n">y</span><span class="p">,</span>
+                                      <span class="n">dx</span><span class="o">=</span><span class="n">data</span><span class="o">.</span><span class="n">dx</span><span class="p">,</span> <span class="n">dy</span><span class="o">=</span><span class="n">data</span><span class="o">.</span><span class="n">dy</span><span class="p">)</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">newplot</span><span class="o">.</span><span class="n">name</span> <span class="o">=</span> <span class="n">data</span><span class="o">.</span><span class="n">name</span>
+            <span class="k">else</span><span class="p">:</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">newplot</span> <span class="o">=</span> <span class="n">Data2D</span><span class="p">(</span><span class="n">image</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">data</span><span class="o">.</span><span class="n">data</span><span class="p">)</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">newplot</span><span class="o">.</span><span class="n">setValues</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">data</span><span class="p">)</span>
+                    <span class="c1"># Compute and get the image plot</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">get_plot</span><span class="p">()</span>
+            <span class="c1"># self.plotpanel.add_image(self.newplot)</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">Centre</span><span class="p">()</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">Layout</span><span class="p">()</span>
+
+<div class="viewcode-block" id="FloatPanel.get_plot"><a class="viewcode-back" href="../../../../../../dev/api/sas.sasgui.guiframe.local_perspectives.plotting.html#sas.sasgui.guiframe.local_perspectives.plotting.masking.FloatPanel.get_plot">[docs]</a>    <span class="k">def</span> <span class="nf">get_plot</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Get Plot panel</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">cal_plot</span> <span class="o">=</span> <span class="n">CalcPlot</span><span class="p">(</span><span class="n">panel</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">plotpanel</span><span class="p">,</span>
+                            <span class="n">image</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">newplot</span><span class="p">,</span>
+                            <span class="n">completefn</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">complete</span><span class="p">)</span>
+        <span class="n">cal_plot</span><span class="o">.</span><span class="n">queue</span><span class="p">()</span></div>
+
+<div class="viewcode-block" id="FloatPanel.complete"><a class="viewcode-back" href="../../../../../../dev/api/sas.sasgui.guiframe.local_perspectives.plotting.html#sas.sasgui.guiframe.local_perspectives.plotting.masking.FloatPanel.complete">[docs]</a>    <span class="k">def</span> <span class="nf">complete</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">panel</span><span class="p">,</span> <span class="n">image</span><span class="p">,</span> <span class="n">elapsed</span><span class="o">=</span><span class="bp">None</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Plot image</span>
+
+<span class="sd">        :param image: newplot [plotpanel]</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">wx</span><span class="o">.</span><span class="n">CallAfter</span><span class="p">(</span><span class="n">panel</span><span class="o">.</span><span class="n">add_image</span><span class="p">,</span> <span class="n">image</span><span class="p">)</span></div>
+
+    <span class="k">def</span> <span class="nf">_setup_layout</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Set up the layout</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="c1">#  panel</span>
+        <span class="n">sizer</span> <span class="o">=</span> <span class="n">wx</span><span class="o">.</span><span class="n">GridBagSizer</span><span class="p">(</span><span class="mi">10</span><span class="p">,</span> <span class="mi">10</span><span class="p">)</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">dimension</span> <span class="o">==</span> <span class="mi">3</span><span class="p">:</span>
+            <span class="n">note</span> <span class="o">=</span> <span class="s2">&quot;Note: I am very SLOW.     Please be PATIENT...</span><span class="se">\n</span><span class="s2">&quot;</span>
+            <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">data</span><span class="o">.</span><span class="n">data</span><span class="p">)</span> <span class="o">&gt;</span> <span class="mi">3600</span><span class="p">:</span>
+                <span class="n">note</span> <span class="o">+=</span> <span class="s2">&quot;Rotation disabled for pixels &gt; 60x60.&quot;</span>
+            <span class="n">note_txt</span> <span class="o">=</span> <span class="n">wx</span><span class="o">.</span><span class="n">StaticText</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="o">-</span><span class="mi">1</span><span class="p">,</span> <span class="n">note</span><span class="p">)</span>
+            <span class="n">note_txt</span><span class="o">.</span><span class="n">SetForegroundColour</span><span class="p">(</span><span class="n">wx</span><span class="o">.</span><span class="n">RED</span><span class="p">)</span>
+            <span class="n">sizer</span><span class="o">.</span><span class="n">Add</span><span class="p">(</span><span class="n">note_txt</span><span class="p">,</span> <span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="mi">2</span><span class="p">),</span> <span class="n">flag</span><span class="o">=</span><span class="n">wx</span><span class="o">.</span><span class="n">RIGHT</span> <span class="o">|</span> <span class="n">wx</span><span class="o">.</span><span class="n">TOP</span><span class="p">,</span> <span class="n">border</span><span class="o">=</span><span class="mi">5</span><span class="p">)</span>
+
+        <span class="n">sizer</span><span class="o">.</span><span class="n">Add</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">plotpanel</span><span class="p">,</span> <span class="p">(</span><span class="mi">1</span><span class="p">,</span> <span class="mi">0</span><span class="p">),</span> <span class="p">(</span><span class="mi">9</span><span class="p">,</span> <span class="mi">9</span><span class="p">),</span>
+                  <span class="n">wx</span><span class="o">.</span><span class="n">EXPAND</span> <span class="o">|</span> <span class="n">wx</span><span class="o">.</span><span class="n">ALL</span><span class="p">,</span> <span class="mi">15</span><span class="p">)</span>
+
+        <span class="n">sizer</span><span class="o">.</span><span class="n">AddGrowableCol</span><span class="p">(</span><span class="mi">3</span><span class="p">)</span>
+        <span class="n">sizer</span><span class="o">.</span><span class="n">AddGrowableRow</span><span class="p">(</span><span class="mi">2</span><span class="p">)</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">SetSizerAndFit</span><span class="p">(</span><span class="n">sizer</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">Centre</span><span class="p">()</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">Show</span><span class="p">(</span><span class="bp">True</span><span class="p">)</span>
+
+<div class="viewcode-block" id="FloatPanel.set_plot_unfocus"><a class="viewcode-back" href="../../../../../../dev/api/sas.sasgui.guiframe.local_perspectives.plotting.html#sas.sasgui.guiframe.local_perspectives.plotting.masking.FloatPanel.set_plot_unfocus">[docs]</a>    <span class="k">def</span> <span class="nf">set_plot_unfocus</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Not implemented</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">pass</span></div>
+
+    <span class="k">def</span> <span class="nf">_draw_model</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">event</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">         on_close, update the model2d plot</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">pass</span>
+
+<div class="viewcode-block" id="FloatPanel.freeze_axes"><a class="viewcode-back" href="../../../../../../dev/api/sas.sasgui.guiframe.local_perspectives.plotting.html#sas.sasgui.guiframe.local_perspectives.plotting.masking.FloatPanel.freeze_axes">[docs]</a>    <span class="k">def</span> <span class="nf">freeze_axes</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        freeze axes</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">plotpanel</span><span class="o">.</span><span class="n">axes_frozen</span> <span class="o">=</span> <span class="bp">True</span></div>
+
+<div class="viewcode-block" id="FloatPanel.thaw_axes"><a class="viewcode-back" href="../../../../../../dev/api/sas.sasgui.guiframe.local_perspectives.plotting.html#sas.sasgui.guiframe.local_perspectives.plotting.masking.FloatPanel.thaw_axes">[docs]</a>    <span class="k">def</span> <span class="nf">thaw_axes</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        thaw axes</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">plotpanel</span><span class="o">.</span><span class="n">axes_frozen</span> <span class="o">=</span> <span class="bp">False</span></div>
+
+<div class="viewcode-block" id="FloatPanel.OnClose"><a class="viewcode-back" href="../../../../../../dev/api/sas.sasgui.guiframe.local_perspectives.plotting.html#sas.sasgui.guiframe.local_perspectives.plotting.masking.FloatPanel.OnClose">[docs]</a>    <span class="k">def</span> <span class="nf">OnClose</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">event</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">try</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">plotpanel</span><span class="o">.</span><span class="n">subplot</span><span class="o">.</span><span class="n">figure</span><span class="o">.</span><span class="n">clf</span><span class="p">()</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">plotpanel</span><span class="o">.</span><span class="n">Close</span><span class="p">()</span>
+        <span class="k">except</span><span class="p">:</span>
+            <span class="c1"># when called by data panel</span>
+            <span class="n">event</span><span class="o">.</span><span class="n">Skip</span><span class="p">()</span>
+            <span class="k">pass</span></div></div>
+
+<div class="viewcode-block" id="Maskplotpanel"><a class="viewcode-back" href="../../../../../../dev/api/sas.sasgui.guiframe.local_perspectives.plotting.html#sas.sasgui.guiframe.local_perspectives.plotting.masking.Maskplotpanel">[docs]</a><span class="k">class</span> <span class="nc">Maskplotpanel</span><span class="p">(</span><span class="n">PlotPanel</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    PlotPanel for Quick plot and masking plot</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">parent</span><span class="p">,</span> <span class="nb">id</span><span class="o">=-</span><span class="mi">1</span><span class="p">,</span> <span class="n">dimension</span><span class="o">=</span><span class="mi">2</span><span class="p">,</span> <span class="n">color</span><span class="o">=</span><span class="bp">None</span><span class="p">,</span> <span class="n">dpi</span><span class="o">=</span><span class="bp">None</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">PlotPanel</span><span class="o">.</span><span class="n">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">parent</span><span class="p">,</span> <span class="nb">id</span><span class="o">=</span><span class="nb">id</span><span class="p">,</span> <span class="n">color</span><span class="o">=</span><span class="n">color</span><span class="p">,</span> <span class="n">dpi</span><span class="o">=</span><span class="n">dpi</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">)</span>
+
+        <span class="c1"># Keep track of the parent Frame</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">parent</span> <span class="o">=</span> <span class="n">parent</span>
+        <span class="c1"># Internal list of plottable names (because graph</span>
+        <span class="c1"># doesn&#39;t have a dictionary of handles for the plottables)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">dimension</span> <span class="o">=</span> <span class="n">dimension</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">plots</span> <span class="o">=</span> <span class="p">{}</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">graph</span> <span class="o">=</span> <span class="n">Graph</span><span class="p">()</span>
+        <span class="c1"># add axis labels</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">graph</span><span class="o">.</span><span class="n">xaxis</span><span class="p">(</span><span class="s1">&#39;</span><span class="se">\\</span><span class="s1">rm{x} &#39;</span><span class="p">,</span> <span class="s1">&#39;&#39;</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">graph</span><span class="o">.</span><span class="n">yaxis</span><span class="p">(</span><span class="s1">&#39;</span><span class="se">\\</span><span class="s1">rm{y} &#39;</span><span class="p">,</span> <span class="s1">&#39;&#39;</span><span class="p">)</span>
+
+<div class="viewcode-block" id="Maskplotpanel.add_toolbar"><a class="viewcode-back" href="../../../../../../dev/api/sas.sasgui.guiframe.local_perspectives.plotting.html#sas.sasgui.guiframe.local_perspectives.plotting.masking.Maskplotpanel.add_toolbar">[docs]</a>    <span class="k">def</span> <span class="nf">add_toolbar</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Add toolbar</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="c1"># Not implemented</span>
+        <span class="k">pass</span></div>
+
+<div class="viewcode-block" id="Maskplotpanel.on_set_focus"><a class="viewcode-back" href="../../../../../../dev/api/sas.sasgui.guiframe.local_perspectives.plotting.html#sas.sasgui.guiframe.local_perspectives.plotting.masking.Maskplotpanel.on_set_focus">[docs]</a>    <span class="k">def</span> <span class="nf">on_set_focus</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">event</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        send to the parenet the current panel on focus</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">dimension</span> <span class="o">==</span> <span class="mi">3</span><span class="p">:</span>
+            <span class="k">pass</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">draw</span><span class="p">()</span></div>
+
+<div class="viewcode-block" id="Maskplotpanel.add_image"><a class="viewcode-back" href="../../../../../../dev/api/sas.sasgui.guiframe.local_perspectives.plotting.html#sas.sasgui.guiframe.local_perspectives.plotting.masking.Maskplotpanel.add_image">[docs]</a>    <span class="k">def</span> <span class="nf">add_image</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">plot</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Add Image</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">plots</span><span class="p">[</span><span class="n">plot</span><span class="o">.</span><span class="n">name</span><span class="p">]</span> <span class="o">=</span> <span class="n">plot</span>
+        <span class="c1"># init graph</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">graph</span> <span class="o">=</span> <span class="n">Graph</span><span class="p">()</span>
+        <span class="c1"># add plot</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">graph</span><span class="o">.</span><span class="n">add</span><span class="p">(</span><span class="n">plot</span><span class="p">)</span>
+        <span class="c1"># add axes</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">dimension</span> <span class="o">==</span> <span class="mi">1</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">xaxis_label</span> <span class="o">=</span> <span class="s1">&#39;</span><span class="se">\\</span><span class="s1">rm{x} &#39;</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">xaxis_unit</span> <span class="o">=</span> <span class="s1">&#39;&#39;</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">yaxis_label</span> <span class="o">=</span> <span class="s1">&#39;</span><span class="se">\\</span><span class="s1">rm{y} &#39;</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">yaxis_unit</span> <span class="o">=</span> <span class="s1">&#39;&#39;</span>
+        <span class="c1"># draw</span>
+        <span class="c1"># message</span>
+        <span class="n">status_type</span> <span class="o">=</span> <span class="s1">&#39;progress&#39;</span>
+        <span class="n">msg</span> <span class="o">=</span> <span class="s1">&#39;Plotting...&#39;</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_status_info</span><span class="p">(</span><span class="n">msg</span><span class="p">,</span> <span class="n">status_type</span><span class="p">)</span>
+        <span class="n">status_type</span> <span class="o">=</span> <span class="s1">&#39;stop&#39;</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">graph</span><span class="o">.</span><span class="n">render</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">subplot</span><span class="o">.</span><span class="n">figure</span><span class="o">.</span><span class="n">canvas</span><span class="o">.</span><span class="n">resizing</span> <span class="o">=</span> <span class="bp">False</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">dimension</span> <span class="o">&lt;</span> <span class="mi">3</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">graph</span><span class="o">.</span><span class="n">render</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">subplot</span><span class="o">.</span><span class="n">figure</span><span class="o">.</span><span class="n">canvas</span><span class="o">.</span><span class="n">draw</span><span class="p">()</span>
+        <span class="k">elif</span> <span class="n">FONT_VARIANT</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">subplot</span><span class="o">.</span><span class="n">figure</span><span class="o">.</span><span class="n">canvas</span><span class="o">.</span><span class="n">draw</span><span class="p">()</span>
+        <span class="n">msg</span> <span class="o">=</span> <span class="s1">&#39;Plotting Completed.&#39;</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_status_info</span><span class="p">(</span><span class="n">msg</span><span class="p">,</span> <span class="n">status_type</span><span class="p">)</span></div>
+
+<div class="viewcode-block" id="Maskplotpanel.onMouseMotion"><a class="viewcode-back" href="../../../../../../dev/api/sas.sasgui.guiframe.local_perspectives.plotting.html#sas.sasgui.guiframe.local_perspectives.plotting.masking.Maskplotpanel.onMouseMotion">[docs]</a>    <span class="k">def</span> <span class="nf">onMouseMotion</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">event</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Disable dragging 2D image</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">pass</span></div>
+
+<div class="viewcode-block" id="Maskplotpanel.onWheel"><a class="viewcode-back" href="../../../../../../dev/api/sas.sasgui.guiframe.local_perspectives.plotting.html#sas.sasgui.guiframe.local_perspectives.plotting.masking.Maskplotpanel.onWheel">[docs]</a>    <span class="k">def</span> <span class="nf">onWheel</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">event</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">pass</span></div>
+
+<div class="viewcode-block" id="Maskplotpanel.onLeftDown"><a class="viewcode-back" href="../../../../../../dev/api/sas.sasgui.guiframe.local_perspectives.plotting.html#sas.sasgui.guiframe.local_perspectives.plotting.masking.Maskplotpanel.onLeftDown">[docs]</a>    <span class="k">def</span> <span class="nf">onLeftDown</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">event</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Disables LeftDown</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">pass</span></div>
+
+<div class="viewcode-block" id="Maskplotpanel.onPick"><a class="viewcode-back" href="../../../../../../dev/api/sas.sasgui.guiframe.local_perspectives.plotting.html#sas.sasgui.guiframe.local_perspectives.plotting.masking.Maskplotpanel.onPick">[docs]</a>    <span class="k">def</span> <span class="nf">onPick</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">event</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Disables OnPick</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">pass</span></div>
+
+<div class="viewcode-block" id="Maskplotpanel.draw"><a class="viewcode-back" href="../../../../../../dev/api/sas.sasgui.guiframe.local_perspectives.plotting.html#sas.sasgui.guiframe.local_perspectives.plotting.masking.Maskplotpanel.draw">[docs]</a>    <span class="k">def</span> <span class="nf">draw</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Draw</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="c1"># message</span>
+        <span class="n">status_type</span> <span class="o">=</span> <span class="s1">&#39;progress&#39;</span>
+        <span class="n">msg</span> <span class="o">=</span> <span class="s1">&#39;Plotting...&#39;</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_status_info</span><span class="p">(</span><span class="n">msg</span><span class="p">,</span> <span class="n">status_type</span><span class="p">)</span>
+        <span class="n">status_type</span> <span class="o">=</span> <span class="s1">&#39;stop&#39;</span>
+
+        <span class="k">if</span> <span class="ow">not</span> <span class="bp">self</span><span class="o">.</span><span class="n">dimension</span> <span class="o">==</span> <span class="mi">3</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">subplot</span><span class="o">.</span><span class="n">figure</span><span class="o">.</span><span class="n">canvas</span><span class="o">.</span><span class="n">draw_idle</span><span class="p">()</span>
+
+        <span class="n">msg</span> <span class="o">=</span> <span class="s1">&#39;Plotting Completed.&#39;</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_status_info</span><span class="p">(</span><span class="n">msg</span><span class="p">,</span> <span class="n">status_type</span><span class="p">)</span></div>
+
+<div class="viewcode-block" id="Maskplotpanel.onContextMenu"><a class="viewcode-back" href="../../../../../../dev/api/sas.sasgui.guiframe.local_perspectives.plotting.html#sas.sasgui.guiframe.local_perspectives.plotting.masking.Maskplotpanel.onContextMenu">[docs]</a>    <span class="k">def</span> <span class="nf">onContextMenu</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">event</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Default context menu for a plot panel</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="c1"># Selective Slicer plot popup menu</span>
+        <span class="n">slicerpop</span> <span class="o">=</span> <span class="n">wx</span><span class="o">.</span><span class="n">Menu</span><span class="p">()</span>
+
+        <span class="nb">id</span> <span class="o">=</span> <span class="n">wx</span><span class="o">.</span><span class="n">NewId</span><span class="p">()</span>
+        <span class="n">slicerpop</span><span class="o">.</span><span class="n">Append</span><span class="p">(</span><span class="nb">id</span><span class="p">,</span> <span class="s1">&#39;&amp;Print Image&#39;</span><span class="p">,</span> <span class="s1">&#39;Print image&#39;</span><span class="p">)</span>
+        <span class="n">wx</span><span class="o">.</span><span class="n">EVT_MENU</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="nb">id</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">onPrint</span><span class="p">)</span>
+
+        <span class="nb">id</span> <span class="o">=</span> <span class="n">wx</span><span class="o">.</span><span class="n">NewId</span><span class="p">()</span>
+        <span class="n">slicerpop</span><span class="o">.</span><span class="n">Append</span><span class="p">(</span><span class="nb">id</span><span class="p">,</span> <span class="s1">&#39;&amp;Copy to Clipboard&#39;</span><span class="p">,</span> <span class="s1">&#39;Copy to the clipboard&#39;</span><span class="p">)</span>
+        <span class="n">wx</span><span class="o">.</span><span class="n">EVT_MENU</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="nb">id</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">OnCopyFigureMenu</span><span class="p">)</span>
+
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">dimension</span> <span class="o">==</span> <span class="mi">1</span><span class="p">:</span>
+            <span class="nb">id</span> <span class="o">=</span> <span class="n">wx</span><span class="o">.</span><span class="n">NewId</span><span class="p">()</span>
+            <span class="n">slicerpop</span><span class="o">.</span><span class="n">Append</span><span class="p">(</span><span class="nb">id</span><span class="p">,</span> <span class="s1">&#39;&amp;Change Scale&#39;</span><span class="p">)</span>
+            <span class="n">wx</span><span class="o">.</span><span class="n">EVT_MENU</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="nb">id</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">_onProperties</span><span class="p">)</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">slicerpop</span><span class="o">.</span><span class="n">AppendSeparator</span><span class="p">()</span>
+            <span class="n">id_cm</span> <span class="o">=</span> <span class="n">wx</span><span class="o">.</span><span class="n">NewId</span><span class="p">()</span>
+            <span class="n">slicerpop</span><span class="o">.</span><span class="n">Append</span><span class="p">(</span><span class="n">id_cm</span><span class="p">,</span> <span class="s1">&#39;&amp;Toggle Linear/Log scale&#39;</span><span class="p">)</span>
+            <span class="n">wx</span><span class="o">.</span><span class="n">EVT_MENU</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">id_cm</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">_onToggleScale</span><span class="p">)</span>
+
+        <span class="n">pos</span> <span class="o">=</span> <span class="n">event</span><span class="o">.</span><span class="n">GetPosition</span><span class="p">()</span>
+        <span class="n">pos</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">ScreenToClient</span><span class="p">(</span><span class="n">pos</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">PopupMenu</span><span class="p">(</span><span class="n">slicerpop</span><span class="p">,</span> <span class="n">pos</span><span class="p">)</span></div>
+
+    <span class="k">def</span> <span class="nf">_status_info</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">msg</span><span class="o">=</span><span class="s1">&#39;&#39;</span><span class="p">,</span> <span class="nb">type</span><span class="o">=</span><span class="s2">&quot;update&quot;</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Status msg</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">parent</span><span class="o">.</span><span class="n">parent</span><span class="o">.</span><span class="n">parent</span> <span class="o">!=</span> <span class="bp">None</span><span class="p">:</span>
+            <span class="n">wx</span><span class="o">.</span><span class="n">PostEvent</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">parent</span><span class="o">.</span><span class="n">parent</span><span class="o">.</span><span class="n">parent</span><span class="p">,</span>
+                         <span class="n">StatusEvent</span><span class="p">(</span><span class="n">status</span><span class="o">=</span><span class="n">msg</span><span class="p">,</span> <span class="nb">type</span><span class="o">=</span><span class="nb">type</span><span class="p">))</span></div>
+
+<div class="viewcode-block" id="ViewerFrame"><a class="viewcode-back" href="../../../../../../dev/api/sas.sasgui.guiframe.local_perspectives.plotting.html#sas.sasgui.guiframe.local_perspectives.plotting.masking.ViewerFrame">[docs]</a><span class="k">class</span> <span class="nc">ViewerFrame</span><span class="p">(</span><span class="n">wx</span><span class="o">.</span><span class="n">Frame</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Add comment</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">parent</span><span class="p">,</span> <span class="nb">id</span><span class="p">,</span> <span class="n">title</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        comment</span>
+<span class="sd">        :param parent: parent panel/container</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="c1"># Initialize the Frame object</span>
+        <span class="n">wx</span><span class="o">.</span><span class="n">Frame</span><span class="o">.</span><span class="n">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">parent</span><span class="p">,</span> <span class="nb">id</span><span class="p">,</span> <span class="n">title</span><span class="p">,</span>
+                          <span class="n">wx</span><span class="o">.</span><span class="n">DefaultPosition</span><span class="p">,</span> <span class="n">wx</span><span class="o">.</span><span class="n">Size</span><span class="p">(</span><span class="mi">950</span><span class="p">,</span> <span class="mi">850</span><span class="p">))</span>
+        <span class="c1"># Panel for 1D plot</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">plotpanel</span> <span class="o">=</span> <span class="n">Maskplotpanel</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="o">-</span><span class="mi">1</span><span class="p">,</span> <span class="n">style</span><span class="o">=</span><span class="n">wx</span><span class="o">.</span><span class="n">RAISED_BORDER</span><span class="p">)</span></div>
+
+<div class="viewcode-block" id="ViewApp"><a class="viewcode-back" href="../../../../../../dev/api/sas.sasgui.guiframe.local_perspectives.plotting.html#sas.sasgui.guiframe.local_perspectives.plotting.masking.ViewApp">[docs]</a><span class="k">class</span> <span class="nc">ViewApp</span><span class="p">(</span><span class="n">wx</span><span class="o">.</span><span class="n">App</span><span class="p">):</span>
+<div class="viewcode-block" id="ViewApp.OnInit"><a class="viewcode-back" href="../../../../../../dev/api/sas.sasgui.guiframe.local_perspectives.plotting.html#sas.sasgui.guiframe.local_perspectives.plotting.masking.ViewApp.OnInit">[docs]</a>    <span class="k">def</span> <span class="nf">OnInit</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="n">frame</span> <span class="o">=</span> <span class="n">ViewerFrame</span><span class="p">(</span><span class="bp">None</span><span class="p">,</span> <span class="o">-</span><span class="mi">1</span><span class="p">,</span> <span class="s1">&#39;testView&#39;</span><span class="p">)</span>
+        <span class="n">frame</span><span class="o">.</span><span class="n">Show</span><span class="p">(</span><span class="bp">True</span><span class="p">)</span>
+        <span class="c1"># self.SetTopWindow(frame)</span>
+
+        <span class="k">return</span> <span class="bp">True</span></div></div>
+
+<span class="k">if</span> <span class="n">__name__</span> <span class="o">==</span> <span class="s2">&quot;__main__&quot;</span><span class="p">:</span>
+    <span class="n">app</span> <span class="o">=</span> <span class="n">ViewApp</span><span class="p">(</span><span class="mi">0</span><span class="p">)</span>
+    <span class="n">app</span><span class="o">.</span><span class="n">MainLoop</span><span class="p">()</span>
+</pre></div>
+
+          </div>
+        </div>
+      </div>
+      <div class="sphinxsidebar" role="navigation" aria-label="main navigation">
+        <div class="sphinxsidebarwrapper">
+<div id="searchbox" style="display: none" role="search">
+  <h3>Quick search</h3>
+    <form class="search" action="../../../../../../search.html" method="get">
+      <input type="text" name="q" />
+      <input type="submit" value="Go" />
+      <input type="hidden" name="check_keywords" value="yes" />
+      <input type="hidden" name="area" value="default" />
+    </form>
+</div>
+<script type="text/javascript">$('#searchbox').show(0);</script>
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="related" role="navigation" aria-label="related navigation">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="../../../../../../genindex.html" title="General Index"
+             >index</a></li>
+        <li class="right" >
+          <a href="../../../../../../py-modindex.html" title="Python Module Index"
+             >modules</a> |</li>
+        <li class="nav-item nav-item-0"><a href="../../../../../../index.html">SasView 4.1.2 documentation</a> &raquo;</li>
+          <li class="nav-item nav-item-1"><a href="../../../../../index.html" >Module code</a> &raquo;</li>
+          <li class="nav-item nav-item-2"><a href="../../../guiframe.html" >sas.sasgui.guiframe</a> &raquo;</li> 
+      </ul>
+    </div>
+    <div class="footer" role="contentinfo">
+        &copy; Copyright 2017, The SasView Project.
+      Created using <a href="http://sphinx-doc.org/">Sphinx</a> 1.4.1.
+    </div>
+  </body>
+</html>

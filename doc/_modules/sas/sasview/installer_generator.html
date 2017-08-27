@@ -1,0 +1,460 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+  "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+    
+    <title>sas.sasview.installer_generator &mdash; SasView 4.1.2 documentation</title>
+    
+    <link rel="stylesheet" href="../../../_static/classic.css" type="text/css" />
+    <link rel="stylesheet" href="../../../_static/pygments.css" type="text/css" />
+    
+    <script type="text/javascript">
+      var DOCUMENTATION_OPTIONS = {
+        URL_ROOT:    '../../../',
+        VERSION:     '4.1.2',
+        COLLAPSE_INDEX: false,
+        FILE_SUFFIX: '.html',
+        HAS_SOURCE:  true
+      };
+    </script>
+    <script type="text/javascript" src="../../../_static/jquery.js"></script>
+    <script type="text/javascript" src="../../../_static/underscore.js"></script>
+    <script type="text/javascript" src="../../../_static/doctools.js"></script>
+    <script type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.1/MathJax.js?config=TeX-MML-AM_CHTML"></script>
+    <link rel="top" title="SasView 4.1.2 documentation" href="../../../index.html" />
+    <link rel="up" title="Module code" href="../../index.html" /> 
+  </head>
+  <body role="document">
+    <div class="related" role="navigation" aria-label="related navigation">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="../../../genindex.html" title="General Index"
+             accesskey="I">index</a></li>
+        <li class="right" >
+          <a href="../../../py-modindex.html" title="Python Module Index"
+             >modules</a> |</li>
+        <li class="nav-item nav-item-0"><a href="../../../index.html">SasView 4.1.2 documentation</a> &raquo;</li>
+          <li class="nav-item nav-item-1"><a href="../../index.html" accesskey="U">Module code</a> &raquo;</li> 
+      </ul>
+    </div>  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          <div class="body" role="main">
+            
+  <h1>Source code for sas.sasview.installer_generator</h1><div class="highlight"><pre>
+<span></span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">This module generates .iss file according to the local config of</span>
+<span class="sd">the current application. Please make sure a file named &quot;local_config.py&quot;</span>
+<span class="sd">exists in the current directory. Edit local_config.py according to your needs.</span>
+<span class="sd">&quot;&quot;&quot;</span>
+<span class="kn">import</span> <span class="nn">local_config</span>
+<span class="kn">import</span> <span class="nn">os</span> 
+<span class="kn">import</span> <span class="nn">string</span>
+
+<span class="n">REG_PROGRAM</span> <span class="o">=</span> <span class="s2">&quot;&quot;&quot;{app}\MYPROG.EXE&quot;&quot; &quot;&quot;%1&quot;&quot;&quot;</span>
+<span class="n">APPLICATION</span> <span class="o">=</span> <span class="nb">str</span><span class="p">(</span><span class="n">local_config</span><span class="o">.</span><span class="n">__appname__</span> <span class="p">)</span><span class="o">+</span> <span class="s1">&#39;.exe&#39;</span>
+<span class="n">AppName</span> <span class="o">=</span> <span class="nb">str</span><span class="p">(</span><span class="n">local_config</span><span class="o">.</span><span class="n">__appname__</span> <span class="p">)</span>
+<span class="n">AppVerName</span> <span class="o">=</span> <span class="nb">str</span><span class="p">(</span><span class="n">local_config</span><span class="o">.</span><span class="n">__appname__</span> <span class="p">)</span><span class="o">+</span><span class="s1">&#39;-&#39;</span><span class="o">+</span> <span class="nb">str</span><span class="p">(</span><span class="n">local_config</span><span class="o">.</span><span class="n">__version__</span><span class="p">)</span>
+<span class="n">Dev</span> <span class="o">=</span> <span class="s1">&#39;&#39;</span>
+<span class="k">if</span> <span class="n">AppVerName</span><span class="o">.</span><span class="n">lower</span><span class="p">()</span><span class="o">.</span><span class="n">count</span><span class="p">(</span><span class="s1">&#39;dev&#39;</span><span class="p">)</span> <span class="o">&gt;</span> <span class="mi">0</span><span class="p">:</span>
+    <span class="n">Dev</span> <span class="o">=</span> <span class="s1">&#39;-Dev&#39;</span>
+<span class="n">AppPublisher</span> <span class="o">=</span> <span class="n">local_config</span><span class="o">.</span><span class="n">_copyright</span>
+<span class="n">AppPublisherURL</span> <span class="o">=</span> <span class="n">local_config</span><span class="o">.</span><span class="n">_homepage</span>
+<span class="n">AppSupportURL</span> <span class="o">=</span> <span class="n">local_config</span><span class="o">.</span><span class="n">_homepage</span>
+<span class="n">AppUpdatesURL</span> <span class="o">=</span> <span class="n">local_config</span><span class="o">.</span><span class="n">_homepage</span>
+<span class="n">ChangesEnvironment</span> <span class="o">=</span> <span class="s1">&#39;true&#39;</span>
+<span class="n">DefaultDirName</span> <span class="o">=</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="s2">&quot;{pf}&quot;</span> <span class="p">,</span> <span class="n">AppName</span><span class="o">+</span><span class="n">Dev</span><span class="p">)</span> 
+<span class="n">DefaultGroupName</span> <span class="o">=</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">local_config</span><span class="o">.</span><span class="n">DefaultGroupName</span><span class="p">,</span> <span class="n">AppVerName</span><span class="p">)</span>
+                                
+<span class="n">OutputBaseFilename</span> <span class="o">=</span> <span class="n">local_config</span><span class="o">.</span><span class="n">OutputBaseFilename</span>
+<span class="n">SetupIconFile</span> <span class="o">=</span> <span class="s2">&quot;images</span><span class="se">\\</span><span class="s2">ball.ico&quot;</span>
+<span class="n">LicenseFile</span> <span class="o">=</span> <span class="s1">&#39;license.txt&#39;</span>
+<span class="n">DisableProgramGroupPage</span> <span class="o">=</span> <span class="s1">&#39;yes&#39;</span>
+<span class="n">Compression</span> <span class="o">=</span> <span class="s1">&#39;lzma&#39;</span>
+<span class="n">SolidCompression</span> <span class="o">=</span> <span class="s1">&#39;yes&#39;</span>
+<span class="n">PrivilegesRequired</span> <span class="o">=</span> <span class="s1">&#39;none&#39;</span>
+<span class="n">INSTALLER_FILE</span> <span class="o">=</span> <span class="s1">&#39;installer&#39;</span>
+
+<span class="n">icon_path</span> <span class="o">=</span>  <span class="n">local_config</span><span class="o">.</span><span class="n">icon_path</span>
+<span class="n">media_path</span> <span class="o">=</span> <span class="n">local_config</span><span class="o">.</span><span class="n">media_path</span>
+<span class="n">test_path</span> <span class="o">=</span> <span class="n">local_config</span><span class="o">.</span><span class="n">test_path</span>
+
+<div class="viewcode-block" id="find_extension"><a class="viewcode-back" href="../../../dev/api/sas.sasview.html#sas.sasview.installer_generator.find_extension">[docs]</a><span class="k">def</span> <span class="nf">find_extension</span><span class="p">():</span>
+    <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Describe the extensions that can be read by the current application</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">list_data</span> <span class="o">=</span> <span class="p">[]</span>
+    <span class="n">list_app</span> <span class="o">=</span><span class="p">[]</span>
+    <span class="k">try</span><span class="p">:</span>
+        
+        <span class="c1">#(ext, type, name, flags)</span>
+        <span class="kn">from</span> <span class="nn">sas.sascalc.dataloader.loader</span> <span class="kn">import</span> <span class="n">Loader</span>
+        <span class="n">wild_cards</span> <span class="o">=</span> <span class="n">Loader</span><span class="p">()</span><span class="o">.</span><span class="n">get_wildcards</span><span class="p">()</span>
+        <span class="k">for</span> <span class="n">item</span> <span class="ow">in</span> <span class="n">wild_cards</span><span class="p">:</span>
+            <span class="c1">#[&#39;All (*.*)|*.*&#39;]</span>
+            <span class="n">file_type</span><span class="p">,</span> <span class="n">ext</span> <span class="o">=</span> <span class="n">string</span><span class="o">.</span><span class="n">split</span><span class="p">(</span><span class="n">item</span><span class="p">,</span> <span class="s2">&quot;|*&quot;</span><span class="p">,</span> <span class="mi">1</span><span class="p">)</span>
+            <span class="k">if</span> <span class="n">ext</span><span class="o">.</span><span class="n">strip</span><span class="p">()</span> <span class="ow">not</span> <span class="ow">in</span> <span class="p">[</span><span class="s1">&#39;.*&#39;</span><span class="p">,</span> <span class="s1">&#39;&#39;</span><span class="p">]</span> <span class="ow">and</span> <span class="n">ext</span><span class="o">.</span><span class="n">strip</span><span class="p">()</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">list_data</span><span class="p">:</span>
+                <span class="n">list_data</span><span class="o">.</span><span class="n">append</span><span class="p">((</span><span class="n">ext</span><span class="p">,</span> <span class="s1">&#39;string&#39;</span><span class="p">,</span> <span class="n">file_type</span><span class="p">))</span>
+    <span class="k">except</span><span class="p">:</span>
+        <span class="k">pass</span>
+    <span class="k">try</span><span class="p">:</span>
+        <span class="n">file_type</span><span class="p">,</span> <span class="n">ext</span> <span class="o">=</span> <span class="n">string</span><span class="o">.</span><span class="n">split</span><span class="p">(</span><span class="n">local_config</span><span class="o">.</span><span class="n">APPLICATION_WLIST</span><span class="p">,</span> <span class="s2">&quot;|*&quot;</span><span class="p">,</span> <span class="mi">1</span><span class="p">)</span>
+        <span class="k">if</span> <span class="n">ext</span><span class="o">.</span><span class="n">strip</span><span class="p">()</span> <span class="ow">not</span> <span class="ow">in</span> <span class="p">[</span><span class="s1">&#39;.&#39;</span><span class="p">,</span> <span class="s1">&#39;&#39;</span><span class="p">]</span> <span class="ow">and</span> <span class="n">ext</span><span class="o">.</span><span class="n">strip</span><span class="p">()</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">list_app</span><span class="p">:</span>
+            <span class="n">list_app</span><span class="o">.</span><span class="n">append</span><span class="p">((</span><span class="n">ext</span><span class="p">,</span> <span class="s1">&#39;string&#39;</span><span class="p">,</span> <span class="n">file_type</span><span class="p">))</span>
+    <span class="k">except</span><span class="p">:</span>
+        <span class="k">pass</span>
+    <span class="k">try</span><span class="p">:</span>
+        <span class="k">for</span> <span class="n">item</span> <span class="ow">in</span> <span class="n">local_config</span><span class="o">.</span><span class="n">PLUGINS_WLIST</span><span class="p">:</span>
+            <span class="n">file_type</span><span class="p">,</span> <span class="n">ext</span> <span class="o">=</span> <span class="n">string</span><span class="o">.</span><span class="n">split</span><span class="p">(</span><span class="n">item</span><span class="p">,</span> <span class="s2">&quot;|*&quot;</span><span class="p">,</span> <span class="mi">1</span><span class="p">)</span>
+            <span class="k">if</span> <span class="n">ext</span><span class="o">.</span><span class="n">strip</span><span class="p">()</span> <span class="ow">not</span> <span class="ow">in</span> <span class="p">[</span><span class="s1">&#39;.&#39;</span><span class="p">,</span> <span class="s1">&#39;&#39;</span><span class="p">]</span> <span class="ow">and</span> <span class="n">ext</span><span class="o">.</span><span class="n">strip</span><span class="p">()</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">list_app</span><span class="p">:</span>
+                <span class="n">list_app</span><span class="o">.</span><span class="n">append</span><span class="p">((</span><span class="n">ext</span><span class="p">,</span> <span class="s1">&#39;string&#39;</span><span class="p">,</span> <span class="n">file_type</span><span class="p">))</span> 
+    <span class="k">except</span><span class="p">:</span>
+        <span class="k">pass</span>
+    <span class="k">return</span> <span class="n">list_data</span><span class="p">,</span> <span class="n">list_app</span></div>
+<span class="n">DATA_EXTENSION</span><span class="p">,</span> <span class="n">APP_EXTENSION</span> <span class="o">=</span> <span class="n">find_extension</span><span class="p">()</span>
+
+<div class="viewcode-block" id="write_registry"><a class="viewcode-back" href="../../../dev/api/sas.sasview.html#sas.sasview.installer_generator.write_registry">[docs]</a><span class="k">def</span> <span class="nf">write_registry</span><span class="p">(</span><span class="n">data_extension</span><span class="o">=</span><span class="bp">None</span><span class="p">,</span> <span class="n">app_extension</span><span class="o">=</span><span class="bp">None</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    create file association for windows.</span>
+<span class="sd">    Allow open file on double click</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">msg</span> <span class="o">=</span> <span class="s2">&quot;&quot;</span>
+    <span class="k">if</span> <span class="n">data_extension</span> <span class="ow">is</span> <span class="ow">not</span> <span class="bp">None</span> <span class="ow">and</span> <span class="n">data_extension</span><span class="p">:</span>
+        <span class="n">openwithlist</span> <span class="o">=</span> <span class="s2">&quot;OpenWithList\</span><span class="si">%s</span><span class="s2">&quot;</span> <span class="o">%</span> <span class="nb">str</span><span class="p">(</span><span class="n">APPLICATION</span><span class="p">)</span>
+        <span class="n">msg</span> <span class="o">=</span> <span class="s2">&quot;</span><span class="se">\n\n</span><span class="s2">[Registry]</span><span class="se">\n</span><span class="s2">&quot;</span>
+        <span class="k">for</span> <span class="p">(</span><span class="n">ext</span><span class="p">,</span> <span class="nb">type</span><span class="p">,</span> <span class="n">_</span><span class="p">)</span> <span class="ow">in</span> <span class="n">data_extension</span><span class="p">:</span>
+            <span class="nb">list</span> <span class="o">=</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">ext</span><span class="p">,</span> <span class="n">openwithlist</span><span class="p">)</span>
+            <span class="n">msg</span> <span class="o">+=</span>  <span class="s2">&quot;&quot;&quot;Root: HKCR;</span><span class="se">\t</span><span class="s2">Subkey: &quot;</span><span class="si">%s</span><span class="s2">&quot;;</span><span class="se">\t</span><span class="s2">&quot;&quot;&quot;</span> <span class="o">%</span> <span class="nb">str</span><span class="p">(</span><span class="nb">list</span><span class="p">)</span>
+            <span class="n">msg</span> <span class="o">+=</span> <span class="s2">&quot;&quot;&quot; Flags: </span><span class="si">%s</span><span class="s2">&quot;&quot;&quot;</span> <span class="o">%</span> <span class="nb">str</span><span class="p">(</span><span class="s1">&#39;uninsdeletekey noerror&#39;</span><span class="p">)</span>
+            <span class="n">msg</span> <span class="o">+=</span> <span class="s2">&quot;</span><span class="se">\n</span><span class="s2">&quot;</span>
+        <span class="c1">#list the file on right-click</span>
+        <span class="n">msg</span> <span class="o">+=</span> <span class="s2">&quot;&quot;&quot;Root: HKCR; Subkey: &quot;applications\</span><span class="si">%s</span><span class="s2">\shell\open\command&quot;;</span><span class="se">\t</span><span class="s2">&quot;&quot;&quot;</span>\
+                              <span class="o">%</span>  <span class="nb">str</span><span class="p">(</span><span class="n">APPLICATION</span><span class="p">)</span>
+        <span class="n">msg</span> <span class="o">+=</span> <span class="s2">&quot;&quot;&quot;ValueType: </span><span class="si">%s</span><span class="s2">; &quot;&quot;&quot;</span> <span class="o">%</span> <span class="nb">str</span><span class="p">(</span><span class="s1">&#39;string&#39;</span><span class="p">)</span>
+        <span class="n">msg</span> <span class="o">+=</span> <span class="s2">&quot;&quot;&quot;ValueName: &quot;</span><span class="si">%s</span><span class="s2">&quot;;</span><span class="se">\t</span><span class="s2">&quot;&quot;&quot;</span> <span class="o">%</span><span class="nb">str</span><span class="p">(</span><span class="s1">&#39;&#39;</span><span class="p">)</span> 
+        <span class="n">msg</span> <span class="o">+=</span> <span class="s2">&quot;&quot;&quot;ValueData: </span><span class="se">\&quot;</span><span class="s2">&quot;&quot;{app}\</span><span class="si">%s</span><span class="s2">&quot;&quot;  &quot;&quot;</span><span class="si">%s</span><span class="s2">1</span><span class="se">\&quot;</span><span class="s2">&quot;&quot;; </span><span class="se">\t</span><span class="s2">&quot;&quot;&quot;</span><span class="o">%</span> <span class="p">(</span><span class="nb">str</span><span class="p">(</span><span class="n">APPLICATION</span><span class="p">),</span>
+                                                          <span class="nb">str</span><span class="p">(</span><span class="s1">&#39;%&#39;</span><span class="p">))</span>    
+        <span class="n">msg</span> <span class="o">+=</span> <span class="s2">&quot;&quot;&quot; Flags: </span><span class="si">%s</span><span class="s2">&quot;&quot;&quot;</span> <span class="o">%</span> <span class="nb">str</span><span class="p">(</span><span class="s1">&#39;uninsdeletevalue noerror&#39;</span><span class="p">)</span>
+        <span class="n">msg</span> <span class="o">+=</span> <span class="s2">&quot;</span><span class="se">\n</span><span class="s2">&quot;</span>
+        <span class="n">user_list</span> <span class="o">=</span> <span class="s2">&quot;Software\Classes&quot;</span> 
+        <span class="k">for</span> <span class="p">(</span><span class="n">ext</span><span class="p">,</span> <span class="nb">type</span><span class="p">,</span> <span class="n">_</span><span class="p">)</span> <span class="ow">in</span> <span class="n">data_extension</span><span class="p">:</span>
+            <span class="nb">list</span> <span class="o">=</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">user_list</span><span class="p">,</span> <span class="n">ext</span><span class="p">,</span> <span class="n">openwithlist</span><span class="p">)</span>
+            <span class="n">msg</span> <span class="o">+=</span>  <span class="s2">&quot;&quot;&quot;Root: HKCU;</span><span class="se">\t</span><span class="s2">Subkey: &quot;</span><span class="si">%s</span><span class="s2">&quot;;</span><span class="se">\t</span><span class="s2">&quot;&quot;&quot;</span> <span class="o">%</span> <span class="nb">str</span><span class="p">(</span><span class="nb">list</span><span class="p">)</span>
+            <span class="n">msg</span> <span class="o">+=</span> <span class="s2">&quot;&quot;&quot; Flags: </span><span class="si">%s</span><span class="s2">&quot;&quot;&quot;</span> <span class="o">%</span> <span class="nb">str</span><span class="p">(</span><span class="s1">&#39;uninsdeletekey noerror&#39;</span><span class="p">)</span>
+            <span class="n">msg</span> <span class="o">+=</span> <span class="s2">&quot;</span><span class="se">\n</span><span class="s2">&quot;</span>
+        <span class="c1">#list the file on right-click</span>
+        <span class="n">user_list</span> <span class="o">=</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="s2">&quot;Software&quot;</span><span class="p">,</span> <span class="s2">&quot;Classes&quot;</span><span class="p">,</span> <span class="s2">&quot;applications&quot;</span><span class="p">)</span>
+        <span class="n">msg</span> <span class="o">+=</span> <span class="s2">&quot;&quot;&quot;Root: HKCU; Subkey: &quot;</span><span class="si">%s</span><span class="s2">\</span><span class="si">%s</span><span class="s2">\shell\open\command&quot;;</span><span class="se">\t</span><span class="s2">&quot;&quot;&quot;</span>\
+                              <span class="o">%</span>  <span class="p">(</span><span class="nb">str</span><span class="p">(</span><span class="n">user_list</span><span class="p">),</span> <span class="nb">str</span><span class="p">(</span><span class="n">APPLICATION</span><span class="p">))</span>
+        <span class="n">msg</span> <span class="o">+=</span> <span class="s2">&quot;&quot;&quot;ValueType: </span><span class="si">%s</span><span class="s2">; &quot;&quot;&quot;</span> <span class="o">%</span> <span class="nb">str</span><span class="p">(</span><span class="s1">&#39;string&#39;</span><span class="p">)</span>
+        <span class="n">msg</span> <span class="o">+=</span> <span class="s2">&quot;&quot;&quot;ValueName: &quot;</span><span class="si">%s</span><span class="s2">&quot;;</span><span class="se">\t</span><span class="s2">&quot;&quot;&quot;</span> <span class="o">%</span><span class="nb">str</span><span class="p">(</span><span class="s1">&#39;&#39;</span><span class="p">)</span> 
+        <span class="n">msg</span> <span class="o">+=</span> <span class="s2">&quot;&quot;&quot;ValueData: </span><span class="se">\&quot;</span><span class="s2">&quot;&quot;{app}\</span><span class="si">%s</span><span class="s2">&quot;&quot;  &quot;&quot;</span><span class="si">%s</span><span class="s2">1</span><span class="se">\&quot;</span><span class="s2">&quot;&quot;; </span><span class="se">\t</span><span class="s2">&quot;&quot;&quot;</span><span class="o">%</span> <span class="p">(</span><span class="nb">str</span><span class="p">(</span><span class="n">APPLICATION</span><span class="p">),</span>
+                                                          <span class="nb">str</span><span class="p">(</span><span class="s1">&#39;%&#39;</span><span class="p">))</span>    
+        <span class="n">msg</span> <span class="o">+=</span> <span class="s2">&quot;&quot;&quot; Flags: </span><span class="si">%s</span><span class="s2">&quot;&quot;&quot;</span> <span class="o">%</span> <span class="nb">str</span><span class="p">(</span><span class="s1">&#39;uninsdeletevalue noerror&#39;</span><span class="p">)</span>
+        <span class="n">msg</span> <span class="o">+=</span> <span class="s2">&quot;</span><span class="se">\n</span><span class="s2">&quot;</span>        
+    <span class="k">if</span> <span class="n">app_extension</span> <span class="ow">is</span> <span class="ow">not</span> <span class="bp">None</span> <span class="ow">and</span> <span class="n">app_extension</span><span class="p">:</span>
+        <span class="k">for</span> <span class="p">(</span><span class="n">ext</span><span class="p">,</span> <span class="nb">type</span><span class="p">,</span> <span class="n">_</span><span class="p">)</span> <span class="ow">in</span> <span class="n">app_extension</span><span class="p">:</span>
+            <span class="n">msg</span> <span class="o">+=</span>  <span class="s2">&quot;&quot;&quot;Root: HKCR;</span><span class="se">\t</span><span class="s2">Subkey: &quot;</span><span class="si">%s</span><span class="s2">&quot;;</span><span class="se">\t</span><span class="s2">&quot;&quot;&quot;</span> <span class="o">%</span> <span class="nb">str</span><span class="p">(</span><span class="n">ext</span><span class="p">)</span>
+            <span class="n">msg</span> <span class="o">+=</span> <span class="s2">&quot;&quot;&quot;ValueType: </span><span class="si">%s</span><span class="s2">;</span><span class="se">\t</span><span class="s2">&quot;&quot;&quot;</span> <span class="o">%</span> <span class="nb">str</span><span class="p">(</span><span class="nb">type</span><span class="p">)</span>
+            <span class="c1">#file type empty set the current application as the default </span>
+            <span class="c1">#reader for this file. change the value of file_type to another</span>
+            <span class="c1">#string modify the default reader</span>
+            <span class="n">file_type</span> <span class="o">=</span> <span class="s1">&#39;&#39;</span>
+            <span class="n">msg</span> <span class="o">+=</span> <span class="s2">&quot;&quot;&quot;ValueName: &quot;</span><span class="si">%s</span><span class="s2">&quot;;</span><span class="se">\t</span><span class="s2">&quot;&quot;&quot;</span> <span class="o">%</span> <span class="nb">str</span><span class="p">(</span><span class="s1">&#39;&#39;</span><span class="p">)</span>
+            <span class="n">msg</span> <span class="o">+=</span> <span class="s2">&quot;&quot;&quot;ValueData: &quot;{app}\</span><span class="si">%s</span><span class="s2">&quot;;</span><span class="se">\t</span><span class="s2">&quot;&quot;&quot;</span> <span class="o">%</span> <span class="nb">str</span><span class="p">(</span><span class="n">APPLICATION</span><span class="p">)</span>
+            <span class="n">msg</span> <span class="o">+=</span> <span class="s2">&quot;&quot;&quot; Flags: </span><span class="si">%s</span><span class="s2">&quot;&quot;&quot;</span> <span class="o">%</span> <span class="nb">str</span><span class="p">(</span><span class="s1">&#39;uninsdeletevalue  noerror&#39;</span><span class="p">)</span>
+            <span class="n">msg</span> <span class="o">+=</span> <span class="s2">&quot;</span><span class="se">\n</span><span class="s2">&quot;</span>
+    <span class="n">msg</span> <span class="o">+=</span> <span class="s2">&quot;&quot;&quot;Root: HKCR; Subkey: &quot;{app}\</span><span class="si">%s</span><span class="s2">&quot;;</span><span class="se">\t</span><span class="s2">&quot;&quot;&quot;</span> <span class="o">%</span> <span class="nb">str</span><span class="p">(</span><span class="n">APPLICATION</span><span class="p">)</span>
+    <span class="n">msg</span> <span class="o">+=</span> <span class="s2">&quot;&quot;&quot;ValueType: </span><span class="si">%s</span><span class="s2">; &quot;&quot;&quot;</span> <span class="o">%</span> <span class="nb">str</span><span class="p">(</span><span class="s1">&#39;string&#39;</span><span class="p">)</span>
+    <span class="n">msg</span> <span class="o">+=</span> <span class="s2">&quot;&quot;&quot;ValueName: &quot;</span><span class="si">%s</span><span class="s2">&quot;;</span><span class="se">\t</span><span class="s2">&quot;&quot;&quot;</span> <span class="o">%</span> <span class="nb">str</span><span class="p">(</span><span class="s1">&#39;&#39;</span><span class="p">)</span> 
+    <span class="n">msg</span> <span class="o">+=</span> <span class="s2">&quot;&quot;&quot;ValueData: &quot;{app}\</span><span class="si">%s</span><span class="s2">&quot;;</span><span class="se">\t</span><span class="s2">&quot;&quot;&quot;</span> <span class="o">%</span> <span class="nb">str</span><span class="p">(</span><span class="s2">&quot;SasView File&quot;</span><span class="p">)</span> 
+    <span class="n">msg</span> <span class="o">+=</span> <span class="s2">&quot;&quot;&quot; Flags: </span><span class="si">%s</span><span class="s2"> </span><span class="se">\t</span><span class="s2">&quot;&quot;&quot;</span> <span class="o">%</span> <span class="nb">str</span><span class="p">(</span><span class="s2">&quot;uninsdeletekey  noerror&quot;</span><span class="p">)</span>
+    <span class="n">msg</span> <span class="o">+=</span> <span class="s2">&quot;</span><span class="se">\n</span><span class="s2">&quot;</span>
+        
+    <span class="c1">#execute the file on double-click</span>
+    <span class="n">msg</span> <span class="o">+=</span> <span class="s2">&quot;&quot;&quot;Root: HKCR; Subkey: &quot;{app}\</span><span class="si">%s</span><span class="s2">\shell\open\command&quot;;</span><span class="se">\t</span><span class="s2">&quot;&quot;&quot;</span>  <span class="o">%</span>  <span class="nb">str</span><span class="p">(</span><span class="n">APPLICATION</span><span class="p">)</span>
+    <span class="n">msg</span> <span class="o">+=</span> <span class="s2">&quot;&quot;&quot;ValueType: </span><span class="si">%s</span><span class="s2">; &quot;&quot;&quot;</span> <span class="o">%</span> <span class="nb">str</span><span class="p">(</span><span class="s1">&#39;string&#39;</span><span class="p">)</span>
+    <span class="n">msg</span> <span class="o">+=</span> <span class="s2">&quot;&quot;&quot;ValueName: &quot;</span><span class="si">%s</span><span class="s2">&quot;;</span><span class="se">\t</span><span class="s2">&quot;&quot;&quot;</span> <span class="o">%</span><span class="nb">str</span><span class="p">(</span><span class="s1">&#39;&#39;</span><span class="p">)</span> 
+    <span class="n">msg</span> <span class="o">+=</span> <span class="s2">&quot;&quot;&quot;ValueData: </span><span class="se">\&quot;</span><span class="s2">&quot;&quot;{app}\</span><span class="si">%s</span><span class="s2">&quot;&quot;  &quot;&quot;</span><span class="si">%s</span><span class="s2">1</span><span class="se">\&quot;</span><span class="s2">&quot;&quot;;</span><span class="se">\t</span><span class="s2">&quot;&quot;&quot;</span><span class="o">%</span> <span class="p">(</span><span class="nb">str</span><span class="p">(</span><span class="n">APPLICATION</span><span class="p">),</span>
+                                                          <span class="nb">str</span><span class="p">(</span><span class="s1">&#39;%&#39;</span><span class="p">))</span>  
+    <span class="n">msg</span> <span class="o">+=</span> <span class="s2">&quot;&quot;&quot; Flags: </span><span class="si">%s</span><span class="s2"> </span><span class="se">\t</span><span class="s2">&quot;&quot;&quot;</span> <span class="o">%</span> <span class="nb">str</span><span class="p">(</span><span class="s2">&quot;uninsdeletevalue noerror&quot;</span><span class="p">)</span>
+    <span class="n">msg</span> <span class="o">+=</span> <span class="s2">&quot;</span><span class="se">\n</span><span class="s2">&quot;</span>                                                      
+    <span class="c1">#create default icon</span>
+    <span class="n">msg</span> <span class="o">+=</span> <span class="s2">&quot;&quot;&quot;Root: HKCR; Subkey: &quot;{app}\</span><span class="si">%s</span><span class="s2">&quot;;</span><span class="se">\t</span><span class="s2">&quot;&quot;&quot;</span> <span class="o">%</span> <span class="nb">str</span><span class="p">(</span><span class="n">SetupIconFile</span><span class="p">)</span>
+    <span class="n">msg</span> <span class="o">+=</span> <span class="s2">&quot;&quot;&quot;ValueType: </span><span class="si">%s</span><span class="s2">; &quot;&quot;&quot;</span> <span class="o">%</span> <span class="nb">str</span><span class="p">(</span><span class="s1">&#39;string&#39;</span><span class="p">)</span>
+    <span class="n">msg</span> <span class="o">+=</span> <span class="s2">&quot;&quot;&quot;ValueName: &quot;</span><span class="si">%s</span><span class="s2">&quot;;</span><span class="se">\t</span><span class="s2">&quot;&quot;&quot;</span> <span class="o">%</span> <span class="nb">str</span><span class="p">(</span><span class="s1">&#39;&#39;</span><span class="p">)</span> 
+    <span class="n">msg</span> <span class="o">+=</span> <span class="s2">&quot;&quot;&quot;ValueData: &quot;{app}\</span><span class="si">%s</span><span class="s2">,0&quot;;</span><span class="se">\t</span><span class="s2">&quot;&quot;&quot;</span> <span class="o">%</span> <span class="nb">str</span><span class="p">(</span><span class="n">APPLICATION</span><span class="p">)</span>
+    <span class="n">msg</span> <span class="o">+=</span> <span class="s2">&quot;&quot;&quot; Flags: </span><span class="si">%s</span><span class="s2"> </span><span class="se">\t</span><span class="s2">&quot;&quot;&quot;</span> <span class="o">%</span> <span class="nb">str</span><span class="p">(</span><span class="s2">&quot;uninsdeletevalue noerror&quot;</span><span class="p">)</span>
+    <span class="n">msg</span> <span class="o">+=</span> <span class="s2">&quot;</span><span class="se">\n</span><span class="s2">&quot;</span>  
+
+    
+    <span class="c1">#SASVIEWPATH</span>
+    <span class="n">msg</span> <span class="o">+=</span> <span class="s2">&quot;&quot;&quot;Root: HKLM; Subkey: &quot;</span><span class="si">%s</span><span class="s2">&quot;;</span><span class="se">\t</span><span class="s2">&quot;&quot;&quot;</span>  <span class="o">%</span>  <span class="nb">str</span><span class="p">(</span><span class="s1">&#39;SYSTEM\CurrentControlSet\Control\Session Manager\Environment&#39;</span><span class="p">)</span>
+    <span class="n">msg</span> <span class="o">+=</span> <span class="s2">&quot;&quot;&quot;ValueType: </span><span class="si">%s</span><span class="s2">; &quot;&quot;&quot;</span> <span class="o">%</span> <span class="nb">str</span><span class="p">(</span><span class="s1">&#39;expandsz&#39;</span><span class="p">)</span>
+    <span class="n">msg</span> <span class="o">+=</span> <span class="s2">&quot;&quot;&quot;ValueName: &quot;</span><span class="si">%s</span><span class="s2">&quot;;</span><span class="se">\t</span><span class="s2">&quot;&quot;&quot;</span> <span class="o">%</span> <span class="nb">str</span><span class="p">(</span><span class="s1">&#39;SASVIEWPATH&#39;</span><span class="p">)</span> 
+    <span class="n">msg</span> <span class="o">+=</span> <span class="s2">&quot;&quot;&quot;ValueData: &quot;{app}&quot;;</span><span class="se">\t</span><span class="s2">&quot;&quot;&quot;</span>
+    <span class="n">msg</span> <span class="o">+=</span> <span class="s2">&quot;&quot;&quot; Flags: </span><span class="si">%s</span><span class="s2">&quot;&quot;&quot;</span> <span class="o">%</span> <span class="nb">str</span><span class="p">(</span><span class="s1">&#39;uninsdeletevalue noerror&#39;</span><span class="p">)</span>
+    <span class="n">msg</span> <span class="o">+=</span> <span class="s2">&quot;</span><span class="se">\n</span><span class="s2">&quot;</span>
+    
+    <span class="c1">#PATH</span>
+    <span class="n">msg</span> <span class="o">+=</span> <span class="s2">&quot;&quot;&quot;; Write to PATH (below) is disabled; need more tests</span><span class="se">\n</span><span class="s2">&quot;&quot;&quot;</span>
+    <span class="n">msg</span> <span class="o">+=</span> <span class="s2">&quot;&quot;&quot;;Root: HKCU; Subkey: &quot;</span><span class="si">%s</span><span class="s2">&quot;;</span><span class="se">\t</span><span class="s2">&quot;&quot;&quot;</span>  <span class="o">%</span>  <span class="nb">str</span><span class="p">(</span><span class="s1">&#39;Environment&#39;</span><span class="p">)</span>
+    <span class="n">msg</span> <span class="o">+=</span> <span class="s2">&quot;&quot;&quot;ValueType: </span><span class="si">%s</span><span class="s2">; &quot;&quot;&quot;</span> <span class="o">%</span> <span class="nb">str</span><span class="p">(</span><span class="s1">&#39;expandsz&#39;</span><span class="p">)</span>
+    <span class="n">msg</span> <span class="o">+=</span> <span class="s2">&quot;&quot;&quot;ValueName: &quot;</span><span class="si">%s</span><span class="s2">&quot;;</span><span class="se">\t</span><span class="s2">&quot;&quot;&quot;</span> <span class="o">%</span> <span class="nb">str</span><span class="p">(</span><span class="s1">&#39;PATH&#39;</span><span class="p">)</span> 
+    <span class="n">msg</span> <span class="o">+=</span> <span class="s2">&quot;&quot;&quot;ValueData: &quot;</span><span class="si">%s</span><span class="s2">;{olddata}&quot;;</span><span class="se">\t</span><span class="s2">&quot;&quot;&quot;</span> <span class="o">%</span> <span class="nb">str</span><span class="p">(</span><span class="s1">&#39;%SASVIEWPATH%&#39;</span><span class="p">)</span>
+    <span class="n">msg</span> <span class="o">+=</span> <span class="s2">&quot;&quot;&quot; Check: </span><span class="si">%s</span><span class="s2">&quot;&quot;&quot;</span> <span class="o">%</span> <span class="nb">str</span><span class="p">(</span><span class="s1">&#39;NeedsAddPath()&#39;</span><span class="p">)</span>
+    <span class="n">msg</span> <span class="o">+=</span> <span class="s2">&quot;</span><span class="se">\n</span><span class="s2">&quot;</span>
+        
+    <span class="k">return</span> <span class="n">msg</span></div>
+
+<div class="viewcode-block" id="write_language"><a class="viewcode-back" href="../../../dev/api/sas.sasview.html#sas.sasview.installer_generator.write_language">[docs]</a><span class="k">def</span> <span class="nf">write_language</span><span class="p">(</span><span class="n">language</span><span class="o">=</span><span class="p">[</span><span class="s1">&#39;english&#39;</span><span class="p">],</span> <span class="n">msfile</span><span class="o">=</span><span class="s2">&quot;compiler:Default.isl&quot;</span><span class="p">):</span>  
+    <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    define the language of the application</span>
+<span class="sd">    &quot;&quot;&quot;</span> 
+    <span class="n">msg</span> <span class="o">=</span> <span class="s1">&#39;&#39;</span>
+    <span class="k">if</span> <span class="n">language</span><span class="p">:</span>
+        <span class="n">msg</span> <span class="o">=</span> <span class="s2">&quot;</span><span class="se">\n\n</span><span class="s2">[Languages]</span><span class="se">\n</span><span class="s2">&quot;</span>
+        <span class="k">for</span> <span class="n">lang</span> <span class="ow">in</span> <span class="n">language</span><span class="p">:</span>
+            <span class="n">msg</span> <span class="o">+=</span> <span class="s2">&quot;&quot;&quot;Name: &quot;</span><span class="si">%s</span><span class="s2">&quot;;</span><span class="se">\t</span><span class="s2">MessagesFile: &quot;</span><span class="si">%s</span><span class="s2">&quot;</span><span class="se">\n</span><span class="s2">&quot;&quot;&quot;</span> <span class="o">%</span> <span class="p">(</span><span class="nb">str</span><span class="p">(</span><span class="n">lang</span><span class="p">),</span> 
+                                                           <span class="nb">str</span><span class="p">(</span><span class="n">msfile</span><span class="p">))</span>
+    <span class="k">return</span> <span class="n">msg</span> </div>
+
+<div class="viewcode-block" id="write_tasks"><a class="viewcode-back" href="../../../dev/api/sas.sasview.html#sas.sasview.installer_generator.write_tasks">[docs]</a><span class="k">def</span> <span class="nf">write_tasks</span><span class="p">():</span>
+    <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    create desktop icon</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">msg</span> <span class="o">=</span> <span class="s2">&quot;&quot;&quot;</span><span class="se">\n\n</span><span class="s2">[Tasks]</span><span class="se">\n</span><span class="s2">&quot;&quot;&quot;</span>
+    <span class="n">msg</span> <span class="o">+=</span> <span class="s2">&quot;&quot;&quot;Name: &quot;desktopicon&quot;;</span><span class="se">\t</span><span class="s2">Description: &quot;{cm:CreateDesktopIcon}&quot;;</span><span class="se">\t</span><span class="s2">&quot;&quot;&quot;</span>
+    <span class="n">msg</span> <span class="o">+=</span> <span class="s2">&quot;&quot;&quot;GroupDescription: &quot;{cm:AdditionalIcons}&quot;;</span><span class="se">\t</span><span class="s2">Flags: unchecked</span><span class="se">\n</span><span class="s2">&quot;&quot;&quot;</span>
+    <span class="n">msg</span> <span class="o">+=</span> <span class="s2">&quot;&quot;&quot;Name: &quot;quicklaunchicon&quot;; Description: &quot;{cm:CreateQuickLaunchIcon}&quot;;</span><span class="se">\t</span><span class="s2">&quot;&quot;&quot;</span>
+    <span class="n">msg</span> <span class="o">+=</span> <span class="s2">&quot;&quot;&quot;GroupDescription: &quot;{cm:AdditionalIcons}&quot;;</span><span class="se">\n</span><span class="s2">&quot;&quot;&quot;</span>
+    <span class="k">return</span> <span class="n">msg</span></div>
+
+<span class="n">dist_path</span> <span class="o">=</span> <span class="s2">&quot;dist&quot;</span>
+<div class="viewcode-block" id="write_file"><a class="viewcode-back" href="../../../dev/api/sas.sasview.html#sas.sasview.installer_generator.write_file">[docs]</a><span class="k">def</span> <span class="nf">write_file</span><span class="p">():</span>
+    <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    copy some data files</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">msg</span> <span class="o">=</span> <span class="s2">&quot;</span><span class="se">\n\n</span><span class="s2">[Files]</span><span class="se">\n</span><span class="s2">&quot;</span>
+    <span class="n">msg</span> <span class="o">+=</span> <span class="s2">&quot;&quot;&quot;Source: &quot;</span><span class="si">%s</span><span class="s2">\</span><span class="si">%s</span><span class="s2">&quot;;</span><span class="se">\t</span><span class="s2">&quot;&quot;&quot;</span> <span class="o">%</span> <span class="p">(</span><span class="n">dist_path</span><span class="p">,</span> <span class="nb">str</span><span class="p">(</span><span class="n">APPLICATION</span><span class="p">))</span>
+    <span class="n">msg</span> <span class="o">+=</span> <span class="s2">&quot;&quot;&quot;DestDir: &quot;{app}&quot;;</span><span class="se">\t</span><span class="s2">Flags: ignoreversion</span><span class="se">\n</span><span class="s2">&quot;&quot;&quot;</span>
+    <span class="n">msg</span> <span class="o">+=</span> <span class="s2">&quot;&quot;&quot;Source: &quot;dist\*&quot;;</span><span class="se">\t</span><span class="s2">DestDir: &quot;{app}&quot;;</span><span class="se">\t</span><span class="s2">&quot;&quot;&quot;</span>
+    <span class="n">msg</span> <span class="o">+=</span> <span class="s2">&quot;&quot;&quot;Flags: ignoreversion recursesubdirs createallsubdirs</span><span class="se">\n</span><span class="s2">&quot;&quot;&quot;</span>
+    <span class="n">msg</span> <span class="o">+=</span> <span class="s2">&quot;&quot;&quot;Source: &quot;dist\plugin_models\*&quot;;</span><span class="se">\t</span><span class="s2">DestDir: &quot;{userdesktop}\..\.sasview\plugin_models&quot;;</span><span class="se">\t</span><span class="s2">&quot;&quot;&quot;</span>
+    <span class="n">msg</span> <span class="o">+=</span> <span class="s2">&quot;&quot;&quot;Flags: recursesubdirs createallsubdirs</span><span class="se">\n</span><span class="s2">&quot;&quot;&quot;</span> 
+    <span class="n">msg</span> <span class="o">+=</span> <span class="s2">&quot;&quot;&quot;Source: &quot;dist\compiled_models\*&quot;;</span><span class="se">\t</span><span class="s2">DestDir: &quot;{userdesktop}\..\.sasmodels\compiled_models&quot;;</span><span class="se">\t</span><span class="s2">&quot;&quot;&quot;</span>
+    <span class="n">msg</span> <span class="o">+=</span> <span class="s2">&quot;&quot;&quot;Flags: recursesubdirs createallsubdirs</span><span class="se">\n</span><span class="s2">&quot;&quot;&quot;</span>
+    <span class="n">msg</span> <span class="o">+=</span> <span class="s2">&quot;&quot;&quot;Source: &quot;dist\config\custom_config.py&quot;;</span><span class="se">\t</span><span class="s2">DestDir: &quot;{userdesktop}\..\.sasview\config&quot;;</span><span class="se">\t</span><span class="s2">&quot;&quot;&quot;</span> 
+    <span class="n">msg</span> <span class="o">+=</span> <span class="s2">&quot;&quot;&quot;Flags: recursesubdirs createallsubdirs</span><span class="se">\n</span><span class="s2">&quot;&quot;&quot;</span>
+    <span class="c1">#msg += &quot;&quot;&quot;Source: &quot;dist\default_categories.json&quot;;    DestDir: &quot;{userdesktop}\..\.sasview&quot;;\t&quot;&quot;&quot; </span>
+    <span class="c1">#msg += &quot;&quot;&quot;DestName: &quot;categories.json&quot;;\n&quot;&quot;&quot;</span>
+    <span class="n">msg</span> <span class="o">+=</span> <span class="s2">&quot;&quot;&quot;;</span><span class="se">\t</span><span class="s2">NOTE: Don&#39;t use &quot;Flags: ignoreversion&quot; on any shared system files&quot;&quot;&quot;</span>
+    <span class="k">return</span> <span class="n">msg</span></div>
+
+<div class="viewcode-block" id="write_icon"><a class="viewcode-back" href="../../../dev/api/sas.sasview.html#sas.sasview.installer_generator.write_icon">[docs]</a><span class="k">def</span> <span class="nf">write_icon</span><span class="p">():</span>
+    <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Create application icon</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">msg</span> <span class="o">=</span> <span class="s2">&quot;&quot;&quot;</span><span class="se">\n\n</span><span class="s2">[Icons]</span><span class="se">\n</span><span class="s2">&quot;&quot;&quot;</span>
+    <span class="n">msg</span> <span class="o">+=</span> <span class="s2">&quot;&quot;&quot;Name: &quot;{group}\</span><span class="si">%s</span><span class="s2">&quot;;</span><span class="se">\t</span><span class="s2">&quot;&quot;&quot;</span> <span class="o">%</span> <span class="nb">str</span><span class="p">(</span><span class="n">AppName</span><span class="p">)</span>
+    <span class="n">msg</span> <span class="o">+=</span> <span class="s2">&quot;&quot;&quot;Filename: &quot;{app}\</span><span class="si">%s</span><span class="s2">&quot;;</span><span class="se">\t</span><span class="s2">&quot;&quot;&quot;</span>  <span class="o">%</span> <span class="nb">str</span><span class="p">(</span><span class="n">APPLICATION</span><span class="p">)</span>
+    <span class="n">msg</span> <span class="o">+=</span> <span class="s2">&quot;&quot;&quot;WorkingDir: &quot;{app}&quot;; IconFilename: &quot;{app}\images</span><span class="se">\\</span><span class="s2">ball.ico&quot; </span><span class="se">\n</span><span class="s2">&quot;&quot;&quot;</span>
+    <span class="n">msg</span> <span class="o">+=</span> <span class="s2">&quot;&quot;&quot;Name: &quot;{group}\{cm:UninstallProgram, </span><span class="si">%s</span><span class="s2">}&quot;;</span><span class="se">\t</span><span class="s2">&quot;&quot;&quot;</span> <span class="o">%</span> <span class="nb">str</span><span class="p">(</span><span class="n">AppName</span><span class="p">)</span>
+    <span class="n">msg</span> <span class="o">+=</span> <span class="s2">&quot;&quot;&quot; Filename: &quot;{uninstallexe}&quot; </span><span class="se">\n</span><span class="s2">&quot;&quot;&quot;</span>
+    <span class="n">msg</span> <span class="o">+=</span> <span class="s2">&quot;&quot;&quot;Name: &quot;{commondesktop}\</span><span class="si">%s</span><span class="s2">&quot;;</span><span class="se">\t</span><span class="s2">&quot;&quot;&quot;</span> <span class="o">%</span> <span class="nb">str</span><span class="p">(</span><span class="n">AppVerName</span><span class="p">)</span>
+    <span class="n">msg</span> <span class="o">+=</span> <span class="s2">&quot;&quot;&quot;Filename: &quot;{app}\</span><span class="si">%s</span><span class="s2">&quot;;</span><span class="se">\t</span><span class="s2">&quot;&quot;&quot;</span> <span class="o">%</span> <span class="nb">str</span><span class="p">(</span><span class="n">APPLICATION</span><span class="p">)</span>
+    <span class="n">msg</span> <span class="o">+=</span> <span class="s2">&quot;&quot;&quot;Tasks: desktopicon; WorkingDir: &quot;{app}&quot; ; IconFilename: &quot;{app}\images</span><span class="se">\\</span><span class="s2">ball.ico&quot; </span><span class="se">\n</span><span class="s2">&quot;&quot;&quot;</span>
+    <span class="n">msg</span> <span class="o">+=</span> <span class="s2">&quot;&quot;&quot;Name: &quot;{userappdata}\Microsoft\Internet Explorer\Quick Launch\</span><span class="si">%s</span><span class="s2">&quot;;</span><span class="se">\t</span><span class="s2">&quot;&quot;&quot;</span> <span class="o">%</span> <span class="nb">str</span><span class="p">(</span><span class="n">AppVerName</span><span class="p">)</span>
+    <span class="n">msg</span> <span class="o">+=</span> <span class="s2">&quot;&quot;&quot;Filename: &quot;{app}\</span><span class="si">%s</span><span class="s2">&quot;;</span><span class="se">\t</span><span class="s2">&quot;&quot;&quot;</span> <span class="o">%</span> <span class="nb">str</span><span class="p">(</span><span class="n">APPLICATION</span><span class="p">)</span>
+    <span class="n">msg</span> <span class="o">+=</span> <span class="s2">&quot;&quot;&quot;Tasks: quicklaunchicon; WorkingDir: &quot;{app}&quot;; IconFilename: &quot;{app}\images</span><span class="se">\\</span><span class="s2">ball.ico&quot; </span><span class="se">\n</span><span class="s2">&quot;&quot;&quot;</span>
+    <span class="k">return</span> <span class="n">msg</span></div>
+
+<div class="viewcode-block" id="write_run"><a class="viewcode-back" href="../../../dev/api/sas.sasview.html#sas.sasview.installer_generator.write_run">[docs]</a><span class="k">def</span> <span class="nf">write_run</span><span class="p">():</span>
+    <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    execute some file</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">msg</span> <span class="o">=</span> <span class="s2">&quot;&quot;&quot;</span><span class="se">\n\n</span><span class="s2">[Run]</span><span class="se">\n</span><span class="s2">&quot;&quot;&quot;</span>
+    <span class="n">msg</span> <span class="o">+=</span> <span class="s2">&quot;&quot;&quot;Filename: &quot;{app}\</span><span class="si">%s</span><span class="s2">&quot;;</span><span class="se">\t</span><span class="s2">&quot;&quot;&quot;</span> <span class="o">%</span> <span class="nb">str</span><span class="p">(</span><span class="n">APPLICATION</span><span class="p">)</span>
+    <span class="n">msg</span> <span class="o">+=</span> <span class="s2">&quot;&quot;&quot;Description: &quot;{cm:LaunchProgram, </span><span class="si">%s</span><span class="s2">}&quot;;</span><span class="se">\t</span><span class="s2">&quot;&quot;&quot;</span> <span class="o">%</span><span class="nb">str</span><span class="p">(</span><span class="n">AppName</span><span class="p">)</span> 
+    <span class="n">msg</span> <span class="o">+=</span> <span class="s2">&quot;&quot;&quot;Flags: nowait postinstall skipifsilent</span><span class="se">\n</span><span class="s2">&quot;&quot;&quot;</span>
+    <span class="n">msg</span> <span class="o">+=</span> <span class="s2">&quot;&quot;&quot;; Install the Microsoft C++ DLL redistributable package if it is &quot;&quot;&quot;</span>
+    <span class="n">msg</span> <span class="o">+=</span> <span class="s2">&quot;&quot;&quot;provided and the DLLs are not present on the target system.</span><span class="se">\n</span><span class="s2">&quot;&quot;&quot;</span>
+    <span class="n">msg</span> <span class="o">+=</span> <span class="s2">&quot;&quot;&quot;; Note that the redistributable package is included if the app was &quot;&quot;&quot;</span>
+    <span class="n">msg</span> <span class="o">+=</span> <span class="s2">&quot;&quot;&quot;built using Python 2.6 or 2.7, but not with 2.5.</span><span class="se">\n</span><span class="s2">&quot;&quot;&quot;</span>
+    <span class="n">msg</span> <span class="o">+=</span> <span class="s2">&quot;&quot;&quot;; Parameter options:</span><span class="se">\n</span><span class="s2">&quot;&quot;&quot;</span>
+    <span class="n">msg</span> <span class="o">+=</span> <span class="s2">&quot;&quot;&quot;; - for silent install use: &quot;/q&quot;</span><span class="se">\n</span><span class="s2">&quot;&quot;&quot;</span>
+    <span class="n">msg</span> <span class="o">+=</span> <span class="s2">&quot;&quot;&quot;; - for silent install with progress bar use: &quot;/qb&quot;</span><span class="se">\n</span><span class="s2">&quot;&quot;&quot;</span>
+    <span class="n">msg</span> <span class="o">+=</span> <span class="s2">&quot;&quot;&quot;; - for silent install with progress bar but disallow &quot;&quot;&quot;</span>
+    <span class="n">msg</span> <span class="o">+=</span> <span class="s2">&quot;&quot;&quot;cancellation of operation use: &quot;/qb!&quot;</span><span class="se">\n</span><span class="s2">&quot;&quot;&quot;</span>
+    <span class="n">msg</span> <span class="o">+=</span> <span class="s2">&quot;&quot;&quot;; Note that we do not use the postinstall flag as this would &quot;&quot;&quot;</span>
+    <span class="n">msg</span> <span class="o">+=</span> <span class="s2">&quot;&quot;&quot;display a checkbox and thus require the user to decide what to do.</span><span class="se">\n</span><span class="s2">&quot;&quot;&quot;</span>
+    <span class="n">msg</span> <span class="o">+=</span> <span class="s2">&quot;&quot;&quot;;Filename: &quot;{app}</span><span class="se">\\</span><span class="s2">vcredist_x86.exe&quot;; Parameters: &quot;/qb!&quot;; &quot;&quot;&quot;</span>
+    <span class="n">msg</span> <span class="o">+=</span> <span class="s2">&quot;&quot;&quot;WorkingDir: &quot;{tmp}&quot;; StatusMsg: &quot;Installing Microsoft Visual &quot;&quot;&quot;</span>
+    <span class="n">msg</span> <span class="o">+=</span> <span class="s2">&quot;&quot;&quot;C++ 2008 Redistributable Package ...&quot;; Check: InstallVC90CRT(); &quot;&quot;&quot;</span>
+    <span class="n">msg</span> <span class="o">+=</span> <span class="s2">&quot;&quot;&quot;Flags: skipifdoesntexist waituntilterminated</span><span class="se">\n</span><span class="s2">&quot;&quot;&quot;</span>
+    <span class="k">return</span> <span class="n">msg</span></div>
+
+<div class="viewcode-block" id="write_dirs"><a class="viewcode-back" href="../../../dev/api/sas.sasview.html#sas.sasview.installer_generator.write_dirs">[docs]</a><span class="k">def</span> <span class="nf">write_dirs</span><span class="p">():</span>
+    <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Define Dir permission</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">msg</span> <span class="o">=</span> <span class="s2">&quot;&quot;&quot;</span><span class="se">\n\n</span><span class="s2">[Dirs]</span><span class="se">\n</span><span class="s2">&quot;&quot;&quot;</span>
+    <span class="n">msg</span> <span class="o">+=</span> <span class="s2">&quot;&quot;&quot;Name: &quot;{app}\</span><span class="si">%s</span><span class="s2">&quot;;</span><span class="se">\t</span><span class="s2">&quot;&quot;&quot;</span> <span class="o">%</span> <span class="nb">str</span><span class="p">(</span><span class="s1">&#39;&#39;</span><span class="p">)</span>
+    <span class="n">msg</span> <span class="o">+=</span> <span class="s2">&quot;&quot;&quot;Permissions: everyone-modify</span><span class="se">\t</span><span class="s2">&quot;&quot;&quot;</span> 
+    <span class="n">msg</span> <span class="o">+=</span> <span class="s2">&quot;&quot;&quot;</span><span class="se">\n</span><span class="s2">&quot;&quot;&quot;</span>  
+    <span class="k">return</span> <span class="n">msg</span></div>
+
+<div class="viewcode-block" id="write_code"><a class="viewcode-back" href="../../../dev/api/sas.sasview.html#sas.sasview.installer_generator.write_code">[docs]</a><span class="k">def</span> <span class="nf">write_code</span><span class="p">():</span>
+    <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Code that checks the existing path and snaviewpath </span>
+<span class="sd">    in the environmental viriables/PATH</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">msg</span> <span class="o">=</span> <span class="s2">&quot;&quot;&quot;</span><span class="se">\n\n</span><span class="s2">[Code]</span><span class="se">\n</span><span class="s2">&quot;&quot;&quot;</span>
+    <span class="n">msg</span> <span class="o">+=</span> <span class="s2">&quot;&quot;&quot;function InstallVC90CRT(): Boolean;</span><span class="se">\n</span><span class="s2">&quot;&quot;&quot;</span> 
+    <span class="n">msg</span> <span class="o">+=</span> <span class="s2">&quot;&quot;&quot;begin</span><span class="se">\n</span><span class="s2">&quot;&quot;&quot;</span>
+    <span class="n">msg</span> <span class="o">+=</span> <span class="s2">&quot;&quot;&quot;    Result := not DirExists(&#39;C:\WINDOWS\WinSxS</span><span class="se">\\</span><span class="s2">x86_Microsoft.VC90.&quot;&quot;&quot;</span>
+    <span class="n">msg</span> <span class="o">+=</span> <span class="s2">&quot;&quot;&quot;CRT_1fc8b3b9a1e18e3b_9.0.21022.8_x-ww_d08d0375&#39;);</span><span class="se">\n</span><span class="s2">&quot;&quot;&quot;</span>
+    <span class="n">msg</span> <span class="o">+=</span> <span class="s2">&quot;&quot;&quot;end;</span><span class="se">\n\n</span><span class="s2">&quot;&quot;&quot;</span>
+    <span class="n">msg</span> <span class="o">+=</span> <span class="s2">&quot;&quot;&quot;function NeedsAddPath(): boolean;</span><span class="se">\n</span><span class="s2">&quot;&quot;&quot;</span> 
+    <span class="n">msg</span> <span class="o">+=</span> <span class="s2">&quot;&quot;&quot;var</span><span class="se">\n</span><span class="s2">&quot;&quot;&quot;</span> 
+    <span class="n">msg</span> <span class="o">+=</span> <span class="s2">&quot;&quot;&quot;  oldpath: string;</span><span class="se">\n</span><span class="s2">&quot;&quot;&quot;</span>
+    <span class="n">msg</span> <span class="o">+=</span> <span class="s2">&quot;&quot;&quot;  newpath: string;</span><span class="se">\n</span><span class="s2">&quot;&quot;&quot;</span> 
+    <span class="n">msg</span> <span class="o">+=</span> <span class="s2">&quot;&quot;&quot;  pathArr:    TArrayOfString;</span><span class="se">\n</span><span class="s2">&quot;&quot;&quot;</span> 
+    <span class="n">msg</span> <span class="o">+=</span> <span class="s2">&quot;&quot;&quot;  i:        Integer;</span><span class="se">\n</span><span class="s2">&quot;&quot;&quot;</span> 
+    <span class="n">msg</span> <span class="o">+=</span> <span class="s2">&quot;&quot;&quot;begin</span><span class="se">\n</span><span class="s2">&quot;&quot;&quot;</span> 
+    <span class="n">msg</span> <span class="o">+=</span> <span class="s2">&quot;&quot;&quot;  RegQueryStringValue(HKEY_CURRENT_USER,&#39;Environment&#39;,&quot;&quot;&quot;</span>
+    <span class="n">msg</span> <span class="o">+=</span> <span class="s2">&quot;&quot;&quot;&#39;PATH&#39;, oldpath)</span><span class="se">\n</span><span class="s2">&quot;&quot;&quot;</span>
+    <span class="n">msg</span> <span class="o">+=</span> <span class="s2">&quot;&quot;&quot;  oldpath := oldpath + &#39;;&#39;;</span><span class="se">\n</span><span class="s2">&quot;&quot;&quot;</span>
+    <span class="n">msg</span> <span class="o">+=</span> <span class="s2">&quot;&quot;&quot;  newpath := &#39;%SASVIEWPATH%&#39;;</span><span class="se">\n</span><span class="s2">&quot;&quot;&quot;</span>
+    <span class="n">msg</span> <span class="o">+=</span> <span class="s2">&quot;&quot;&quot;  i := 0;</span><span class="se">\n</span><span class="s2">&quot;&quot;&quot;</span>
+    <span class="n">msg</span> <span class="o">+=</span> <span class="s2">&quot;&quot;&quot;  while (Pos(&#39;;&#39;, oldpath) &gt; 0) do begin</span><span class="se">\n</span><span class="s2">&quot;&quot;&quot;</span>
+    <span class="n">msg</span> <span class="o">+=</span> <span class="s2">&quot;&quot;&quot;    SetArrayLength(pathArr, i+1);</span><span class="se">\n</span><span class="s2">&quot;&quot;&quot;</span>
+    <span class="n">msg</span> <span class="o">+=</span> <span class="s2">&quot;&quot;&quot;    pathArr[i] := Copy(oldpath, 0, Pos(&#39;;&#39;, oldpath)-1);</span><span class="se">\n</span><span class="s2">&quot;&quot;&quot;</span>
+    <span class="n">msg</span> <span class="o">+=</span> <span class="s2">&quot;&quot;&quot;    oldpath := Copy(oldpath, Pos(&#39;;&#39;, oldpath)+1,&quot;&quot;&quot;</span>
+    <span class="n">msg</span> <span class="o">+=</span> <span class="s2">&quot;&quot;&quot; Length(oldpath));</span><span class="se">\n</span><span class="s2">&quot;&quot;&quot;</span>
+    <span class="n">msg</span> <span class="o">+=</span> <span class="s2">&quot;&quot;&quot;    i := i + 1;</span><span class="se">\n</span><span class="s2">&quot;&quot;&quot;</span>
+    <span class="n">msg</span> <span class="o">+=</span> <span class="s2">&quot;&quot;&quot;    // Check if current directory matches app dir</span><span class="se">\n</span><span class="s2">&quot;&quot;&quot;</span>
+    <span class="n">msg</span> <span class="o">+=</span> <span class="s2">&quot;&quot;&quot;    if newpath = pathArr[i-1] </span><span class="se">\n</span><span class="s2">&quot;&quot;&quot;</span>
+    <span class="n">msg</span> <span class="o">+=</span> <span class="s2">&quot;&quot;&quot;    then begin</span><span class="se">\n</span><span class="s2">&quot;&quot;&quot;</span>
+    <span class="n">msg</span> <span class="o">+=</span> <span class="s2">&quot;&quot;&quot;      Result := False;</span><span class="se">\n</span><span class="s2">&quot;&quot;&quot;</span>
+    <span class="n">msg</span> <span class="o">+=</span> <span class="s2">&quot;&quot;&quot;      exit;</span><span class="se">\n</span><span class="s2">&quot;&quot;&quot;</span>
+    <span class="n">msg</span> <span class="o">+=</span> <span class="s2">&quot;&quot;&quot;    end;</span><span class="se">\n</span><span class="s2">&quot;&quot;&quot;</span>
+    <span class="n">msg</span> <span class="o">+=</span> <span class="s2">&quot;&quot;&quot;  end;</span><span class="se">\n</span><span class="s2">&quot;&quot;&quot;</span>
+    <span class="n">msg</span> <span class="o">+=</span> <span class="s2">&quot;&quot;&quot;  Result := True;</span><span class="se">\n</span><span class="s2">&quot;&quot;&quot;</span>
+    <span class="n">msg</span> <span class="o">+=</span> <span class="s2">&quot;&quot;&quot;end;</span><span class="se">\n</span><span class="s2">&quot;&quot;&quot;</span>
+    <span class="n">msg</span> <span class="o">+=</span> <span class="s2">&quot;&quot;&quot;</span><span class="se">\n</span><span class="s2">&quot;&quot;&quot;</span>
+    <span class="k">return</span> <span class="n">msg</span></div>
+
+<div class="viewcode-block" id="write_uninstalldelete"><a class="viewcode-back" href="../../../dev/api/sas.sasview.html#sas.sasview.installer_generator.write_uninstalldelete">[docs]</a><span class="k">def</span> <span class="nf">write_uninstalldelete</span><span class="p">():</span>
+    <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Define uninstalldelete</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">msg</span> <span class="o">=</span> <span class="s2">&quot;&quot;&quot;</span><span class="se">\n</span><span class="s2">[UninstallDelete]</span><span class="se">\n</span><span class="s2">&quot;&quot;&quot;</span>
+    <span class="n">msg</span> <span class="o">+=</span> <span class="s2">&quot;&quot;&quot;; Delete directories and files that are dynamically created by &quot;&quot;&quot;</span>
+    <span class="n">msg</span> <span class="o">+=</span> <span class="s2">&quot;&quot;&quot;the application (i.e. at runtime).</span><span class="se">\n</span><span class="s2">&quot;&quot;&quot;</span>
+    <span class="n">msg</span> <span class="o">+=</span> <span class="s2">&quot;&quot;&quot;Type: filesandordirs; Name: &quot;{app}\.matplotlib&quot;</span><span class="se">\n</span><span class="s2">&quot;&quot;&quot;</span>
+    <span class="n">msg</span> <span class="o">+=</span> <span class="s2">&quot;&quot;&quot;Type: files; Name: &quot;{app}\*.*&quot;</span><span class="se">\n</span><span class="s2">&quot;&quot;&quot;</span>
+    <span class="n">msg</span> <span class="o">+=</span> <span class="s2">&quot;&quot;&quot;; The following is a workaround for the case where the &quot;&quot;&quot;</span>
+    <span class="n">msg</span> <span class="o">+=</span> <span class="s2">&quot;&quot;&quot;application is installed and uninstalled but the</span><span class="se">\n</span><span class="s2">&quot;&quot;&quot;</span>
+    <span class="n">msg</span> <span class="o">+=</span> <span class="s2">&quot;&quot;&quot;;{app} directory is not deleted because it has user files.  &quot;&quot;&quot;</span>
+    <span class="n">msg</span> <span class="o">+=</span> <span class="s2">&quot;&quot;&quot;Then the application is installed into the</span><span class="se">\n</span><span class="s2">&quot;&quot;&quot;</span>
+    <span class="n">msg</span> <span class="o">+=</span> <span class="s2">&quot;&quot;&quot;; existing directory, user files are deleted, and the &quot;&quot;&quot;</span>
+    <span class="n">msg</span> <span class="o">+=</span> <span class="s2">&quot;&quot;&quot;application is un-installed again.  Without the</span><span class="se">\n</span><span class="s2">&quot;&quot;&quot;</span>
+    <span class="n">msg</span> <span class="o">+=</span> <span class="s2">&quot;&quot;&quot;; directive below, {app} will not be deleted because Inno Setup &quot;&quot;&quot;</span>
+    <span class="n">msg</span> <span class="o">+=</span> <span class="s2">&quot;&quot;&quot;did not create it during the previous</span><span class="se">\n</span><span class="s2">&quot;&quot;&quot;</span>
+    <span class="n">msg</span> <span class="o">+=</span> <span class="s2">&quot;&quot;&quot;; installation.</span><span class="se">\n</span><span class="s2">&quot;&quot;&quot;</span>
+    <span class="n">msg</span> <span class="o">+=</span> <span class="s2">&quot;&quot;&quot;Type: dirifempty; Name: &quot;{app}&quot;</span><span class="se">\n</span><span class="s2">&quot;&quot;&quot;</span>
+    <span class="n">msg</span> <span class="o">+=</span> <span class="s2">&quot;&quot;&quot;</span><span class="se">\n</span><span class="s2">&quot;&quot;&quot;</span>  
+    <span class="k">return</span> <span class="n">msg</span></div>
+
+<div class="viewcode-block" id="generate_installer"><a class="viewcode-back" href="../../../dev/api/sas.sasview.html#sas.sasview.installer_generator.generate_installer">[docs]</a><span class="k">def</span> <span class="nf">generate_installer</span><span class="p">():</span>
+    <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">TEMPLATE</span> <span class="o">=</span> <span class="s2">&quot;</span><span class="se">\n</span><span class="s2">; Script generated by the Inno Setup Script Wizard</span><span class="se">\n</span><span class="s2">&quot;</span>
+    <span class="n">TEMPLATE</span> <span class="o">+=</span> <span class="s2">&quot;</span><span class="se">\n</span><span class="s2">; and local_config.py located in this directory.</span><span class="se">\n</span><span class="s2"> &quot;</span>
+    <span class="n">TEMPLATE</span> <span class="o">+=</span> <span class="s2">&quot;; SEE THE DOCUMENTATION FOR DETAILS ON CREATING INNO SETUP SCRIPT FILES!&quot;</span>
+    <span class="n">TEMPLATE</span> <span class="o">+=</span> <span class="s2">&quot;</span><span class="se">\n</span><span class="s2">[Setup]</span><span class="se">\n\n</span><span class="s2">&quot;</span> 
+    <span class="n">TEMPLATE</span> <span class="o">+=</span> <span class="s2">&quot;ChangesAssociations=</span><span class="si">%s</span><span class="se">\n</span><span class="s2">&quot;</span> <span class="o">%</span><span class="nb">str</span><span class="p">(</span><span class="s1">&#39;yes&#39;</span><span class="p">)</span>
+    <span class="n">TEMPLATE</span> <span class="o">+=</span> <span class="s2">&quot;AppName=</span><span class="si">%s</span><span class="se">\n</span><span class="s2">&quot;</span> <span class="o">%</span> <span class="nb">str</span><span class="p">(</span><span class="n">AppName</span><span class="p">)</span>
+    <span class="n">TEMPLATE</span> <span class="o">+=</span> <span class="s2">&quot;AppVerName=</span><span class="si">%s</span><span class="se">\n</span><span class="s2">&quot;</span> <span class="o">%</span> <span class="nb">str</span><span class="p">(</span><span class="n">AppVerName</span><span class="p">)</span>
+    <span class="n">TEMPLATE</span> <span class="o">+=</span> <span class="s2">&quot;AppPublisher=</span><span class="si">%s</span><span class="se">\n</span><span class="s2">&quot;</span> <span class="o">%</span> <span class="nb">str</span><span class="p">(</span><span class="n">AppPublisher</span><span class="p">)</span>
+    <span class="n">TEMPLATE</span> <span class="o">+=</span> <span class="s2">&quot;AppPublisherURL=</span><span class="si">%s</span><span class="se">\n</span><span class="s2">&quot;</span> <span class="o">%</span> <span class="nb">str</span><span class="p">(</span><span class="n">AppPublisherURL</span><span class="p">)</span>
+    <span class="n">TEMPLATE</span> <span class="o">+=</span> <span class="s2">&quot;AppSupportURL=</span><span class="si">%s</span><span class="se">\n</span><span class="s2">&quot;</span> <span class="o">%</span> <span class="nb">str</span><span class="p">(</span><span class="n">AppSupportURL</span><span class="p">)</span>
+    <span class="n">TEMPLATE</span> <span class="o">+=</span> <span class="s2">&quot;AppUpdatesURL=</span><span class="si">%s</span><span class="s2"> </span><span class="se">\n</span><span class="s2">&quot;</span> <span class="o">%</span> <span class="nb">str</span><span class="p">(</span><span class="n">AppUpdatesURL</span><span class="p">)</span>
+    <span class="n">TEMPLATE</span> <span class="o">+=</span> <span class="s2">&quot;ChangesEnvironment=</span><span class="si">%s</span><span class="s2"> </span><span class="se">\n</span><span class="s2">&quot;</span> <span class="o">%</span> <span class="nb">str</span><span class="p">(</span><span class="n">ChangesEnvironment</span><span class="p">)</span>
+    <span class="n">TEMPLATE</span> <span class="o">+=</span> <span class="s2">&quot;DefaultDirName=</span><span class="si">%s</span><span class="se">\n</span><span class="s2">&quot;</span> <span class="o">%</span> <span class="nb">str</span><span class="p">(</span><span class="n">DefaultDirName</span><span class="p">)</span>
+    <span class="n">TEMPLATE</span> <span class="o">+=</span> <span class="s2">&quot;DefaultGroupName=</span><span class="si">%s</span><span class="se">\n</span><span class="s2">&quot;</span> <span class="o">%</span> <span class="nb">str</span><span class="p">(</span><span class="n">DefaultGroupName</span><span class="p">)</span>
+    <span class="n">TEMPLATE</span> <span class="o">+=</span> <span class="s2">&quot;DisableProgramGroupPage=</span><span class="si">%s</span><span class="se">\n</span><span class="s2">&quot;</span> <span class="o">%</span> <span class="nb">str</span><span class="p">(</span><span class="n">DisableProgramGroupPage</span><span class="p">)</span>
+    <span class="n">TEMPLATE</span> <span class="o">+=</span> <span class="s2">&quot;LicenseFile=</span><span class="si">%s</span><span class="se">\n</span><span class="s2">&quot;</span> <span class="o">%</span> <span class="nb">str</span><span class="p">(</span><span class="n">LicenseFile</span><span class="p">)</span>
+    <span class="n">TEMPLATE</span> <span class="o">+=</span> <span class="s2">&quot;OutputBaseFilename=</span><span class="si">%s</span><span class="se">\n</span><span class="s2">&quot;</span> <span class="o">%</span> <span class="nb">str</span><span class="p">(</span><span class="n">OutputBaseFilename</span><span class="p">)</span>
+    <span class="n">TEMPLATE</span> <span class="o">+=</span> <span class="s2">&quot;SetupIconFile=</span><span class="si">%s</span><span class="se">\n</span><span class="s2">&quot;</span> <span class="o">%</span> <span class="nb">str</span><span class="p">(</span><span class="n">SetupIconFile</span><span class="p">)</span>
+    <span class="n">TEMPLATE</span> <span class="o">+=</span> <span class="s2">&quot;Compression=</span><span class="si">%s</span><span class="se">\n</span><span class="s2">&quot;</span> <span class="o">%</span> <span class="nb">str</span><span class="p">(</span><span class="n">Compression</span><span class="p">)</span>
+    <span class="n">TEMPLATE</span> <span class="o">+=</span> <span class="s2">&quot;SolidCompression=</span><span class="si">%s</span><span class="se">\n</span><span class="s2">&quot;</span> <span class="o">%</span> <span class="nb">str</span><span class="p">(</span><span class="n">SolidCompression</span><span class="p">)</span>
+    <span class="n">TEMPLATE</span> <span class="o">+=</span> <span class="s2">&quot;PrivilegesRequired=</span><span class="si">%s</span><span class="se">\n</span><span class="s2">&quot;</span> <span class="o">%</span> <span class="nb">str</span><span class="p">(</span><span class="n">PrivilegesRequired</span><span class="p">)</span>
+    <span class="n">TEMPLATE</span> <span class="o">+=</span> <span class="s2">&quot;UsePreviousAppDir=no</span><span class="se">\n</span><span class="s2">&quot;</span>
+   
+    <span class="n">TEMPLATE</span> <span class="o">+=</span> <span class="n">write_registry</span><span class="p">(</span><span class="n">data_extension</span><span class="o">=</span><span class="n">DATA_EXTENSION</span><span class="p">,</span>
+                                <span class="n">app_extension</span><span class="o">=</span><span class="n">APP_EXTENSION</span><span class="p">)</span>
+    <span class="n">TEMPLATE</span> <span class="o">+=</span> <span class="n">write_language</span><span class="p">()</span>
+    <span class="n">TEMPLATE</span> <span class="o">+=</span> <span class="n">write_tasks</span><span class="p">()</span>
+    <span class="n">TEMPLATE</span> <span class="o">+=</span> <span class="n">write_file</span><span class="p">()</span>
+    <span class="n">TEMPLATE</span> <span class="o">+=</span> <span class="n">write_icon</span><span class="p">()</span>
+    <span class="n">TEMPLATE</span> <span class="o">+=</span> <span class="n">write_run</span><span class="p">()</span>
+    <span class="n">TEMPLATE</span> <span class="o">+=</span> <span class="n">write_dirs</span><span class="p">()</span>
+    <span class="n">TEMPLATE</span> <span class="o">+=</span> <span class="n">write_code</span><span class="p">()</span>
+    <span class="n">TEMPLATE</span> <span class="o">+=</span> <span class="n">write_uninstalldelete</span><span class="p">()</span>
+    <span class="n">path</span> <span class="o">=</span> <span class="s1">&#39;</span><span class="si">%s</span><span class="s1">.iss&#39;</span> <span class="o">%</span> <span class="nb">str</span><span class="p">(</span><span class="n">INSTALLER_FILE</span><span class="p">)</span>
+    <span class="n">f</span> <span class="o">=</span> <span class="nb">open</span><span class="p">(</span><span class="n">path</span><span class="p">,</span><span class="s1">&#39;w&#39;</span><span class="p">)</span> 
+    <span class="n">f</span><span class="o">.</span><span class="n">write</span><span class="p">(</span><span class="n">TEMPLATE</span><span class="p">)</span>
+    <span class="n">f</span><span class="o">.</span><span class="n">close</span><span class="p">()</span>
+    <span class="k">print</span> <span class="s2">&quot;Generate Inno setup installer script complete&quot;</span>
+    <span class="k">print</span> <span class="s2">&quot;A new file </span><span class="si">%s</span><span class="s2">.iss should be created.Please refresh your directory&quot;</span> <span class="o">%</span> <span class="nb">str</span><span class="p">(</span><span class="n">INSTALLER_FILE</span><span class="p">)</span></div>
+    
+<span class="k">if</span> <span class="n">__name__</span> <span class="o">==</span> <span class="s2">&quot;__main__&quot;</span><span class="p">:</span>
+    <span class="n">generate_installer</span><span class="p">()</span>
+</pre></div>
+
+          </div>
+        </div>
+      </div>
+      <div class="sphinxsidebar" role="navigation" aria-label="main navigation">
+        <div class="sphinxsidebarwrapper">
+<div id="searchbox" style="display: none" role="search">
+  <h3>Quick search</h3>
+    <form class="search" action="../../../search.html" method="get">
+      <input type="text" name="q" />
+      <input type="submit" value="Go" />
+      <input type="hidden" name="check_keywords" value="yes" />
+      <input type="hidden" name="area" value="default" />
+    </form>
+</div>
+<script type="text/javascript">$('#searchbox').show(0);</script>
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="related" role="navigation" aria-label="related navigation">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="../../../genindex.html" title="General Index"
+             >index</a></li>
+        <li class="right" >
+          <a href="../../../py-modindex.html" title="Python Module Index"
+             >modules</a> |</li>
+        <li class="nav-item nav-item-0"><a href="../../../index.html">SasView 4.1.2 documentation</a> &raquo;</li>
+          <li class="nav-item nav-item-1"><a href="../../index.html" >Module code</a> &raquo;</li> 
+      </ul>
+    </div>
+    <div class="footer" role="contentinfo">
+        &copy; Copyright 2017, The SasView Project.
+      Created using <a href="http://sphinx-doc.org/">Sphinx</a> 1.4.1.
+    </div>
+  </body>
+</html>

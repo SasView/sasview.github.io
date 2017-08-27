@@ -1,0 +1,1373 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+  "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+    
+    <title>sas.sasgui.plottools.plottables &mdash; SasView 4.1.2 documentation</title>
+    
+    <link rel="stylesheet" href="../../../../_static/classic.css" type="text/css" />
+    <link rel="stylesheet" href="../../../../_static/pygments.css" type="text/css" />
+    
+    <script type="text/javascript">
+      var DOCUMENTATION_OPTIONS = {
+        URL_ROOT:    '../../../../',
+        VERSION:     '4.1.2',
+        COLLAPSE_INDEX: false,
+        FILE_SUFFIX: '.html',
+        HAS_SOURCE:  true
+      };
+    </script>
+    <script type="text/javascript" src="../../../../_static/jquery.js"></script>
+    <script type="text/javascript" src="../../../../_static/underscore.js"></script>
+    <script type="text/javascript" src="../../../../_static/doctools.js"></script>
+    <script type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.1/MathJax.js?config=TeX-MML-AM_CHTML"></script>
+    <link rel="top" title="SasView 4.1.2 documentation" href="../../../../index.html" />
+    <link rel="up" title="Module code" href="../../../index.html" /> 
+  </head>
+  <body role="document">
+    <div class="related" role="navigation" aria-label="related navigation">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="../../../../genindex.html" title="General Index"
+             accesskey="I">index</a></li>
+        <li class="right" >
+          <a href="../../../../py-modindex.html" title="Python Module Index"
+             >modules</a> |</li>
+        <li class="nav-item nav-item-0"><a href="../../../../index.html">SasView 4.1.2 documentation</a> &raquo;</li>
+          <li class="nav-item nav-item-1"><a href="../../../index.html" accesskey="U">Module code</a> &raquo;</li> 
+      </ul>
+    </div>  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          <div class="body" role="main">
+            
+  <h1>Source code for sas.sasgui.plottools.plottables</h1><div class="highlight"><pre>
+<span></span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">Prototype plottable object support.</span>
+
+<span class="sd">The main point of this prototype is to provide a clean separation between</span>
+<span class="sd">the style (plotter details: color, grids, widgets, etc.) and substance</span>
+<span class="sd">(application details: which information to plot).  Programmers should not be</span>
+<span class="sd">dictating line colours and plotting symbols.</span>
+
+<span class="sd">Unlike the problem of style in CSS or Word, where most paragraphs look</span>
+<span class="sd">the same, each line on a graph has to be distinguishable from its neighbours.</span>
+<span class="sd">Our solution is to provide parametric styles, in which a number of</span>
+<span class="sd">different classes of object (e.g., reflectometry data, reflectometry</span>
+<span class="sd">theory) representing multiple graph primitives cycle through a colour</span>
+<span class="sd">palette provided by the underlying plotter.</span>
+
+<span class="sd">A full treatment would provide perceptual dimensions of prominence and</span>
+<span class="sd">distinctiveness rather than a simple colour number.</span>
+
+<span class="sd">&quot;&quot;&quot;</span>
+
+<span class="c1"># Design question: who owns the color?</span>
+<span class="c1"># Is it a property of the plottable?</span>
+<span class="c1"># Or of the plottable as it exists on the graph?</span>
+<span class="c1"># Or if the graph?</span>
+<span class="c1"># If a plottable can appear on multiple graphs, in some case the</span>
+<span class="c1"># color should be the same on each graph in which it appears, and</span>
+<span class="c1"># in other cases (where multiple plottables from different graphs</span>
+<span class="c1"># coexist), the color should be assigned by the graph.  In any case</span>
+<span class="c1"># once a plottable is placed on the graph its color should not</span>
+<span class="c1"># depend on the other plottables on the graph.  Furthermore, if</span>
+<span class="c1"># a plottable is added and removed from a graph and added again,</span>
+<span class="c1"># it may be nice, but not necessary, to have the color persist.</span>
+<span class="c1">#</span>
+<span class="c1"># The safest approach seems to be to give ownership of color</span>
+<span class="c1"># to the graph, which will allocate the colors along with the</span>
+<span class="c1"># plottable.  The plottable will need to return the number of</span>
+<span class="c1"># colors that are needed.</span>
+<span class="c1">#</span>
+<span class="c1"># The situation is less clear for symbols.  It is less clear</span>
+<span class="c1"># how much the application requires that symbols be unique across</span>
+<span class="c1"># all plots on the graph.</span>
+
+<span class="c1"># Support for ancient python versions</span>
+<span class="kn">import</span> <span class="nn">copy</span>
+<span class="kn">import</span> <span class="nn">numpy</span>
+<span class="kn">import</span> <span class="nn">sys</span>
+<span class="kn">import</span> <span class="nn">logging</span>
+
+<span class="k">if</span> <span class="s1">&#39;any&#39;</span> <span class="ow">not</span> <span class="ow">in</span> <span class="nb">dir</span><span class="p">(</span><span class="n">__builtins__</span><span class="p">):</span>
+<div class="viewcode-block" id="any"><a class="viewcode-back" href="../../../../dev/api/sas.sasgui.plottools.html#sas.sasgui.plottools.plottables.any">[docs]</a>    <span class="k">def</span> <span class="nf">any</span><span class="p">(</span><span class="n">L</span><span class="p">):</span>
+        <span class="k">for</span> <span class="n">cond</span> <span class="ow">in</span> <span class="n">L</span><span class="p">:</span>
+            <span class="k">if</span> <span class="n">cond</span><span class="p">:</span>
+                <span class="k">return</span> <span class="bp">True</span>
+        <span class="k">return</span> <span class="bp">False</span></div>
+
+<div class="viewcode-block" id="all"><a class="viewcode-back" href="../../../../dev/api/sas.sasgui.plottools.html#sas.sasgui.plottools.plottables.all">[docs]</a>    <span class="k">def</span> <span class="nf">all</span><span class="p">(</span><span class="n">L</span><span class="p">):</span>
+        <span class="k">for</span> <span class="n">cond</span> <span class="ow">in</span> <span class="n">L</span><span class="p">:</span>
+            <span class="k">if</span> <span class="ow">not</span> <span class="n">cond</span><span class="p">:</span>
+                <span class="k">return</span> <span class="bp">False</span>
+        <span class="k">return</span> <span class="bp">True</span></div>
+
+
+<div class="viewcode-block" id="Graph"><a class="viewcode-back" href="../../../../dev/api/sas.sasgui.plottools.html#sas.sasgui.plottools.plottables.Graph">[docs]</a><span class="k">class</span> <span class="nc">Graph</span><span class="p">(</span><span class="nb">object</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Generic plottables graph structure.</span>
+
+<span class="sd">    Plot styles are based on color/symbol lists.  The user gets to select</span>
+<span class="sd">    the list of colors/symbols/sizes to choose from, not the application</span>
+<span class="sd">    developer.  The programmer only gets to add/remove lines from the</span>
+<span class="sd">    plot and move to the next symbol/color.</span>
+
+<span class="sd">    Another dimension is prominence, which refers to line sizes/point sizes.</span>
+
+<span class="sd">    Axis transformations allow the user to select the coordinate view</span>
+<span class="sd">    which provides clarity to the data.  There is no way we can provide</span>
+<span class="sd">    every possible transformation for every application generically, so</span>
+<span class="sd">    the plottable objects themselves will need to provide the transformations.</span>
+<span class="sd">    Here are some examples from reflectometry: ::</span>
+
+<span class="sd">       independent: x -&gt; f(x)</span>
+<span class="sd">          monitor scaling: y -&gt; M*y</span>
+<span class="sd">          log:  y -&gt; log(y if y &gt; min else min)</span>
+<span class="sd">          cos:  y -&gt; cos(y*pi/180)</span>
+<span class="sd">       dependent:   x -&gt; f(x,y)</span>
+<span class="sd">          Q4:      y -&gt; y*x^4</span>
+<span class="sd">          fresnel: y -&gt; y*fresnel(x)</span>
+<span class="sd">       coordinated: x,y = f(x,y)</span>
+<span class="sd">          Q:    x -&gt; 2*pi/L (cos(x*pi/180) - cos(y*pi/180))</span>
+<span class="sd">                y -&gt; 2*pi/L (sin(x*pi/180) + sin(y*pi/180))</span>
+<span class="sd">       reducing: x,y = f(x1,x2,y1,y2)</span>
+<span class="sd">          spin asymmetry: x -&gt; x1, y -&gt; (y1 - y2)/(y1 + y2)</span>
+<span class="sd">          vector net: x -&gt; x1, y -&gt; y1*cos(y2*pi/180)</span>
+
+<span class="sd">    Multiple transformations are possible, such as Q4 spin asymmetry</span>
+
+<span class="sd">    Axes have further complications in that the units of what are being</span>
+<span class="sd">    plotted should correspond to the units on the axes.  Plotting multiple</span>
+<span class="sd">    types on the same graph should be handled gracefully, e.g., by creating</span>
+<span class="sd">    a separate tab for each available axis type, breaking into subplots,</span>
+<span class="sd">    showing multiple axes on the same plot, or generating inset plots.</span>
+<span class="sd">    Ultimately the decision should be left to the user.</span>
+
+<span class="sd">    Graph properties such as grids/crosshairs should be under user control,</span>
+<span class="sd">    as should the sizes of items such as axis fonts, etc.  No direct</span>
+<span class="sd">    access will be provided to the application.</span>
+
+<span class="sd">    Axis limits are mostly under user control.  If the user has zoomed or</span>
+<span class="sd">    panned then those limits are preserved even if new data is plotted.</span>
+<span class="sd">    The exception is when, e.g., scanning through a set of related lines</span>
+<span class="sd">    in which the user may want to fix the limits so that user can compare</span>
+<span class="sd">    the values directly.  Another exception is when creating multiple</span>
+<span class="sd">    graphs sharing the same limits, though this case may be important</span>
+<span class="sd">    enough that it is handled by the graph widget itself.  Axis limits</span>
+<span class="sd">    will of course have to understand the effects of axis transformations.</span>
+
+<span class="sd">    High level plottable objects may be composed of low level primitives.</span>
+<span class="sd">    Operations such as legend/hide/show copy/paste, etc. need to operate</span>
+<span class="sd">    on these primitives as a group.  E.g., allowing the user to have a</span>
+<span class="sd">    working canvas where they can drag lines they want to save and annotate</span>
+<span class="sd">    them.</span>
+
+<span class="sd">    Graphs need to be printable.  A page layout program for entire plots</span>
+<span class="sd">    would be nice.</span>
+
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="k">def</span> <span class="nf">_xaxis_transformed</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">name</span><span class="p">,</span> <span class="n">units</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Change the property of the x axis</span>
+<span class="sd">        according to an axis transformation</span>
+<span class="sd">        (as opposed to changing the basic properties)</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">if</span> <span class="n">units</span> <span class="o">!=</span> <span class="s2">&quot;&quot;</span><span class="p">:</span>
+            <span class="n">name</span> <span class="o">=</span> <span class="s2">&quot;</span><span class="si">%s</span><span class="s2"> (</span><span class="si">%s</span><span class="s2">)&quot;</span> <span class="o">%</span> <span class="p">(</span><span class="n">name</span><span class="p">,</span> <span class="n">units</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">prop</span><span class="p">[</span><span class="s2">&quot;xlabel&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">name</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">prop</span><span class="p">[</span><span class="s2">&quot;xunit&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">units</span>
+
+    <span class="k">def</span> <span class="nf">_yaxis_transformed</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">name</span><span class="p">,</span> <span class="n">units</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Change the property of the y axis</span>
+<span class="sd">        according to an axis transformation</span>
+<span class="sd">        (as opposed to changing the basic properties)</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">if</span> <span class="n">units</span> <span class="o">!=</span> <span class="s2">&quot;&quot;</span><span class="p">:</span>
+            <span class="n">name</span> <span class="o">=</span> <span class="s2">&quot;</span><span class="si">%s</span><span class="s2"> (</span><span class="si">%s</span><span class="s2">)&quot;</span> <span class="o">%</span> <span class="p">(</span><span class="n">name</span><span class="p">,</span> <span class="n">units</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">prop</span><span class="p">[</span><span class="s2">&quot;ylabel&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">name</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">prop</span><span class="p">[</span><span class="s2">&quot;yunit&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">units</span>
+
+<div class="viewcode-block" id="Graph.xaxis"><a class="viewcode-back" href="../../../../dev/api/sas.sasgui.plottools.html#sas.sasgui.plottools.plottables.Graph.xaxis">[docs]</a>    <span class="k">def</span> <span class="nf">xaxis</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">name</span><span class="p">,</span> <span class="n">units</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Properties of the x axis.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">if</span> <span class="n">units</span> <span class="o">!=</span> <span class="s2">&quot;&quot;</span><span class="p">:</span>
+            <span class="n">name</span> <span class="o">=</span> <span class="s2">&quot;</span><span class="si">%s</span><span class="s2"> (</span><span class="si">%s</span><span class="s2">)&quot;</span> <span class="o">%</span> <span class="p">(</span><span class="n">name</span><span class="p">,</span> <span class="n">units</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">prop</span><span class="p">[</span><span class="s2">&quot;xlabel&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">name</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">prop</span><span class="p">[</span><span class="s2">&quot;xunit&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">units</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">prop</span><span class="p">[</span><span class="s2">&quot;xlabel_base&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">name</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">prop</span><span class="p">[</span><span class="s2">&quot;xunit_base&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">units</span></div>
+
+<div class="viewcode-block" id="Graph.yaxis"><a class="viewcode-back" href="../../../../dev/api/sas.sasgui.plottools.html#sas.sasgui.plottools.plottables.Graph.yaxis">[docs]</a>    <span class="k">def</span> <span class="nf">yaxis</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">name</span><span class="p">,</span> <span class="n">units</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Properties of the y axis.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">if</span> <span class="n">units</span> <span class="o">!=</span> <span class="s2">&quot;&quot;</span><span class="p">:</span>
+            <span class="n">name</span> <span class="o">=</span> <span class="s2">&quot;</span><span class="si">%s</span><span class="s2"> (</span><span class="si">%s</span><span class="s2">)&quot;</span> <span class="o">%</span> <span class="p">(</span><span class="n">name</span><span class="p">,</span> <span class="n">units</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">prop</span><span class="p">[</span><span class="s2">&quot;ylabel&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">name</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">prop</span><span class="p">[</span><span class="s2">&quot;yunit&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">units</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">prop</span><span class="p">[</span><span class="s2">&quot;ylabel_base&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">name</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">prop</span><span class="p">[</span><span class="s2">&quot;yunit_base&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">units</span></div>
+
+<div class="viewcode-block" id="Graph.title"><a class="viewcode-back" href="../../../../dev/api/sas.sasgui.plottools.html#sas.sasgui.plottools.plottables.Graph.title">[docs]</a>    <span class="k">def</span> <span class="nf">title</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">name</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Graph title</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">prop</span><span class="p">[</span><span class="s2">&quot;title&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">name</span></div>
+
+<div class="viewcode-block" id="Graph.get"><a class="viewcode-back" href="../../../../dev/api/sas.sasgui.plottools.html#sas.sasgui.plottools.plottables.Graph.get">[docs]</a>    <span class="k">def</span> <span class="nf">get</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">key</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Get the graph properties</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">if</span> <span class="n">key</span> <span class="o">==</span> <span class="s2">&quot;color&quot;</span><span class="p">:</span>
+            <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">color</span>
+        <span class="k">elif</span> <span class="n">key</span> <span class="o">==</span> <span class="s2">&quot;symbol&quot;</span><span class="p">:</span>
+            <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">symbol</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">prop</span><span class="p">[</span><span class="n">key</span><span class="p">]</span></div>
+
+<div class="viewcode-block" id="Graph.set"><a class="viewcode-back" href="../../../../dev/api/sas.sasgui.plottools.html#sas.sasgui.plottools.plottables.Graph.set">[docs]</a>    <span class="k">def</span> <span class="nf">set</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="o">**</span><span class="n">kw</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Set the graph properties</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">for</span> <span class="n">key</span> <span class="ow">in</span> <span class="n">kw</span><span class="p">:</span>
+            <span class="k">if</span> <span class="n">key</span> <span class="o">==</span> <span class="s2">&quot;color&quot;</span><span class="p">:</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">color</span> <span class="o">=</span> <span class="n">kw</span><span class="p">[</span><span class="n">key</span><span class="p">]</span> <span class="o">%</span> <span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">colorlist</span><span class="p">)</span>
+            <span class="k">elif</span> <span class="n">key</span> <span class="o">==</span> <span class="s2">&quot;symbol&quot;</span><span class="p">:</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">symbol</span> <span class="o">=</span> <span class="n">kw</span><span class="p">[</span><span class="n">key</span><span class="p">]</span> <span class="o">%</span> <span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">symbollist</span><span class="p">)</span>
+            <span class="k">else</span><span class="p">:</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">prop</span><span class="p">[</span><span class="n">key</span><span class="p">]</span> <span class="o">=</span> <span class="n">kw</span><span class="p">[</span><span class="n">key</span><span class="p">]</span></div>
+
+<div class="viewcode-block" id="Graph.isPlotted"><a class="viewcode-back" href="../../../../dev/api/sas.sasgui.plottools.html#sas.sasgui.plottools.plottables.Graph.isPlotted">[docs]</a>    <span class="k">def</span> <span class="nf">isPlotted</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">plottable</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Return True is the plottable is already on the graph&quot;&quot;&quot;</span>
+        <span class="k">if</span> <span class="n">plottable</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">plottables</span><span class="p">:</span>
+            <span class="k">return</span> <span class="bp">True</span>
+        <span class="k">return</span> <span class="bp">False</span></div>
+
+<div class="viewcode-block" id="Graph.add"><a class="viewcode-back" href="../../../../dev/api/sas.sasgui.plottools.html#sas.sasgui.plottools.plottables.Graph.add">[docs]</a>    <span class="k">def</span> <span class="nf">add</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">plottable</span><span class="p">,</span> <span class="n">color</span><span class="o">=</span><span class="bp">None</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Add a new plottable to the graph&quot;&quot;&quot;</span>
+        <span class="c1"># record the colour associated with the plottable</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="n">plottable</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">plottables</span><span class="p">:</span>
+            <span class="k">if</span> <span class="n">color</span> <span class="ow">is</span> <span class="ow">not</span> <span class="bp">None</span><span class="p">:</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">plottables</span><span class="p">[</span><span class="n">plottable</span><span class="p">]</span> <span class="o">=</span> <span class="n">color</span>
+            <span class="k">else</span><span class="p">:</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">color</span> <span class="o">+=</span> <span class="n">plottable</span><span class="o">.</span><span class="n">colors</span><span class="p">()</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">plottables</span><span class="p">[</span><span class="n">plottable</span><span class="p">]</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">color</span>
+                <span class="n">plottable</span><span class="o">.</span><span class="n">custom_color</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">color</span></div>
+
+<div class="viewcode-block" id="Graph.changed"><a class="viewcode-back" href="../../../../dev/api/sas.sasgui.plottools.html#sas.sasgui.plottools.plottables.Graph.changed">[docs]</a>    <span class="k">def</span> <span class="nf">changed</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Detect if any graphed plottables have changed&quot;&quot;&quot;</span>
+        <span class="k">return</span> <span class="nb">any</span><span class="p">([</span><span class="n">p</span><span class="o">.</span><span class="n">changed</span><span class="p">()</span> <span class="k">for</span> <span class="n">p</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">plottables</span><span class="p">])</span></div>
+
+<div class="viewcode-block" id="Graph.get_range"><a class="viewcode-back" href="../../../../dev/api/sas.sasgui.plottools.html#sas.sasgui.plottools.plottables.Graph.get_range">[docs]</a>    <span class="k">def</span> <span class="nf">get_range</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Return the range of all displayed plottables</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">min_value</span> <span class="o">=</span> <span class="bp">None</span>
+        <span class="n">max_value</span> <span class="o">=</span> <span class="bp">None</span>
+        <span class="k">for</span> <span class="n">p</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">plottables</span><span class="p">:</span>
+            <span class="k">if</span> <span class="n">p</span><span class="o">.</span><span class="n">hidden</span> <span class="o">==</span> <span class="bp">True</span><span class="p">:</span>
+                <span class="k">continue</span>
+            <span class="k">if</span> <span class="ow">not</span> <span class="n">p</span><span class="o">.</span><span class="n">x</span> <span class="o">==</span> <span class="bp">None</span><span class="p">:</span>
+                <span class="k">for</span> <span class="n">x_i</span> <span class="ow">in</span> <span class="n">p</span><span class="o">.</span><span class="n">x</span><span class="p">:</span>
+                    <span class="k">if</span> <span class="n">min_value</span> <span class="o">==</span> <span class="bp">None</span> <span class="ow">or</span> <span class="n">x_i</span> <span class="o">&lt;</span> <span class="n">min_value</span><span class="p">:</span>
+                        <span class="n">min_value</span> <span class="o">=</span> <span class="n">x_i</span>
+                    <span class="k">if</span> <span class="n">max_value</span> <span class="o">==</span> <span class="bp">None</span> <span class="ow">or</span> <span class="n">x_i</span> <span class="o">&gt;</span> <span class="n">max_value</span><span class="p">:</span>
+                        <span class="n">max_value</span> <span class="o">=</span> <span class="n">x_i</span>
+        <span class="k">return</span> <span class="n">min_value</span><span class="p">,</span> <span class="n">max_value</span></div>
+
+<div class="viewcode-block" id="Graph.replace"><a class="viewcode-back" href="../../../../dev/api/sas.sasgui.plottools.html#sas.sasgui.plottools.plottables.Graph.replace">[docs]</a>    <span class="k">def</span> <span class="nf">replace</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">plottable</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Replace an existing plottable from the graph&quot;&quot;&quot;</span>
+        <span class="n">selected_color</span> <span class="o">=</span> <span class="bp">None</span>
+        <span class="n">selected_plottable</span> <span class="o">=</span> <span class="bp">None</span>
+        <span class="k">for</span> <span class="n">p</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">plottables</span><span class="o">.</span><span class="n">keys</span><span class="p">():</span>
+            <span class="k">if</span> <span class="n">plottable</span><span class="o">.</span><span class="n">id</span> <span class="o">==</span> <span class="n">p</span><span class="o">.</span><span class="n">id</span><span class="p">:</span>
+                <span class="n">selected_plottable</span> <span class="o">=</span> <span class="n">p</span>
+                <span class="n">selected_color</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">plottables</span><span class="p">[</span><span class="n">p</span><span class="p">]</span>
+                <span class="k">break</span>
+        <span class="k">if</span>  <span class="n">selected_plottable</span> <span class="ow">is</span> <span class="ow">not</span> <span class="bp">None</span> <span class="ow">and</span> <span class="n">selected_color</span> <span class="ow">is</span> <span class="ow">not</span> <span class="bp">None</span><span class="p">:</span>
+            <span class="k">del</span> <span class="bp">self</span><span class="o">.</span><span class="n">plottables</span><span class="p">[</span><span class="n">selected_plottable</span><span class="p">]</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">plottables</span><span class="p">[</span><span class="n">plottable</span><span class="p">]</span> <span class="o">=</span> <span class="n">selected_color</span></div>
+
+<div class="viewcode-block" id="Graph.delete"><a class="viewcode-back" href="../../../../dev/api/sas.sasgui.plottools.html#sas.sasgui.plottools.plottables.Graph.delete">[docs]</a>    <span class="k">def</span> <span class="nf">delete</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">plottable</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Remove an existing plottable from the graph&quot;&quot;&quot;</span>
+        <span class="k">if</span> <span class="n">plottable</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">plottables</span><span class="p">:</span>
+            <span class="k">del</span> <span class="bp">self</span><span class="o">.</span><span class="n">plottables</span><span class="p">[</span><span class="n">plottable</span><span class="p">]</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">color</span> <span class="o">=</span> <span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">plottables</span><span class="p">)</span></div>
+
+<div class="viewcode-block" id="Graph.reset_scale"><a class="viewcode-back" href="../../../../dev/api/sas.sasgui.plottools.html#sas.sasgui.plottools.plottables.Graph.reset_scale">[docs]</a>    <span class="k">def</span> <span class="nf">reset_scale</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Resets the scale transformation data to the underlying data</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">for</span> <span class="n">p</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">plottables</span><span class="p">:</span>
+            <span class="n">p</span><span class="o">.</span><span class="n">reset_view</span><span class="p">()</span></div>
+
+<div class="viewcode-block" id="Graph.reset"><a class="viewcode-back" href="../../../../dev/api/sas.sasgui.plottools.html#sas.sasgui.plottools.plottables.Graph.reset">[docs]</a>    <span class="k">def</span> <span class="nf">reset</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Reset the graph.&quot;&quot;&quot;</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">color</span> <span class="o">=</span> <span class="o">-</span><span class="mi">1</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">symbol</span> <span class="o">=</span> <span class="mi">0</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">prop</span> <span class="o">=</span> <span class="p">{</span><span class="s2">&quot;xlabel&quot;</span><span class="p">:</span> <span class="s2">&quot;&quot;</span><span class="p">,</span> <span class="s2">&quot;xunit&quot;</span><span class="p">:</span> <span class="bp">None</span><span class="p">,</span>
+                     <span class="s2">&quot;ylabel&quot;</span><span class="p">:</span> <span class="s2">&quot;&quot;</span><span class="p">,</span> <span class="s2">&quot;yunit&quot;</span><span class="p">:</span> <span class="bp">None</span><span class="p">,</span>
+                     <span class="s2">&quot;title&quot;</span><span class="p">:</span> <span class="s2">&quot;&quot;</span><span class="p">}</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">plottables</span> <span class="o">=</span> <span class="p">{}</span></div>
+
+    <span class="k">def</span> <span class="nf">_make_labels</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="c1"># Find groups of related plottables</span>
+        <span class="n">sets</span> <span class="o">=</span> <span class="p">{}</span>
+        <span class="k">for</span> <span class="n">p</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">plottables</span><span class="p">:</span>
+            <span class="k">if</span> <span class="n">p</span><span class="o">.</span><span class="n">__class__</span> <span class="ow">in</span> <span class="n">sets</span><span class="p">:</span>
+                <span class="n">sets</span><span class="p">[</span><span class="n">p</span><span class="o">.</span><span class="n">__class__</span><span class="p">]</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">p</span><span class="p">)</span>
+            <span class="k">else</span><span class="p">:</span>
+                <span class="n">sets</span><span class="p">[</span><span class="n">p</span><span class="o">.</span><span class="n">__class__</span><span class="p">]</span> <span class="o">=</span> <span class="p">[</span><span class="n">p</span><span class="p">]</span>
+        <span class="c1"># Ask each plottable class for a set of unique labels</span>
+        <span class="n">labels</span> <span class="o">=</span> <span class="p">{}</span>
+        <span class="k">for</span> <span class="n">c</span> <span class="ow">in</span> <span class="n">sets</span><span class="p">:</span>
+            <span class="n">labels</span><span class="o">.</span><span class="n">update</span><span class="p">(</span><span class="n">c</span><span class="o">.</span><span class="n">labels</span><span class="p">(</span><span class="n">sets</span><span class="p">[</span><span class="n">c</span><span class="p">]))</span>
+        <span class="k">return</span> <span class="n">labels</span>
+
+<div class="viewcode-block" id="Graph.get_plottable"><a class="viewcode-back" href="../../../../dev/api/sas.sasgui.plottools.html#sas.sasgui.plottools.plottables.Graph.get_plottable">[docs]</a>    <span class="k">def</span> <span class="nf">get_plottable</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">name</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Return the plottable with the given</span>
+<span class="sd">        name if it exists. Otherwise return None</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">for</span> <span class="n">item</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">plottables</span><span class="p">:</span>
+            <span class="k">if</span> <span class="n">item</span><span class="o">.</span><span class="n">name</span> <span class="o">==</span> <span class="n">name</span><span class="p">:</span>
+                <span class="k">return</span> <span class="n">item</span>
+        <span class="k">return</span> <span class="bp">None</span></div>
+
+<div class="viewcode-block" id="Graph.returnPlottable"><a class="viewcode-back" href="../../../../dev/api/sas.sasgui.plottools.html#sas.sasgui.plottools.plottables.Graph.returnPlottable">[docs]</a>    <span class="k">def</span> <span class="nf">returnPlottable</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        This method returns a dictionary of plottables contained in graph</span>
+<span class="sd">        It is just by Plotpanel to interact with the complete list of plottables</span>
+<span class="sd">        inside the graph.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">plottables</span></div>
+
+<div class="viewcode-block" id="Graph.render"><a class="viewcode-back" href="../../../../dev/api/sas.sasgui.plottools.html#sas.sasgui.plottools.plottables.Graph.render">[docs]</a>    <span class="k">def</span> <span class="nf">render</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">plot</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Redraw the graph&quot;&quot;&quot;</span>
+        <span class="n">plot</span><span class="o">.</span><span class="n">connect</span><span class="o">.</span><span class="n">clearall</span><span class="p">()</span>
+        <span class="n">plot</span><span class="o">.</span><span class="n">clear</span><span class="p">()</span>
+        <span class="n">plot</span><span class="o">.</span><span class="n">properties</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">prop</span><span class="p">)</span>
+        <span class="n">labels</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_make_labels</span><span class="p">()</span>
+        <span class="k">for</span> <span class="n">p</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">plottables</span><span class="p">:</span>
+            <span class="k">if</span> <span class="n">p</span><span class="o">.</span><span class="n">custom_color</span> <span class="ow">is</span> <span class="ow">not</span> <span class="bp">None</span><span class="p">:</span>
+                <span class="n">p</span><span class="o">.</span><span class="n">render</span><span class="p">(</span><span class="n">plot</span><span class="p">,</span> <span class="n">color</span><span class="o">=</span><span class="n">p</span><span class="o">.</span><span class="n">custom_color</span><span class="p">,</span> <span class="n">symbol</span><span class="o">=</span><span class="mi">0</span><span class="p">,</span>
+                         <span class="n">markersize</span><span class="o">=</span><span class="n">p</span><span class="o">.</span><span class="n">markersize</span><span class="p">,</span> <span class="n">label</span><span class="o">=</span><span class="n">labels</span><span class="p">[</span><span class="n">p</span><span class="p">])</span>
+            <span class="k">else</span><span class="p">:</span>
+                <span class="n">p</span><span class="o">.</span><span class="n">render</span><span class="p">(</span><span class="n">plot</span><span class="p">,</span> <span class="n">color</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">plottables</span><span class="p">[</span><span class="n">p</span><span class="p">],</span> <span class="n">symbol</span><span class="o">=</span><span class="mi">0</span><span class="p">,</span>
+                         <span class="n">markersize</span><span class="o">=</span><span class="n">p</span><span class="o">.</span><span class="n">markersize</span><span class="p">,</span> <span class="n">label</span><span class="o">=</span><span class="n">labels</span><span class="p">[</span><span class="n">p</span><span class="p">])</span>
+        <span class="n">plot</span><span class="o">.</span><span class="n">render</span><span class="p">()</span></div>
+
+    <span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="o">**</span><span class="n">kw</span><span class="p">):</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">reset</span><span class="p">()</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">set</span><span class="p">(</span><span class="o">**</span><span class="n">kw</span><span class="p">)</span>
+        <span class="c1"># Name of selected plottable, if any</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">selected_plottable</span> <span class="o">=</span> <span class="bp">None</span></div>
+
+
+<span class="c1"># Transform interface definition</span>
+<span class="c1"># No need to inherit from this class, just need to provide</span>
+<span class="c1"># the same methods.</span>
+<div class="viewcode-block" id="Transform"><a class="viewcode-back" href="../../../../dev/api/sas.sasgui.plottools.html#sas.sasgui.plottools.plottables.Transform">[docs]</a><span class="k">class</span> <span class="nc">Transform</span><span class="p">(</span><span class="nb">object</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Define a transform plugin to the plottable architecture.</span>
+
+<span class="sd">    Transforms operate on axes.  The plottable defines the</span>
+<span class="sd">    set of transforms available for it, and the axes on which</span>
+<span class="sd">    they operate.  These transforms can operate on the x axis</span>
+<span class="sd">    only, the y axis only or on the x and y axes together.</span>
+
+<span class="sd">    This infrastructure is not able to support transformations</span>
+<span class="sd">    such as log and polar plots as these require full control</span>
+<span class="sd">    over the drawing of axes and grids.</span>
+
+<span class="sd">    A transform has a number of attributes.</span>
+
+<span class="sd">    name</span>
+<span class="sd">      user visible name for the transform.  This will</span>
+<span class="sd">      appear in the context menu for the axis and the transform</span>
+<span class="sd">      menu for the graph.</span>
+
+<span class="sd">    type</span>
+<span class="sd">      operational axis.  This determines whether the</span>
+<span class="sd">      transform should appear on x,y or z axis context</span>
+<span class="sd">      menus, or if it should appear in the context menu for</span>
+<span class="sd">      the graph.</span>
+
+<span class="sd">    inventory</span>
+<span class="sd">      (not implemented)</span>
+<span class="sd">      a dictionary of user settable parameter names and</span>
+<span class="sd">      their associated types.  These should appear as keyword</span>
+<span class="sd">      arguments to the transform call.  For example, Fresnel</span>
+<span class="sd">      reflectivity requires the substrate density:</span>
+<span class="sd">      ``{ &#39;rho&#39;: type.Value(10e-6/units.angstrom**2) }``</span>
+<span class="sd">      Supply reasonable defaults in the callback so that</span>
+<span class="sd">      limited plotting clients work even though they cannot</span>
+<span class="sd">      set the inventory.</span>
+
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="k">def</span> <span class="nf">__call__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">plottable</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Transform the data.  Whenever a plottable is added</span>
+<span class="sd">        to the axes, the infrastructure will apply all required</span>
+<span class="sd">        transforms.  When the user selects a different representation</span>
+<span class="sd">        for the axes (via menu, script, or context menu), all</span>
+<span class="sd">        plottables on the axes will be transformed.  The</span>
+<span class="sd">        plottable should store the underlying data but set</span>
+<span class="sd">        the standard x,dx,y,dy,z,dz attributes appropriately.</span>
+
+<span class="sd">        If the call raises a NotImplemented error the dataline</span>
+<span class="sd">        will not be plotted.  The associated string will usually</span>
+<span class="sd">        be &#39;Not a valid transform&#39;, though other strings are possible.</span>
+<span class="sd">        The application may or may not display the message to the</span>
+<span class="sd">        user, along with an indication of which plottable was at fault.</span>
+
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">raise</span> <span class="bp">NotImplemented</span><span class="p">,</span> <span class="s2">&quot;Not a valid transform&quot;</span></div>
+
+    <span class="c1"># Related issues</span>
+    <span class="c1"># ==============</span>
+    <span class="c1">#</span>
+    <span class="c1"># log scale:</span>
+    <span class="c1">#    All axes have implicit log/linear scaling options.</span>
+    <span class="c1">#</span>
+    <span class="c1"># normalization:</span>
+    <span class="c1">#    Want to display raw counts vs detector efficiency correction</span>
+    <span class="c1">#    Want to normalize by time/monitor/proton current/intensity.</span>
+    <span class="c1">#    Want to display by eg. counts per 3 sec or counts per 10000 monitor.</span>
+    <span class="c1">#    Want to divide by footprint (ab initio, fitted or measured).</span>
+    <span class="c1">#    Want to scale by attenuator values.</span>
+    <span class="c1">#</span>
+    <span class="c1"># compare/contrast:</span>
+    <span class="c1">#    Want to average all visible lines with the same tag, and</span>
+    <span class="c1">#    display difference from one particular line.  Not a transform</span>
+    <span class="c1">#    issue?</span>
+    <span class="c1">#</span>
+    <span class="c1"># multiline graph:</span>
+    <span class="c1">#    How do we show/hide data parts.  E.g., data or theory, or</span>
+    <span class="c1">#    different polarization cross sections?  One way is with</span>
+    <span class="c1">#    tags: each plottable has a set of tags and the tags are</span>
+    <span class="c1">#    listed as check boxes above the plotting area.  Click a</span>
+    <span class="c1">#    tag and all plottables with that tag are hidden on the</span>
+    <span class="c1">#    plot and on the legend.</span>
+    <span class="c1">#</span>
+    <span class="c1"># nonconformant y-axes:</span>
+    <span class="c1">#    What do we do with temperature vs. Q and reflectivity vs. Q</span>
+    <span class="c1">#    on the same graph?</span>
+    <span class="c1">#</span>
+    <span class="c1"># 2D -&gt; 1D:</span>
+    <span class="c1">#    Want various slices through the data.  Do transforms apply</span>
+    <span class="c1">#    to the sliced data as well?</span>
+
+
+<div class="viewcode-block" id="Plottable"><a class="viewcode-back" href="../../../../dev/api/sas.sasgui.plottools.html#sas.sasgui.plottools.plottables.Plottable">[docs]</a><span class="k">class</span> <span class="nc">Plottable</span><span class="p">(</span><span class="nb">object</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="c1"># Short ascii name to refer to the plottable in a menu</span>
+    <span class="n">short_name</span> <span class="o">=</span> <span class="bp">None</span>
+    <span class="c1"># Fancy name</span>
+    <span class="n">name</span> <span class="o">=</span> <span class="bp">None</span>
+    <span class="c1"># Data</span>
+    <span class="n">x</span> <span class="o">=</span> <span class="bp">None</span>
+    <span class="n">y</span> <span class="o">=</span> <span class="bp">None</span>
+    <span class="n">dx</span> <span class="o">=</span> <span class="bp">None</span>
+    <span class="n">dy</span> <span class="o">=</span> <span class="bp">None</span>
+    <span class="c1"># Parameter to allow a plot to be part of the list without being displayed</span>
+    <span class="n">hidden</span> <span class="o">=</span> <span class="bp">False</span>
+    <span class="c1"># Flag to set whether a plottable has an interactor or not</span>
+    <span class="n">interactive</span> <span class="o">=</span> <span class="bp">True</span>
+    <span class="n">custom_color</span> <span class="o">=</span> <span class="bp">None</span>
+    <span class="n">markersize</span> <span class="o">=</span> <span class="mi">5</span>  <span class="c1"># default marker size is &#39;size 5&#39;</span>
+
+    <span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">view</span> <span class="o">=</span> <span class="n">View</span><span class="p">()</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_xaxis</span> <span class="o">=</span> <span class="s2">&quot;&quot;</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_xunit</span> <span class="o">=</span> <span class="s2">&quot;&quot;</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_yaxis</span> <span class="o">=</span> <span class="s2">&quot;&quot;</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_yunit</span> <span class="o">=</span> <span class="s2">&quot;&quot;</span>
+
+    <span class="k">def</span> <span class="nf">__setattr__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">name</span><span class="p">,</span> <span class="n">value</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Take care of changes in View when data is changed.</span>
+<span class="sd">        This method is provided for backward compatibility.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="nb">object</span><span class="o">.</span><span class="n">__setattr__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">name</span><span class="p">,</span> <span class="n">value</span><span class="p">)</span>
+        <span class="k">if</span> <span class="n">name</span> <span class="ow">in</span> <span class="p">[</span><span class="s1">&#39;x&#39;</span><span class="p">,</span> <span class="s1">&#39;y&#39;</span><span class="p">,</span> <span class="s1">&#39;dx&#39;</span><span class="p">,</span> <span class="s1">&#39;dy&#39;</span><span class="p">]:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">reset_view</span><span class="p">()</span>
+            <span class="c1"># print &quot;self.%s has been called&quot; % name</span>
+
+<div class="viewcode-block" id="Plottable.set_data"><a class="viewcode-back" href="../../../../dev/api/sas.sasgui.plottools.html#sas.sasgui.plottools.plottables.Plottable.set_data">[docs]</a>    <span class="k">def</span> <span class="nf">set_data</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">x</span><span class="p">,</span> <span class="n">y</span><span class="p">,</span> <span class="n">dx</span><span class="o">=</span><span class="bp">None</span><span class="p">,</span> <span class="n">dy</span><span class="o">=</span><span class="bp">None</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">x</span> <span class="o">=</span> <span class="n">x</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">y</span> <span class="o">=</span> <span class="n">y</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">dy</span> <span class="o">=</span> <span class="n">dy</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">dx</span> <span class="o">=</span> <span class="n">dx</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">transformView</span><span class="p">()</span></div>
+
+<div class="viewcode-block" id="Plottable.xaxis"><a class="viewcode-back" href="../../../../dev/api/sas.sasgui.plottools.html#sas.sasgui.plottools.plottables.Plottable.xaxis">[docs]</a>    <span class="k">def</span> <span class="nf">xaxis</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">name</span><span class="p">,</span> <span class="n">units</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Set the name and unit of x_axis</span>
+
+<span class="sd">        :param name: the name of x-axis</span>
+<span class="sd">        :param units: the units of x_axis</span>
+
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_xaxis</span> <span class="o">=</span> <span class="n">name</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_xunit</span> <span class="o">=</span> <span class="n">units</span></div>
+
+<div class="viewcode-block" id="Plottable.yaxis"><a class="viewcode-back" href="../../../../dev/api/sas.sasgui.plottools.html#sas.sasgui.plottools.plottables.Plottable.yaxis">[docs]</a>    <span class="k">def</span> <span class="nf">yaxis</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">name</span><span class="p">,</span> <span class="n">units</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Set the name and unit of y_axis</span>
+
+<span class="sd">        :param name: the name of y-axis</span>
+<span class="sd">        :param units: the units of y_axis</span>
+
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_yaxis</span> <span class="o">=</span> <span class="n">name</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_yunit</span> <span class="o">=</span> <span class="n">units</span></div>
+
+<div class="viewcode-block" id="Plottable.get_xaxis"><a class="viewcode-back" href="../../../../dev/api/sas.sasgui.plottools.html#sas.sasgui.plottools.plottables.Plottable.get_xaxis">[docs]</a>    <span class="k">def</span> <span class="nf">get_xaxis</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Return the units and name of x-axis&quot;&quot;&quot;</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_xaxis</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">_xunit</span></div>
+
+<div class="viewcode-block" id="Plottable.get_yaxis"><a class="viewcode-back" href="../../../../dev/api/sas.sasgui.plottools.html#sas.sasgui.plottools.plottables.Plottable.get_yaxis">[docs]</a>    <span class="k">def</span> <span class="nf">get_yaxis</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot; Return the units and name of y- axis&quot;&quot;&quot;</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_yaxis</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">_yunit</span></div>
+
+    <span class="nd">@classmethod</span>
+<div class="viewcode-block" id="Plottable.labels"><a class="viewcode-back" href="../../../../dev/api/sas.sasgui.plottools.html#sas.sasgui.plottools.plottables.Plottable.labels">[docs]</a>    <span class="k">def</span> <span class="nf">labels</span><span class="p">(</span><span class="n">cls</span><span class="p">,</span> <span class="n">collection</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Construct a set of unique labels for a collection of plottables of</span>
+<span class="sd">        the same type.</span>
+
+<span class="sd">        Returns a map from plottable to name.</span>
+
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">n</span> <span class="o">=</span> <span class="nb">len</span><span class="p">(</span><span class="n">collection</span><span class="p">)</span>
+        <span class="n">label_dict</span> <span class="o">=</span> <span class="p">{}</span>
+        <span class="k">if</span> <span class="n">n</span> <span class="o">&gt;</span> <span class="mi">0</span><span class="p">:</span>
+            <span class="n">basename</span> <span class="o">=</span> <span class="nb">str</span><span class="p">(</span><span class="n">cls</span><span class="p">)</span><span class="o">.</span><span class="n">split</span><span class="p">(</span><span class="s1">&#39;.&#39;</span><span class="p">)[</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span>
+            <span class="k">if</span> <span class="n">n</span> <span class="o">==</span> <span class="mi">1</span><span class="p">:</span>
+                <span class="n">label_dict</span><span class="p">[</span><span class="n">collection</span><span class="p">[</span><span class="mi">0</span><span class="p">]]</span> <span class="o">=</span> <span class="n">basename</span>
+            <span class="k">else</span><span class="p">:</span>
+                <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">xrange</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">collection</span><span class="p">)):</span>
+                    <span class="n">label_dict</span><span class="p">[</span><span class="n">collection</span><span class="p">[</span><span class="n">i</span><span class="p">]]</span> <span class="o">=</span> <span class="s2">&quot;</span><span class="si">%s</span><span class="s2"> </span><span class="si">%d</span><span class="s2">&quot;</span> <span class="o">%</span> <span class="p">(</span><span class="n">basename</span><span class="p">,</span> <span class="n">i</span><span class="p">)</span>
+        <span class="k">return</span> <span class="n">label_dict</span></div>
+
+    <span class="c1"># #Use the following if @classmethod doesn&#39;t work</span>
+    <span class="c1"># labels = classmethod(labels)</span>
+<div class="viewcode-block" id="Plottable.setLabel"><a class="viewcode-back" href="../../../../dev/api/sas.sasgui.plottools.html#sas.sasgui.plottools.plottables.Plottable.setLabel">[docs]</a>    <span class="k">def</span> <span class="nf">setLabel</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">labelx</span><span class="p">,</span> <span class="n">labely</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        It takes a label of the x and y transformation and set View parameters</span>
+
+<span class="sd">        :param transx: The label of x transformation is sent by Properties Dialog</span>
+<span class="sd">        :param transy: The label of y transformation is sent Properties Dialog</span>
+
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">view</span><span class="o">.</span><span class="n">xLabel</span> <span class="o">=</span> <span class="n">labelx</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">view</span><span class="o">.</span><span class="n">yLabel</span> <span class="o">=</span> <span class="n">labely</span></div>
+
+<div class="viewcode-block" id="Plottable.set_View"><a class="viewcode-back" href="../../../../dev/api/sas.sasgui.plottools.html#sas.sasgui.plottools.plottables.Plottable.set_View">[docs]</a>    <span class="k">def</span> <span class="nf">set_View</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">x</span><span class="p">,</span> <span class="n">y</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Load View&quot;&quot;&quot;</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">x</span> <span class="o">=</span> <span class="n">x</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">y</span> <span class="o">=</span> <span class="n">y</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">reset_view</span><span class="p">()</span></div>
+
+<div class="viewcode-block" id="Plottable.reset_view"><a class="viewcode-back" href="../../../../dev/api/sas.sasgui.plottools.html#sas.sasgui.plottools.plottables.Plottable.reset_view">[docs]</a>    <span class="k">def</span> <span class="nf">reset_view</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Reload view with new value to plot&quot;&quot;&quot;</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">view</span> <span class="o">=</span> <span class="n">View</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">x</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">y</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">dx</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">dy</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">view</span><span class="o">.</span><span class="n">Xreel</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">view</span><span class="o">.</span><span class="n">x</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">view</span><span class="o">.</span><span class="n">Yreel</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">view</span><span class="o">.</span><span class="n">y</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">view</span><span class="o">.</span><span class="n">DXreel</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">view</span><span class="o">.</span><span class="n">dx</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">view</span><span class="o">.</span><span class="n">DYreel</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">view</span><span class="o">.</span><span class="n">dy</span></div>
+
+<div class="viewcode-block" id="Plottable.render"><a class="viewcode-back" href="../../../../dev/api/sas.sasgui.plottools.html#sas.sasgui.plottools.plottables.Plottable.render">[docs]</a>    <span class="k">def</span> <span class="nf">render</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">plot</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        The base class makes sure the correct units are being used for</span>
+<span class="sd">        subsequent plottable.</span>
+
+<span class="sd">        For now it is assumed that the graphs are commensurate, and if you</span>
+<span class="sd">        put a Qx object on a Temperature graph then you had better hope</span>
+<span class="sd">        that it makes sense.</span>
+
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">plot</span><span class="o">.</span><span class="n">xaxis</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_xaxis</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">_xunit</span><span class="p">)</span>
+        <span class="n">plot</span><span class="o">.</span><span class="n">yaxis</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_yaxis</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">_yunit</span><span class="p">)</span></div>
+
+<div class="viewcode-block" id="Plottable.is_empty"><a class="viewcode-back" href="../../../../dev/api/sas.sasgui.plottools.html#sas.sasgui.plottools.plottables.Plottable.is_empty">[docs]</a>    <span class="k">def</span> <span class="nf">is_empty</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Returns True if there is no data stored in the plottable</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="bp">self</span><span class="o">.</span><span class="n">x</span> <span class="o">==</span> <span class="bp">None</span> <span class="ow">and</span> <span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">x</span><span class="p">)</span> <span class="o">==</span> <span class="mi">0</span> \
+            <span class="ow">and</span> <span class="ow">not</span> <span class="bp">self</span><span class="o">.</span><span class="n">y</span> <span class="o">==</span> <span class="bp">None</span> <span class="ow">and</span> <span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">y</span><span class="p">)</span> <span class="o">==</span> <span class="mi">0</span><span class="p">:</span>
+            <span class="k">return</span> <span class="bp">True</span>
+        <span class="k">return</span> <span class="bp">False</span></div>
+
+<div class="viewcode-block" id="Plottable.colors"><a class="viewcode-back" href="../../../../dev/api/sas.sasgui.plottools.html#sas.sasgui.plottools.plottables.Plottable.colors">[docs]</a>    <span class="k">def</span> <span class="nf">colors</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Return the number of colors need to render the object&quot;&quot;&quot;</span>
+        <span class="k">return</span> <span class="mi">1</span></div>
+
+<div class="viewcode-block" id="Plottable.transformView"><a class="viewcode-back" href="../../../../dev/api/sas.sasgui.plottools.html#sas.sasgui.plottools.plottables.Plottable.transformView">[docs]</a>    <span class="k">def</span> <span class="nf">transformView</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        It transforms x, y before displaying</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">view</span><span class="o">.</span><span class="n">transform</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">x</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">y</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">dx</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">dy</span><span class="p">)</span></div>
+
+<div class="viewcode-block" id="Plottable.returnValuesOfView"><a class="viewcode-back" href="../../../../dev/api/sas.sasgui.plottools.html#sas.sasgui.plottools.plottables.Plottable.returnValuesOfView">[docs]</a>    <span class="k">def</span> <span class="nf">returnValuesOfView</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Return View parameters and it is used by Fit Dialog</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">view</span><span class="o">.</span><span class="n">returnXview</span><span class="p">()</span></div>
+
+<div class="viewcode-block" id="Plottable.check_data_PlottableX"><a class="viewcode-back" href="../../../../dev/api/sas.sasgui.plottools.html#sas.sasgui.plottools.plottables.Plottable.check_data_PlottableX">[docs]</a>    <span class="k">def</span> <span class="nf">check_data_PlottableX</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Since no transformation is made for log10(x), check that</span>
+<span class="sd">        no negative values is plot in log scale</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">view</span><span class="o">.</span><span class="n">check_data_logX</span><span class="p">()</span></div>
+
+<div class="viewcode-block" id="Plottable.check_data_PlottableY"><a class="viewcode-back" href="../../../../dev/api/sas.sasgui.plottools.html#sas.sasgui.plottools.plottables.Plottable.check_data_PlottableY">[docs]</a>    <span class="k">def</span> <span class="nf">check_data_PlottableY</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Since no transformation is made for log10(y), check that</span>
+<span class="sd">        no negative values is plot in log scale</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">view</span><span class="o">.</span><span class="n">check_data_logY</span><span class="p">()</span></div>
+
+<div class="viewcode-block" id="Plottable.transformX"><a class="viewcode-back" href="../../../../dev/api/sas.sasgui.plottools.html#sas.sasgui.plottools.plottables.Plottable.transformX">[docs]</a>    <span class="k">def</span> <span class="nf">transformX</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">transx</span><span class="p">,</span> <span class="n">transdx</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Receive pointers to function that transform x and dx</span>
+<span class="sd">        and set corresponding View pointers</span>
+
+<span class="sd">        :param transx: pointer to function that transforms x</span>
+<span class="sd">        :param transdx: pointer to function that transforms dx</span>
+
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">view</span><span class="o">.</span><span class="n">setTransformX</span><span class="p">(</span><span class="n">transx</span><span class="p">,</span> <span class="n">transdx</span><span class="p">)</span></div>
+
+<div class="viewcode-block" id="Plottable.transformY"><a class="viewcode-back" href="../../../../dev/api/sas.sasgui.plottools.html#sas.sasgui.plottools.plottables.Plottable.transformY">[docs]</a>    <span class="k">def</span> <span class="nf">transformY</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">transy</span><span class="p">,</span> <span class="n">transdy</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Receive pointers to function that transform y and dy</span>
+<span class="sd">        and set corresponding View pointers</span>
+
+<span class="sd">        :param transy: pointer to function that transforms y</span>
+<span class="sd">        :param transdy: pointer to function that transforms dy</span>
+
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">view</span><span class="o">.</span><span class="n">setTransformY</span><span class="p">(</span><span class="n">transy</span><span class="p">,</span> <span class="n">transdy</span><span class="p">)</span></div>
+
+<div class="viewcode-block" id="Plottable.onReset"><a class="viewcode-back" href="../../../../dev/api/sas.sasgui.plottools.html#sas.sasgui.plottools.plottables.Plottable.onReset">[docs]</a>    <span class="k">def</span> <span class="nf">onReset</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Reset x, y, dx, dy view with its parameters</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">view</span><span class="o">.</span><span class="n">onResetView</span><span class="p">()</span></div>
+
+<div class="viewcode-block" id="Plottable.onFitRange"><a class="viewcode-back" href="../../../../dev/api/sas.sasgui.plottools.html#sas.sasgui.plottools.plottables.Plottable.onFitRange">[docs]</a>    <span class="k">def</span> <span class="nf">onFitRange</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">xmin</span><span class="o">=</span><span class="bp">None</span><span class="p">,</span> <span class="n">xmax</span><span class="o">=</span><span class="bp">None</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        It limits View data range to plot from min to max</span>
+
+<span class="sd">        :param xmin: the minimum value of x to plot.</span>
+<span class="sd">        :param xmax: the maximum value of x to plot</span>
+
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">view</span><span class="o">.</span><span class="n">onFitRangeView</span><span class="p">(</span><span class="n">xmin</span><span class="p">,</span> <span class="n">xmax</span><span class="p">)</span></div></div>
+
+
+<div class="viewcode-block" id="View"><a class="viewcode-back" href="../../../../dev/api/sas.sasgui.plottools.html#sas.sasgui.plottools.plottables.View">[docs]</a><span class="k">class</span> <span class="nc">View</span><span class="p">(</span><span class="nb">object</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Representation of the data that might include a transformation</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">x</span> <span class="o">=</span> <span class="bp">None</span>
+    <span class="n">y</span> <span class="o">=</span> <span class="bp">None</span>
+    <span class="n">dx</span> <span class="o">=</span> <span class="bp">None</span>
+    <span class="n">dy</span> <span class="o">=</span> <span class="bp">None</span>
+
+    <span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">x</span><span class="o">=</span><span class="bp">None</span><span class="p">,</span> <span class="n">y</span><span class="o">=</span><span class="bp">None</span><span class="p">,</span> <span class="n">dx</span><span class="o">=</span><span class="bp">None</span><span class="p">,</span> <span class="n">dy</span><span class="o">=</span><span class="bp">None</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">x</span> <span class="o">=</span> <span class="n">x</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">y</span> <span class="o">=</span> <span class="n">y</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">dx</span> <span class="o">=</span> <span class="n">dx</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">dy</span> <span class="o">=</span> <span class="n">dy</span>
+        <span class="c1"># To change x range to the reel range</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">Xreel</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">x</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">Yreel</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">y</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">DXreel</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">dx</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">DYreel</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">dy</span>
+        <span class="c1"># Labels of x and y received from Properties Dialog</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">xLabel</span> <span class="o">=</span> <span class="s2">&quot;&quot;</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">yLabel</span> <span class="o">=</span> <span class="s2">&quot;&quot;</span>
+        <span class="c1"># Function to transform x, y, dx and dy</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">funcx</span> <span class="o">=</span> <span class="bp">None</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">funcy</span> <span class="o">=</span> <span class="bp">None</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">funcdx</span> <span class="o">=</span> <span class="bp">None</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">funcdy</span> <span class="o">=</span> <span class="bp">None</span>
+
+<div class="viewcode-block" id="View.transform"><a class="viewcode-back" href="../../../../dev/api/sas.sasgui.plottools.html#sas.sasgui.plottools.plottables.View.transform">[docs]</a>    <span class="k">def</span> <span class="nf">transform</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">x</span><span class="o">=</span><span class="bp">None</span><span class="p">,</span> <span class="n">y</span><span class="o">=</span><span class="bp">None</span><span class="p">,</span> <span class="n">dx</span><span class="o">=</span><span class="bp">None</span><span class="p">,</span> <span class="n">dy</span><span class="o">=</span><span class="bp">None</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Transforms the x,y,dx and dy vectors and stores</span>
+<span class="sd">         the output in View parameters</span>
+
+<span class="sd">        :param x: array of x values</span>
+<span class="sd">        :param y: array of y values</span>
+<span class="sd">        :param dx: array of  errors values on x</span>
+<span class="sd">        :param dy: array of error values on y</span>
+
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="c1"># Sanity check</span>
+        <span class="c1"># Do the transofrmation only when x and y are empty</span>
+        <span class="n">has_err_x</span> <span class="o">=</span> <span class="ow">not</span> <span class="p">(</span><span class="n">dx</span> <span class="o">==</span> <span class="bp">None</span> <span class="ow">or</span> <span class="nb">len</span><span class="p">(</span><span class="n">dx</span><span class="p">)</span> <span class="o">==</span> <span class="mi">0</span><span class="p">)</span>
+        <span class="n">has_err_y</span> <span class="o">=</span> <span class="ow">not</span> <span class="p">(</span><span class="n">dy</span> <span class="o">==</span> <span class="bp">None</span> <span class="ow">or</span> <span class="nb">len</span><span class="p">(</span><span class="n">dy</span><span class="p">)</span> <span class="o">==</span> <span class="mi">0</span><span class="p">)</span>
+
+        <span class="k">if</span><span class="p">(</span><span class="n">x</span> <span class="o">!=</span> <span class="bp">None</span><span class="p">)</span> <span class="ow">and</span> <span class="p">(</span><span class="n">y</span> <span class="o">!=</span> <span class="bp">None</span><span class="p">):</span>
+            <span class="k">if</span> <span class="ow">not</span> <span class="n">dx</span> <span class="o">==</span> <span class="bp">None</span> <span class="ow">and</span> <span class="ow">not</span> <span class="nb">len</span><span class="p">(</span><span class="n">dx</span><span class="p">)</span> <span class="o">==</span> <span class="mi">0</span> <span class="ow">and</span> <span class="ow">not</span> <span class="nb">len</span><span class="p">(</span><span class="n">x</span><span class="p">)</span> <span class="o">==</span> <span class="nb">len</span><span class="p">(</span><span class="n">dx</span><span class="p">):</span>
+                <span class="n">msg</span> <span class="o">=</span> <span class="s2">&quot;Plottable.View: Given x and dx are not&quot;</span>
+                <span class="n">msg</span> <span class="o">+=</span> <span class="s2">&quot; of the same length&quot;</span>
+                <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">,</span> <span class="n">msg</span>
+            <span class="c1"># Check length of y array</span>
+            <span class="k">if</span> <span class="ow">not</span> <span class="nb">len</span><span class="p">(</span><span class="n">y</span><span class="p">)</span> <span class="o">==</span> <span class="nb">len</span><span class="p">(</span><span class="n">x</span><span class="p">):</span>
+                <span class="n">msg</span> <span class="o">=</span> <span class="s2">&quot;Plottable.View: Given y &quot;</span>
+                <span class="n">msg</span> <span class="o">+=</span> <span class="s2">&quot;and x are not of the same length&quot;</span>
+                <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">,</span> <span class="n">msg</span>
+
+            <span class="k">if</span> <span class="ow">not</span> <span class="n">dy</span> <span class="o">==</span> <span class="bp">None</span> <span class="ow">and</span> <span class="ow">not</span> <span class="nb">len</span><span class="p">(</span><span class="n">dy</span><span class="p">)</span> <span class="o">==</span> <span class="mi">0</span> <span class="ow">and</span> <span class="ow">not</span> <span class="nb">len</span><span class="p">(</span><span class="n">y</span><span class="p">)</span> <span class="o">==</span> <span class="nb">len</span><span class="p">(</span><span class="n">dy</span><span class="p">):</span>
+                <span class="n">msg</span> <span class="o">=</span> <span class="s2">&quot;Plottable.View: Given y and dy are not of the same &quot;</span>
+                <span class="n">msg</span> <span class="o">+=</span> <span class="s2">&quot;length: len(y)=</span><span class="si">%s</span><span class="s2">, len(dy)=</span><span class="si">%s</span><span class="s2">&quot;</span> <span class="o">%</span> <span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">y</span><span class="p">),</span> <span class="nb">len</span><span class="p">(</span><span class="n">dy</span><span class="p">))</span>
+                <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">,</span> <span class="n">msg</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">x</span> <span class="o">=</span> <span class="p">[]</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">y</span> <span class="o">=</span> <span class="p">[]</span>
+            <span class="k">if</span> <span class="n">has_err_x</span><span class="p">:</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">dx</span> <span class="o">=</span> <span class="p">[]</span>
+            <span class="k">else</span><span class="p">:</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">dx</span> <span class="o">=</span> <span class="bp">None</span>
+            <span class="k">if</span> <span class="n">has_err_y</span><span class="p">:</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">dy</span> <span class="o">=</span> <span class="p">[]</span>
+            <span class="k">else</span><span class="p">:</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">dy</span> <span class="o">=</span> <span class="bp">None</span>
+            <span class="k">if</span> <span class="ow">not</span> <span class="n">has_err_x</span><span class="p">:</span>
+                <span class="n">dx</span> <span class="o">=</span> <span class="n">numpy</span><span class="o">.</span><span class="n">zeros</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">x</span><span class="p">))</span>
+            <span class="k">if</span> <span class="ow">not</span> <span class="n">has_err_y</span><span class="p">:</span>
+                <span class="n">dy</span> <span class="o">=</span> <span class="n">numpy</span><span class="o">.</span><span class="n">zeros</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">y</span><span class="p">))</span>
+            <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">x</span><span class="p">)):</span>
+                <span class="k">try</span><span class="p">:</span>
+                    <span class="n">tempx</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">funcx</span><span class="p">(</span><span class="n">x</span><span class="p">[</span><span class="n">i</span><span class="p">],</span> <span class="n">y</span><span class="p">[</span><span class="n">i</span><span class="p">])</span>
+                    <span class="n">tempy</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">funcy</span><span class="p">(</span><span class="n">y</span><span class="p">[</span><span class="n">i</span><span class="p">],</span> <span class="n">x</span><span class="p">[</span><span class="n">i</span><span class="p">])</span>
+                    <span class="k">if</span> <span class="n">has_err_x</span><span class="p">:</span>
+                        <span class="n">tempdx</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">funcdx</span><span class="p">(</span><span class="n">x</span><span class="p">[</span><span class="n">i</span><span class="p">],</span> <span class="n">y</span><span class="p">[</span><span class="n">i</span><span class="p">],</span> <span class="n">dx</span><span class="p">[</span><span class="n">i</span><span class="p">],</span> <span class="n">dy</span><span class="p">[</span><span class="n">i</span><span class="p">])</span>
+                    <span class="k">if</span> <span class="n">has_err_y</span><span class="p">:</span>
+                        <span class="n">tempdy</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">funcdy</span><span class="p">(</span><span class="n">y</span><span class="p">[</span><span class="n">i</span><span class="p">],</span> <span class="n">x</span><span class="p">[</span><span class="n">i</span><span class="p">],</span> <span class="n">dy</span><span class="p">[</span><span class="n">i</span><span class="p">],</span> <span class="n">dx</span><span class="p">[</span><span class="n">i</span><span class="p">])</span>
+                    <span class="bp">self</span><span class="o">.</span><span class="n">x</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">tempx</span><span class="p">)</span>
+                    <span class="bp">self</span><span class="o">.</span><span class="n">y</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">tempy</span><span class="p">)</span>
+                    <span class="k">if</span> <span class="n">has_err_x</span><span class="p">:</span>
+                        <span class="bp">self</span><span class="o">.</span><span class="n">dx</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">tempdx</span><span class="p">)</span>
+                    <span class="k">if</span> <span class="n">has_err_y</span><span class="p">:</span>
+                        <span class="bp">self</span><span class="o">.</span><span class="n">dy</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">tempdy</span><span class="p">)</span>
+                <span class="k">except</span> <span class="ne">Exception</span><span class="p">:</span>
+                    <span class="k">pass</span>
+            <span class="c1"># Sanity check</span>
+            <span class="k">if</span> <span class="ow">not</span> <span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">x</span><span class="p">)</span> <span class="o">==</span> <span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">y</span><span class="p">):</span>
+                <span class="n">msg</span> <span class="o">=</span> <span class="s2">&quot;Plottable.View: transformed x &quot;</span>
+                <span class="n">msg</span> <span class="o">+=</span> <span class="s2">&quot;and y are not of the same length&quot;</span>
+                <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">,</span> <span class="n">msg</span>
+            <span class="k">if</span> <span class="n">has_err_x</span> <span class="ow">and</span> <span class="ow">not</span> <span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">x</span><span class="p">)</span> <span class="o">==</span> <span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">dx</span><span class="p">)):</span>
+                <span class="n">msg</span> <span class="o">=</span> <span class="s2">&quot;Plottable.View: transformed x and dx&quot;</span>
+                <span class="n">msg</span> <span class="o">+=</span> <span class="s2">&quot; are not of the same length&quot;</span>
+                <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">,</span> <span class="n">msg</span>
+            <span class="k">if</span> <span class="n">has_err_y</span> <span class="ow">and</span> <span class="ow">not</span> <span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">y</span><span class="p">)</span> <span class="o">==</span> <span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">dy</span><span class="p">)):</span>
+                <span class="n">msg</span> <span class="o">=</span> <span class="s2">&quot;Plottable.View: transformed y&quot;</span>
+                <span class="n">msg</span> <span class="o">+=</span> <span class="s2">&quot; and dy are not of the same length&quot;</span>
+                <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">,</span> <span class="n">msg</span>
+            <span class="c1"># Check that negative values are not plot on x and y axis for</span>
+            <span class="c1"># log10 transformation</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">check_data_logX</span><span class="p">()</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">check_data_logY</span><span class="p">()</span>
+            <span class="c1"># Store x ,y dx,and dy in their full range for reset</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">Xreel</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">x</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">Yreel</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">y</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">DXreel</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">dx</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">DYreel</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">dy</span></div>
+
+<div class="viewcode-block" id="View.onResetView"><a class="viewcode-back" href="../../../../dev/api/sas.sasgui.plottools.html#sas.sasgui.plottools.plottables.View.onResetView">[docs]</a>    <span class="k">def</span> <span class="nf">onResetView</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Reset x,y,dx and y in their full range  and in the initial scale</span>
+<span class="sd">        in case their previous range has changed</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">x</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">Xreel</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">y</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">Yreel</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">dx</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">DXreel</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">dy</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">DYreel</span></div>
+
+<div class="viewcode-block" id="View.setTransformX"><a class="viewcode-back" href="../../../../dev/api/sas.sasgui.plottools.html#sas.sasgui.plottools.plottables.View.setTransformX">[docs]</a>    <span class="k">def</span> <span class="nf">setTransformX</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">funcx</span><span class="p">,</span> <span class="n">funcdx</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Receive pointers to function that transform x and dx</span>
+<span class="sd">        and set corresponding View pointers</span>
+
+<span class="sd">        :param transx: pointer to function that transforms x</span>
+<span class="sd">        :param transdx: pointer to function that transforms dx</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">funcx</span> <span class="o">=</span> <span class="n">funcx</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">funcdx</span> <span class="o">=</span> <span class="n">funcdx</span></div>
+
+<div class="viewcode-block" id="View.setTransformY"><a class="viewcode-back" href="../../../../dev/api/sas.sasgui.plottools.html#sas.sasgui.plottools.plottables.View.setTransformY">[docs]</a>    <span class="k">def</span> <span class="nf">setTransformY</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">funcy</span><span class="p">,</span> <span class="n">funcdy</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Receive pointers to function that transform y and dy</span>
+<span class="sd">        and set corresponding View pointers</span>
+
+<span class="sd">        :param transx: pointer to function that transforms y</span>
+<span class="sd">        :param transdx: pointer to function that transforms dy</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">funcy</span> <span class="o">=</span> <span class="n">funcy</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">funcdy</span> <span class="o">=</span> <span class="n">funcdy</span></div>
+
+<div class="viewcode-block" id="View.returnXview"><a class="viewcode-back" href="../../../../dev/api/sas.sasgui.plottools.html#sas.sasgui.plottools.plottables.View.returnXview">[docs]</a>    <span class="k">def</span> <span class="nf">returnXview</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Return View  x,y,dx,dy</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">x</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">y</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">dx</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">dy</span></div>
+
+<div class="viewcode-block" id="View.check_data_logX"><a class="viewcode-back" href="../../../../dev/api/sas.sasgui.plottools.html#sas.sasgui.plottools.plottables.View.check_data_logX">[docs]</a>    <span class="k">def</span> <span class="nf">check_data_logX</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Remove negative value in x vector to avoid plotting negative</span>
+<span class="sd">        value of Log10</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">tempx</span> <span class="o">=</span> <span class="p">[]</span>
+        <span class="n">tempdx</span> <span class="o">=</span> <span class="p">[]</span>
+        <span class="n">tempy</span> <span class="o">=</span> <span class="p">[]</span>
+        <span class="n">tempdy</span> <span class="o">=</span> <span class="p">[]</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">dx</span> <span class="o">==</span> <span class="bp">None</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">dx</span> <span class="o">=</span> <span class="n">numpy</span><span class="o">.</span><span class="n">zeros</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">x</span><span class="p">))</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">dy</span> <span class="o">==</span> <span class="bp">None</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">dy</span> <span class="o">=</span> <span class="n">numpy</span><span class="o">.</span><span class="n">zeros</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">y</span><span class="p">))</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">xLabel</span> <span class="o">==</span> <span class="s2">&quot;log10(x)&quot;</span><span class="p">:</span>
+            <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">x</span><span class="p">)):</span>
+                <span class="k">try</span><span class="p">:</span>
+                    <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">x</span><span class="p">[</span><span class="n">i</span><span class="p">]</span> <span class="o">&gt;</span> <span class="mi">0</span><span class="p">:</span>
+                        <span class="n">tempx</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">x</span><span class="p">[</span><span class="n">i</span><span class="p">])</span>
+                        <span class="n">tempdx</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">dx</span><span class="p">[</span><span class="n">i</span><span class="p">])</span>
+                        <span class="n">tempy</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">y</span><span class="p">[</span><span class="n">i</span><span class="p">])</span>
+                        <span class="n">tempdy</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">dy</span><span class="p">[</span><span class="n">i</span><span class="p">])</span>
+                <span class="k">except</span><span class="p">:</span>
+                    <span class="n">logging</span><span class="o">.</span><span class="n">error</span><span class="p">(</span><span class="s2">&quot;check_data_logX: skipping point x </span><span class="si">%g</span><span class="s2">&quot;</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">x</span><span class="p">[</span><span class="n">i</span><span class="p">])</span>
+                    <span class="n">logging</span><span class="o">.</span><span class="n">error</span><span class="p">(</span><span class="n">sys</span><span class="o">.</span><span class="n">exc_value</span><span class="p">)</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">x</span> <span class="o">=</span> <span class="n">tempx</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">y</span> <span class="o">=</span> <span class="n">tempy</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">dx</span> <span class="o">=</span> <span class="n">tempdx</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">dy</span> <span class="o">=</span> <span class="n">tempdy</span></div>
+
+<div class="viewcode-block" id="View.check_data_logY"><a class="viewcode-back" href="../../../../dev/api/sas.sasgui.plottools.html#sas.sasgui.plottools.plottables.View.check_data_logY">[docs]</a>    <span class="k">def</span> <span class="nf">check_data_logY</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Remove negative value in y vector</span>
+<span class="sd">        to avoid plotting negative value of Log10</span>
+
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">tempx</span> <span class="o">=</span> <span class="p">[]</span>
+        <span class="n">tempdx</span> <span class="o">=</span> <span class="p">[]</span>
+        <span class="n">tempy</span> <span class="o">=</span> <span class="p">[]</span>
+        <span class="n">tempdy</span> <span class="o">=</span> <span class="p">[]</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">dx</span> <span class="o">==</span> <span class="bp">None</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">dx</span> <span class="o">=</span> <span class="n">numpy</span><span class="o">.</span><span class="n">zeros</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">x</span><span class="p">))</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">dy</span> <span class="o">==</span> <span class="bp">None</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">dy</span> <span class="o">=</span> <span class="n">numpy</span><span class="o">.</span><span class="n">zeros</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">y</span><span class="p">))</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">yLabel</span> <span class="o">==</span> <span class="s2">&quot;log10(y)&quot;</span><span class="p">:</span>
+            <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">x</span><span class="p">)):</span>
+                <span class="k">try</span><span class="p">:</span>
+                    <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">y</span><span class="p">[</span><span class="n">i</span><span class="p">]</span> <span class="o">&gt;</span> <span class="mi">0</span><span class="p">:</span>
+                        <span class="n">tempx</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">x</span><span class="p">[</span><span class="n">i</span><span class="p">])</span>
+                        <span class="n">tempdx</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">dx</span><span class="p">[</span><span class="n">i</span><span class="p">])</span>
+                        <span class="n">tempy</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">y</span><span class="p">[</span><span class="n">i</span><span class="p">])</span>
+                        <span class="n">tempdy</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">dy</span><span class="p">[</span><span class="n">i</span><span class="p">])</span>
+                <span class="k">except</span><span class="p">:</span>
+                    <span class="n">logging</span><span class="o">.</span><span class="n">error</span><span class="p">(</span><span class="s2">&quot;check_data_logY: skipping point </span><span class="si">%g</span><span class="s2">&quot;</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">y</span><span class="p">[</span><span class="n">i</span><span class="p">])</span>
+                    <span class="n">logging</span><span class="o">.</span><span class="n">error</span><span class="p">(</span><span class="n">sys</span><span class="o">.</span><span class="n">exc_value</span><span class="p">)</span>
+
+            <span class="bp">self</span><span class="o">.</span><span class="n">x</span> <span class="o">=</span> <span class="n">tempx</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">y</span> <span class="o">=</span> <span class="n">tempy</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">dx</span> <span class="o">=</span> <span class="n">tempdx</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">dy</span> <span class="o">=</span> <span class="n">tempdy</span></div>
+
+<div class="viewcode-block" id="View.onFitRangeView"><a class="viewcode-back" href="../../../../dev/api/sas.sasgui.plottools.html#sas.sasgui.plottools.plottables.View.onFitRangeView">[docs]</a>    <span class="k">def</span> <span class="nf">onFitRangeView</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">xmin</span><span class="o">=</span><span class="bp">None</span><span class="p">,</span> <span class="n">xmax</span><span class="o">=</span><span class="bp">None</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        It limits View data range to plot from min to max</span>
+
+<span class="sd">        :param xmin: the minimum value of x to plot.</span>
+<span class="sd">        :param xmax: the maximum value of x to plot</span>
+
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">tempx</span> <span class="o">=</span> <span class="p">[]</span>
+        <span class="n">tempdx</span> <span class="o">=</span> <span class="p">[]</span>
+        <span class="n">tempy</span> <span class="o">=</span> <span class="p">[]</span>
+        <span class="n">tempdy</span> <span class="o">=</span> <span class="p">[]</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">dx</span> <span class="o">==</span> <span class="bp">None</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">dx</span> <span class="o">=</span> <span class="n">numpy</span><span class="o">.</span><span class="n">zeros</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">x</span><span class="p">))</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">dy</span> <span class="o">==</span> <span class="bp">None</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">dy</span> <span class="o">=</span> <span class="n">numpy</span><span class="o">.</span><span class="n">zeros</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">y</span><span class="p">))</span>
+        <span class="k">if</span> <span class="n">xmin</span> <span class="o">!=</span> <span class="bp">None</span> <span class="ow">and</span> <span class="n">xmax</span> <span class="o">!=</span> <span class="bp">None</span><span class="p">:</span>
+            <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">x</span><span class="p">)):</span>
+                <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">x</span><span class="p">[</span><span class="n">i</span><span class="p">]</span> <span class="o">&gt;=</span> <span class="n">xmin</span> <span class="ow">and</span> <span class="bp">self</span><span class="o">.</span><span class="n">x</span><span class="p">[</span><span class="n">i</span><span class="p">]</span> <span class="o">&lt;=</span> <span class="n">xmax</span><span class="p">:</span>
+                    <span class="n">tempx</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">x</span><span class="p">[</span><span class="n">i</span><span class="p">])</span>
+                    <span class="n">tempdx</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">dx</span><span class="p">[</span><span class="n">i</span><span class="p">])</span>
+                    <span class="n">tempy</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">y</span><span class="p">[</span><span class="n">i</span><span class="p">])</span>
+                    <span class="n">tempdy</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">dy</span><span class="p">[</span><span class="n">i</span><span class="p">])</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">x</span> <span class="o">=</span> <span class="n">tempx</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">y</span> <span class="o">=</span> <span class="n">tempy</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">dx</span> <span class="o">=</span> <span class="n">tempdx</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">dy</span> <span class="o">=</span> <span class="n">tempdy</span></div></div>
+
+
+<div class="viewcode-block" id="Data2D"><a class="viewcode-back" href="../../../../dev/api/sas.sasgui.plottools.html#sas.sasgui.plottools.plottables.Data2D">[docs]</a><span class="k">class</span> <span class="nc">Data2D</span><span class="p">(</span><span class="n">Plottable</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    2D data class for image plotting</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">image</span><span class="o">=</span><span class="bp">None</span><span class="p">,</span> <span class="n">qx_data</span><span class="o">=</span><span class="bp">None</span><span class="p">,</span> <span class="n">qy_data</span><span class="o">=</span><span class="bp">None</span><span class="p">,</span>
+                 <span class="n">err_image</span><span class="o">=</span><span class="bp">None</span><span class="p">,</span> <span class="n">xmin</span><span class="o">=</span><span class="bp">None</span><span class="p">,</span> <span class="n">xmax</span><span class="o">=</span><span class="bp">None</span><span class="p">,</span> <span class="n">ymin</span><span class="o">=</span><span class="bp">None</span><span class="p">,</span>
+                 <span class="n">ymax</span><span class="o">=</span><span class="bp">None</span><span class="p">,</span> <span class="n">zmin</span><span class="o">=</span><span class="bp">None</span><span class="p">,</span> <span class="n">zmax</span><span class="o">=</span><span class="bp">None</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Draw image</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">Plottable</span><span class="o">.</span><span class="n">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">name</span> <span class="o">=</span> <span class="s2">&quot;Data2D&quot;</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">label</span> <span class="o">=</span> <span class="bp">None</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">data</span> <span class="o">=</span> <span class="n">image</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">qx_data</span> <span class="o">=</span> <span class="n">qx_data</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">qy_data</span> <span class="o">=</span> <span class="n">qx_data</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">err_data</span> <span class="o">=</span> <span class="n">err_image</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">source</span> <span class="o">=</span> <span class="bp">None</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">detector</span> <span class="o">=</span> <span class="p">[]</span>
+
+        <span class="c1"># # Units for Q-values</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">xy_unit</span> <span class="o">=</span> <span class="s1">&#39;A^{-1}&#39;</span>
+        <span class="c1"># # Units for I(Q) values</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">z_unit</span> <span class="o">=</span> <span class="s1">&#39;cm^{-1}&#39;</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_zaxis</span> <span class="o">=</span> <span class="s1">&#39;&#39;</span>
+        <span class="c1"># x-axis unit and label</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_xaxis</span> <span class="o">=</span> <span class="s1">&#39;</span><span class="se">\\</span><span class="s1">rm{Q_{x}}&#39;</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_xunit</span> <span class="o">=</span> <span class="s1">&#39;A^{-1}&#39;</span>
+        <span class="c1"># y-axis unit and label</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_yaxis</span> <span class="o">=</span> <span class="s1">&#39;</span><span class="se">\\</span><span class="s1">rm{Q_{y}}&#39;</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_yunit</span> <span class="o">=</span> <span class="s1">&#39;A^{-1}&#39;</span>
+
+        <span class="c1"># ## might remove that later</span>
+        <span class="c1"># # Vector of Q-values at the center of each bin in x</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">x_bins</span> <span class="o">=</span> <span class="p">[]</span>
+        <span class="c1"># # Vector of Q-values at the center of each bin in y</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">y_bins</span> <span class="o">=</span> <span class="p">[]</span>
+
+        <span class="c1"># x and y boundaries</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">xmin</span> <span class="o">=</span> <span class="n">xmin</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">xmax</span> <span class="o">=</span> <span class="n">xmax</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">ymin</span> <span class="o">=</span> <span class="n">ymin</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">ymax</span> <span class="o">=</span> <span class="n">ymax</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">zmin</span> <span class="o">=</span> <span class="n">zmin</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">zmax</span> <span class="o">=</span> <span class="n">zmax</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">id</span> <span class="o">=</span> <span class="bp">None</span>
+
+<div class="viewcode-block" id="Data2D.xaxis"><a class="viewcode-back" href="../../../../dev/api/sas.sasgui.plottools.html#sas.sasgui.plottools.plottables.Data2D.xaxis">[docs]</a>    <span class="k">def</span> <span class="nf">xaxis</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">label</span><span class="p">,</span> <span class="n">unit</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        set x-axis</span>
+
+<span class="sd">        :param label: x-axis label</span>
+<span class="sd">        :param unit: x-axis unit</span>
+
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_xaxis</span> <span class="o">=</span> <span class="n">label</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_xunit</span> <span class="o">=</span> <span class="n">unit</span></div>
+
+<div class="viewcode-block" id="Data2D.yaxis"><a class="viewcode-back" href="../../../../dev/api/sas.sasgui.plottools.html#sas.sasgui.plottools.plottables.Data2D.yaxis">[docs]</a>    <span class="k">def</span> <span class="nf">yaxis</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">label</span><span class="p">,</span> <span class="n">unit</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        set y-axis</span>
+
+<span class="sd">        :param label: y-axis label</span>
+<span class="sd">        :param unit: y-axis unit</span>
+
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_yaxis</span> <span class="o">=</span> <span class="n">label</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_yunit</span> <span class="o">=</span> <span class="n">unit</span></div>
+
+<div class="viewcode-block" id="Data2D.zaxis"><a class="viewcode-back" href="../../../../dev/api/sas.sasgui.plottools.html#sas.sasgui.plottools.plottables.Data2D.zaxis">[docs]</a>    <span class="k">def</span> <span class="nf">zaxis</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">label</span><span class="p">,</span> <span class="n">unit</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        set z-axis</span>
+
+<span class="sd">        :param label: z-axis label</span>
+<span class="sd">        :param unit: z-axis unit</span>
+
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_zaxis</span> <span class="o">=</span> <span class="n">label</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_zunit</span> <span class="o">=</span> <span class="n">unit</span></div>
+
+<div class="viewcode-block" id="Data2D.setValues"><a class="viewcode-back" href="../../../../dev/api/sas.sasgui.plottools.html#sas.sasgui.plottools.plottables.Data2D.setValues">[docs]</a>    <span class="k">def</span> <span class="nf">setValues</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">datainfo</span><span class="o">=</span><span class="bp">None</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Use datainfo object to initialize data2D</span>
+
+<span class="sd">        :param datainfo: object</span>
+
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">image</span> <span class="o">=</span> <span class="n">copy</span><span class="o">.</span><span class="n">deepcopy</span><span class="p">(</span><span class="n">datainfo</span><span class="o">.</span><span class="n">data</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">qx_data</span> <span class="o">=</span> <span class="n">copy</span><span class="o">.</span><span class="n">deepcopy</span><span class="p">(</span><span class="n">datainfo</span><span class="o">.</span><span class="n">qx_data</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">qy_data</span> <span class="o">=</span> <span class="n">copy</span><span class="o">.</span><span class="n">deepcopy</span><span class="p">(</span><span class="n">datainfo</span><span class="o">.</span><span class="n">qy_data</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">err_image</span> <span class="o">=</span> <span class="n">copy</span><span class="o">.</span><span class="n">deepcopy</span><span class="p">(</span><span class="n">datainfo</span><span class="o">.</span><span class="n">err_data</span><span class="p">)</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">xy_unit</span> <span class="o">=</span> <span class="n">datainfo</span><span class="o">.</span><span class="n">Q_unit</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">z_unit</span> <span class="o">=</span> <span class="n">datainfo</span><span class="o">.</span><span class="n">I_unit</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_zaxis</span> <span class="o">=</span> <span class="n">datainfo</span><span class="o">.</span><span class="n">_zaxis</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">xaxis</span><span class="p">(</span><span class="n">datainfo</span><span class="o">.</span><span class="n">_xunit</span><span class="p">,</span> <span class="n">datainfo</span><span class="o">.</span><span class="n">_xaxis</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">yaxis</span><span class="p">(</span><span class="n">datainfo</span><span class="o">.</span><span class="n">_yunit</span><span class="p">,</span> <span class="n">datainfo</span><span class="o">.</span><span class="n">_yaxis</span><span class="p">)</span>
+        <span class="c1"># x and y boundaries</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">xmin</span> <span class="o">=</span> <span class="n">datainfo</span><span class="o">.</span><span class="n">xmin</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">xmax</span> <span class="o">=</span> <span class="n">datainfo</span><span class="o">.</span><span class="n">xmax</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">ymin</span> <span class="o">=</span> <span class="n">datainfo</span><span class="o">.</span><span class="n">ymin</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">ymax</span> <span class="o">=</span> <span class="n">datainfo</span><span class="o">.</span><span class="n">ymax</span>
+        <span class="c1"># # Vector of Q-values at the center of each bin in x</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">x_bins</span> <span class="o">=</span> <span class="n">datainfo</span><span class="o">.</span><span class="n">x_bins</span>
+        <span class="c1"># # Vector of Q-values at the center of each bin in y</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">y_bins</span> <span class="o">=</span> <span class="n">datainfo</span><span class="o">.</span><span class="n">y_bins</span></div>
+
+<div class="viewcode-block" id="Data2D.set_zrange"><a class="viewcode-back" href="../../../../dev/api/sas.sasgui.plottools.html#sas.sasgui.plottools.plottables.Data2D.set_zrange">[docs]</a>    <span class="k">def</span> <span class="nf">set_zrange</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">zmin</span><span class="o">=</span><span class="bp">None</span><span class="p">,</span> <span class="n">zmax</span><span class="o">=</span><span class="bp">None</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">if</span> <span class="n">zmin</span> <span class="o">&lt;</span> <span class="n">zmax</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">zmin</span> <span class="o">=</span> <span class="n">zmin</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">zmax</span> <span class="o">=</span> <span class="n">zmax</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="s2">&quot;zmin is greater or equal to zmax &quot;</span></div>
+
+<div class="viewcode-block" id="Data2D.render"><a class="viewcode-back" href="../../../../dev/api/sas.sasgui.plottools.html#sas.sasgui.plottools.plottables.Data2D.render">[docs]</a>    <span class="k">def</span> <span class="nf">render</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">plot</span><span class="p">,</span> <span class="o">**</span><span class="n">kw</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Renders the plottable on the graph</span>
+
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">plot</span><span class="o">.</span><span class="n">image</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">data</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">qx_data</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">qy_data</span><span class="p">,</span>
+                   <span class="bp">self</span><span class="o">.</span><span class="n">xmin</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">xmax</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">ymin</span><span class="p">,</span>
+                   <span class="bp">self</span><span class="o">.</span><span class="n">ymax</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">zmin</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">zmax</span><span class="p">,</span> <span class="o">**</span><span class="n">kw</span><span class="p">)</span></div>
+
+<div class="viewcode-block" id="Data2D.changed"><a class="viewcode-back" href="../../../../dev/api/sas.sasgui.plottools.html#sas.sasgui.plottools.plottables.Data2D.changed">[docs]</a>    <span class="k">def</span> <span class="nf">changed</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">return</span> <span class="bp">False</span></div>
+
+    <span class="nd">@classmethod</span>
+<div class="viewcode-block" id="Data2D.labels"><a class="viewcode-back" href="../../../../dev/api/sas.sasgui.plottools.html#sas.sasgui.plottools.plottables.Data2D.labels">[docs]</a>    <span class="k">def</span> <span class="nf">labels</span><span class="p">(</span><span class="n">cls</span><span class="p">,</span> <span class="n">collection</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Build a label mostly unique within a collection&quot;&quot;&quot;</span>
+        <span class="n">label_dict</span> <span class="o">=</span> <span class="p">{}</span>
+        <span class="k">for</span> <span class="n">item</span> <span class="ow">in</span> <span class="n">collection</span><span class="p">:</span>
+            <span class="k">if</span> <span class="n">item</span><span class="o">.</span><span class="n">label</span> <span class="o">==</span> <span class="s2">&quot;Data2D&quot;</span><span class="p">:</span>
+                <span class="n">item</span><span class="o">.</span><span class="n">label</span> <span class="o">=</span> <span class="n">item</span><span class="o">.</span><span class="n">name</span>
+            <span class="n">label_dict</span><span class="p">[</span><span class="n">item</span><span class="p">]</span> <span class="o">=</span> <span class="n">item</span><span class="o">.</span><span class="n">label</span>
+        <span class="k">return</span> <span class="n">label_dict</span></div></div>
+
+
+<div class="viewcode-block" id="Data1D"><a class="viewcode-back" href="../../../../dev/api/sas.sasgui.plottools.html#sas.sasgui.plottools.plottables.Data1D">[docs]</a><span class="k">class</span> <span class="nc">Data1D</span><span class="p">(</span><span class="n">Plottable</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Data plottable: scatter plot of x,y with errors in x and y.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+
+    <span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">x</span><span class="p">,</span> <span class="n">y</span><span class="p">,</span> <span class="n">dx</span><span class="o">=</span><span class="bp">None</span><span class="p">,</span> <span class="n">dy</span><span class="o">=</span><span class="bp">None</span><span class="p">,</span> <span class="n">lam</span><span class="o">=</span><span class="bp">None</span><span class="p">,</span> <span class="n">dlam</span><span class="o">=</span><span class="bp">None</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Draw points specified by x[i],y[i] in the current color/symbol.</span>
+<span class="sd">        Uncertainty in x is given by dx[i], or by (xlo[i],xhi[i]) if the</span>
+<span class="sd">        uncertainty is asymmetric.  Similarly for y uncertainty.</span>
+
+<span class="sd">        The title appears on the legend.</span>
+<span class="sd">        The label, if it is different, appears on the status bar.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">Plottable</span><span class="o">.</span><span class="n">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">name</span> <span class="o">=</span> <span class="s2">&quot;data&quot;</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">label</span> <span class="o">=</span> <span class="s2">&quot;data&quot;</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">x</span> <span class="o">=</span> <span class="n">x</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">y</span> <span class="o">=</span> <span class="n">y</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">lam</span> <span class="o">=</span> <span class="n">lam</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">dx</span> <span class="o">=</span> <span class="n">dx</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">dy</span> <span class="o">=</span> <span class="n">dy</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">dlam</span> <span class="o">=</span> <span class="n">dlam</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">source</span> <span class="o">=</span> <span class="bp">None</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">detector</span> <span class="o">=</span> <span class="bp">None</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">xaxis</span><span class="p">(</span><span class="s1">&#39;&#39;</span><span class="p">,</span> <span class="s1">&#39;&#39;</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">yaxis</span><span class="p">(</span><span class="s1">&#39;&#39;</span><span class="p">,</span> <span class="s1">&#39;&#39;</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">view</span> <span class="o">=</span> <span class="n">View</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">x</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">y</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">dx</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">dy</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">symbol</span> <span class="o">=</span> <span class="mi">0</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">custom_color</span> <span class="o">=</span> <span class="bp">None</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">markersize</span> <span class="o">=</span> <span class="mi">5</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">id</span> <span class="o">=</span> <span class="bp">None</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">zorder</span> <span class="o">=</span> <span class="mi">1</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">hide_error</span> <span class="o">=</span> <span class="bp">False</span>
+
+<div class="viewcode-block" id="Data1D.render"><a class="viewcode-back" href="../../../../dev/api/sas.sasgui.plottools.html#sas.sasgui.plottools.plottables.Data1D.render">[docs]</a>    <span class="k">def</span> <span class="nf">render</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">plot</span><span class="p">,</span> <span class="o">**</span><span class="n">kw</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Renders the plottable on the graph</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">interactive</span> <span class="o">==</span> <span class="bp">True</span><span class="p">:</span>
+            <span class="n">kw</span><span class="p">[</span><span class="s1">&#39;symbol&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">symbol</span>
+            <span class="n">kw</span><span class="p">[</span><span class="s1">&#39;id&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">id</span>
+            <span class="n">kw</span><span class="p">[</span><span class="s1">&#39;hide_error&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">hide_error</span>
+            <span class="n">kw</span><span class="p">[</span><span class="s1">&#39;markersize&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">markersize</span>
+            <span class="n">plot</span><span class="o">.</span><span class="n">interactive_points</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">view</span><span class="o">.</span><span class="n">x</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">view</span><span class="o">.</span><span class="n">y</span><span class="p">,</span>
+                                    <span class="n">dx</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">view</span><span class="o">.</span><span class="n">dx</span><span class="p">,</span> <span class="n">dy</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">view</span><span class="o">.</span><span class="n">dy</span><span class="p">,</span>
+                                    <span class="n">name</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">name</span><span class="p">,</span> <span class="n">zorder</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">zorder</span><span class="p">,</span> <span class="o">**</span><span class="n">kw</span><span class="p">)</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">kw</span><span class="p">[</span><span class="s1">&#39;id&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">id</span>
+            <span class="n">kw</span><span class="p">[</span><span class="s1">&#39;hide_error&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">hide_error</span>
+            <span class="n">kw</span><span class="p">[</span><span class="s1">&#39;symbol&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">symbol</span>
+            <span class="n">kw</span><span class="p">[</span><span class="s1">&#39;color&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">custom_color</span>
+            <span class="n">kw</span><span class="p">[</span><span class="s1">&#39;markersize&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">markersize</span>
+            <span class="n">plot</span><span class="o">.</span><span class="n">points</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">view</span><span class="o">.</span><span class="n">x</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">view</span><span class="o">.</span><span class="n">y</span><span class="p">,</span> <span class="n">dx</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">view</span><span class="o">.</span><span class="n">dx</span><span class="p">,</span>
+                        <span class="n">dy</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">view</span><span class="o">.</span><span class="n">dy</span><span class="p">,</span> <span class="n">zorder</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">zorder</span><span class="p">,</span>
+                        <span class="n">marker</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">symbollist</span><span class="p">[</span><span class="bp">self</span><span class="o">.</span><span class="n">symbol</span><span class="p">],</span> <span class="o">**</span><span class="n">kw</span><span class="p">)</span></div>
+
+<div class="viewcode-block" id="Data1D.changed"><a class="viewcode-back" href="../../../../dev/api/sas.sasgui.plottools.html#sas.sasgui.plottools.plottables.Data1D.changed">[docs]</a>    <span class="k">def</span> <span class="nf">changed</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="k">return</span> <span class="bp">False</span></div>
+
+    <span class="nd">@classmethod</span>
+<div class="viewcode-block" id="Data1D.labels"><a class="viewcode-back" href="../../../../dev/api/sas.sasgui.plottools.html#sas.sasgui.plottools.plottables.Data1D.labels">[docs]</a>    <span class="k">def</span> <span class="nf">labels</span><span class="p">(</span><span class="n">cls</span><span class="p">,</span> <span class="n">collection</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Build a label mostly unique within a collection&quot;&quot;&quot;</span>
+        <span class="n">label_dict</span> <span class="o">=</span> <span class="p">{}</span>
+        <span class="k">for</span> <span class="n">item</span> <span class="ow">in</span> <span class="n">collection</span><span class="p">:</span>
+            <span class="k">if</span> <span class="n">item</span><span class="o">.</span><span class="n">label</span> <span class="o">==</span> <span class="s2">&quot;data&quot;</span><span class="p">:</span>
+                <span class="n">item</span><span class="o">.</span><span class="n">label</span> <span class="o">=</span> <span class="n">item</span><span class="o">.</span><span class="n">name</span>
+            <span class="n">label_dict</span><span class="p">[</span><span class="n">item</span><span class="p">]</span> <span class="o">=</span> <span class="n">item</span><span class="o">.</span><span class="n">label</span>
+        <span class="k">return</span> <span class="n">label_dict</span></div></div>
+
+
+<div class="viewcode-block" id="Theory1D"><a class="viewcode-back" href="../../../../dev/api/sas.sasgui.plottools.html#sas.sasgui.plottools.plottables.Theory1D">[docs]</a><span class="k">class</span> <span class="nc">Theory1D</span><span class="p">(</span><span class="n">Plottable</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Theory plottable: line plot of x,y with confidence interval y.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">x</span><span class="p">,</span> <span class="n">y</span><span class="p">,</span> <span class="n">dy</span><span class="o">=</span><span class="bp">None</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Draw lines specified in x[i],y[i] in the current color/symbol.</span>
+<span class="sd">        Confidence intervals in x are given by dx[i] or by (xlo[i],xhi[i])</span>
+<span class="sd">        if the limits are asymmetric.</span>
+
+<span class="sd">        The title is the name that will show up on the legend.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">Plottable</span><span class="o">.</span><span class="n">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span>
+        <span class="n">msg</span> <span class="o">=</span> <span class="s2">&quot;Theory1D is no longer supported, please use Data1D and change symbol.</span><span class="se">\n</span><span class="s2">&quot;</span>
+        <span class="k">raise</span> <span class="ne">DeprecationWarning</span><span class="p">,</span> <span class="n">msg</span></div>
+
+<div class="viewcode-block" id="Fit1D"><a class="viewcode-back" href="../../../../dev/api/sas.sasgui.plottools.html#sas.sasgui.plottools.plottables.Fit1D">[docs]</a><span class="k">class</span> <span class="nc">Fit1D</span><span class="p">(</span><span class="n">Plottable</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Fit plottable: composed of a data line plus a theory line.  This</span>
+<span class="sd">    is treated like a single object from the perspective of the graph,</span>
+<span class="sd">    except that it will have two legend entries, one for the data and</span>
+<span class="sd">    one for the theory.</span>
+
+<span class="sd">    The color of the data and theory will be shared.</span>
+
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">data</span><span class="o">=</span><span class="bp">None</span><span class="p">,</span> <span class="n">theory</span><span class="o">=</span><span class="bp">None</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">Plottable</span><span class="o">.</span><span class="n">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">data</span> <span class="o">=</span> <span class="n">data</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">theory</span> <span class="o">=</span> <span class="n">theory</span>
+
+<div class="viewcode-block" id="Fit1D.render"><a class="viewcode-back" href="../../../../dev/api/sas.sasgui.plottools.html#sas.sasgui.plottools.plottables.Fit1D.render">[docs]</a>    <span class="k">def</span> <span class="nf">render</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">plot</span><span class="p">,</span> <span class="o">**</span><span class="n">kw</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">data</span><span class="o">.</span><span class="n">render</span><span class="p">(</span><span class="n">plot</span><span class="p">,</span> <span class="o">**</span><span class="n">kw</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">theory</span><span class="o">.</span><span class="n">render</span><span class="p">(</span><span class="n">plot</span><span class="p">,</span> <span class="o">**</span><span class="n">kw</span><span class="p">)</span></div>
+
+<div class="viewcode-block" id="Fit1D.changed"><a class="viewcode-back" href="../../../../dev/api/sas.sasgui.plottools.html#sas.sasgui.plottools.plottables.Fit1D.changed">[docs]</a>    <span class="k">def</span> <span class="nf">changed</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">data</span><span class="o">.</span><span class="n">changed</span><span class="p">()</span> <span class="ow">or</span> <span class="bp">self</span><span class="o">.</span><span class="n">theory</span><span class="o">.</span><span class="n">changed</span><span class="p">()</span></div></div>
+
+
+<span class="c1"># ---------------------------------------------------------------</span>
+<div class="viewcode-block" id="Text"><a class="viewcode-back" href="../../../../dev/api/sas.sasgui.plottools.html#sas.sasgui.plottools.plottables.Text">[docs]</a><span class="k">class</span> <span class="nc">Text</span><span class="p">(</span><span class="n">Plottable</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">text</span><span class="o">=</span><span class="bp">None</span><span class="p">,</span> <span class="n">xpos</span><span class="o">=</span><span class="mf">0.5</span><span class="p">,</span> <span class="n">ypos</span><span class="o">=</span><span class="mf">0.9</span><span class="p">,</span> <span class="n">name</span><span class="o">=</span><span class="s1">&#39;text&#39;</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Draw the user-defined text in plotter</span>
+<span class="sd">        We can specify the position of text</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">Plottable</span><span class="o">.</span><span class="n">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">name</span> <span class="o">=</span> <span class="n">name</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">text</span> <span class="o">=</span> <span class="n">text</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">xpos</span> <span class="o">=</span> <span class="n">xpos</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">ypos</span> <span class="o">=</span> <span class="n">ypos</span>
+
+<div class="viewcode-block" id="Text.render"><a class="viewcode-back" href="../../../../dev/api/sas.sasgui.plottools.html#sas.sasgui.plottools.plottables.Text.render">[docs]</a>    <span class="k">def</span> <span class="nf">render</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">plot</span><span class="p">,</span> <span class="o">**</span><span class="n">kw</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="kn">from</span> <span class="nn">matplotlib</span> <span class="kn">import</span> <span class="n">transforms</span>
+
+        <span class="n">xcoords</span> <span class="o">=</span> <span class="n">transforms</span><span class="o">.</span><span class="n">blended_transform_factory</span><span class="p">(</span><span class="n">plot</span><span class="o">.</span><span class="n">subplot</span><span class="o">.</span><span class="n">transAxes</span><span class="p">,</span>
+                                                       <span class="n">plot</span><span class="o">.</span><span class="n">subplot</span><span class="o">.</span><span class="n">transAxes</span><span class="p">)</span>
+        <span class="n">plot</span><span class="o">.</span><span class="n">subplot</span><span class="o">.</span><span class="n">text</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">xpos</span><span class="p">,</span>
+                          <span class="bp">self</span><span class="o">.</span><span class="n">ypos</span><span class="p">,</span>
+                          <span class="bp">self</span><span class="o">.</span><span class="n">text</span><span class="p">,</span>
+                          <span class="n">label</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">name</span><span class="p">,</span>
+                          <span class="n">transform</span><span class="o">=</span><span class="n">xcoords</span><span class="p">)</span></div>
+
+<div class="viewcode-block" id="Text.setText"><a class="viewcode-back" href="../../../../dev/api/sas.sasgui.plottools.html#sas.sasgui.plottools.plottables.Text.setText">[docs]</a>    <span class="k">def</span> <span class="nf">setText</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">text</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Set the text string.&quot;&quot;&quot;</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">text</span> <span class="o">=</span> <span class="n">text</span></div>
+
+<div class="viewcode-block" id="Text.getText"><a class="viewcode-back" href="../../../../dev/api/sas.sasgui.plottools.html#sas.sasgui.plottools.plottables.Text.getText">[docs]</a>    <span class="k">def</span> <span class="nf">getText</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">text</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Get the text string.&quot;&quot;&quot;</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">text</span></div>
+
+<div class="viewcode-block" id="Text.set_x"><a class="viewcode-back" href="../../../../dev/api/sas.sasgui.plottools.html#sas.sasgui.plottools.plottables.Text.set_x">[docs]</a>    <span class="k">def</span> <span class="nf">set_x</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">x</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Set the x position of the text</span>
+<span class="sd">        ACCEPTS: float</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">xpos</span> <span class="o">=</span> <span class="n">x</span></div>
+
+<div class="viewcode-block" id="Text.set_y"><a class="viewcode-back" href="../../../../dev/api/sas.sasgui.plottools.html#sas.sasgui.plottools.plottables.Text.set_y">[docs]</a>    <span class="k">def</span> <span class="nf">set_y</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">y</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Set the y position of the text</span>
+<span class="sd">        ACCEPTS: float</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">ypos</span> <span class="o">=</span> <span class="n">y</span></div></div>
+
+
+<span class="c1"># ---------------------------------------------------------------</span>
+<div class="viewcode-block" id="Chisq"><a class="viewcode-back" href="../../../../dev/api/sas.sasgui.plottools.html#sas.sasgui.plottools.plottables.Chisq">[docs]</a><span class="k">class</span> <span class="nc">Chisq</span><span class="p">(</span><span class="n">Plottable</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Chisq plottable plots the chisq</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">chisq</span><span class="o">=</span><span class="bp">None</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Draw the chisq in plotter</span>
+<span class="sd">        We can specify the position of chisq</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">Plottable</span><span class="o">.</span><span class="n">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">name</span> <span class="o">=</span> <span class="s2">&quot;chisq&quot;</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_chisq</span> <span class="o">=</span> <span class="n">chisq</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">xpos</span> <span class="o">=</span> <span class="mf">0.5</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">ypos</span> <span class="o">=</span> <span class="mf">0.9</span>
+
+<div class="viewcode-block" id="Chisq.render"><a class="viewcode-back" href="../../../../dev/api/sas.sasgui.plottools.html#sas.sasgui.plottools.plottables.Chisq.render">[docs]</a>    <span class="k">def</span> <span class="nf">render</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">plot</span><span class="p">,</span> <span class="o">**</span><span class="n">kw</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">if</span>  <span class="bp">self</span><span class="o">.</span><span class="n">_chisq</span> <span class="o">==</span> <span class="bp">None</span><span class="p">:</span>
+            <span class="n">chisqTxt</span> <span class="o">=</span> <span class="s1">r&#39;$\chi^2=$&#39;</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">chisqTxt</span> <span class="o">=</span> <span class="s1">r&#39;$\chi^2=</span><span class="si">%g</span><span class="s1">$&#39;</span> <span class="o">%</span> <span class="p">(</span><span class="nb">float</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_chisq</span><span class="p">))</span>
+
+        <span class="kn">from</span> <span class="nn">matplotlib</span> <span class="kn">import</span> <span class="n">transforms</span>
+
+        <span class="n">xcoords</span> <span class="o">=</span> <span class="n">transforms</span><span class="o">.</span><span class="n">blended_transform_factory</span><span class="p">(</span><span class="n">plot</span><span class="o">.</span><span class="n">subplot</span><span class="o">.</span><span class="n">transAxes</span><span class="p">,</span>
+                                                      <span class="n">plot</span><span class="o">.</span><span class="n">subplot</span><span class="o">.</span><span class="n">transAxes</span><span class="p">)</span>
+        <span class="n">plot</span><span class="o">.</span><span class="n">subplot</span><span class="o">.</span><span class="n">text</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">xpos</span><span class="p">,</span>
+                          <span class="bp">self</span><span class="o">.</span><span class="n">ypos</span><span class="p">,</span>
+                          <span class="n">chisqTxt</span><span class="p">,</span> <span class="n">label</span><span class="o">=</span><span class="s1">&#39;chisq&#39;</span><span class="p">,</span>
+                          <span class="n">transform</span><span class="o">=</span><span class="n">xcoords</span><span class="p">)</span></div>
+
+<div class="viewcode-block" id="Chisq.setChisq"><a class="viewcode-back" href="../../../../dev/api/sas.sasgui.plottools.html#sas.sasgui.plottools.plottables.Chisq.setChisq">[docs]</a>    <span class="k">def</span> <span class="nf">setChisq</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">chisq</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Set the chisq value.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_chisq</span> <span class="o">=</span> <span class="n">chisq</span></div></div>
+
+
+<span class="c1">######################################################</span>
+
+<div class="viewcode-block" id="sample_graph"><a class="viewcode-back" href="../../../../dev/api/sas.sasgui.plottools.html#sas.sasgui.plottools.plottables.sample_graph">[docs]</a><span class="k">def</span> <span class="nf">sample_graph</span><span class="p">():</span>
+    <span class="kn">import</span> <span class="nn">numpy</span> <span class="kn">as</span> <span class="nn">nx</span>
+
+    <span class="c1"># Construct a simple graph</span>
+    <span class="k">if</span> <span class="bp">False</span><span class="p">:</span>
+        <span class="n">x</span> <span class="o">=</span> <span class="n">nx</span><span class="o">.</span><span class="n">array</span><span class="p">([</span><span class="mi">1</span><span class="p">,</span> <span class="mi">2</span><span class="p">,</span> <span class="mi">3</span><span class="p">,</span> <span class="mi">4</span><span class="p">,</span> <span class="mi">5</span><span class="p">,</span> <span class="mi">6</span><span class="p">],</span> <span class="s1">&#39;d&#39;</span><span class="p">)</span>
+        <span class="n">y</span> <span class="o">=</span> <span class="n">nx</span><span class="o">.</span><span class="n">array</span><span class="p">([</span><span class="mi">4</span><span class="p">,</span> <span class="mi">5</span><span class="p">,</span> <span class="mi">6</span><span class="p">,</span> <span class="mi">5</span><span class="p">,</span> <span class="mi">4</span><span class="p">,</span> <span class="mi">5</span><span class="p">],</span> <span class="s1">&#39;d&#39;</span><span class="p">)</span>
+        <span class="n">dy</span> <span class="o">=</span> <span class="n">nx</span><span class="o">.</span><span class="n">array</span><span class="p">([</span><span class="mf">0.2</span><span class="p">,</span> <span class="mf">0.3</span><span class="p">,</span> <span class="mf">0.1</span><span class="p">,</span> <span class="mf">0.2</span><span class="p">,</span> <span class="mf">0.9</span><span class="p">,</span> <span class="mf">0.3</span><span class="p">])</span>
+    <span class="k">else</span><span class="p">:</span>
+        <span class="n">x</span> <span class="o">=</span> <span class="n">nx</span><span class="o">.</span><span class="n">linspace</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="mf">1.</span><span class="p">,</span> <span class="mi">10000</span><span class="p">)</span>
+        <span class="n">y</span> <span class="o">=</span> <span class="n">nx</span><span class="o">.</span><span class="n">sin</span><span class="p">(</span><span class="mi">2</span> <span class="o">*</span> <span class="n">nx</span><span class="o">.</span><span class="n">pi</span> <span class="o">*</span> <span class="n">x</span> <span class="o">*</span> <span class="mf">2.8</span><span class="p">)</span>
+        <span class="n">dy</span> <span class="o">=</span> <span class="n">nx</span><span class="o">.</span><span class="n">sqrt</span><span class="p">(</span><span class="mi">100</span> <span class="o">*</span> <span class="n">nx</span><span class="o">.</span><span class="n">abs</span><span class="p">(</span><span class="n">y</span><span class="p">))</span> <span class="o">/</span> <span class="mi">100</span>
+    <span class="n">data</span> <span class="o">=</span> <span class="n">Data1D</span><span class="p">(</span><span class="n">x</span><span class="p">,</span> <span class="n">y</span><span class="p">,</span> <span class="n">dy</span><span class="o">=</span><span class="n">dy</span><span class="p">)</span>
+    <span class="n">data</span><span class="o">.</span><span class="n">xaxis</span><span class="p">(</span><span class="s1">&#39;distance&#39;</span><span class="p">,</span> <span class="s1">&#39;m&#39;</span><span class="p">)</span>
+    <span class="n">data</span><span class="o">.</span><span class="n">yaxis</span><span class="p">(</span><span class="s1">&#39;time&#39;</span><span class="p">,</span> <span class="s1">&#39;s&#39;</span><span class="p">)</span>
+    <span class="n">graph</span> <span class="o">=</span> <span class="n">Graph</span><span class="p">()</span>
+    <span class="n">graph</span><span class="o">.</span><span class="n">title</span><span class="p">(</span><span class="s1">&#39;Walking Results&#39;</span><span class="p">)</span>
+    <span class="n">graph</span><span class="o">.</span><span class="n">add</span><span class="p">(</span><span class="n">data</span><span class="p">)</span>
+    <span class="n">graph</span><span class="o">.</span><span class="n">add</span><span class="p">(</span><span class="n">Theory1D</span><span class="p">(</span><span class="n">x</span><span class="p">,</span> <span class="n">y</span><span class="p">,</span> <span class="n">dy</span><span class="o">=</span><span class="n">dy</span><span class="p">))</span>
+    <span class="k">return</span> <span class="n">graph</span></div>
+
+
+<div class="viewcode-block" id="demo_plotter"><a class="viewcode-back" href="../../../../dev/api/sas.sasgui.plottools.html#sas.sasgui.plottools.plottables.demo_plotter">[docs]</a><span class="k">def</span> <span class="nf">demo_plotter</span><span class="p">(</span><span class="n">graph</span><span class="p">):</span>
+    <span class="kn">import</span> <span class="nn">wx</span>
+    <span class="kn">from</span> <span class="nn">pylab_plottables</span> <span class="kn">import</span> <span class="n">Plotter</span>
+    <span class="c1"># from mplplotter import Plotter</span>
+
+    <span class="c1"># Make a frame to show it</span>
+    <span class="n">app</span> <span class="o">=</span> <span class="n">wx</span><span class="o">.</span><span class="n">PySimpleApp</span><span class="p">()</span>
+    <span class="n">frame</span> <span class="o">=</span> <span class="n">wx</span><span class="o">.</span><span class="n">Frame</span><span class="p">(</span><span class="bp">None</span><span class="p">,</span> <span class="o">-</span><span class="mi">1</span><span class="p">,</span> <span class="s1">&#39;Plottables&#39;</span><span class="p">)</span>
+    <span class="n">plotter</span> <span class="o">=</span> <span class="n">Plotter</span><span class="p">(</span><span class="n">frame</span><span class="p">)</span>
+    <span class="n">frame</span><span class="o">.</span><span class="n">Show</span><span class="p">()</span>
+
+    <span class="c1"># render the graph to the pylab plotter</span>
+    <span class="n">graph</span><span class="o">.</span><span class="n">render</span><span class="p">(</span><span class="n">plotter</span><span class="p">)</span>
+
+    <span class="k">class</span> <span class="nc">GraphUpdate</span><span class="p">(</span><span class="nb">object</span><span class="p">):</span>
+        <span class="n">callnum</span> <span class="o">=</span> <span class="mi">0</span>
+
+        <span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">graph</span><span class="p">,</span> <span class="n">plotter</span><span class="p">):</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">graph</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">plotter</span> <span class="o">=</span> <span class="n">graph</span><span class="p">,</span> <span class="n">plotter</span>
+
+        <span class="k">def</span> <span class="nf">__call__</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+            <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">graph</span><span class="o">.</span><span class="n">changed</span><span class="p">():</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">graph</span><span class="o">.</span><span class="n">render</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">plotter</span><span class="p">)</span>
+                <span class="k">return</span> <span class="bp">True</span>
+            <span class="k">return</span> <span class="bp">False</span>
+
+        <span class="k">def</span> <span class="nf">onIdle</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">event</span><span class="p">):</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">callnum</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">callnum</span> <span class="o">+</span> <span class="mi">1</span>
+            <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">__call__</span><span class="p">():</span>
+                <span class="k">pass</span>  <span class="c1"># event.RequestMore()</span>
+    <span class="n">update</span> <span class="o">=</span> <span class="n">GraphUpdate</span><span class="p">(</span><span class="n">graph</span><span class="p">,</span> <span class="n">plotter</span><span class="p">)</span>
+    <span class="n">frame</span><span class="o">.</span><span class="n">Bind</span><span class="p">(</span><span class="n">wx</span><span class="o">.</span><span class="n">EVT_IDLE</span><span class="p">,</span> <span class="n">update</span><span class="o">.</span><span class="n">onIdle</span><span class="p">)</span>
+    <span class="n">app</span><span class="o">.</span><span class="n">MainLoop</span><span class="p">()</span></div>
+</pre></div>
+
+          </div>
+        </div>
+      </div>
+      <div class="sphinxsidebar" role="navigation" aria-label="main navigation">
+        <div class="sphinxsidebarwrapper">
+<div id="searchbox" style="display: none" role="search">
+  <h3>Quick search</h3>
+    <form class="search" action="../../../../search.html" method="get">
+      <input type="text" name="q" />
+      <input type="submit" value="Go" />
+      <input type="hidden" name="check_keywords" value="yes" />
+      <input type="hidden" name="area" value="default" />
+    </form>
+</div>
+<script type="text/javascript">$('#searchbox').show(0);</script>
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="related" role="navigation" aria-label="related navigation">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="../../../../genindex.html" title="General Index"
+             >index</a></li>
+        <li class="right" >
+          <a href="../../../../py-modindex.html" title="Python Module Index"
+             >modules</a> |</li>
+        <li class="nav-item nav-item-0"><a href="../../../../index.html">SasView 4.1.2 documentation</a> &raquo;</li>
+          <li class="nav-item nav-item-1"><a href="../../../index.html" >Module code</a> &raquo;</li> 
+      </ul>
+    </div>
+    <div class="footer" role="contentinfo">
+        &copy; Copyright 2017, The SasView Project.
+      Created using <a href="http://sphinx-doc.org/">Sphinx</a> 1.4.1.
+    </div>
+  </body>
+</html>
