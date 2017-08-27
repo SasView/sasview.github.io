@@ -1,12 +1,12 @@
-
 <!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
   "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+
 
 <html xmlns="http://www.w3.org/1999/xhtml">
   <head>
     <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
     
-    <title>polymer_micelle &#8212; SasView 4.1.1 documentation</title>
+    <title>polymer_micelle &mdash; SasView 4.1.2 documentation</title>
     
     <link rel="stylesheet" href="../../_static/classic.css" type="text/css" />
     <link rel="stylesheet" href="../../_static/pygments.css" type="text/css" />
@@ -14,23 +14,22 @@
     <script type="text/javascript">
       var DOCUMENTATION_OPTIONS = {
         URL_ROOT:    '../../',
-        VERSION:     '4.1.1',
+        VERSION:     '4.1.2',
         COLLAPSE_INDEX: false,
         FILE_SUFFIX: '.html',
-        HAS_SOURCE:  true,
-        SOURCELINK_SUFFIX: '.txt'
+        HAS_SOURCE:  true
       };
     </script>
     <script type="text/javascript" src="../../_static/jquery.js"></script>
     <script type="text/javascript" src="../../_static/underscore.js"></script>
     <script type="text/javascript" src="../../_static/doctools.js"></script>
     <script type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.1/MathJax.js?config=TeX-MML-AM_CHTML"></script>
-    <link rel="index" title="Index" href="../../genindex.html" />
-    <link rel="search" title="Search" href="../../search.html" />
+    <link rel="top" title="SasView 4.1.2 documentation" href="../../index.html" />
+    <link rel="up" title="Sphere Functions" href="../shape-sphere.html" />
     <link rel="next" title="raspberry" href="raspberry.html" />
     <link rel="prev" title="onion" href="onion.html" /> 
   </head>
-  <body>
+  <body role="document">
     <div class="related" role="navigation" aria-label="related navigation">
       <h3>Navigation</h3>
       <ul>
@@ -46,10 +45,10 @@
         <li class="right" >
           <a href="onion.html" title="onion"
              accesskey="P">previous</a> |</li>
-        <li class="nav-item nav-item-0"><a href="../../index.html">SasView 4.1.1 documentation</a> &#187;</li>
-          <li class="nav-item nav-item-1"><a href="../user.html" >SasView User Documentation</a> &#187;</li>
-          <li class="nav-item nav-item-2"><a href="../index.html" >Model Functions</a> &#187;</li>
-          <li class="nav-item nav-item-3"><a href="../shape-sphere.html" accesskey="U">Sphere Functions</a> &#187;</li> 
+        <li class="nav-item nav-item-0"><a href="../../index.html">SasView 4.1.2 documentation</a> &raquo;</li>
+          <li class="nav-item nav-item-1"><a href="../user.html" >SasView User Documentation</a> &raquo;</li>
+          <li class="nav-item nav-item-2"><a href="../index.html" >Model Functions</a> &raquo;</li>
+          <li class="nav-item nav-item-3"><a href="../shape-sphere.html" accesskey="U">Sphere Functions</a> &raquo;</li> 
       </ul>
     </div>  
 
@@ -88,17 +87,17 @@
 </tr>
 <tr class="row-even"><td>ndensity</td>
 <td>Number density of micelles</td>
-<td>1e15/cm^3</td>
+<td>10<sup>15</sup>cm<sup>3</sup></td>
 <td>8.94</td>
 </tr>
 <tr class="row-odd"><td>v_core</td>
 <td>Core volume</td>
-<td>Ang^3</td>
+<td>Å<sup>3</sup></td>
 <td>62624</td>
 </tr>
 <tr class="row-even"><td>v_corona</td>
 <td>Corona volume</td>
-<td>Ang^3</td>
+<td>Å<sup>3</sup></td>
 <td>61940</td>
 </tr>
 <tr class="row-odd"><td>sld_solvent</td>
@@ -117,11 +116,11 @@
 <td>0.8</td>
 </tr>
 <tr class="row-even"><td>radius_core</td>
-<td>Radius of core ( must be &gt;&gt; radius_gyr )</td>
+<td>Radius of core ( must be &gt;&gt; rg )</td>
 <td>Å</td>
 <td>45</td>
 </tr>
-<tr class="row-odd"><td>radius_gyr</td>
+<tr class="row-odd"><td>rg</td>
 <td>Radius of gyration of chains in corona</td>
 <td>Å</td>
 <td>20</td>
@@ -146,12 +145,37 @@ smaller than the core, which is often not the case.  Please study the
 reference carefully.</p>
 <p><strong>Definition</strong></p>
 <p>The 1D scattering intensity for this model is calculated according to
-the equations given by Pedersen (Pedersen, 2000).</p>
+the equations given by Pedersen (Pedersen, 2000), summarised briefly here.</p>
+<p>The micelle core is imagined as <span class="math">\(N\_aggreg\)</span> polymer heads, each of volume <span class="math">\(v\_core\)</span>,
+which then defines a micelle core of <span class="math">\(radius\_core\)</span>, which is a separate parameter
+even though it could be directly determined.
+The Gaussian random coil tails, of gyration radius <span class="math">\(rg\)</span>, are imagined uniformly
+distributed around the spherical core, centred at a distance <span class="math">\(radius\_core + d\_penetration.rg\)</span>
+from the micelle centre, where <span class="math">\(d\_penetration\)</span> is of order unity.
+A volume <span class="math">\(v\_corona\)</span> is defined for each coil.
+The model in detail seems to separately parametrise the terms for the shape of I(Q) and the
+relative intensity of each term, so use with caution and check parameters for consistency.
+The spherical core is monodisperse, so it&#8217;s intensity and the cross terms may have sharp
+oscillations (use q resolution smearing if needs be to help remove them).</p>
+<div class="math">
+\[ \begin{align}\begin{aligned}P(q) = N^2\beta^2_s\Phi(qR)^2+N\beta^2_cP_c(q)+2N^2\beta_s\beta_cS_{sc}s_c(q)+N(N-1)\beta_c^2S_{cc}(q)\\\beta_s = v\_core(sld\_core - sld\_solvent)\\\beta_c = v\_corona(sld\_corona - sld\_solvent)\end{aligned}\end{align} \]</div>
+<p>where <span class="math">\(N = n\_aggreg\)</span>, and for the spherical core of radius <span class="math">\(R\)</span></p>
+<div class="math">
+\[\Phi(qR)= \frac{\sin(qr) - qr\cos(qr)}{(qr)^3}\]</div>
+<p>whilst for the Gaussian coils</p>
+<div class="math">
+\[ \begin{align}\begin{aligned}P_c(q) &amp;= 2 [\exp(-Z) + Z - 1] / Z^2\\Z &amp;= (q R_g)^2\end{aligned}\end{align} \]</div>
+<p>The sphere to coil ( core to corona) and coil to coil (corona to corona) cross terms are
+approximated by:</p>
+<div class="math">
+\[ \begin{align}\begin{aligned}S_{sc}(q)=\Phi(qR)\psi(Z)\frac{sin(q(R+d.R_g))}{q(R+d.R_g)}\\S_{cc}(q)=\psi(Z)^2\left[\frac{sin(q(R+d.R_g))}{q(R+d.R_g)} \right ]^2\\\psi(Z)=\frac{[1-exp^{-Z}]}{Z}\end{aligned}\end{align} \]</div>
 <p><strong>Validation</strong></p>
-<p>This model has not yet been validated. Feb2015</p>
+<p><span class="math">\(P(q)\)</span> above is multiplied by <span class="math">\(ndensity\)</span>, and a units conversion of 10^{-13}, so <span class="math">\(scale\)</span>
+is likely 1.0 if the scattering data is in absolute units. This model has not yet been
+independently validated.</p>
 <div class="figure" id="id2">
 <img alt="../../_images/polymer_micelle_autogenfig.png" src="../../_images/polymer_micelle_autogenfig.png" />
-<p class="caption"><span class="caption-number">Fig. 71 </span><span class="caption-text">1D plot corresponding to the default parameters of the model.</span></p>
+<p class="caption"><span class="caption-number">Fig. 73 </span><span class="caption-text">1D plot corresponding to the default parameters of the model.</span></p>
 </div>
 <p><strong>References</strong></p>
 <p>J Pedersen, <em>J. Appl. Cryst.</em>, 33 (2000) 637-640</p>
@@ -172,15 +196,15 @@ the equations given by Pedersen (Pedersen, 2000).</p>
   <div role="note" aria-label="source link">
     <h3>This Page</h3>
     <ul class="this-page-menu">
-      <li><a href="../../_sources/user/models/polymer_micelle.rst.txt"
+      <li><a href="../../_sources/user/models/polymer_micelle.txt"
             rel="nofollow">Show Source</a></li>
     </ul>
    </div>
 <div id="searchbox" style="display: none" role="search">
   <h3>Quick search</h3>
     <form class="search" action="../../search.html" method="get">
-      <div><input type="text" name="q" /></div>
-      <div><input type="submit" value="Go" /></div>
+      <input type="text" name="q" />
+      <input type="submit" value="Go" />
       <input type="hidden" name="check_keywords" value="yes" />
       <input type="hidden" name="area" value="default" />
     </form>
@@ -205,15 +229,15 @@ the equations given by Pedersen (Pedersen, 2000).</p>
         <li class="right" >
           <a href="onion.html" title="onion"
              >previous</a> |</li>
-        <li class="nav-item nav-item-0"><a href="../../index.html">SasView 4.1.1 documentation</a> &#187;</li>
-          <li class="nav-item nav-item-1"><a href="../user.html" >SasView User Documentation</a> &#187;</li>
-          <li class="nav-item nav-item-2"><a href="../index.html" >Model Functions</a> &#187;</li>
-          <li class="nav-item nav-item-3"><a href="../shape-sphere.html" >Sphere Functions</a> &#187;</li> 
+        <li class="nav-item nav-item-0"><a href="../../index.html">SasView 4.1.2 documentation</a> &raquo;</li>
+          <li class="nav-item nav-item-1"><a href="../user.html" >SasView User Documentation</a> &raquo;</li>
+          <li class="nav-item nav-item-2"><a href="../index.html" >Model Functions</a> &raquo;</li>
+          <li class="nav-item nav-item-3"><a href="../shape-sphere.html" >Sphere Functions</a> &raquo;</li> 
       </ul>
     </div>
     <div class="footer" role="contentinfo">
-        &#169; Copyright 2017, The SasView Project.
-      Created using <a href="http://sphinx-doc.org/">Sphinx</a> 1.6.2.
+        &copy; Copyright 2017, The SasView Project.
+      Created using <a href="http://sphinx-doc.org/">Sphinx</a> 1.4.1.
     </div>
   </body>
 </html>

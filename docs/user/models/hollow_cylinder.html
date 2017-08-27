@@ -1,12 +1,12 @@
-
 <!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
   "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+
 
 <html xmlns="http://www.w3.org/1999/xhtml">
   <head>
     <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
     
-    <title>hollow_cylinder &#8212; SasView 4.1.1 documentation</title>
+    <title>hollow_cylinder &mdash; SasView 4.1.2 documentation</title>
     
     <link rel="stylesheet" href="../../_static/classic.css" type="text/css" />
     <link rel="stylesheet" href="../../_static/pygments.css" type="text/css" />
@@ -14,23 +14,22 @@
     <script type="text/javascript">
       var DOCUMENTATION_OPTIONS = {
         URL_ROOT:    '../../',
-        VERSION:     '4.1.1',
+        VERSION:     '4.1.2',
         COLLAPSE_INDEX: false,
         FILE_SUFFIX: '.html',
-        HAS_SOURCE:  true,
-        SOURCELINK_SUFFIX: '.txt'
+        HAS_SOURCE:  true
       };
     </script>
     <script type="text/javascript" src="../../_static/jquery.js"></script>
     <script type="text/javascript" src="../../_static/underscore.js"></script>
     <script type="text/javascript" src="../../_static/doctools.js"></script>
     <script type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.1/MathJax.js?config=TeX-MML-AM_CHTML"></script>
-    <link rel="index" title="Index" href="../../genindex.html" />
-    <link rel="search" title="Search" href="../../search.html" />
+    <link rel="top" title="SasView 4.1.2 documentation" href="../../index.html" />
+    <link rel="up" title="Cylinder Functions" href="../shape-cylinder.html" />
     <link rel="next" title="pearl_necklace" href="pearl_necklace.html" />
     <link rel="prev" title="flexible_cylinder_elliptical" href="flexible_cylinder_elliptical.html" /> 
   </head>
-  <body>
+  <body role="document">
     <div class="related" role="navigation" aria-label="related navigation">
       <h3>Navigation</h3>
       <ul>
@@ -46,10 +45,10 @@
         <li class="right" >
           <a href="flexible_cylinder_elliptical.html" title="flexible_cylinder_elliptical"
              accesskey="P">previous</a> |</li>
-        <li class="nav-item nav-item-0"><a href="../../index.html">SasView 4.1.1 documentation</a> &#187;</li>
-          <li class="nav-item nav-item-1"><a href="../user.html" >SasView User Documentation</a> &#187;</li>
-          <li class="nav-item nav-item-2"><a href="../index.html" >Model Functions</a> &#187;</li>
-          <li class="nav-item nav-item-3"><a href="../shape-cylinder.html" accesskey="U">Cylinder Functions</a> &#187;</li> 
+        <li class="nav-item nav-item-0"><a href="../../index.html">SasView 4.1.2 documentation</a> &raquo;</li>
+          <li class="nav-item nav-item-1"><a href="../user.html" >SasView User Documentation</a> &raquo;</li>
+          <li class="nav-item nav-item-2"><a href="../index.html" >Model Functions</a> &raquo;</li>
+          <li class="nav-item nav-item-3"><a href="../shape-cylinder.html" accesskey="U">Cylinder Functions</a> &raquo;</li> 
       </ul>
     </div>  
 
@@ -62,10 +61,10 @@
 <span id="id1"></span><h1>hollow_cylinder</h1>
 <table border="1" class="docutils">
 <colgroup>
-<col width="22%" />
-<col width="36%" />
-<col width="16%" />
-<col width="26%" />
+<col width="20%" />
+<col width="42%" />
+<col width="15%" />
+<col width="24%" />
 </colgroup>
 <thead valign="bottom">
 <tr class="row-odd"><th class="head">Parameter</th>
@@ -86,17 +85,17 @@
 <td>0.001</td>
 </tr>
 <tr class="row-even"><td>radius</td>
-<td>Cylinder radius</td>
-<td>Å</td>
-<td>30</td>
-</tr>
-<tr class="row-odd"><td>core_radius</td>
-<td>Hollow core radius</td>
+<td>Cylinder core radius</td>
 <td>Å</td>
 <td>20</td>
 </tr>
+<tr class="row-odd"><td>thickness</td>
+<td>Cylinder wall thickness</td>
+<td>Å</td>
+<td>10</td>
+</tr>
 <tr class="row-even"><td>length</td>
-<td>Cylinder length</td>
+<td>Cylinder total length</td>
 <td>Å</td>
 <td>400</td>
 </tr>
@@ -124,8 +123,8 @@
 </table>
 <p>The returned value is scaled to units of cm<sup>-1</sup> sr<sup>-1</sup>, absolute scale.</p>
 <p>This model provides the form factor, <span class="math">\(P(q)\)</span>, for a monodisperse hollow right
-angle circular cylinder (tube) where the form factor is normalized by the
-volume of the tube</p>
+angle circular cylinder (rigid tube) where the form factor is normalized by the
+volume of the tube (i.e. not by the external volume).</p>
 <div class="math">
 \[P(q) = \text{scale} \left&lt;F^2\right&gt;/V_\text{shell} + \text{background}\]</div>
 <p>where the averaging <span class="math">\(\left&lt;\ldots\right&gt;\)</span> is applied only for the 1D calculation.</p>
@@ -135,32 +134,44 @@ volume of the tube</p>
 <div class="math">
 \[\begin{split}P(q)           &amp;= (\text{scale})V_\text{shell}\Delta\rho^2
         \int_0^{1}\Psi^2
-        \left[q_z, R_\text{shell}(1-x^2)^{1/2},
+        \left[q_z, R_\text{outer}(1-x^2)^{1/2},
                    R_\text{core}(1-x^2)^{1/2}\right]
         \left[\frac{\sin(qHx)}{qHx}\right]^2 dx \\
 \Psi[q,y,z]    &amp;= \frac{1}{1-\gamma^2}
         \left[ \Lambda(qy) - \gamma^2\Lambda(qz) \right] \\
 \Lambda(a)     &amp;= 2 J_1(a) / a \\
-\gamma         &amp;= R_\text{core} / R_\text{shell} \\
-V_\text{shell} &amp;= \pi \left(R_\text{shell}^2 - R_\text{core}^2 \right)L \\
+\gamma         &amp;= R_\text{core} / R_\text{outer} \\
+V_\text{shell} &amp;= \pi \left(R_\text{outer}^2 - R_\text{core}^2 \right)L \\
 J_1(x)         &amp;= (\sin(x)-x\cdot \cos(x)) / x^2\end{split}\]</div>
 <p>where <em>scale</em> is a scale factor, <span class="math">\(H = L/2\)</span> and <span class="math">\(J_1\)</span> is the 1st order
 Bessel function.</p>
 <p><strong>NB</strong>: The 2nd virial coefficient of the cylinder is calculated
-based on the radius and 2 length values, and used as the effective radius
-for <span class="math">\(S(q)\)</span> when <span class="math">\(P(q) \cdot S(q)\)</span> is applied.</p>
-<p>In the parameters, the contrast represents SLD <sub>shell</sub> - SLD <sub>solvent</sub>
-and the <em>radius</em> is <span class="math">\(R_\text{shell}\)</span> while <em>core_radius</em> is <span class="math">\(R_\text{core}\)</span>.</p>
+based on the outer radius and full length, which give an the effective radius
+for structure factor <span class="math">\(S(q)\)</span> when <span class="math">\(P(q) \cdot S(q)\)</span> is applied.</p>
+<p>In the parameters,the <em>radius</em> is <span class="math">\(R_\text{core}\)</span> while <em>thickness</em> is <span class="math">\(R_\text{outer} - R_\text{core}\)</span>.</p>
 <p>To provide easy access to the orientation of the core-shell cylinder, we define
 the axis of the cylinder using two angles <span class="math">\(\theta\)</span> and <span class="math">\(\phi\)</span>
 (see <a class="reference internal" href="cylinder.html#cylinder-angle-definition"><span class="std std-ref">cylinder model</span></a>).</p>
 <div class="figure" id="id2">
 <img alt="../../_images/hollow_cylinder_autogenfig.png" src="../../_images/hollow_cylinder_autogenfig.png" />
-<p class="caption"><span class="caption-number">Fig. 23 </span><span class="caption-text">1D and 2D plots corresponding to the default parameters of the model.</span></p>
+<p class="caption"><span class="caption-number">Fig. 26 </span><span class="caption-text">1D and 2D plots corresponding to the default parameters of the model.</span></p>
 </div>
 <p><strong>References</strong></p>
 <p>L A Feigin and D I Svergun, <em>Structure Analysis by Small-Angle X-Ray and
 Neutron Scattering</em>, Plenum Press, New York, (1987)</p>
+<p><strong>Authorship and Verification</strong></p>
+<ul>
+<li><p class="first"><strong>Author:</strong> NIST IGOR/DANSE <strong>Date:</strong> pre 2010</p>
+</li>
+<li><dl class="first docutils">
+<dt><strong>Last Modified by:</strong> Richard Heenan <strong>Date:</strong> October 06, 2016</dt>
+<dd><p class="first last">(reparametrised to use thickness, not outer radius)</p>
+</dd>
+</dl>
+</li>
+<li><p class="first"><strong>Last Reviewed by:</strong> Richard Heenan <strong>Date:</strong> October 06, 2016</p>
+</li>
+</ul>
 </div>
 
 
@@ -178,15 +189,15 @@ Neutron Scattering</em>, Plenum Press, New York, (1987)</p>
   <div role="note" aria-label="source link">
     <h3>This Page</h3>
     <ul class="this-page-menu">
-      <li><a href="../../_sources/user/models/hollow_cylinder.rst.txt"
+      <li><a href="../../_sources/user/models/hollow_cylinder.txt"
             rel="nofollow">Show Source</a></li>
     </ul>
    </div>
 <div id="searchbox" style="display: none" role="search">
   <h3>Quick search</h3>
     <form class="search" action="../../search.html" method="get">
-      <div><input type="text" name="q" /></div>
-      <div><input type="submit" value="Go" /></div>
+      <input type="text" name="q" />
+      <input type="submit" value="Go" />
       <input type="hidden" name="check_keywords" value="yes" />
       <input type="hidden" name="area" value="default" />
     </form>
@@ -211,15 +222,15 @@ Neutron Scattering</em>, Plenum Press, New York, (1987)</p>
         <li class="right" >
           <a href="flexible_cylinder_elliptical.html" title="flexible_cylinder_elliptical"
              >previous</a> |</li>
-        <li class="nav-item nav-item-0"><a href="../../index.html">SasView 4.1.1 documentation</a> &#187;</li>
-          <li class="nav-item nav-item-1"><a href="../user.html" >SasView User Documentation</a> &#187;</li>
-          <li class="nav-item nav-item-2"><a href="../index.html" >Model Functions</a> &#187;</li>
-          <li class="nav-item nav-item-3"><a href="../shape-cylinder.html" >Cylinder Functions</a> &#187;</li> 
+        <li class="nav-item nav-item-0"><a href="../../index.html">SasView 4.1.2 documentation</a> &raquo;</li>
+          <li class="nav-item nav-item-1"><a href="../user.html" >SasView User Documentation</a> &raquo;</li>
+          <li class="nav-item nav-item-2"><a href="../index.html" >Model Functions</a> &raquo;</li>
+          <li class="nav-item nav-item-3"><a href="../shape-cylinder.html" >Cylinder Functions</a> &raquo;</li> 
       </ul>
     </div>
     <div class="footer" role="contentinfo">
-        &#169; Copyright 2017, The SasView Project.
-      Created using <a href="http://sphinx-doc.org/">Sphinx</a> 1.6.2.
+        &copy; Copyright 2017, The SasView Project.
+      Created using <a href="http://sphinx-doc.org/">Sphinx</a> 1.4.1.
     </div>
   </body>
 </html>
