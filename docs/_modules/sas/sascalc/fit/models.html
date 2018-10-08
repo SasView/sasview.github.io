@@ -1,0 +1,428 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+  "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+    
+    <title>sas.sascalc.fit.models &mdash; SasView 4.2.0 documentation</title>
+    
+    <link rel="stylesheet" href="../../../../_static/classic.css" type="text/css" />
+    <link rel="stylesheet" href="../../../../_static/pygments.css" type="text/css" />
+    
+    <script type="text/javascript">
+      var DOCUMENTATION_OPTIONS = {
+        URL_ROOT:    '../../../../',
+        VERSION:     '4.2.0',
+        COLLAPSE_INDEX: false,
+        FILE_SUFFIX: '.html',
+        HAS_SOURCE:  true
+      };
+    </script>
+    <script type="text/javascript" src="../../../../_static/jquery.js"></script>
+    <script type="text/javascript" src="../../../../_static/underscore.js"></script>
+    <script type="text/javascript" src="../../../../_static/doctools.js"></script>
+    <script type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.1/MathJax.js?config=TeX-MML-AM_CHTML"></script>
+    <link rel="top" title="SasView 4.2.0 documentation" href="../../../../index.html" />
+    <link rel="up" title="sas" href="../../../sas.html" /> 
+  </head>
+  <body role="document">
+    <div class="related" role="navigation" aria-label="related navigation">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="../../../../genindex.html" title="General Index"
+             accesskey="I">index</a></li>
+        <li class="right" >
+          <a href="../../../../py-modindex.html" title="Python Module Index"
+             >modules</a> |</li>
+        <li class="nav-item nav-item-0"><a href="../../../../index.html">SasView 4.2.0 documentation</a> &raquo;</li>
+          <li class="nav-item nav-item-1"><a href="../../../index.html" >Module code</a> &raquo;</li>
+          <li class="nav-item nav-item-2"><a href="../../../sas.html" accesskey="U">sas</a> &raquo;</li> 
+      </ul>
+    </div>  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          <div class="body" role="main">
+            
+  <h1>Source code for sas.sascalc.fit.models</h1><div class="highlight"><pre>
+<span></span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Utilities to manage models</span>
+<span class="sd">&quot;&quot;&quot;</span>
+<span class="kn">from</span> <span class="nn">__future__</span> <span class="kn">import</span> <span class="n">print_function</span>
+
+<span class="kn">import</span> <span class="nn">os</span>
+<span class="kn">import</span> <span class="nn">sys</span>
+<span class="kn">import</span> <span class="nn">time</span>
+<span class="kn">import</span> <span class="nn">datetime</span>
+<span class="kn">import</span> <span class="nn">logging</span>
+<span class="kn">import</span> <span class="nn">traceback</span>
+<span class="kn">import</span> <span class="nn">py_compile</span>
+<span class="kn">import</span> <span class="nn">shutil</span>
+
+<span class="kn">from</span> <span class="nn">sasmodels.sasview_model</span> <span class="kn">import</span> <span class="n">load_custom_model</span><span class="p">,</span> <span class="n">load_standard_models</span>
+
+<span class="kn">from</span> <span class="nn">sas</span> <span class="kn">import</span> <span class="n">get_user_dir</span>
+
+<span class="c1"># Explicitly import from the pluginmodel module so that py2exe</span>
+<span class="c1"># places it in the distribution. The Model1DPlugin class is used</span>
+<span class="c1"># as the base class of plug-in models.</span>
+<span class="kn">from</span> <span class="nn">.pluginmodel</span> <span class="kn">import</span> <span class="n">Model1DPlugin</span>
+
+<span class="n">logger</span> <span class="o">=</span> <span class="n">logging</span><span class="o">.</span><span class="n">getLogger</span><span class="p">(</span><span class="n">__name__</span><span class="p">)</span>
+
+
+<span class="n">PLUGIN_DIR</span> <span class="o">=</span> <span class="s1">&#39;plugin_models&#39;</span>
+<span class="n">PLUGIN_LOG</span> <span class="o">=</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">get_user_dir</span><span class="p">(),</span> <span class="n">PLUGIN_DIR</span><span class="p">,</span> <span class="s2">&quot;plugins.log&quot;</span><span class="p">)</span>
+<span class="n">PLUGIN_NAME_BASE</span> <span class="o">=</span> <span class="s1">&#39;[plug-in] &#39;</span>
+
+
+<div class="viewcode-block" id="plugin_log"><a class="viewcode-back" href="../../../../dev/sasview-api/sas.sascalc.fit.html#sas.sascalc.fit.models.plugin_log">[docs]</a><span class="k">def</span> <span class="nf">plugin_log</span><span class="p">(</span><span class="n">message</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Log a message in a file located in the user&#39;s home directory</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">out</span> <span class="o">=</span> <span class="nb">open</span><span class="p">(</span><span class="n">PLUGIN_LOG</span><span class="p">,</span> <span class="s1">&#39;a&#39;</span><span class="p">)</span>
+    <span class="n">now</span> <span class="o">=</span> <span class="n">time</span><span class="o">.</span><span class="n">time</span><span class="p">()</span>
+    <span class="n">stamp</span> <span class="o">=</span> <span class="n">datetime</span><span class="o">.</span><span class="n">datetime</span><span class="o">.</span><span class="n">fromtimestamp</span><span class="p">(</span><span class="n">now</span><span class="p">)</span><span class="o">.</span><span class="n">strftime</span><span class="p">(</span><span class="s1">&#39;%Y-%m-</span><span class="si">%d</span><span class="s1"> %H:%M:%S&#39;</span><span class="p">)</span>
+    <span class="n">out</span><span class="o">.</span><span class="n">write</span><span class="p">(</span><span class="s2">&quot;</span><span class="si">%s</span><span class="s2">: </span><span class="si">%s</span><span class="se">\n</span><span class="s2">&quot;</span> <span class="o">%</span> <span class="p">(</span><span class="n">stamp</span><span class="p">,</span> <span class="n">message</span><span class="p">))</span>
+    <span class="n">out</span><span class="o">.</span><span class="n">close</span><span class="p">()</span></div>
+
+
+<span class="k">def</span> <span class="nf">_check_plugin</span><span class="p">(</span><span class="n">model</span><span class="p">,</span> <span class="n">name</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Do some checking before model adding plugins in the list</span>
+
+<span class="sd">    :param model: class model to add into the plugin list</span>
+<span class="sd">    :param name:name of the module plugin</span>
+
+<span class="sd">    :return model: model if valid model or None if not valid</span>
+
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="c1">#Check if the plugin is of type Model1DPlugin</span>
+    <span class="k">if</span> <span class="ow">not</span> <span class="nb">issubclass</span><span class="p">(</span><span class="n">model</span><span class="p">,</span> <span class="n">Model1DPlugin</span><span class="p">):</span>
+        <span class="n">msg</span> <span class="o">=</span> <span class="s2">&quot;Plugin </span><span class="si">%s</span><span class="s2"> must be of type Model1DPlugin </span><span class="se">\n</span><span class="s2">&quot;</span> <span class="o">%</span> <span class="nb">str</span><span class="p">(</span><span class="n">name</span><span class="p">)</span>
+        <span class="n">plugin_log</span><span class="p">(</span><span class="n">msg</span><span class="p">)</span>
+        <span class="k">return</span> <span class="bp">None</span>
+    <span class="k">if</span> <span class="n">model</span><span class="o">.</span><span class="n">__name__</span> <span class="o">!=</span> <span class="s2">&quot;Model&quot;</span><span class="p">:</span>
+        <span class="n">msg</span> <span class="o">=</span> <span class="s2">&quot;Plugin </span><span class="si">%s</span><span class="s2"> class name must be Model </span><span class="se">\n</span><span class="s2">&quot;</span> <span class="o">%</span> <span class="nb">str</span><span class="p">(</span><span class="n">name</span><span class="p">)</span>
+        <span class="n">plugin_log</span><span class="p">(</span><span class="n">msg</span><span class="p">)</span>
+        <span class="k">return</span> <span class="bp">None</span>
+    <span class="k">try</span><span class="p">:</span>
+        <span class="n">new_instance</span> <span class="o">=</span> <span class="n">model</span><span class="p">()</span>
+    <span class="k">except</span> <span class="ne">Exception</span><span class="p">:</span>
+        <span class="n">msg</span> <span class="o">=</span> <span class="s2">&quot;Plugin </span><span class="si">%s</span><span class="s2"> error in __init__ </span><span class="se">\n\t</span><span class="s2">: </span><span class="si">%s</span><span class="s2"> </span><span class="si">%s</span><span class="se">\n</span><span class="s2">&quot;</span> <span class="o">%</span> <span class="p">(</span><span class="nb">str</span><span class="p">(</span><span class="n">name</span><span class="p">),</span>
+                                                             <span class="nb">str</span><span class="p">(</span><span class="n">sys</span><span class="o">.</span><span class="n">exc_type</span><span class="p">),</span>
+                                                             <span class="n">sys</span><span class="o">.</span><span class="n">exc_info</span><span class="p">()[</span><span class="mi">1</span><span class="p">])</span>
+        <span class="n">plugin_log</span><span class="p">(</span><span class="n">msg</span><span class="p">)</span>
+        <span class="k">return</span> <span class="bp">None</span>
+
+    <span class="k">if</span> <span class="nb">hasattr</span><span class="p">(</span><span class="n">new_instance</span><span class="p">,</span> <span class="s2">&quot;function&quot;</span><span class="p">):</span>
+        <span class="k">try</span><span class="p">:</span>
+            <span class="n">value</span> <span class="o">=</span> <span class="n">new_instance</span><span class="o">.</span><span class="n">function</span><span class="p">()</span>
+        <span class="k">except</span> <span class="ne">Exception</span><span class="p">:</span>
+            <span class="n">msg</span> <span class="o">=</span> <span class="s2">&quot;Plugin </span><span class="si">%s</span><span class="s2">: error writing function </span><span class="se">\n\t</span><span class="s2"> :</span><span class="si">%s</span><span class="s2"> </span><span class="si">%s</span><span class="se">\n</span><span class="s2"> &quot;</span> <span class="o">%</span> \
+                    <span class="p">(</span><span class="nb">str</span><span class="p">(</span><span class="n">name</span><span class="p">),</span> <span class="nb">str</span><span class="p">(</span><span class="n">sys</span><span class="o">.</span><span class="n">exc_type</span><span class="p">),</span> <span class="n">sys</span><span class="o">.</span><span class="n">exc_info</span><span class="p">()[</span><span class="mi">1</span><span class="p">])</span>
+            <span class="n">plugin_log</span><span class="p">(</span><span class="n">msg</span><span class="p">)</span>
+            <span class="k">return</span> <span class="bp">None</span>
+    <span class="k">else</span><span class="p">:</span>
+        <span class="n">msg</span> <span class="o">=</span> <span class="s2">&quot;Plugin  </span><span class="si">%s</span><span class="s2"> needs a method called function </span><span class="se">\n</span><span class="s2">&quot;</span> <span class="o">%</span> <span class="nb">str</span><span class="p">(</span><span class="n">name</span><span class="p">)</span>
+        <span class="n">plugin_log</span><span class="p">(</span><span class="n">msg</span><span class="p">)</span>
+        <span class="k">return</span> <span class="bp">None</span>
+    <span class="k">return</span> <span class="n">model</span>
+
+
+<div class="viewcode-block" id="find_plugins_dir"><a class="viewcode-back" href="../../../../dev/sasview-api/sas.sascalc.fit.html#sas.sascalc.fit.models.find_plugins_dir">[docs]</a><span class="k">def</span> <span class="nf">find_plugins_dir</span><span class="p">():</span>
+    <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Find path of the plugins directory.</span>
+<span class="sd">    The plugin directory is located in the user&#39;s home directory.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">path</span> <span class="o">=</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">expanduser</span><span class="p">(</span><span class="s2">&quot;~&quot;</span><span class="p">),</span> <span class="s1">&#39;.sasview&#39;</span><span class="p">,</span> <span class="n">PLUGIN_DIR</span><span class="p">)</span>
+
+    <span class="c1"># TODO: trigger initialization of plugins dir from installer or startup</span>
+    <span class="c1"># If the plugin directory doesn&#39;t exist, create it</span>
+    <span class="k">if</span> <span class="ow">not</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">isdir</span><span class="p">(</span><span class="n">path</span><span class="p">):</span>
+        <span class="n">os</span><span class="o">.</span><span class="n">makedirs</span><span class="p">(</span><span class="n">path</span><span class="p">)</span>
+    <span class="c1"># TODO: should we be checking for new default models every time?</span>
+    <span class="c1"># TODO: restore support for default plugins</span>
+    <span class="c1">#initialize_plugins_dir(path)</span>
+    <span class="k">return</span> <span class="n">path</span></div>
+
+
+<div class="viewcode-block" id="initialize_plugins_dir"><a class="viewcode-back" href="../../../../dev/sasview-api/sas.sascalc.fit.html#sas.sascalc.fit.models.initialize_plugins_dir">[docs]</a><span class="k">def</span> <span class="nf">initialize_plugins_dir</span><span class="p">(</span><span class="n">path</span><span class="p">):</span>
+    <span class="c1"># TODO: There are no default plugins</span>
+    <span class="c1"># TODO: Default plugins directory is in sasgui, but models.py is in sascalc</span>
+    <span class="c1"># TODO: Move default plugins beside sample data files</span>
+    <span class="c1"># TODO: Should not look for defaults above the root of the sasview install</span>
+
+    <span class="c1"># Walk up the tree looking for default plugin_models directory</span>
+    <span class="n">base</span> <span class="o">=</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">abspath</span><span class="p">(</span><span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">dirname</span><span class="p">(</span><span class="n">__file__</span><span class="p">))</span>
+    <span class="k">for</span> <span class="n">_</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="mi">12</span><span class="p">):</span>
+        <span class="n">default_plugins_path</span> <span class="o">=</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">base</span><span class="p">,</span> <span class="n">PLUGIN_DIR</span><span class="p">)</span>
+        <span class="k">if</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">isdir</span><span class="p">(</span><span class="n">default_plugins_path</span><span class="p">):</span>
+            <span class="k">break</span>
+        <span class="n">base</span><span class="p">,</span> <span class="n">_</span> <span class="o">=</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">split</span><span class="p">(</span><span class="n">base</span><span class="p">)</span>
+    <span class="k">else</span><span class="p">:</span>
+        <span class="n">logger</span><span class="o">.</span><span class="n">error</span><span class="p">(</span><span class="s2">&quot;default plugins directory not found&quot;</span><span class="p">)</span>
+        <span class="k">return</span>
+
+    <span class="c1"># Copy files from default plugins to the .sasview directory</span>
+    <span class="c1"># This may include c files, depending on the example.</span>
+    <span class="c1"># Note: files are never replaced, even if the default plugins are updated</span>
+    <span class="k">for</span> <span class="n">filename</span> <span class="ow">in</span> <span class="n">os</span><span class="o">.</span><span class="n">listdir</span><span class="p">(</span><span class="n">default_plugins_path</span><span class="p">):</span>
+        <span class="c1"># skip __init__.py and all pyc files</span>
+        <span class="k">if</span> <span class="n">filename</span> <span class="o">==</span> <span class="s2">&quot;__init__.py&quot;</span> <span class="ow">or</span> <span class="n">filename</span><span class="o">.</span><span class="n">endswith</span><span class="p">(</span><span class="s1">&#39;.pyc&#39;</span><span class="p">):</span>
+            <span class="k">continue</span>
+        <span class="n">source</span> <span class="o">=</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">default_plugins_path</span><span class="p">,</span> <span class="n">filename</span><span class="p">)</span>
+        <span class="n">target</span> <span class="o">=</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">path</span><span class="p">,</span> <span class="n">filename</span><span class="p">)</span>
+        <span class="k">if</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">isfile</span><span class="p">(</span><span class="n">source</span><span class="p">)</span> <span class="ow">and</span> <span class="ow">not</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">isfile</span><span class="p">(</span><span class="n">target</span><span class="p">):</span>
+            <span class="n">shutil</span><span class="o">.</span><span class="n">copy</span><span class="p">(</span><span class="n">source</span><span class="p">,</span> <span class="n">target</span><span class="p">)</span></div>
+
+
+<div class="viewcode-block" id="ReportProblem"><a class="viewcode-back" href="../../../../dev/sasview-api/sas.sascalc.fit.html#sas.sascalc.fit.models.ReportProblem">[docs]</a><span class="k">class</span> <span class="nc">ReportProblem</span><span class="p">(</span><span class="nb">object</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Class to check for problems with specific values</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="k">def</span> <span class="nf">__nonzero__</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="nb">type</span><span class="p">,</span> <span class="n">value</span><span class="p">,</span> <span class="n">tb</span> <span class="o">=</span> <span class="n">sys</span><span class="o">.</span><span class="n">exc_info</span><span class="p">()</span>
+        <span class="k">if</span> <span class="nb">type</span> <span class="ow">is</span> <span class="ow">not</span> <span class="bp">None</span> <span class="ow">and</span> <span class="nb">issubclass</span><span class="p">(</span><span class="nb">type</span><span class="p">,</span> <span class="n">py_compile</span><span class="o">.</span><span class="n">PyCompileError</span><span class="p">):</span>
+            <span class="k">print</span><span class="p">(</span><span class="s2">&quot;Problem with&quot;</span><span class="p">,</span> <span class="nb">repr</span><span class="p">(</span><span class="n">value</span><span class="p">))</span>
+            <span class="k">raise</span> <span class="nb">type</span><span class="p">,</span> <span class="n">value</span><span class="p">,</span> <span class="n">tb</span>
+        <span class="k">return</span> <span class="mi">1</span></div>
+
+<span class="n">report_problem</span> <span class="o">=</span> <span class="n">ReportProblem</span><span class="p">()</span>
+
+
+<div class="viewcode-block" id="compile_file"><a class="viewcode-back" href="../../../../dev/sasview-api/sas.sascalc.fit.html#sas.sascalc.fit.models.compile_file">[docs]</a><span class="k">def</span> <span class="nf">compile_file</span><span class="p">(</span><span class="nb">dir</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Compile a py file</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="k">try</span><span class="p">:</span>
+        <span class="kn">import</span> <span class="nn">compileall</span>
+        <span class="n">compileall</span><span class="o">.</span><span class="n">compile_dir</span><span class="p">(</span><span class="nb">dir</span><span class="o">=</span><span class="nb">dir</span><span class="p">,</span> <span class="n">ddir</span><span class="o">=</span><span class="nb">dir</span><span class="p">,</span> <span class="n">force</span><span class="o">=</span><span class="mi">0</span><span class="p">,</span>
+                               <span class="n">quiet</span><span class="o">=</span><span class="n">report_problem</span><span class="p">)</span>
+    <span class="k">except</span> <span class="ne">Exception</span><span class="p">:</span>
+        <span class="k">return</span> <span class="n">sys</span><span class="o">.</span><span class="n">exc_info</span><span class="p">()[</span><span class="mi">1</span><span class="p">]</span>
+    <span class="k">return</span> <span class="bp">None</span></div>
+
+
+<div class="viewcode-block" id="find_plugin_models"><a class="viewcode-back" href="../../../../dev/sasview-api/sas.sascalc.fit.html#sas.sascalc.fit.models.find_plugin_models">[docs]</a><span class="k">def</span> <span class="nf">find_plugin_models</span><span class="p">():</span>
+    <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Find custom models</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="c1"># List of plugin objects</span>
+    <span class="n">plugins_dir</span> <span class="o">=</span> <span class="n">find_plugins_dir</span><span class="p">()</span>
+    <span class="c1"># Go through files in plug-in directory</span>
+    <span class="k">if</span> <span class="ow">not</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">isdir</span><span class="p">(</span><span class="n">plugins_dir</span><span class="p">):</span>
+        <span class="n">msg</span> <span class="o">=</span> <span class="s2">&quot;SasView couldn&#39;t locate Model plugin folder </span><span class="si">%r</span><span class="s2">.&quot;</span> <span class="o">%</span> <span class="n">plugins_dir</span>
+        <span class="n">logger</span><span class="o">.</span><span class="n">warning</span><span class="p">(</span><span class="n">msg</span><span class="p">)</span>
+        <span class="k">return</span> <span class="p">{}</span>
+
+    <span class="n">plugin_log</span><span class="p">(</span><span class="s2">&quot;looking for models in: </span><span class="si">%s</span><span class="s2">&quot;</span> <span class="o">%</span> <span class="n">plugins_dir</span><span class="p">)</span>
+    <span class="c1"># compile_file(plugins_dir)  #always recompile the folder plugin</span>
+    <span class="n">logger</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="s2">&quot;plugin model dir: </span><span class="si">%s</span><span class="s2">&quot;</span><span class="p">,</span> <span class="n">plugins_dir</span><span class="p">)</span>
+
+    <span class="n">plugins</span> <span class="o">=</span> <span class="p">{}</span>
+    <span class="k">for</span> <span class="n">filename</span> <span class="ow">in</span> <span class="n">os</span><span class="o">.</span><span class="n">listdir</span><span class="p">(</span><span class="n">plugins_dir</span><span class="p">):</span>
+        <span class="n">name</span><span class="p">,</span> <span class="n">ext</span> <span class="o">=</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">splitext</span><span class="p">(</span><span class="n">filename</span><span class="p">)</span>
+        <span class="k">if</span> <span class="n">ext</span> <span class="o">==</span> <span class="s1">&#39;.py&#39;</span> <span class="ow">and</span> <span class="ow">not</span> <span class="n">name</span> <span class="o">==</span> <span class="s1">&#39;__init__&#39;</span><span class="p">:</span>
+            <span class="n">path</span> <span class="o">=</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">abspath</span><span class="p">(</span><span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">plugins_dir</span><span class="p">,</span> <span class="n">filename</span><span class="p">))</span>
+            <span class="k">try</span><span class="p">:</span>
+                <span class="n">model</span> <span class="o">=</span> <span class="n">load_custom_model</span><span class="p">(</span><span class="n">path</span><span class="p">)</span>
+                <span class="c1"># TODO: add [plug-in] tag to model name in sasview_model</span>
+                <span class="k">if</span> <span class="ow">not</span> <span class="n">model</span><span class="o">.</span><span class="n">name</span><span class="o">.</span><span class="n">startswith</span><span class="p">(</span><span class="n">PLUGIN_NAME_BASE</span><span class="p">):</span>
+                    <span class="n">model</span><span class="o">.</span><span class="n">name</span> <span class="o">=</span> <span class="n">PLUGIN_NAME_BASE</span> <span class="o">+</span> <span class="n">model</span><span class="o">.</span><span class="n">name</span>
+                <span class="n">plugins</span><span class="p">[</span><span class="n">model</span><span class="o">.</span><span class="n">name</span><span class="p">]</span> <span class="o">=</span> <span class="n">model</span>
+            <span class="k">except</span> <span class="ne">Exception</span><span class="p">:</span>
+                <span class="n">msg</span> <span class="o">=</span> <span class="n">traceback</span><span class="o">.</span><span class="n">format_exc</span><span class="p">()</span>
+                <span class="n">msg</span> <span class="o">+=</span> <span class="s2">&quot;</span><span class="se">\n</span><span class="s2">while accessing model in </span><span class="si">%r</span><span class="s2">&quot;</span> <span class="o">%</span> <span class="n">path</span>
+                <span class="n">plugin_log</span><span class="p">(</span><span class="n">msg</span><span class="p">)</span>
+                <span class="n">logger</span><span class="o">.</span><span class="n">warning</span><span class="p">(</span><span class="s2">&quot;Failed to load plugin </span><span class="si">%r</span><span class="s2">. See </span><span class="si">%s</span><span class="s2"> for details&quot;</span><span class="p">,</span>
+                               <span class="n">path</span><span class="p">,</span> <span class="n">PLUGIN_LOG</span><span class="p">)</span>
+
+    <span class="k">return</span> <span class="n">plugins</span></div>
+
+
+<div class="viewcode-block" id="ModelManagerBase"><a class="viewcode-back" href="../../../../dev/sasview-api/sas.sascalc.fit.html#sas.sascalc.fit.models.ModelManagerBase">[docs]</a><span class="k">class</span> <span class="nc">ModelManagerBase</span><span class="p">(</span><span class="nb">object</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Base class for the model manager</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="c1">#: mutable dictionary of models, continually updated to reflect the</span>
+    <span class="c1">#: current set of plugins</span>
+    <span class="n">model_dictionary</span> <span class="o">=</span> <span class="bp">None</span>  <span class="c1"># type: Dict[str, Model]</span>
+    <span class="c1">#: constant list of standard models</span>
+    <span class="n">standard_models</span> <span class="o">=</span> <span class="bp">None</span>  <span class="c1"># type: Dict[str, Model]</span>
+    <span class="c1">#: list of plugin models reset each time the plugin directory is queried</span>
+    <span class="n">plugin_models</span> <span class="o">=</span> <span class="bp">None</span>  <span class="c1"># type: Dict[str, Model]</span>
+    <span class="c1">#: timestamp on the plugin directory at the last plugin update</span>
+    <span class="n">last_time_dir_modified</span> <span class="o">=</span> <span class="mi">0</span>  <span class="c1"># type: int</span>
+
+    <span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="c1"># the model dictionary is allocated at the start and updated to</span>
+        <span class="c1"># reflect the current list of models.  Be sure to clear it rather</span>
+        <span class="c1"># than reassign to it.</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">model_dictionary</span> <span class="o">=</span> <span class="p">{}</span>
+
+        <span class="c1">#Build list automagically from sasmodels package</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">standard_models</span> <span class="o">=</span> <span class="p">{</span><span class="n">model</span><span class="o">.</span><span class="n">name</span><span class="p">:</span> <span class="n">model</span>
+                                <span class="k">for</span> <span class="n">model</span> <span class="ow">in</span> <span class="n">load_standard_models</span><span class="p">()}</span>
+        <span class="c1"># Look for plugins</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">plugins_reset</span><span class="p">()</span>
+
+    <span class="k">def</span> <span class="nf">_is_plugin_dir_changed</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        check the last time the plugin dir has changed and return true</span>
+<span class="sd">        is the directory was modified else return false</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">is_modified</span> <span class="o">=</span> <span class="bp">False</span>
+        <span class="n">plugin_dir</span> <span class="o">=</span> <span class="n">find_plugins_dir</span><span class="p">()</span>
+        <span class="k">if</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">isdir</span><span class="p">(</span><span class="n">plugin_dir</span><span class="p">):</span>
+            <span class="n">mod_time</span> <span class="o">=</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">getmtime</span><span class="p">(</span><span class="n">plugin_dir</span><span class="p">)</span>
+            <span class="k">if</span>  <span class="bp">self</span><span class="o">.</span><span class="n">last_time_dir_modified</span> <span class="o">!=</span> <span class="n">mod_time</span><span class="p">:</span>
+                <span class="n">is_modified</span> <span class="o">=</span> <span class="bp">True</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">last_time_dir_modified</span> <span class="o">=</span> <span class="n">mod_time</span>
+
+        <span class="k">return</span> <span class="n">is_modified</span>
+
+<div class="viewcode-block" id="ModelManagerBase.composable_models"><a class="viewcode-back" href="../../../../dev/sasview-api/sas.sascalc.fit.html#sas.sascalc.fit.models.ModelManagerBase.composable_models">[docs]</a>    <span class="k">def</span> <span class="nf">composable_models</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        return list of standard models that can be used in sum/multiply</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="c1"># TODO: should scan plugin models in addition to standard models</span>
+        <span class="c1"># and update model_editor so that it doesn&#39;t add plugins to the list</span>
+        <span class="k">return</span> <span class="p">[</span><span class="n">model</span><span class="o">.</span><span class="n">name</span> <span class="k">for</span> <span class="n">model</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">standard_models</span><span class="o">.</span><span class="n">values</span><span class="p">()</span>
+                <span class="k">if</span> <span class="ow">not</span> <span class="n">model</span><span class="o">.</span><span class="n">is_multiplicity_model</span><span class="p">]</span></div>
+
+<div class="viewcode-block" id="ModelManagerBase.plugins_update"><a class="viewcode-back" href="../../../../dev/sasview-api/sas.sascalc.fit.html#sas.sascalc.fit.models.ModelManagerBase.plugins_update">[docs]</a>    <span class="k">def</span> <span class="nf">plugins_update</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        return a dictionary of model if</span>
+<span class="sd">        new models were added else return empty dictionary</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">plugins_reset</span><span class="p">()</span></div>
+        <span class="c1">#if self._is_plugin_dir_changed():</span>
+        <span class="c1">#    return self.plugins_reset()</span>
+        <span class="c1">#else:</span>
+        <span class="c1">#    return {}</span>
+
+<div class="viewcode-block" id="ModelManagerBase.plugins_reset"><a class="viewcode-back" href="../../../../dev/sasview-api/sas.sascalc.fit.html#sas.sascalc.fit.models.ModelManagerBase.plugins_reset">[docs]</a>    <span class="k">def</span> <span class="nf">plugins_reset</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        return a dictionary of model</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">plugin_models</span> <span class="o">=</span> <span class="n">find_plugin_models</span><span class="p">()</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">model_dictionary</span><span class="o">.</span><span class="n">clear</span><span class="p">()</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">model_dictionary</span><span class="o">.</span><span class="n">update</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">standard_models</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">model_dictionary</span><span class="o">.</span><span class="n">update</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">plugin_models</span><span class="p">)</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">get_model_list</span><span class="p">()</span></div>
+
+<div class="viewcode-block" id="ModelManagerBase.get_model_list"><a class="viewcode-back" href="../../../../dev/sasview-api/sas.sascalc.fit.html#sas.sascalc.fit.models.ModelManagerBase.get_model_list">[docs]</a>    <span class="k">def</span> <span class="nf">get_model_list</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        return dictionary of classified models</span>
+
+<span class="sd">        *Structure Factors* are the structure factor models</span>
+<span class="sd">        *Multi-Functions* are the multiplicity models</span>
+<span class="sd">        *Plugin Models* are the plugin models</span>
+
+<span class="sd">        Note that a model can be both a plugin and a structure factor or</span>
+<span class="sd">        multiplicity model.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="c1">## Model_list now only contains attribute lists not category list.</span>
+        <span class="c1">## Eventually this should be in one master list -- read in category</span>
+        <span class="c1">## list then pull those models that exist and get attributes then add</span>
+        <span class="c1">## to list ..and if model does not exist remove from list as now</span>
+        <span class="c1">## and update json file.</span>
+        <span class="c1">##</span>
+        <span class="c1">## -PDB   April 26, 2014</span>
+
+
+        <span class="c1"># Classify models</span>
+        <span class="n">structure_factors</span> <span class="o">=</span> <span class="p">[]</span>
+        <span class="n">form_factors</span> <span class="o">=</span> <span class="p">[]</span>
+        <span class="n">multiplicity_models</span> <span class="o">=</span> <span class="p">[]</span>
+        <span class="k">for</span> <span class="n">model</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">model_dictionary</span><span class="o">.</span><span class="n">values</span><span class="p">():</span>
+            <span class="c1"># Old style models don&#39;t have is_structure_factor attribute</span>
+            <span class="k">if</span> <span class="nb">getattr</span><span class="p">(</span><span class="n">model</span><span class="p">,</span> <span class="s1">&#39;is_structure_factor&#39;</span><span class="p">,</span> <span class="bp">False</span><span class="p">):</span>
+                <span class="n">structure_factors</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">model</span><span class="p">)</span>
+            <span class="k">if</span> <span class="nb">getattr</span><span class="p">(</span><span class="n">model</span><span class="p">,</span> <span class="s1">&#39;is_form_factor&#39;</span><span class="p">,</span> <span class="bp">False</span><span class="p">):</span>
+                <span class="n">form_factors</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">model</span><span class="p">)</span>
+            <span class="k">if</span> <span class="n">model</span><span class="o">.</span><span class="n">is_multiplicity_model</span><span class="p">:</span>
+                <span class="n">multiplicity_models</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">model</span><span class="p">)</span>
+        <span class="n">plugin_models</span> <span class="o">=</span> <span class="nb">list</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">plugin_models</span><span class="o">.</span><span class="n">values</span><span class="p">())</span>
+
+        <span class="k">return</span> <span class="p">{</span>
+            <span class="s2">&quot;Structure Factors&quot;</span><span class="p">:</span> <span class="n">structure_factors</span><span class="p">,</span>
+            <span class="s2">&quot;Form Factors&quot;</span><span class="p">:</span> <span class="n">form_factors</span><span class="p">,</span>
+            <span class="s2">&quot;Plugin Models&quot;</span><span class="p">:</span> <span class="n">plugin_models</span><span class="p">,</span>
+            <span class="s2">&quot;Multi-Functions&quot;</span><span class="p">:</span> <span class="n">multiplicity_models</span><span class="p">,</span>
+        <span class="p">}</span></div></div>
+
+
+<div class="viewcode-block" id="ModelManager"><a class="viewcode-back" href="../../../../dev/sasview-api/sas.sascalc.fit.html#sas.sascalc.fit.models.ModelManager">[docs]</a><span class="k">class</span> <span class="nc">ModelManager</span><span class="p">(</span><span class="nb">object</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    manage the list of available models</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">base</span> <span class="o">=</span> <span class="bp">None</span>  <span class="c1"># type: ModelManagerBase()</span>
+
+    <span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="k">if</span> <span class="n">ModelManager</span><span class="o">.</span><span class="n">base</span> <span class="ow">is</span> <span class="bp">None</span><span class="p">:</span>
+            <span class="n">ModelManager</span><span class="o">.</span><span class="n">base</span> <span class="o">=</span> <span class="n">ModelManagerBase</span><span class="p">()</span>
+
+<div class="viewcode-block" id="ModelManager.cat_model_list"><a class="viewcode-back" href="../../../../dev/sasview-api/sas.sascalc.fit.html#sas.sascalc.fit.models.ModelManager.cat_model_list">[docs]</a>    <span class="k">def</span> <span class="nf">cat_model_list</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="k">return</span> <span class="nb">list</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">base</span><span class="o">.</span><span class="n">standard_models</span><span class="o">.</span><span class="n">values</span><span class="p">())</span></div>
+
+<div class="viewcode-block" id="ModelManager.update"><a class="viewcode-back" href="../../../../dev/sasview-api/sas.sascalc.fit.html#sas.sascalc.fit.models.ModelManager.update">[docs]</a>    <span class="k">def</span> <span class="nf">update</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">base</span><span class="o">.</span><span class="n">plugins_update</span><span class="p">()</span></div>
+
+<div class="viewcode-block" id="ModelManager.plugins_reset"><a class="viewcode-back" href="../../../../dev/sasview-api/sas.sascalc.fit.html#sas.sascalc.fit.models.ModelManager.plugins_reset">[docs]</a>    <span class="k">def</span> <span class="nf">plugins_reset</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">base</span><span class="o">.</span><span class="n">plugins_reset</span><span class="p">()</span></div>
+
+<div class="viewcode-block" id="ModelManager.get_model_list"><a class="viewcode-back" href="../../../../dev/sasview-api/sas.sascalc.fit.html#sas.sascalc.fit.models.ModelManager.get_model_list">[docs]</a>    <span class="k">def</span> <span class="nf">get_model_list</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">base</span><span class="o">.</span><span class="n">get_model_list</span><span class="p">()</span></div>
+
+<div class="viewcode-block" id="ModelManager.composable_models"><a class="viewcode-back" href="../../../../dev/sasview-api/sas.sascalc.fit.html#sas.sascalc.fit.models.ModelManager.composable_models">[docs]</a>    <span class="k">def</span> <span class="nf">composable_models</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">base</span><span class="o">.</span><span class="n">composable_models</span><span class="p">()</span></div>
+
+<div class="viewcode-block" id="ModelManager.get_model_dictionary"><a class="viewcode-back" href="../../../../dev/sasview-api/sas.sascalc.fit.html#sas.sascalc.fit.models.ModelManager.get_model_dictionary">[docs]</a>    <span class="k">def</span> <span class="nf">get_model_dictionary</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">base</span><span class="o">.</span><span class="n">model_dictionary</span></div></div>
+</pre></div>
+
+          </div>
+        </div>
+      </div>
+      <div class="sphinxsidebar" role="navigation" aria-label="main navigation">
+        <div class="sphinxsidebarwrapper">
+<div id="searchbox" style="display: none" role="search">
+  <h3>Quick search</h3>
+    <form class="search" action="../../../../search.html" method="get">
+      <input type="text" name="q" />
+      <input type="submit" value="Go" />
+      <input type="hidden" name="check_keywords" value="yes" />
+      <input type="hidden" name="area" value="default" />
+    </form>
+</div>
+<script type="text/javascript">$('#searchbox').show(0);</script>
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="related" role="navigation" aria-label="related navigation">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="../../../../genindex.html" title="General Index"
+             >index</a></li>
+        <li class="right" >
+          <a href="../../../../py-modindex.html" title="Python Module Index"
+             >modules</a> |</li>
+        <li class="nav-item nav-item-0"><a href="../../../../index.html">SasView 4.2.0 documentation</a> &raquo;</li>
+          <li class="nav-item nav-item-1"><a href="../../../index.html" >Module code</a> &raquo;</li>
+          <li class="nav-item nav-item-2"><a href="../../../sas.html" >sas</a> &raquo;</li> 
+      </ul>
+    </div>
+    <div class="footer" role="contentinfo">
+        &copy; Copyright 2018, The SasView Project.
+      Created using <a href="http://sphinx-doc.org/">Sphinx</a> 1.4.1.
+    </div>
+  </body>
+</html>

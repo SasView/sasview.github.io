@@ -6,7 +6,7 @@
   <head>
     <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
     
-    <title>ellipsoid &mdash; SasView 4.1.2 documentation</title>
+    <title>ellipsoid &mdash; SasView 4.2.0 documentation</title>
     
     <link rel="stylesheet" href="../../_static/classic.css" type="text/css" />
     <link rel="stylesheet" href="../../_static/pygments.css" type="text/css" />
@@ -14,7 +14,7 @@
     <script type="text/javascript">
       var DOCUMENTATION_OPTIONS = {
         URL_ROOT:    '../../',
-        VERSION:     '4.1.2',
+        VERSION:     '4.2.0',
         COLLAPSE_INDEX: false,
         FILE_SUFFIX: '.html',
         HAS_SOURCE:  true
@@ -24,8 +24,8 @@
     <script type="text/javascript" src="../../_static/underscore.js"></script>
     <script type="text/javascript" src="../../_static/doctools.js"></script>
     <script type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.1/MathJax.js?config=TeX-MML-AM_CHTML"></script>
-    <link rel="top" title="SasView 4.1.2 documentation" href="../../index.html" />
-    <link rel="up" title="Ellipsoid Functions" href="../shape-ellipsoid.html" />
+    <link rel="top" title="SasView 4.2.0 documentation" href="../../index.html" />
+    <link rel="up" title="Ellipsoid Functions" href="../sasgui/perspectives/fitting/models/shape-ellipsoid.html" />
     <link rel="next" title="triaxial_ellipsoid" href="triaxial_ellipsoid.html" />
     <link rel="prev" title="core_shell_ellipsoid" href="core_shell_ellipsoid.html" /> 
   </head>
@@ -45,10 +45,10 @@
         <li class="right" >
           <a href="core_shell_ellipsoid.html" title="core_shell_ellipsoid"
              accesskey="P">previous</a> |</li>
-        <li class="nav-item nav-item-0"><a href="../../index.html">SasView 4.1.2 documentation</a> &raquo;</li>
+        <li class="nav-item nav-item-0"><a href="../../index.html">SasView 4.2.0 documentation</a> &raquo;</li>
           <li class="nav-item nav-item-1"><a href="../user.html" >SasView User Documentation</a> &raquo;</li>
-          <li class="nav-item nav-item-2"><a href="../index.html" >Model Functions</a> &raquo;</li>
-          <li class="nav-item nav-item-3"><a href="../shape-ellipsoid.html" accesskey="U">Ellipsoid Functions</a> &raquo;</li> 
+          <li class="nav-item nav-item-2"><a href="../sasgui/perspectives/fitting/models/index.html" >Model Functions</a> &raquo;</li>
+          <li class="nav-item nav-item-3"><a href="../sasgui/perspectives/fitting/models/shape-ellipsoid.html" accesskey="U">Ellipsoid Functions</a> &raquo;</li> 
       </ul>
     </div>  
 
@@ -106,12 +106,12 @@
 <td>400</td>
 </tr>
 <tr class="row-even"><td>theta</td>
-<td>In plane angle</td>
+<td>ellipsoid axis to beam angle</td>
 <td>degree</td>
 <td>60</td>
 </tr>
 <tr class="row-odd"><td>phi</td>
-<td>Out of plane angle</td>
+<td>rotation about beam</td>
 <td>degree</td>
 <td>60</td>
 </tr>
@@ -126,27 +126,32 @@ is given by (Feigin, 1987)</p>
 \[P(q,\alpha) = \frac{\text{scale}}{V} F^2(q,\alpha) + \text{background}\]</div>
 <p>where</p>
 <div class="math">
-\[F(q,\alpha) = \frac{3 \Delta \rho V (\sin[qr(R_p,R_e,\alpha)]
-            - \cos[qr(R_p,R_e,\alpha)])}
-            {[qr(R_p,R_e,\alpha)]^3}\]</div>
-<p>and</p>
+\[F(q,\alpha) = \Delta \rho V \frac{3(\sin qr  - qr \cos qr)}{(qr)^3}\]</div>
+<p>for</p>
 <div class="math">
-\[r(R_p,R_e,\alpha) = \left[ R_e^2 \sin^2 \alpha
-    + R_p^2 \cos^2 \alpha \right]^{1/2}\]</div>
+\[r = \left[ R_e^2 \sin^2 \alpha + R_p^2 \cos^2 \alpha \right]^{1/2}\]</div>
 <p><span class="math">\(\alpha\)</span> is the angle between the axis of the ellipsoid and <span class="math">\(\vec q\)</span>,
-<span class="math">\(V = (4/3)\pi R_pR_e^2\)</span> is the volume of the ellipsoid , <span class="math">\(R_p\)</span> is the polar radius along the
-rotational axis of the ellipsoid, <span class="math">\(R_e\)</span> is the equatorial radius perpendicular
-to the rotational axis of the ellipsoid and <span class="math">\(\Delta \rho\)</span> (contrast) is the
-scattering length density difference between the scatterer and the solvent.</p>
-<p>For randomly oriented particles:</p>
+<span class="math">\(V = (4/3)\pi R_pR_e^2\)</span> is the volume of the ellipsoid, <span class="math">\(R_p\)</span> is the polar
+radius along the rotational axis of the ellipsoid, <span class="math">\(R_e\)</span> is the equatorial
+radius perpendicular to the rotational axis of the ellipsoid and
+<span class="math">\(\Delta \rho\)</span> (contrast) is the scattering length density difference between
+the scatterer and the solvent.</p>
+<p>For randomly oriented particles use the orientational average,</p>
 <div class="math">
-\[F^2(q)=\int_{0}^{\pi/2}{F^2(q,\alpha)\sin(\alpha)d\alpha}\]</div>
-<p>To provide easy access to the orientation of the ellipsoid, we define
-the rotation axis of the ellipsoid using two angles <span class="math">\(\theta\)</span> and <span class="math">\(\phi\)</span>.
-These angles are defined in the
+\[\langle F^2(q) \rangle = \int_{0}^{\pi/2}{F^2(q,\alpha)\sin(\alpha)\,d\alpha}\]</div>
+<p>computed via substitution of <span class="math">\(u=\sin(\alpha)\)</span>, <span class="math">\(du=\cos(\alpha)\,d\alpha\)</span> as</p>
+<div class="math">
+\[\langle F^2(q) \rangle = \int_0^1{F^2(q, u)\,du}\]</div>
+<p>with</p>
+<div class="math">
+\[r = R_e \left[ 1 + u^2\left(R_p^2/R_e^2 - 1\right)\right]^{1/2}\]</div>
+<p>For 2d data from oriented ellipsoids the direction of the rotation axis of
+the ellipsoid is defined using two angles <span class="math">\(\theta\)</span> and <span class="math">\(\phi\)</span> as for the
 <a class="reference internal" href="cylinder.html#cylinder-angle-definition"><span class="std std-ref">cylinder orientation figure</span></a>.
 For the ellipsoid, <span class="math">\(\theta\)</span> is the angle between the rotational axis
-and the <span class="math">\(z\)</span> -axis.</p>
+and the <span class="math">\(z\)</span> -axis in the <span class="math">\(xz\)</span> plane followed by a rotation by <span class="math">\(\phi\)</span>
+in the <span class="math">\(xy\)</span> plane, for further details of the calculation and angular
+dispersions see <a class="reference internal" href="../sasgui/perspectives/fitting/orientation/orientation.html#orientation"><span class="std std-ref">Oriented particles</span></a> .</p>
 <p>NB: The 2nd virial coefficient of the solid ellipsoid is calculated based
 on the <span class="math">\(R_p\)</span> and <span class="math">\(R_e\)</span> values, and used as the effective radius for
 <span class="math">\(S(q)\)</span> when <span class="math">\(P(q) \cdot S(q)\)</span> is applied.</p>
@@ -159,7 +164,7 @@ validated by averaging the 2D output using a uniform distribution
 <span class="math">\(p(\theta,\phi) = 1.0\)</span> and comparing with the output of the 1D calculation.</p>
 <div class="figure" id="id2">
 <span id="ellipsoid-comparison-2d"></span><img alt="../../_images/ellipsoid_comparison_2d.jpg" src="../../_images/ellipsoid_comparison_2d.jpg" />
-<p class="caption"><span class="caption-number">Fig. 35 </span><span class="caption-text">Comparison of the intensity for uniformly distributed ellipsoids
+<p class="caption"><span class="caption-number">Fig. 40 </span><span class="caption-text">Comparison of the intensity for uniformly distributed ellipsoids
 calculated from our 2D model and the intensity from the NIST SANS
 analysis software. The parameters used were: <em>scale</em> = 1.0,
 <em>radius_polar</em> = 20 Å, <em>radius_equatorial</em> = 400 Å,
@@ -174,14 +179,26 @@ varies quickly as a function of <span class="math">\(q\)</span>. The SasView res
 obtained by summing over 501 equidistant points. Our result was found
 to be stable over the range of <span class="math">\(q\)</span> shown for a number of points higher
 than 500.</p>
+<p>Model was also tested against the triaxial ellipsoid model with equal major
+and minor equatorial radii.  It is also consistent with the cyclinder model
+with polar radius equal to length and equatorial radius equal to radius.</p>
 <div class="figure" id="id3">
 <img alt="../../_images/ellipsoid_autogenfig.png" src="../../_images/ellipsoid_autogenfig.png" />
-<p class="caption"><span class="caption-number">Fig. 36 </span><span class="caption-text">1D and 2D plots corresponding to the default parameters of the model.</span></p>
+<p class="caption"><span class="caption-number">Fig. 41 </span><span class="caption-text">1D and 2D plots corresponding to the default parameters of the model.</span></p>
 </div>
 <p><strong>References</strong></p>
 <p>L A Feigin and D I Svergun.
 <em>Structure Analysis by Small-Angle X-Ray and Neutron Scattering</em>,
 Plenum Press, New York, 1987.</p>
+<ol class="upperalpha simple">
+<li>Isihara. J. Chem. Phys. 18(1950) 1446-1449</li>
+</ol>
+<p><strong>Authorship and Verification</strong></p>
+<ul class="simple">
+<li><strong>Author:</strong> NIST IGOR/DANSE <strong>Date:</strong> pre 2010</li>
+<li><strong>Converted to sasmodels by:</strong> Helen Park <strong>Date:</strong> July 9, 2014</li>
+<li><strong>Last Modified by:</strong> Paul Kienzle <strong>Date:</strong> March 22, 2017</li>
+</ul>
 </div>
 
 
@@ -232,14 +249,14 @@ Plenum Press, New York, 1987.</p>
         <li class="right" >
           <a href="core_shell_ellipsoid.html" title="core_shell_ellipsoid"
              >previous</a> |</li>
-        <li class="nav-item nav-item-0"><a href="../../index.html">SasView 4.1.2 documentation</a> &raquo;</li>
+        <li class="nav-item nav-item-0"><a href="../../index.html">SasView 4.2.0 documentation</a> &raquo;</li>
           <li class="nav-item nav-item-1"><a href="../user.html" >SasView User Documentation</a> &raquo;</li>
-          <li class="nav-item nav-item-2"><a href="../index.html" >Model Functions</a> &raquo;</li>
-          <li class="nav-item nav-item-3"><a href="../shape-ellipsoid.html" >Ellipsoid Functions</a> &raquo;</li> 
+          <li class="nav-item nav-item-2"><a href="../sasgui/perspectives/fitting/models/index.html" >Model Functions</a> &raquo;</li>
+          <li class="nav-item nav-item-3"><a href="../sasgui/perspectives/fitting/models/shape-ellipsoid.html" >Ellipsoid Functions</a> &raquo;</li> 
       </ul>
     </div>
     <div class="footer" role="contentinfo">
-        &copy; Copyright 2017, The SasView Project.
+        &copy; Copyright 2018, The SasView Project.
       Created using <a href="http://sphinx-doc.org/">Sphinx</a> 1.4.1.
     </div>
   </body>

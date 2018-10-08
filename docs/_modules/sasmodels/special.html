@@ -1,0 +1,907 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+  "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+    
+    <title>sasmodels.special &mdash; SasView 4.2.0 documentation</title>
+    
+    <link rel="stylesheet" href="../../_static/classic.css" type="text/css" />
+    <link rel="stylesheet" href="../../_static/pygments.css" type="text/css" />
+    
+    <script type="text/javascript">
+      var DOCUMENTATION_OPTIONS = {
+        URL_ROOT:    '../../',
+        VERSION:     '4.2.0',
+        COLLAPSE_INDEX: false,
+        FILE_SUFFIX: '.html',
+        HAS_SOURCE:  true
+      };
+    </script>
+    <script type="text/javascript" src="../../_static/jquery.js"></script>
+    <script type="text/javascript" src="../../_static/underscore.js"></script>
+    <script type="text/javascript" src="../../_static/doctools.js"></script>
+    <script type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.1/MathJax.js?config=TeX-MML-AM_CHTML"></script>
+    <link rel="top" title="SasView 4.2.0 documentation" href="../../index.html" />
+    <link rel="up" title="sasmodels" href="../sasmodels.html" /> 
+  </head>
+  <body role="document">
+    <div class="related" role="navigation" aria-label="related navigation">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="../../genindex.html" title="General Index"
+             accesskey="I">index</a></li>
+        <li class="right" >
+          <a href="../../py-modindex.html" title="Python Module Index"
+             >modules</a> |</li>
+        <li class="nav-item nav-item-0"><a href="../../index.html">SasView 4.2.0 documentation</a> &raquo;</li>
+          <li class="nav-item nav-item-1"><a href="../index.html" >Module code</a> &raquo;</li>
+          <li class="nav-item nav-item-2"><a href="../sasmodels.html" accesskey="U">sasmodels</a> &raquo;</li> 
+      </ul>
+    </div>  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          <div class="body" role="main">
+            
+  <h1>Source code for sasmodels.special</h1><div class="highlight"><pre>
+<span></span><span class="sd">r&quot;&quot;&quot;</span>
+<span class="sd">Special Functions</span>
+<span class="sd">.................</span>
+
+<span class="sd">This following standard C99 math functions are available:</span>
+
+<span class="sd">    M_PI, M_PI_2, M_PI_4, M_SQRT1_2, M_E:</span>
+<span class="sd">        $\pi$, $\pi/2$, $\pi/4$, $1/\sqrt{2}$ and Euler&#39;s constant $e$</span>
+
+<span class="sd">    exp, log, pow(x,y), expm1, log1p, sqrt, cbrt:</span>
+<span class="sd">        Power functions $e^x$, $\ln x$, $x^y$, $e^x - 1$, $\ln 1 + x$,</span>
+<span class="sd">        $\sqrt{x}$, $\sqrt[3]{x}$. The functions expm1(x) and log1p(x)</span>
+<span class="sd">        are accurate across all $x$, including $x$ very close to zero.</span>
+
+<span class="sd">    sin, cos, tan, asin, acos, atan:</span>
+<span class="sd">        Trigonometry functions and inverses, operating on radians.</span>
+
+<span class="sd">    sinh, cosh, tanh, asinh, acosh, atanh:</span>
+<span class="sd">        Hyperbolic trigonometry functions.</span>
+
+<span class="sd">    atan2(y,x):</span>
+<span class="sd">        Angle from the $x$\ -axis to the point $(x,y)$, which is equal to</span>
+<span class="sd">        $\tan^{-1}(y/x)$ corrected for quadrant.  That is, if $x$ and $y$ are</span>
+<span class="sd">        both negative, then atan2(y,x) returns a value in quadrant III where</span>
+<span class="sd">        atan(y/x) would return a value in quadrant I. Similarly for</span>
+<span class="sd">        quadrants II and IV when $x$ and $y$ have opposite sign.</span>
+
+<span class="sd">    fabs(x), fmin(x,y), fmax(x,y), trunc, rint:</span>
+<span class="sd">        Floating point functions.  rint(x) returns the nearest integer.</span>
+
+<span class="sd">    NAN:</span>
+<span class="sd">        NaN, Not a Number, $0/0$.  Use isnan(x) to test for NaN.  Note that</span>
+<span class="sd">        you cannot use :code:`x == NAN` to test for NaN values since that</span>
+<span class="sd">        will always return false.  NAN does not equal NAN!  The alternative,</span>
+<span class="sd">        :code:`x != x` may fail if the compiler optimizes the test away.</span>
+
+<span class="sd">    INFINITY:</span>
+<span class="sd">        $\infty, 1/0$.  Use isinf(x) to test for infinity, or isfinite(x)</span>
+<span class="sd">        to test for finite and not NaN.</span>
+
+<span class="sd">    erf, erfc, tgamma, lgamma:  **do not use**</span>
+<span class="sd">        Special functions that should be part of the standard, but are missing</span>
+<span class="sd">        or inaccurate on some platforms. Use sas_erf, sas_erfc and sas_gamma</span>
+<span class="sd">        instead (see below). Note: lgamma(x) has not yet been tested.</span>
+
+<span class="sd">Some non-standard constants and functions are also provided:</span>
+
+<span class="sd">    M_PI_180, M_4PI_3:</span>
+<span class="sd">        $\frac{\pi}{180}$, $\frac{4\pi}{3}$</span>
+
+<span class="sd">    SINCOS(x, s, c):</span>
+<span class="sd">        Macro which sets s=sin(x) and c=cos(x). The variables *c* and *s*</span>
+<span class="sd">        must be declared first.</span>
+
+<span class="sd">    square(x):</span>
+<span class="sd">        $x^2$</span>
+
+<span class="sd">    cube(x):</span>
+<span class="sd">        $x^3$</span>
+
+<span class="sd">    sas_sinx_x(x):</span>
+<span class="sd">        $\sin(x)/x$, with limit $\sin(0)/0 = 1$.</span>
+
+<span class="sd">    powr(x, y):</span>
+<span class="sd">        $x^y$ for $x \ge 0$; this is faster than general $x^y$ on some GPUs.</span>
+
+<span class="sd">    pown(x, n):</span>
+<span class="sd">        $x^n$ for $n$ integer; this is faster than general $x^n$ on some GPUs.</span>
+
+<span class="sd">    FLOAT_SIZE:</span>
+<span class="sd">        The number of bytes in a floating point value.  Even though all</span>
+<span class="sd">        variables are declared double, they may be converted to single</span>
+<span class="sd">        precision float before running. If your algorithm depends on</span>
+<span class="sd">        precision (which is not uncommon for numerical algorithms), use</span>
+<span class="sd">        the following::</span>
+
+<span class="sd">            #if FLOAT_SIZE&gt;4</span>
+<span class="sd">            ... code for double precision ...</span>
+<span class="sd">            #else</span>
+<span class="sd">            ... code for single precision ...</span>
+<span class="sd">            #endif</span>
+
+<span class="sd">    SAS_DOUBLE:</span>
+<span class="sd">        A replacement for :code:`double` so that the declared variable will</span>
+<span class="sd">        stay double precision; this should generally not be used since some</span>
+<span class="sd">        graphics cards do not support double precision.  There is no provision</span>
+<span class="sd">        for forcing a constant to stay double precision.</span>
+
+<span class="sd">The following special functions and scattering calculations are defined.</span>
+<span class="sd">These functions have been tuned to be fast and numerically stable down</span>
+<span class="sd">to $q=0$ even in single precision.  In some cases they work around bugs</span>
+<span class="sd">which appear on some platforms but not others, so use them where needed.</span>
+<span class="sd">Add the files listed in :code:`source = [&quot;lib/file.c&quot;, ...]` to your *model.py*</span>
+<span class="sd">file in the order given, otherwise these functions will not be available.</span>
+
+<span class="sd">    polevl(x, c, n):</span>
+<span class="sd">        Polynomial evaluation $p(x) = \sum_{i=0}^n c_i x^i$ using Horner&#39;s</span>
+<span class="sd">        method so it is faster and more accurate.</span>
+
+<span class="sd">        $c = \{c_n, c_{n-1}, \ldots, c_0 \}$ is the table of coefficients,</span>
+<span class="sd">        sorted from highest to lowest.</span>
+
+<span class="sd">    p1evl(x, c, n):</span>
+<span class="sd">        Evaluate normalized polynomial $p(x) = x^n + \sum_{i=0}^{n-1} c_i x^i$</span>
+<span class="sd">        using Horner&#39;s method so it is faster and more accurate.</span>
+
+<span class="sd">        $c = \{c_{n-1}, c_{n-2} \ldots, c_0 \}$ is the table of coefficients,</span>
+<span class="sd">        sorted from highest to lowest.</span>
+
+<span class="sd">    sas_gamma(x):</span>
+<span class="sd">        Gamma function $\text{sas_gamma}(x) = \Gamma(x)$.</span>
+
+<span class="sd">        The standard math function, tgamma(x) is unstable for $x &lt; 1$</span>
+<span class="sd">        on some platforms.</span>
+
+<span class="sd">    sas_erf(x), sas_erfc(x):</span>
+<span class="sd">        Error function</span>
+<span class="sd">        $\text{sas_erf}(x) = \frac{2}{\sqrt\pi}\int_0^x e^{-t^2}\,dt$</span>
+<span class="sd">        and complementary error function</span>
+<span class="sd">        $\text{sas_erfc}(x) = \frac{2}{\sqrt\pi}\int_x^{\infty} e^{-t^2}\,dt$.</span>
+
+<span class="sd">        The standard math functions erf(x) and erfc(x) are slower and broken</span>
+<span class="sd">        on some platforms.</span>
+
+<span class="sd">    sas_J0(x):</span>
+<span class="sd">        Bessel function of the first kind $\text{sas_J0}(x)=J_0(x)$ where</span>
+<span class="sd">        $J_0(x) = \frac{1}{\pi}\int_0^\pi \cos(x\sin(\tau))\,d\tau$.</span>
+
+<span class="sd">        The standard math function j0(x) is not available on all platforms.</span>
+
+<span class="sd">    sas_J1(x):</span>
+<span class="sd">        Bessel function of the first kind  $\text{sas_J1}(x)=J_1(x)$ where</span>
+<span class="sd">        $J_1(x) = \frac{1}{\pi}\int_0^\pi \cos(\tau - x\sin(\tau))\,d\tau$.</span>
+
+<span class="sd">        The standard math function j1(x) is not available on all platforms.</span>
+
+<span class="sd">    sas_JN(n, x):</span>
+<span class="sd">        Bessel function of the first kind and integer order $n$:</span>
+<span class="sd">        $\text{sas_JN}(n, x)=J_n(x)$ where</span>
+<span class="sd">        $J_n(x) = \frac{1}{\pi}\int_0^\pi \cos(n\tau - x\sin(\tau))\,d\tau$.</span>
+<span class="sd">        If $n$ = 0 or 1, it uses sas_J0(x) or sas_J1(x), respectively.</span>
+
+<span class="sd">        The standard math function jn(n, x) is not available on all platforms.</span>
+
+<span class="sd">    sas_Si(x):</span>
+<span class="sd">        Sine integral $\text{Si}(x) = \int_0^x \tfrac{\sin t}{t}\,dt$.</span>
+
+<span class="sd">        This function uses Taylor series for small and large arguments:</span>
+
+<span class="sd">        For large arguments,</span>
+
+<span class="sd">        .. math::</span>
+
+<span class="sd">            \text{Si}(x) \sim \frac{\pi}{2}</span>
+<span class="sd">             - \frac{\cos(x)}{x}</span>
+<span class="sd">            \left(1 - \frac{2!}{x^2} + \frac{4!}{x^4} - \frac{6!}{x^6} \right)</span>
+<span class="sd">             - \frac{\sin(x)}{x}</span>
+<span class="sd">            \left(\frac{1}{x} - \frac{3!}{x^3} + \frac{5!}{x^5} - \frac{7!}{x^7}\right)</span>
+
+<span class="sd">        For small arguments,</span>
+
+<span class="sd">        .. math::</span>
+
+<span class="sd">           \text{Si}(x) \sim x</span>
+<span class="sd">           - \frac{x^3}{3\times 3!} + \frac{x^5}{5 \times 5!} - \frac{x^7}{7 \times 7!}</span>
+<span class="sd">           + \frac{x^9}{9\times 9!} - \frac{x^{11}}{11\times 11!}</span>
+
+<span class="sd">    sas_3j1x_x(x):</span>
+<span class="sd">        Spherical Bessel form</span>
+<span class="sd">        $\text{sph_j1c}(x) = 3 j_1(x)/x = 3 (\sin(x) - x \cos(x))/x^3$,</span>
+<span class="sd">        with a limiting value of 1 at $x=0$, where $j_1(x)$ is the spherical</span>
+<span class="sd">        Bessel function of the first kind and first order.</span>
+
+<span class="sd">        This function uses a Taylor series for small $x$ for numerical accuracy.</span>
+
+
+<span class="sd">    sas_2J1x_x(x):</span>
+<span class="sd">        Bessel form $\text{sas_J1c}(x) = 2 J_1(x)/x$, with a limiting value</span>
+<span class="sd">        of 1 at $x=0$, where $J_1(x)$ is the Bessel function of first kind</span>
+<span class="sd">        and first order.</span>
+
+
+<span class="sd">    gauss76.n, gauss76.z[i], gauss76.w[i]:</span>
+<span class="sd">        Points $z_i$ and weights $w_i$ for 76-point Gaussian quadrature, respectively,</span>
+<span class="sd">        computing $\int_{-1}^1 f(z)\,dz \approx \sum_{i=1}^{76} w_i\,f(z_i)$.</span>
+<span class="sd">        When translating the model to C, include &#39;lib/gauss76.c&#39; in the source</span>
+<span class="sd">        and use :code:`GAUSS_N`, :code:`GAUSS_Z`, and :code:`GAUSS_W`.</span>
+
+<span class="sd">        Similar arrays are available in :code:`gauss20` for 20-point quadrature</span>
+<span class="sd">        and :code:`gauss150.c` for 150-point quadrature. By using</span>
+<span class="sd">        :code:`import gauss76 as gauss` it is easy to change the number of</span>
+<span class="sd">        points in the integration.</span>
+<span class="sd">&quot;&quot;&quot;</span>
+<span class="c1"># pylint: disable=unused-import</span>
+
+<span class="kn">import</span> <span class="nn">numpy</span> <span class="kn">as</span> <span class="nn">np</span>
+
+<span class="c1"># Functions to add to our standard set</span>
+<span class="kn">from</span> <span class="nn">numpy</span> <span class="kn">import</span> <span class="n">degrees</span><span class="p">,</span> <span class="n">radians</span>
+
+<span class="c1"># C99 standard math library functions</span>
+<span class="kn">from</span> <span class="nn">numpy</span> <span class="kn">import</span> <span class="n">exp</span><span class="p">,</span> <span class="n">log</span><span class="p">,</span> <span class="n">power</span> <span class="k">as</span> <span class="nb">pow</span><span class="p">,</span> <span class="n">expm1</span><span class="p">,</span> <span class="n">log1p</span><span class="p">,</span> <span class="n">sqrt</span><span class="p">,</span> <span class="n">cbrt</span>
+<span class="kn">from</span> <span class="nn">numpy</span> <span class="kn">import</span> <span class="n">sin</span><span class="p">,</span> <span class="n">cos</span><span class="p">,</span> <span class="n">tan</span><span class="p">,</span> <span class="n">arcsin</span> <span class="k">as</span> <span class="n">asin</span><span class="p">,</span> <span class="n">arccos</span> <span class="k">as</span> <span class="n">acos</span><span class="p">,</span> <span class="n">arctan</span> <span class="k">as</span> <span class="n">atan</span>
+<span class="kn">from</span> <span class="nn">numpy</span> <span class="kn">import</span> <span class="n">sinh</span><span class="p">,</span> <span class="n">cosh</span><span class="p">,</span> <span class="n">tanh</span><span class="p">,</span> <span class="n">arcsinh</span> <span class="k">as</span> <span class="n">asinh</span><span class="p">,</span> <span class="n">arccosh</span> <span class="k">as</span> <span class="n">acosh</span><span class="p">,</span> <span class="n">arctanh</span> <span class="k">as</span> <span class="n">atanh</span>
+<span class="kn">from</span> <span class="nn">numpy</span> <span class="kn">import</span> <span class="n">arctan2</span> <span class="k">as</span> <span class="n">atan2</span>
+<span class="kn">from</span> <span class="nn">numpy</span> <span class="kn">import</span> <span class="n">fabs</span><span class="p">,</span> <span class="n">fmin</span><span class="p">,</span> <span class="n">fmax</span><span class="p">,</span> <span class="n">trunc</span><span class="p">,</span> <span class="n">rint</span>
+<span class="kn">from</span> <span class="nn">numpy</span> <span class="kn">import</span> <span class="n">pi</span><span class="p">,</span> <span class="n">nan</span><span class="p">,</span> <span class="n">inf</span>
+<span class="kn">from</span> <span class="nn">scipy.special</span> <span class="kn">import</span> <span class="n">gamma</span> <span class="k">as</span> <span class="n">sas_gamma</span>
+<span class="kn">from</span> <span class="nn">scipy.special</span> <span class="kn">import</span> <span class="n">erf</span> <span class="k">as</span> <span class="n">sas_erf</span>
+<span class="kn">from</span> <span class="nn">scipy.special</span> <span class="kn">import</span> <span class="n">erfc</span> <span class="k">as</span> <span class="n">sas_erfc</span>
+<span class="kn">from</span> <span class="nn">scipy.special</span> <span class="kn">import</span> <span class="n">j0</span> <span class="k">as</span> <span class="n">sas_J0</span>
+<span class="kn">from</span> <span class="nn">scipy.special</span> <span class="kn">import</span> <span class="n">j1</span> <span class="k">as</span> <span class="n">sas_J1</span>
+<span class="kn">from</span> <span class="nn">scipy.special</span> <span class="kn">import</span> <span class="n">jn</span> <span class="k">as</span> <span class="n">sas_JN</span>
+
+<span class="c1"># erf, erfc, tgamma, lgamma  **do not use**</span>
+
+<span class="c1"># C99 standard math constants</span>
+<span class="n">M_PI</span><span class="p">,</span> <span class="n">M_PI_2</span><span class="p">,</span> <span class="n">M_PI_4</span><span class="p">,</span> <span class="n">M_SQRT1_2</span><span class="p">,</span> <span class="n">M_E</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">pi</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">pi</span><span class="o">/</span><span class="mi">2</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">pi</span><span class="o">/</span><span class="mi">4</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">sqrt</span><span class="p">(</span><span class="mf">0.5</span><span class="p">),</span> <span class="n">np</span><span class="o">.</span><span class="n">e</span>
+<span class="n">NAN</span> <span class="o">=</span> <span class="n">nan</span>
+<span class="n">INFINITY</span> <span class="o">=</span> <span class="n">inf</span>
+
+<span class="c1"># non-standard constants</span>
+<span class="n">M_PI_180</span><span class="p">,</span> <span class="n">M_4PI_3</span> <span class="o">=</span> <span class="n">M_PI</span><span class="o">/</span><span class="mi">180</span><span class="p">,</span> <span class="mi">4</span><span class="o">*</span><span class="n">M_PI</span><span class="o">/</span><span class="mi">3</span>
+
+<span class="c1"># can&#39;t do SINCOS in python; use &quot;s, c = SINCOS(x)&quot; instead</span>
+<div class="viewcode-block" id="SINCOS"><a class="viewcode-back" href="../../dev/sasmodels-api/sasmodels.html#sasmodels.special.SINCOS">[docs]</a><span class="k">def</span> <span class="nf">SINCOS</span><span class="p">(</span><span class="n">x</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;return sin(x), cos(x)&quot;&quot;&quot;</span>
+    <span class="k">return</span> <span class="n">sin</span><span class="p">(</span><span class="n">x</span><span class="p">),</span> <span class="n">cos</span><span class="p">(</span><span class="n">x</span><span class="p">)</span></div>
+<span class="n">sincos</span> <span class="o">=</span> <span class="n">SINCOS</span>
+
+<div class="viewcode-block" id="square"><a class="viewcode-back" href="../../dev/sasmodels-api/sasmodels.html#sasmodels.special.square">[docs]</a><span class="k">def</span> <span class="nf">square</span><span class="p">(</span><span class="n">x</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;return x^2&quot;&quot;&quot;</span>
+    <span class="k">return</span> <span class="n">x</span><span class="o">*</span><span class="n">x</span></div>
+
+<div class="viewcode-block" id="cube"><a class="viewcode-back" href="../../dev/sasmodels-api/sasmodels.html#sasmodels.special.cube">[docs]</a><span class="k">def</span> <span class="nf">cube</span><span class="p">(</span><span class="n">x</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;return x^3&quot;&quot;&quot;</span>
+    <span class="k">return</span> <span class="n">x</span><span class="o">*</span><span class="n">x</span><span class="o">*</span><span class="n">x</span></div>
+
+<div class="viewcode-block" id="sas_sinx_x"><a class="viewcode-back" href="../../dev/sasmodels-api/sasmodels.html#sasmodels.special.sas_sinx_x">[docs]</a><span class="k">def</span> <span class="nf">sas_sinx_x</span><span class="p">(</span><span class="n">x</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;return sin(x)/x&quot;&quot;&quot;</span>
+    <span class="kn">from</span> <span class="nn">numpy</span> <span class="kn">import</span> <span class="n">sinc</span> <span class="k">as</span> <span class="n">_sinc</span>
+    <span class="k">return</span> <span class="n">_sinc</span><span class="p">(</span><span class="n">x</span><span class="o">/</span><span class="n">M_PI</span><span class="p">)</span></div>
+
+<div class="viewcode-block" id="powr"><a class="viewcode-back" href="../../dev/sasmodels-api/sasmodels.html#sasmodels.special.powr">[docs]</a><span class="k">def</span> <span class="nf">powr</span><span class="p">(</span><span class="n">x</span><span class="p">,</span> <span class="n">y</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;return x^y for x&gt;0&quot;&quot;&quot;</span>
+    <span class="k">return</span> <span class="n">x</span><span class="o">**</span><span class="n">y</span></div>
+<div class="viewcode-block" id="pown"><a class="viewcode-back" href="../../dev/sasmodels-api/sasmodels.html#sasmodels.special.pown">[docs]</a><span class="k">def</span> <span class="nf">pown</span><span class="p">(</span><span class="n">x</span><span class="p">,</span> <span class="n">n</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;return x^n for n integer&quot;&quot;&quot;</span>
+    <span class="k">return</span> <span class="n">x</span><span class="o">**</span><span class="n">n</span></div>
+
+<span class="n">FLOAT_SIZE</span> <span class="o">=</span> <span class="mi">8</span>
+
+<div class="viewcode-block" id="polevl"><a class="viewcode-back" href="../../dev/sasmodels-api/sasmodels.html#sasmodels.special.polevl">[docs]</a><span class="k">def</span> <span class="nf">polevl</span><span class="p">(</span><span class="n">x</span><span class="p">,</span> <span class="n">c</span><span class="p">,</span> <span class="n">n</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;return p(x) for polynomial p of degree n-1 with coefficients c&quot;&quot;&quot;</span>
+    <span class="k">return</span> <span class="n">np</span><span class="o">.</span><span class="n">polyval</span><span class="p">(</span><span class="n">c</span><span class="p">[:</span><span class="n">n</span><span class="p">],</span> <span class="n">x</span><span class="p">)</span></div>
+
+<div class="viewcode-block" id="p1evl"><a class="viewcode-back" href="../../dev/sasmodels-api/sasmodels.html#sasmodels.special.p1evl">[docs]</a><span class="k">def</span> <span class="nf">p1evl</span><span class="p">(</span><span class="n">x</span><span class="p">,</span> <span class="n">c</span><span class="p">,</span> <span class="n">n</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;return x^n + p(x) for polynomial p of degree n-1 with coefficients c&quot;&quot;&quot;</span>
+    <span class="k">return</span> <span class="n">np</span><span class="o">.</span><span class="n">polyval</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">hstack</span><span class="p">(([</span><span class="mf">1.</span><span class="p">],</span> <span class="n">c</span><span class="p">))[:</span><span class="n">n</span><span class="p">],</span> <span class="n">x</span><span class="p">)</span></div>
+
+<div class="viewcode-block" id="sas_Si"><a class="viewcode-back" href="../../dev/sasmodels-api/sasmodels.html#sasmodels.special.sas_Si">[docs]</a><span class="k">def</span> <span class="nf">sas_Si</span><span class="p">(</span><span class="n">x</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;return Si(x)&quot;&quot;&quot;</span>
+    <span class="kn">from</span> <span class="nn">scipy.special</span> <span class="kn">import</span> <span class="n">sici</span>
+    <span class="k">return</span> <span class="n">sici</span><span class="p">(</span><span class="n">x</span><span class="p">)[</span><span class="mi">0</span><span class="p">]</span></div>
+
+<div class="viewcode-block" id="sas_j1"><a class="viewcode-back" href="../../dev/sasmodels-api/sasmodels.html#sasmodels.special.sas_j1">[docs]</a><span class="k">def</span> <span class="nf">sas_j1</span><span class="p">(</span><span class="n">x</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;return j1(x)&quot;&quot;&quot;</span>
+    <span class="k">if</span> <span class="n">np</span><span class="o">.</span><span class="n">isscalar</span><span class="p">(</span><span class="n">x</span><span class="p">):</span>
+        <span class="n">retvalue</span> <span class="o">=</span> <span class="p">(</span><span class="n">sin</span><span class="p">(</span><span class="n">x</span><span class="p">)</span> <span class="o">-</span> <span class="n">x</span><span class="o">*</span><span class="n">cos</span><span class="p">(</span><span class="n">x</span><span class="p">))</span><span class="o">/</span><span class="n">x</span><span class="o">**</span><span class="mi">2</span> <span class="k">if</span> <span class="n">x</span> <span class="o">!=</span> <span class="mf">0.</span> <span class="k">else</span> <span class="mf">0.</span>
+    <span class="k">else</span><span class="p">:</span>
+        <span class="k">with</span> <span class="n">np</span><span class="o">.</span><span class="n">errstate</span><span class="p">(</span><span class="nb">all</span><span class="o">=</span><span class="s1">&#39;ignore&#39;</span><span class="p">):</span>
+            <span class="n">retvalue</span> <span class="o">=</span> <span class="p">(</span><span class="n">sin</span><span class="p">(</span><span class="n">x</span><span class="p">)</span> <span class="o">-</span> <span class="n">x</span><span class="o">*</span><span class="n">cos</span><span class="p">(</span><span class="n">x</span><span class="p">))</span><span class="o">/</span><span class="n">x</span><span class="o">**</span><span class="mi">2</span>
+        <span class="n">retvalue</span><span class="p">[</span><span class="n">x</span> <span class="o">==</span> <span class="mf">0.</span><span class="p">]</span> <span class="o">=</span> <span class="mf">0.</span>
+    <span class="k">return</span> <span class="n">retvalue</span></div>
+
+<div class="viewcode-block" id="sas_3j1x_x"><a class="viewcode-back" href="../../dev/sasmodels-api/sasmodels.html#sasmodels.special.sas_3j1x_x">[docs]</a><span class="k">def</span> <span class="nf">sas_3j1x_x</span><span class="p">(</span><span class="n">x</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;return 3*j1(x)/x&quot;&quot;&quot;</span>
+    <span class="k">if</span> <span class="n">np</span><span class="o">.</span><span class="n">isscalar</span><span class="p">(</span><span class="n">x</span><span class="p">):</span>
+        <span class="n">retvalue</span> <span class="o">=</span> <span class="mi">3</span><span class="o">*</span><span class="p">(</span><span class="n">sin</span><span class="p">(</span><span class="n">x</span><span class="p">)</span> <span class="o">-</span> <span class="n">x</span><span class="o">*</span><span class="n">cos</span><span class="p">(</span><span class="n">x</span><span class="p">))</span><span class="o">/</span><span class="n">x</span><span class="o">**</span><span class="mi">3</span> <span class="k">if</span> <span class="n">x</span> <span class="o">!=</span> <span class="mf">0.</span> <span class="k">else</span> <span class="mf">1.</span>
+    <span class="k">else</span><span class="p">:</span>
+        <span class="k">with</span> <span class="n">np</span><span class="o">.</span><span class="n">errstate</span><span class="p">(</span><span class="nb">all</span><span class="o">=</span><span class="s1">&#39;ignore&#39;</span><span class="p">):</span>
+            <span class="n">retvalue</span> <span class="o">=</span> <span class="mi">3</span><span class="o">*</span><span class="p">(</span><span class="n">sin</span><span class="p">(</span><span class="n">x</span><span class="p">)</span> <span class="o">-</span> <span class="n">x</span><span class="o">*</span><span class="n">cos</span><span class="p">(</span><span class="n">x</span><span class="p">))</span><span class="o">/</span><span class="n">x</span><span class="o">**</span><span class="mi">3</span>
+        <span class="n">retvalue</span><span class="p">[</span><span class="n">x</span> <span class="o">==</span> <span class="mf">0.</span><span class="p">]</span> <span class="o">=</span> <span class="mf">1.</span>
+    <span class="k">return</span> <span class="n">retvalue</span></div>
+
+<div class="viewcode-block" id="sas_2J1x_x"><a class="viewcode-back" href="../../dev/sasmodels-api/sasmodels.html#sasmodels.special.sas_2J1x_x">[docs]</a><span class="k">def</span> <span class="nf">sas_2J1x_x</span><span class="p">(</span><span class="n">x</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;return 2*J1(x)/x&quot;&quot;&quot;</span>
+    <span class="k">if</span> <span class="n">np</span><span class="o">.</span><span class="n">isscalar</span><span class="p">(</span><span class="n">x</span><span class="p">):</span>
+        <span class="n">retvalue</span> <span class="o">=</span> <span class="mi">2</span><span class="o">*</span><span class="n">sas_J1</span><span class="p">(</span><span class="n">x</span><span class="p">)</span><span class="o">/</span><span class="n">x</span> <span class="k">if</span> <span class="n">x</span> <span class="o">!=</span> <span class="mi">0</span> <span class="k">else</span> <span class="mf">1.</span>
+    <span class="k">else</span><span class="p">:</span>
+        <span class="k">with</span> <span class="n">np</span><span class="o">.</span><span class="n">errstate</span><span class="p">(</span><span class="nb">all</span><span class="o">=</span><span class="s1">&#39;ignore&#39;</span><span class="p">):</span>
+            <span class="n">retvalue</span> <span class="o">=</span> <span class="mi">2</span><span class="o">*</span><span class="n">sas_J1</span><span class="p">(</span><span class="n">x</span><span class="p">)</span><span class="o">/</span><span class="n">x</span>
+        <span class="n">retvalue</span><span class="p">[</span><span class="n">x</span> <span class="o">==</span> <span class="mi">0</span><span class="p">]</span> <span class="o">=</span> <span class="mf">1.</span>
+    <span class="k">return</span> <span class="n">retvalue</span></div>
+
+
+<span class="c1"># Gaussians</span>
+<div class="viewcode-block" id="Gauss"><a class="viewcode-back" href="../../dev/sasmodels-api/sasmodels.html#sasmodels.special.Gauss">[docs]</a><span class="k">class</span> <span class="nc">Gauss</span><span class="p">:</span>
+    <span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">w</span><span class="p">,</span> <span class="n">z</span><span class="p">):</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">n</span> <span class="o">=</span> <span class="nb">len</span><span class="p">(</span><span class="n">w</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">w</span> <span class="o">=</span> <span class="n">w</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">z</span> <span class="o">=</span> <span class="n">z</span></div>
+
+<span class="n">gauss20</span> <span class="o">=</span> <span class="n">Gauss</span><span class="p">(</span>
+    <span class="n">w</span><span class="o">=</span><span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">([</span>
+        <span class="o">.</span><span class="mo">01761400713</span><span class="mi">91521</span><span class="p">,</span>
+        <span class="o">.</span><span class="mo">04060142</span><span class="mi">98003869</span><span class="p">,</span>
+        <span class="o">.</span><span class="mo">06267204</span><span class="mi">83341091</span><span class="p">,</span>
+        <span class="o">.</span><span class="mi">0832767415767047</span><span class="p">,</span>
+        <span class="o">.</span><span class="mi">10193011981724</span><span class="p">,</span>
+        <span class="o">.</span><span class="mi">118194531961518</span><span class="p">,</span>
+        <span class="o">.</span><span class="mi">131688638449177</span><span class="p">,</span>
+        <span class="o">.</span><span class="mi">142096109318382</span><span class="p">,</span>
+        <span class="o">.</span><span class="mi">149172986472604</span><span class="p">,</span>
+        <span class="o">.</span><span class="mi">152753387130726</span><span class="p">,</span>
+        <span class="o">.</span><span class="mi">152753387130726</span><span class="p">,</span>
+        <span class="o">.</span><span class="mi">149172986472604</span><span class="p">,</span>
+        <span class="o">.</span><span class="mi">142096109318382</span><span class="p">,</span>
+        <span class="o">.</span><span class="mi">131688638449177</span><span class="p">,</span>
+        <span class="o">.</span><span class="mi">118194531961518</span><span class="p">,</span>
+        <span class="o">.</span><span class="mi">10193011981724</span><span class="p">,</span>
+        <span class="o">.</span><span class="mi">0832767415767047</span><span class="p">,</span>
+        <span class="o">.</span><span class="mo">06267204</span><span class="mi">83341091</span><span class="p">,</span>
+        <span class="o">.</span><span class="mo">04060142</span><span class="mi">98003869</span><span class="p">,</span>
+        <span class="o">.</span><span class="mo">01761400713</span><span class="mi">91521</span>
+    <span class="p">]),</span>
+    <span class="n">z</span><span class="o">=</span><span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">([</span>
+        <span class="o">-.</span><span class="mi">993128599185095</span><span class="p">,</span>
+        <span class="o">-.</span><span class="mi">963971927277914</span><span class="p">,</span>
+        <span class="o">-.</span><span class="mi">912234428251326</span><span class="p">,</span>
+        <span class="o">-.</span><span class="mi">839116971822219</span><span class="p">,</span>
+        <span class="o">-.</span><span class="mi">746331906460151</span><span class="p">,</span>
+        <span class="o">-.</span><span class="mi">636053680726515</span><span class="p">,</span>
+        <span class="o">-.</span><span class="mi">510867001950827</span><span class="p">,</span>
+        <span class="o">-.</span><span class="mi">37370608871542</span><span class="p">,</span>
+        <span class="o">-.</span><span class="mi">227785851141645</span><span class="p">,</span>
+        <span class="o">-.</span><span class="mo">0765265211334</span><span class="mi">97</span><span class="p">,</span>
+        <span class="o">.</span><span class="mo">0765265211334</span><span class="mi">973</span><span class="p">,</span>
+        <span class="o">.</span><span class="mi">227785851141645</span><span class="p">,</span>
+        <span class="o">.</span><span class="mi">37370608871542</span><span class="p">,</span>
+        <span class="o">.</span><span class="mi">510867001950827</span><span class="p">,</span>
+        <span class="o">.</span><span class="mi">636053680726515</span><span class="p">,</span>
+        <span class="o">.</span><span class="mi">746331906460151</span><span class="p">,</span>
+        <span class="o">.</span><span class="mi">839116971822219</span><span class="p">,</span>
+        <span class="o">.</span><span class="mi">912234428251326</span><span class="p">,</span>
+        <span class="o">.</span><span class="mi">963971927277914</span><span class="p">,</span>
+        <span class="o">.</span><span class="mi">993128599185095</span>
+    <span class="p">])</span>
+<span class="p">)</span>
+
+<span class="n">gauss76</span> <span class="o">=</span> <span class="n">Gauss</span><span class="p">(</span>
+    <span class="n">w</span><span class="o">=</span><span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">([</span>
+        <span class="o">.</span><span class="mo">0012677</span><span class="mi">9163408536</span><span class="p">,</span>		<span class="c1">#0</span>
+        <span class="o">.</span><span class="mo">002</span><span class="mi">94910295364247</span><span class="p">,</span>
+        <span class="o">.</span><span class="mo">004627</span><span class="mi">93522803742</span><span class="p">,</span>
+        <span class="o">.</span><span class="mo">0062</span><span class="mi">9918049732845</span><span class="p">,</span>
+        <span class="o">.</span><span class="mo">007</span><span class="mi">95984747723973</span><span class="p">,</span>
+        <span class="o">.</span><span class="mo">00</span><span class="mi">960710541471375</span><span class="p">,</span>
+        <span class="o">.</span><span class="mo">01123</span><span class="mi">81685696677</span><span class="p">,</span>
+        <span class="o">.</span><span class="mo">012</span><span class="mi">8502838475101</span><span class="p">,</span>
+        <span class="o">.</span><span class="mo">01444073174</span><span class="mi">82767</span><span class="p">,</span>
+        <span class="o">.</span><span class="mo">016006</span><span class="mi">8299122486</span><span class="p">,</span>
+        <span class="o">.</span><span class="mo">017545</span><span class="mi">9372914742</span><span class="p">,</span>		<span class="c1">#10</span>
+        <span class="o">.</span><span class="mo">01</span><span class="mi">90554584671906</span><span class="p">,</span>
+        <span class="o">.</span><span class="mo">020532</span><span class="mi">847967908</span><span class="p">,</span>
+        <span class="o">.</span><span class="mo">021</span><span class="mi">9756145344162</span><span class="p">,</span>
+        <span class="o">.</span><span class="mo">0233</span><span class="mi">813253070112</span><span class="p">,</span>
+        <span class="o">.</span><span class="mo">02474760</span><span class="mi">99206597</span><span class="p">,</span>
+        <span class="o">.</span><span class="mo">0260721644</span><span class="mi">97986</span><span class="p">,</span>
+        <span class="o">.</span><span class="mo">027352755531</span><span class="mi">8275</span><span class="p">,</span>
+        <span class="o">.</span><span class="mo">02</span><span class="mi">8587223650054</span><span class="p">,</span>
+        <span class="o">.</span><span class="mo">02</span><span class="mi">9773487255905</span><span class="p">,</span>
+        <span class="o">.</span><span class="mo">030</span><span class="mi">9095460374916</span><span class="p">,</span>		<span class="c1">#20</span>
+        <span class="o">.</span><span class="mo">031</span><span class="mi">9934843404216</span><span class="p">,</span>
+        <span class="o">.</span><span class="mo">0330234743</span><span class="mi">977917</span><span class="p">,</span>
+        <span class="o">.</span><span class="mo">033</span><span class="mi">9977794120564</span><span class="p">,</span>
+        <span class="o">.</span><span class="mo">034</span><span class="mi">9147564835508</span><span class="p">,</span>
+        <span class="o">.</span><span class="mo">035772</span><span class="mi">8593807139</span><span class="p">,</span>
+        <span class="o">.</span><span class="mo">03657064114732</span><span class="mi">96</span><span class="p">,</span>
+        <span class="o">.</span><span class="mo">0373067565423</span><span class="mi">816</span><span class="p">,</span>
+        <span class="o">.</span><span class="mo">037</span><span class="mi">9799643084053</span><span class="p">,</span>
+        <span class="o">.</span><span class="mo">03</span><span class="mi">85891292645067</span><span class="p">,</span>
+        <span class="o">.</span><span class="mo">03</span><span class="mi">91332242205184</span><span class="p">,</span>		<span class="c1">#30</span>
+        <span class="o">.</span><span class="mo">03</span><span class="mi">96113317090621</span><span class="p">,</span>
+        <span class="o">.</span><span class="mo">0400226455325</span><span class="mi">968</span><span class="p">,</span>
+        <span class="o">.</span><span class="mo">040366472122</span><span class="mi">844</span><span class="p">,</span>
+        <span class="o">.</span><span class="mo">0406422317102</span><span class="mi">947</span><span class="p">,</span>
+        <span class="o">.</span><span class="mo">040</span><span class="mi">8494593018285</span><span class="p">,</span>
+        <span class="o">.</span><span class="mo">040</span><span class="mi">987805464794</span><span class="p">,</span>
+        <span class="o">.</span><span class="mo">041057036</span><span class="mi">9162294</span><span class="p">,</span>
+        <span class="o">.</span><span class="mo">041057036</span><span class="mi">9162294</span><span class="p">,</span>
+        <span class="o">.</span><span class="mo">040</span><span class="mi">987805464794</span><span class="p">,</span>
+        <span class="o">.</span><span class="mo">040</span><span class="mi">8494593018285</span><span class="p">,</span>		<span class="c1">#40</span>
+        <span class="o">.</span><span class="mo">0406422317102</span><span class="mi">947</span><span class="p">,</span>
+        <span class="o">.</span><span class="mo">040366472122</span><span class="mi">844</span><span class="p">,</span>
+        <span class="o">.</span><span class="mo">0400226455325</span><span class="mi">968</span><span class="p">,</span>
+        <span class="o">.</span><span class="mo">03</span><span class="mi">96113317090621</span><span class="p">,</span>
+        <span class="o">.</span><span class="mo">03</span><span class="mi">91332242205184</span><span class="p">,</span>
+        <span class="o">.</span><span class="mo">03</span><span class="mi">85891292645067</span><span class="p">,</span>
+        <span class="o">.</span><span class="mo">037</span><span class="mi">9799643084053</span><span class="p">,</span>
+        <span class="o">.</span><span class="mo">0373067565423</span><span class="mi">816</span><span class="p">,</span>
+        <span class="o">.</span><span class="mo">03657064114732</span><span class="mi">96</span><span class="p">,</span>
+        <span class="o">.</span><span class="mo">035772</span><span class="mi">8593807139</span><span class="p">,</span>		<span class="c1">#50</span>
+        <span class="o">.</span><span class="mo">034</span><span class="mi">9147564835508</span><span class="p">,</span>
+        <span class="o">.</span><span class="mo">033</span><span class="mi">9977794120564</span><span class="p">,</span>
+        <span class="o">.</span><span class="mo">0330234743</span><span class="mi">977917</span><span class="p">,</span>
+        <span class="o">.</span><span class="mo">031</span><span class="mi">9934843404216</span><span class="p">,</span>
+        <span class="o">.</span><span class="mo">030</span><span class="mi">9095460374916</span><span class="p">,</span>
+        <span class="o">.</span><span class="mo">02</span><span class="mi">9773487255905</span><span class="p">,</span>
+        <span class="o">.</span><span class="mo">02</span><span class="mi">8587223650054</span><span class="p">,</span>
+        <span class="o">.</span><span class="mo">027352755531</span><span class="mi">8275</span><span class="p">,</span>
+        <span class="o">.</span><span class="mo">0260721644</span><span class="mi">97986</span><span class="p">,</span>
+        <span class="o">.</span><span class="mo">02474760</span><span class="mi">99206597</span><span class="p">,</span>		<span class="c1">#60</span>
+        <span class="o">.</span><span class="mo">0233</span><span class="mi">813253070112</span><span class="p">,</span>
+        <span class="o">.</span><span class="mo">021</span><span class="mi">9756145344162</span><span class="p">,</span>
+        <span class="o">.</span><span class="mo">020532</span><span class="mi">847967908</span><span class="p">,</span>
+        <span class="o">.</span><span class="mo">01</span><span class="mi">90554584671906</span><span class="p">,</span>
+        <span class="o">.</span><span class="mo">017545</span><span class="mi">9372914742</span><span class="p">,</span>
+        <span class="o">.</span><span class="mo">016006</span><span class="mi">8299122486</span><span class="p">,</span>
+        <span class="o">.</span><span class="mo">01444073174</span><span class="mi">82767</span><span class="p">,</span>
+        <span class="o">.</span><span class="mo">012</span><span class="mi">8502838475101</span><span class="p">,</span>
+        <span class="o">.</span><span class="mo">01123</span><span class="mi">81685696677</span><span class="p">,</span>
+        <span class="o">.</span><span class="mo">00</span><span class="mi">960710541471375</span><span class="p">,</span>		<span class="c1">#70</span>
+        <span class="o">.</span><span class="mo">007</span><span class="mi">95984747723973</span><span class="p">,</span>
+        <span class="o">.</span><span class="mo">0062</span><span class="mi">9918049732845</span><span class="p">,</span>
+        <span class="o">.</span><span class="mo">004627</span><span class="mi">93522803742</span><span class="p">,</span>
+        <span class="o">.</span><span class="mo">002</span><span class="mi">94910295364247</span><span class="p">,</span>
+        <span class="o">.</span><span class="mo">0012677</span><span class="mi">9163408536</span>		<span class="c1">#75 (indexed from 0)</span>
+    <span class="p">]),</span>
+    <span class="n">z</span><span class="o">=</span><span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">([</span>
+        <span class="o">-.</span><span class="mi">999505948362153</span><span class="p">,</span>		<span class="c1">#0</span>
+        <span class="o">-.</span><span class="mi">997397786355355</span><span class="p">,</span>
+        <span class="o">-.</span><span class="mi">993608772723527</span><span class="p">,</span>
+        <span class="o">-.</span><span class="mi">988144453359837</span><span class="p">,</span>
+        <span class="o">-.</span><span class="mi">981013938975656</span><span class="p">,</span>
+        <span class="o">-.</span><span class="mi">972229228520377</span><span class="p">,</span>
+        <span class="o">-.</span><span class="mi">961805126758768</span><span class="p">,</span>
+        <span class="o">-.</span><span class="mi">949759207710896</span><span class="p">,</span>
+        <span class="o">-.</span><span class="mi">936111781934811</span><span class="p">,</span>
+        <span class="o">-.</span><span class="mi">92088586125215</span><span class="p">,</span>
+        <span class="o">-.</span><span class="mi">904107119545567</span><span class="p">,</span>		<span class="c1">#10</span>
+        <span class="o">-.</span><span class="mi">885803849292083</span><span class="p">,</span>
+        <span class="o">-.</span><span class="mi">866006913771982</span><span class="p">,</span>
+        <span class="o">-.</span><span class="mi">844749694983342</span><span class="p">,</span>
+        <span class="o">-.</span><span class="mi">822068037328975</span><span class="p">,</span>
+        <span class="o">-.</span><span class="mi">7980001871612</span><span class="p">,</span>
+        <span class="o">-.</span><span class="mi">77258672828181</span><span class="p">,</span>
+        <span class="o">-.</span><span class="mi">74587051350361</span><span class="p">,</span>
+        <span class="o">-.</span><span class="mi">717896592387704</span><span class="p">,</span>
+        <span class="o">-.</span><span class="mi">688712135277641</span><span class="p">,</span>
+        <span class="o">-.</span><span class="mi">658366353758143</span><span class="p">,</span>		<span class="c1">#20</span>
+        <span class="o">-.</span><span class="mi">626910417672267</span><span class="p">,</span>
+        <span class="o">-.</span><span class="mi">594397368836793</span><span class="p">,</span>
+        <span class="o">-.</span><span class="mi">560882031601237</span><span class="p">,</span>
+        <span class="o">-.</span><span class="mi">526420920401243</span><span class="p">,</span>
+        <span class="o">-.</span><span class="mi">491072144462194</span><span class="p">,</span>
+        <span class="o">-.</span><span class="mi">454895309813726</span><span class="p">,</span>
+        <span class="o">-.</span><span class="mi">417951418780327</span><span class="p">,</span>
+        <span class="o">-.</span><span class="mi">380302767117504</span><span class="p">,</span>
+        <span class="o">-.</span><span class="mi">342012838966962</span><span class="p">,</span>
+        <span class="o">-.</span><span class="mi">303146199807908</span><span class="p">,</span>		<span class="c1">#30</span>
+        <span class="o">-.</span><span class="mi">263768387584994</span><span class="p">,</span>
+        <span class="o">-.</span><span class="mi">223945802196474</span><span class="p">,</span>
+        <span class="o">-.</span><span class="mi">183745593528914</span><span class="p">,</span>
+        <span class="o">-.</span><span class="mi">143235548227268</span><span class="p">,</span>
+        <span class="o">-.</span><span class="mi">102483975391227</span><span class="p">,</span>
+        <span class="o">-.</span><span class="mo">06155</span><span class="mi">95913906112</span><span class="p">,</span>
+        <span class="o">-.</span><span class="mo">020531403</span><span class="mi">9939986</span><span class="p">,</span>
+        <span class="o">.</span><span class="mo">020531403</span><span class="mi">9939986</span><span class="p">,</span>
+        <span class="o">.</span><span class="mo">06155</span><span class="mi">95913906112</span><span class="p">,</span>
+        <span class="o">.</span><span class="mi">102483975391227</span><span class="p">,</span>			<span class="c1">#40</span>
+        <span class="o">.</span><span class="mi">143235548227268</span><span class="p">,</span>
+        <span class="o">.</span><span class="mi">183745593528914</span><span class="p">,</span>
+        <span class="o">.</span><span class="mi">223945802196474</span><span class="p">,</span>
+        <span class="o">.</span><span class="mi">263768387584994</span><span class="p">,</span>
+        <span class="o">.</span><span class="mi">303146199807908</span><span class="p">,</span>
+        <span class="o">.</span><span class="mi">342012838966962</span><span class="p">,</span>
+        <span class="o">.</span><span class="mi">380302767117504</span><span class="p">,</span>
+        <span class="o">.</span><span class="mi">417951418780327</span><span class="p">,</span>
+        <span class="o">.</span><span class="mi">454895309813726</span><span class="p">,</span>
+        <span class="o">.</span><span class="mi">491072144462194</span><span class="p">,</span>		<span class="c1">#50</span>
+        <span class="o">.</span><span class="mi">526420920401243</span><span class="p">,</span>
+        <span class="o">.</span><span class="mi">560882031601237</span><span class="p">,</span>
+        <span class="o">.</span><span class="mi">594397368836793</span><span class="p">,</span>
+        <span class="o">.</span><span class="mi">626910417672267</span><span class="p">,</span>
+        <span class="o">.</span><span class="mi">658366353758143</span><span class="p">,</span>
+        <span class="o">.</span><span class="mi">688712135277641</span><span class="p">,</span>
+        <span class="o">.</span><span class="mi">717896592387704</span><span class="p">,</span>
+        <span class="o">.</span><span class="mi">74587051350361</span><span class="p">,</span>
+        <span class="o">.</span><span class="mi">77258672828181</span><span class="p">,</span>
+        <span class="o">.</span><span class="mi">7980001871612</span><span class="p">,</span>	<span class="c1">#60</span>
+        <span class="o">.</span><span class="mi">822068037328975</span><span class="p">,</span>
+        <span class="o">.</span><span class="mi">844749694983342</span><span class="p">,</span>
+        <span class="o">.</span><span class="mi">866006913771982</span><span class="p">,</span>
+        <span class="o">.</span><span class="mi">885803849292083</span><span class="p">,</span>
+        <span class="o">.</span><span class="mi">904107119545567</span><span class="p">,</span>
+        <span class="o">.</span><span class="mi">92088586125215</span><span class="p">,</span>
+        <span class="o">.</span><span class="mi">936111781934811</span><span class="p">,</span>
+        <span class="o">.</span><span class="mi">949759207710896</span><span class="p">,</span>
+        <span class="o">.</span><span class="mi">961805126758768</span><span class="p">,</span>
+        <span class="o">.</span><span class="mi">972229228520377</span><span class="p">,</span>		<span class="c1">#70</span>
+        <span class="o">.</span><span class="mi">981013938975656</span><span class="p">,</span>
+        <span class="o">.</span><span class="mi">988144453359837</span><span class="p">,</span>
+        <span class="o">.</span><span class="mi">993608772723527</span><span class="p">,</span>
+        <span class="o">.</span><span class="mi">997397786355355</span><span class="p">,</span>
+        <span class="o">.</span><span class="mi">999505948362153</span>		<span class="c1">#75</span>
+    <span class="p">])</span>
+<span class="p">)</span>
+
+<span class="n">gauss150</span> <span class="o">=</span> <span class="n">Gauss</span><span class="p">(</span>
+    <span class="n">z</span><span class="o">=</span><span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">([</span>
+        <span class="o">-</span><span class="mf">0.9998723404457334</span><span class="p">,</span>
+        <span class="o">-</span><span class="mf">0.9993274305065947</span><span class="p">,</span>
+        <span class="o">-</span><span class="mf">0.9983473449340834</span><span class="p">,</span>
+        <span class="o">-</span><span class="mf">0.9969322929775997</span><span class="p">,</span>
+        <span class="o">-</span><span class="mf">0.9950828645255290</span><span class="p">,</span>
+        <span class="o">-</span><span class="mf">0.9927998590434373</span><span class="p">,</span>
+        <span class="o">-</span><span class="mf">0.9900842691660192</span><span class="p">,</span>
+        <span class="o">-</span><span class="mf">0.9869372772712794</span><span class="p">,</span>
+        <span class="o">-</span><span class="mf">0.9833602541697529</span><span class="p">,</span>
+        <span class="o">-</span><span class="mf">0.9793547582425894</span><span class="p">,</span>
+        <span class="o">-</span><span class="mf">0.9749225346595943</span><span class="p">,</span>
+        <span class="o">-</span><span class="mf">0.9700655145738374</span><span class="p">,</span>
+        <span class="o">-</span><span class="mf">0.9647858142586956</span><span class="p">,</span>
+        <span class="o">-</span><span class="mf">0.9590857341746905</span><span class="p">,</span>
+        <span class="o">-</span><span class="mf">0.9529677579610971</span><span class="p">,</span>
+        <span class="o">-</span><span class="mf">0.9464345513503147</span><span class="p">,</span>
+        <span class="o">-</span><span class="mf">0.9394889610042837</span><span class="p">,</span>
+        <span class="o">-</span><span class="mf">0.9321340132728527</span><span class="p">,</span>
+        <span class="o">-</span><span class="mf">0.9243729128743136</span><span class="p">,</span>
+        <span class="o">-</span><span class="mf">0.9162090414984952</span><span class="p">,</span>
+        <span class="o">-</span><span class="mf">0.9076459563329236</span><span class="p">,</span>
+        <span class="o">-</span><span class="mf">0.8986873885126239</span><span class="p">,</span>
+        <span class="o">-</span><span class="mf">0.8893372414942055</span><span class="p">,</span>
+        <span class="o">-</span><span class="mf">0.8795995893549102</span><span class="p">,</span>
+        <span class="o">-</span><span class="mf">0.8694786750173527</span><span class="p">,</span>
+        <span class="o">-</span><span class="mf">0.8589789084007133</span><span class="p">,</span>
+        <span class="o">-</span><span class="mf">0.8481048644991847</span><span class="p">,</span>
+        <span class="o">-</span><span class="mf">0.8368612813885015</span><span class="p">,</span>
+        <span class="o">-</span><span class="mf">0.8252530581614230</span><span class="p">,</span>
+        <span class="o">-</span><span class="mf">0.8132852527930605</span><span class="p">,</span>
+        <span class="o">-</span><span class="mf">0.8009630799369827</span><span class="p">,</span>
+        <span class="o">-</span><span class="mf">0.7882919086530552</span><span class="p">,</span>
+        <span class="o">-</span><span class="mf">0.7752772600680049</span><span class="p">,</span>
+        <span class="o">-</span><span class="mf">0.7619248049697269</span><span class="p">,</span>
+        <span class="o">-</span><span class="mf">0.7482403613363824</span><span class="p">,</span>
+        <span class="o">-</span><span class="mf">0.7342298918013638</span><span class="p">,</span>
+        <span class="o">-</span><span class="mf">0.7198995010552305</span><span class="p">,</span>
+        <span class="o">-</span><span class="mf">0.7052554331857488</span><span class="p">,</span>
+        <span class="o">-</span><span class="mf">0.6903040689571928</span><span class="p">,</span>
+        <span class="o">-</span><span class="mf">0.6750519230300931</span><span class="p">,</span>
+        <span class="o">-</span><span class="mf">0.6595056411226444</span><span class="p">,</span>
+        <span class="o">-</span><span class="mf">0.6436719971150083</span><span class="p">,</span>
+        <span class="o">-</span><span class="mf">0.6275578900977726</span><span class="p">,</span>
+        <span class="o">-</span><span class="mf">0.6111703413658551</span><span class="p">,</span>
+        <span class="o">-</span><span class="mf">0.5945164913591590</span><span class="p">,</span>
+        <span class="o">-</span><span class="mf">0.5776035965513142</span><span class="p">,</span>
+        <span class="o">-</span><span class="mf">0.5604390262878617</span><span class="p">,</span>
+        <span class="o">-</span><span class="mf">0.5430302595752546</span><span class="p">,</span>
+        <span class="o">-</span><span class="mf">0.5253848818220803</span><span class="p">,</span>
+        <span class="o">-</span><span class="mf">0.5075105815339176</span><span class="p">,</span>
+        <span class="o">-</span><span class="mf">0.4894151469632753</span><span class="p">,</span>
+        <span class="o">-</span><span class="mf">0.4711064627160663</span><span class="p">,</span>
+        <span class="o">-</span><span class="mf">0.4525925063160997</span><span class="p">,</span>
+        <span class="o">-</span><span class="mf">0.4338813447290861</span><span class="p">,</span>
+        <span class="o">-</span><span class="mf">0.4149811308476706</span><span class="p">,</span>
+        <span class="o">-</span><span class="mf">0.3959000999390257</span><span class="p">,</span>
+        <span class="o">-</span><span class="mf">0.3766465660565522</span><span class="p">,</span>
+        <span class="o">-</span><span class="mf">0.3572289184172501</span><span class="p">,</span>
+        <span class="o">-</span><span class="mf">0.3376556177463400</span><span class="p">,</span>
+        <span class="o">-</span><span class="mf">0.3179351925907259</span><span class="p">,</span>
+        <span class="o">-</span><span class="mf">0.2980762356029071</span><span class="p">,</span>
+        <span class="o">-</span><span class="mf">0.2780873997969574</span><span class="p">,</span>
+        <span class="o">-</span><span class="mf">0.2579773947782034</span><span class="p">,</span>
+        <span class="o">-</span><span class="mf">0.2377549829482451</span><span class="p">,</span>
+        <span class="o">-</span><span class="mf">0.2174289756869712</span><span class="p">,</span>
+        <span class="o">-</span><span class="mf">0.1970082295132342</span><span class="p">,</span>
+        <span class="o">-</span><span class="mf">0.1765016422258567</span><span class="p">,</span>
+        <span class="o">-</span><span class="mf">0.1559181490266516</span><span class="p">,</span>
+        <span class="o">-</span><span class="mf">0.1352667186271445</span><span class="p">,</span>
+        <span class="o">-</span><span class="mf">0.1145563493406956</span><span class="p">,</span>
+        <span class="o">-</span><span class="mf">0.0937960651617229</span><span class="p">,</span>
+        <span class="o">-</span><span class="mf">0.0729949118337358</span><span class="p">,</span>
+        <span class="o">-</span><span class="mf">0.0521619529078925</span><span class="p">,</span>
+        <span class="o">-</span><span class="mf">0.0313062657937972</span><span class="p">,</span>
+        <span class="o">-</span><span class="mf">0.0104369378042598</span><span class="p">,</span>
+        <span class="mf">0.0104369378042598</span><span class="p">,</span>
+        <span class="mf">0.0313062657937972</span><span class="p">,</span>
+        <span class="mf">0.0521619529078925</span><span class="p">,</span>
+        <span class="mf">0.0729949118337358</span><span class="p">,</span>
+        <span class="mf">0.0937960651617229</span><span class="p">,</span>
+        <span class="mf">0.1145563493406956</span><span class="p">,</span>
+        <span class="mf">0.1352667186271445</span><span class="p">,</span>
+        <span class="mf">0.1559181490266516</span><span class="p">,</span>
+        <span class="mf">0.1765016422258567</span><span class="p">,</span>
+        <span class="mf">0.1970082295132342</span><span class="p">,</span>
+        <span class="mf">0.2174289756869712</span><span class="p">,</span>
+        <span class="mf">0.2377549829482451</span><span class="p">,</span>
+        <span class="mf">0.2579773947782034</span><span class="p">,</span>
+        <span class="mf">0.2780873997969574</span><span class="p">,</span>
+        <span class="mf">0.2980762356029071</span><span class="p">,</span>
+        <span class="mf">0.3179351925907259</span><span class="p">,</span>
+        <span class="mf">0.3376556177463400</span><span class="p">,</span>
+        <span class="mf">0.3572289184172501</span><span class="p">,</span>
+        <span class="mf">0.3766465660565522</span><span class="p">,</span>
+        <span class="mf">0.3959000999390257</span><span class="p">,</span>
+        <span class="mf">0.4149811308476706</span><span class="p">,</span>
+        <span class="mf">0.4338813447290861</span><span class="p">,</span>
+        <span class="mf">0.4525925063160997</span><span class="p">,</span>
+        <span class="mf">0.4711064627160663</span><span class="p">,</span>
+        <span class="mf">0.4894151469632753</span><span class="p">,</span>
+        <span class="mf">0.5075105815339176</span><span class="p">,</span>
+        <span class="mf">0.5253848818220803</span><span class="p">,</span>
+        <span class="mf">0.5430302595752546</span><span class="p">,</span>
+        <span class="mf">0.5604390262878617</span><span class="p">,</span>
+        <span class="mf">0.5776035965513142</span><span class="p">,</span>
+        <span class="mf">0.5945164913591590</span><span class="p">,</span>
+        <span class="mf">0.6111703413658551</span><span class="p">,</span>
+        <span class="mf">0.6275578900977726</span><span class="p">,</span>
+        <span class="mf">0.6436719971150083</span><span class="p">,</span>
+        <span class="mf">0.6595056411226444</span><span class="p">,</span>
+        <span class="mf">0.6750519230300931</span><span class="p">,</span>
+        <span class="mf">0.6903040689571928</span><span class="p">,</span>
+        <span class="mf">0.7052554331857488</span><span class="p">,</span>
+        <span class="mf">0.7198995010552305</span><span class="p">,</span>
+        <span class="mf">0.7342298918013638</span><span class="p">,</span>
+        <span class="mf">0.7482403613363824</span><span class="p">,</span>
+        <span class="mf">0.7619248049697269</span><span class="p">,</span>
+        <span class="mf">0.7752772600680049</span><span class="p">,</span>
+        <span class="mf">0.7882919086530552</span><span class="p">,</span>
+        <span class="mf">0.8009630799369827</span><span class="p">,</span>
+        <span class="mf">0.8132852527930605</span><span class="p">,</span>
+        <span class="mf">0.8252530581614230</span><span class="p">,</span>
+        <span class="mf">0.8368612813885015</span><span class="p">,</span>
+        <span class="mf">0.8481048644991847</span><span class="p">,</span>
+        <span class="mf">0.8589789084007133</span><span class="p">,</span>
+        <span class="mf">0.8694786750173527</span><span class="p">,</span>
+        <span class="mf">0.8795995893549102</span><span class="p">,</span>
+        <span class="mf">0.8893372414942055</span><span class="p">,</span>
+        <span class="mf">0.8986873885126239</span><span class="p">,</span>
+        <span class="mf">0.9076459563329236</span><span class="p">,</span>
+        <span class="mf">0.9162090414984952</span><span class="p">,</span>
+        <span class="mf">0.9243729128743136</span><span class="p">,</span>
+        <span class="mf">0.9321340132728527</span><span class="p">,</span>
+        <span class="mf">0.9394889610042837</span><span class="p">,</span>
+        <span class="mf">0.9464345513503147</span><span class="p">,</span>
+        <span class="mf">0.9529677579610971</span><span class="p">,</span>
+        <span class="mf">0.9590857341746905</span><span class="p">,</span>
+        <span class="mf">0.9647858142586956</span><span class="p">,</span>
+        <span class="mf">0.9700655145738374</span><span class="p">,</span>
+        <span class="mf">0.9749225346595943</span><span class="p">,</span>
+        <span class="mf">0.9793547582425894</span><span class="p">,</span>
+        <span class="mf">0.9833602541697529</span><span class="p">,</span>
+        <span class="mf">0.9869372772712794</span><span class="p">,</span>
+        <span class="mf">0.9900842691660192</span><span class="p">,</span>
+        <span class="mf">0.9927998590434373</span><span class="p">,</span>
+        <span class="mf">0.9950828645255290</span><span class="p">,</span>
+        <span class="mf">0.9969322929775997</span><span class="p">,</span>
+        <span class="mf">0.9983473449340834</span><span class="p">,</span>
+        <span class="mf">0.9993274305065947</span><span class="p">,</span>
+        <span class="mf">0.9998723404457334</span>
+    <span class="p">]),</span>
+    <span class="n">w</span><span class="o">=</span><span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">([</span>
+        <span class="mf">0.0003276086705538</span><span class="p">,</span>
+        <span class="mf">0.0007624720924706</span><span class="p">,</span>
+        <span class="mf">0.0011976474864367</span><span class="p">,</span>
+        <span class="mf">0.0016323569986067</span><span class="p">,</span>
+        <span class="mf">0.0020663664924131</span><span class="p">,</span>
+        <span class="mf">0.0024994789888943</span><span class="p">,</span>
+        <span class="mf">0.0029315036836558</span><span class="p">,</span>
+        <span class="mf">0.0033622516236779</span><span class="p">,</span>
+        <span class="mf">0.0037915348363451</span><span class="p">,</span>
+        <span class="mf">0.0042191661429919</span><span class="p">,</span>
+        <span class="mf">0.0046449591497966</span><span class="p">,</span>
+        <span class="mf">0.0050687282939456</span><span class="p">,</span>
+        <span class="mf">0.0054902889094487</span><span class="p">,</span>
+        <span class="mf">0.0059094573005900</span><span class="p">,</span>
+        <span class="mf">0.0063260508184704</span><span class="p">,</span>
+        <span class="mf">0.0067398879387430</span><span class="p">,</span>
+        <span class="mf">0.0071507883396855</span><span class="p">,</span>
+        <span class="mf">0.0075585729801782</span><span class="p">,</span>
+        <span class="mf">0.0079630641773633</span><span class="p">,</span>
+        <span class="mf">0.0083640856838475</span><span class="p">,</span>
+        <span class="mf">0.0087614627643580</span><span class="p">,</span>
+        <span class="mf">0.0091550222717888</span><span class="p">,</span>
+        <span class="mf">0.0095445927225849</span><span class="p">,</span>
+        <span class="mf">0.0099300043714212</span><span class="p">,</span>
+        <span class="mf">0.0103110892851360</span><span class="p">,</span>
+        <span class="mf">0.0106876814158841</span><span class="p">,</span>
+        <span class="mf">0.0110596166734735</span><span class="p">,</span>
+        <span class="mf">0.0114267329968529</span><span class="p">,</span>
+        <span class="mf">0.0117888704247183</span><span class="p">,</span>
+        <span class="mf">0.0121458711652067</span><span class="p">,</span>
+        <span class="mf">0.0124975796646449</span><span class="p">,</span>
+        <span class="mf">0.0128438426753249</span><span class="p">,</span>
+        <span class="mf">0.0131845093222756</span><span class="p">,</span>
+        <span class="mf">0.0135194311690004</span><span class="p">,</span>
+        <span class="mf">0.0138484622795371</span><span class="p">,</span>
+        <span class="mf">0.0141714592928592</span><span class="p">,</span>
+        <span class="mf">0.0144882814685445</span><span class="p">,</span>
+        <span class="mf">0.0147987907597169</span><span class="p">,</span>
+        <span class="mf">0.0151028518701744</span><span class="p">,</span>
+        <span class="mf">0.0154003323133401</span><span class="p">,</span>
+        <span class="mf">0.0156911024699895</span><span class="p">,</span>
+        <span class="mf">0.0159750356447283</span><span class="p">,</span>
+        <span class="mf">0.0162520081211971</span><span class="p">,</span>
+        <span class="mf">0.0165218992159766</span><span class="p">,</span>
+        <span class="mf">0.0167845913311726</span><span class="p">,</span>
+        <span class="mf">0.0170399700056559</span><span class="p">,</span>
+        <span class="mf">0.0172879239649355</span><span class="p">,</span>
+        <span class="mf">0.0175283451696437</span><span class="p">,</span>
+        <span class="mf">0.0177611288626114</span><span class="p">,</span>
+        <span class="mf">0.0179861736145128</span><span class="p">,</span>
+        <span class="mf">0.0182033813680609</span><span class="p">,</span>
+        <span class="mf">0.0184126574807331</span><span class="p">,</span>
+        <span class="mf">0.0186139107660094</span><span class="p">,</span>
+        <span class="mf">0.0188070535331042</span><span class="p">,</span>
+        <span class="mf">0.0189920016251754</span><span class="p">,</span>
+        <span class="mf">0.0191686744559934</span><span class="p">,</span>
+        <span class="mf">0.0193369950450545</span><span class="p">,</span>
+        <span class="mf">0.0194968900511231</span><span class="p">,</span>
+        <span class="mf">0.0196482898041878</span><span class="p">,</span>
+        <span class="mf">0.0197911283358190</span><span class="p">,</span>
+        <span class="mf">0.0199253434079123</span><span class="p">,</span>
+        <span class="mf">0.0200508765398072</span><span class="p">,</span>
+        <span class="mf">0.0201676730337687</span><span class="p">,</span>
+        <span class="mf">0.0202756819988200</span><span class="p">,</span>
+        <span class="mf">0.0203748563729175</span><span class="p">,</span>
+        <span class="mf">0.0204651529434560</span><span class="p">,</span>
+        <span class="mf">0.0205465323660984</span><span class="p">,</span>
+        <span class="mf">0.0206189591819181</span><span class="p">,</span>
+        <span class="mf">0.0206824018328499</span><span class="p">,</span>
+        <span class="mf">0.0207368326754401</span><span class="p">,</span>
+        <span class="mf">0.0207822279928917</span><span class="p">,</span>
+        <span class="mf">0.0208185680053983</span><span class="p">,</span>
+        <span class="mf">0.0208458368787627</span><span class="p">,</span>
+        <span class="mf">0.0208640227312962</span><span class="p">,</span>
+        <span class="mf">0.0208731176389954</span><span class="p">,</span>
+        <span class="mf">0.0208731176389954</span><span class="p">,</span>
+        <span class="mf">0.0208640227312962</span><span class="p">,</span>
+        <span class="mf">0.0208458368787627</span><span class="p">,</span>
+        <span class="mf">0.0208185680053983</span><span class="p">,</span>
+        <span class="mf">0.0207822279928917</span><span class="p">,</span>
+        <span class="mf">0.0207368326754401</span><span class="p">,</span>
+        <span class="mf">0.0206824018328499</span><span class="p">,</span>
+        <span class="mf">0.0206189591819181</span><span class="p">,</span>
+        <span class="mf">0.0205465323660984</span><span class="p">,</span>
+        <span class="mf">0.0204651529434560</span><span class="p">,</span>
+        <span class="mf">0.0203748563729175</span><span class="p">,</span>
+        <span class="mf">0.0202756819988200</span><span class="p">,</span>
+        <span class="mf">0.0201676730337687</span><span class="p">,</span>
+        <span class="mf">0.0200508765398072</span><span class="p">,</span>
+        <span class="mf">0.0199253434079123</span><span class="p">,</span>
+        <span class="mf">0.0197911283358190</span><span class="p">,</span>
+        <span class="mf">0.0196482898041878</span><span class="p">,</span>
+        <span class="mf">0.0194968900511231</span><span class="p">,</span>
+        <span class="mf">0.0193369950450545</span><span class="p">,</span>
+        <span class="mf">0.0191686744559934</span><span class="p">,</span>
+        <span class="mf">0.0189920016251754</span><span class="p">,</span>
+        <span class="mf">0.0188070535331042</span><span class="p">,</span>
+        <span class="mf">0.0186139107660094</span><span class="p">,</span>
+        <span class="mf">0.0184126574807331</span><span class="p">,</span>
+        <span class="mf">0.0182033813680609</span><span class="p">,</span>
+        <span class="mf">0.0179861736145128</span><span class="p">,</span>
+        <span class="mf">0.0177611288626114</span><span class="p">,</span>
+        <span class="mf">0.0175283451696437</span><span class="p">,</span>
+        <span class="mf">0.0172879239649355</span><span class="p">,</span>
+        <span class="mf">0.0170399700056559</span><span class="p">,</span>
+        <span class="mf">0.0167845913311726</span><span class="p">,</span>
+        <span class="mf">0.0165218992159766</span><span class="p">,</span>
+        <span class="mf">0.0162520081211971</span><span class="p">,</span>
+        <span class="mf">0.0159750356447283</span><span class="p">,</span>
+        <span class="mf">0.0156911024699895</span><span class="p">,</span>
+        <span class="mf">0.0154003323133401</span><span class="p">,</span>
+        <span class="mf">0.0151028518701744</span><span class="p">,</span>
+        <span class="mf">0.0147987907597169</span><span class="p">,</span>
+        <span class="mf">0.0144882814685445</span><span class="p">,</span>
+        <span class="mf">0.0141714592928592</span><span class="p">,</span>
+        <span class="mf">0.0138484622795371</span><span class="p">,</span>
+        <span class="mf">0.0135194311690004</span><span class="p">,</span>
+        <span class="mf">0.0131845093222756</span><span class="p">,</span>
+        <span class="mf">0.0128438426753249</span><span class="p">,</span>
+        <span class="mf">0.0124975796646449</span><span class="p">,</span>
+        <span class="mf">0.0121458711652067</span><span class="p">,</span>
+        <span class="mf">0.0117888704247183</span><span class="p">,</span>
+        <span class="mf">0.0114267329968529</span><span class="p">,</span>
+        <span class="mf">0.0110596166734735</span><span class="p">,</span>
+        <span class="mf">0.0106876814158841</span><span class="p">,</span>
+        <span class="mf">0.0103110892851360</span><span class="p">,</span>
+        <span class="mf">0.0099300043714212</span><span class="p">,</span>
+        <span class="mf">0.0095445927225849</span><span class="p">,</span>
+        <span class="mf">0.0091550222717888</span><span class="p">,</span>
+        <span class="mf">0.0087614627643580</span><span class="p">,</span>
+        <span class="mf">0.0083640856838475</span><span class="p">,</span>
+        <span class="mf">0.0079630641773633</span><span class="p">,</span>
+        <span class="mf">0.0075585729801782</span><span class="p">,</span>
+        <span class="mf">0.0071507883396855</span><span class="p">,</span>
+        <span class="mf">0.0067398879387430</span><span class="p">,</span>
+        <span class="mf">0.0063260508184704</span><span class="p">,</span>
+        <span class="mf">0.0059094573005900</span><span class="p">,</span>
+        <span class="mf">0.0054902889094487</span><span class="p">,</span>
+        <span class="mf">0.0050687282939456</span><span class="p">,</span>
+        <span class="mf">0.0046449591497966</span><span class="p">,</span>
+        <span class="mf">0.0042191661429919</span><span class="p">,</span>
+        <span class="mf">0.0037915348363451</span><span class="p">,</span>
+        <span class="mf">0.0033622516236779</span><span class="p">,</span>
+        <span class="mf">0.0029315036836558</span><span class="p">,</span>
+        <span class="mf">0.0024994789888943</span><span class="p">,</span>
+        <span class="mf">0.0020663664924131</span><span class="p">,</span>
+        <span class="mf">0.0016323569986067</span><span class="p">,</span>
+        <span class="mf">0.0011976474864367</span><span class="p">,</span>
+        <span class="mf">0.0007624720924706</span><span class="p">,</span>
+        <span class="mf">0.0003276086705538</span>
+    <span class="p">])</span>
+<span class="p">)</span>
+</pre></div>
+
+          </div>
+        </div>
+      </div>
+      <div class="sphinxsidebar" role="navigation" aria-label="main navigation">
+        <div class="sphinxsidebarwrapper">
+<div id="searchbox" style="display: none" role="search">
+  <h3>Quick search</h3>
+    <form class="search" action="../../search.html" method="get">
+      <input type="text" name="q" />
+      <input type="submit" value="Go" />
+      <input type="hidden" name="check_keywords" value="yes" />
+      <input type="hidden" name="area" value="default" />
+    </form>
+</div>
+<script type="text/javascript">$('#searchbox').show(0);</script>
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="related" role="navigation" aria-label="related navigation">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="../../genindex.html" title="General Index"
+             >index</a></li>
+        <li class="right" >
+          <a href="../../py-modindex.html" title="Python Module Index"
+             >modules</a> |</li>
+        <li class="nav-item nav-item-0"><a href="../../index.html">SasView 4.2.0 documentation</a> &raquo;</li>
+          <li class="nav-item nav-item-1"><a href="../index.html" >Module code</a> &raquo;</li>
+          <li class="nav-item nav-item-2"><a href="../sasmodels.html" >sasmodels</a> &raquo;</li> 
+      </ul>
+    </div>
+    <div class="footer" role="contentinfo">
+        &copy; Copyright 2018, The SasView Project.
+      Created using <a href="http://sphinx-doc.org/">Sphinx</a> 1.4.1.
+    </div>
+  </body>
+</html>

@@ -6,7 +6,7 @@
   <head>
     <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
     
-    <title>sas.sasgui.perspectives.calculator.model_editor &mdash; SasView 4.1.2 documentation</title>
+    <title>sas.sasgui.perspectives.calculator.model_editor &mdash; SasView 4.2.0 documentation</title>
     
     <link rel="stylesheet" href="../../../../../_static/classic.css" type="text/css" />
     <link rel="stylesheet" href="../../../../../_static/pygments.css" type="text/css" />
@@ -14,7 +14,7 @@
     <script type="text/javascript">
       var DOCUMENTATION_OPTIONS = {
         URL_ROOT:    '../../../../../',
-        VERSION:     '4.1.2',
+        VERSION:     '4.2.0',
         COLLAPSE_INDEX: false,
         FILE_SUFFIX: '.html',
         HAS_SOURCE:  true
@@ -24,7 +24,7 @@
     <script type="text/javascript" src="../../../../../_static/underscore.js"></script>
     <script type="text/javascript" src="../../../../../_static/doctools.js"></script>
     <script type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.1/MathJax.js?config=TeX-MML-AM_CHTML"></script>
-    <link rel="top" title="SasView 4.1.2 documentation" href="../../../../../index.html" />
+    <link rel="top" title="SasView 4.2.0 documentation" href="../../../../../index.html" />
     <link rel="up" title="sas.sasgui.perspectives.calculator" href="../calculator.html" /> 
   </head>
   <body role="document">
@@ -37,9 +37,10 @@
         <li class="right" >
           <a href="../../../../../py-modindex.html" title="Python Module Index"
              >modules</a> |</li>
-        <li class="nav-item nav-item-0"><a href="../../../../../index.html">SasView 4.1.2 documentation</a> &raquo;</li>
+        <li class="nav-item nav-item-0"><a href="../../../../../index.html">SasView 4.2.0 documentation</a> &raquo;</li>
           <li class="nav-item nav-item-1"><a href="../../../../index.html" >Module code</a> &raquo;</li>
-          <li class="nav-item nav-item-2"><a href="../calculator.html" accesskey="U">sas.sasgui.perspectives.calculator</a> &raquo;</li> 
+          <li class="nav-item nav-item-2"><a href="../../../../sas.html" >sas</a> &raquo;</li>
+          <li class="nav-item nav-item-3"><a href="../calculator.html" accesskey="U">sas.sasgui.perspectives.calculator</a> &raquo;</li> 
       </ul>
     </div>  
 
@@ -73,24 +74,31 @@
 <span class="c1">#</span>
 <span class="c1">#copyright 2009, University of Tennessee</span>
 <span class="c1">################################################################################</span>
+<span class="kn">from</span> <span class="nn">__future__</span> <span class="kn">import</span> <span class="n">print_function</span>
+
 <span class="kn">import</span> <span class="nn">wx</span>
 <span class="kn">import</span> <span class="nn">sys</span>
 <span class="kn">import</span> <span class="nn">os</span>
 <span class="kn">import</span> <span class="nn">math</span>
 <span class="kn">import</span> <span class="nn">re</span>
 <span class="kn">import</span> <span class="nn">logging</span>
+<span class="kn">import</span> <span class="nn">datetime</span>
+
 <span class="kn">from</span> <span class="nn">wx.py.editwindow</span> <span class="kn">import</span> <span class="n">EditWindow</span>
+
 <span class="kn">from</span> <span class="nn">sas.sasgui.guiframe.documentation_window</span> <span class="kn">import</span> <span class="n">DocumentationWindow</span>
+
 <span class="kn">from</span> <span class="nn">.pyconsole</span> <span class="kn">import</span> <span class="n">show_model_output</span><span class="p">,</span> <span class="n">check_model</span>
 
+<span class="n">logger</span> <span class="o">=</span> <span class="n">logging</span><span class="o">.</span><span class="n">getLogger</span><span class="p">(</span><span class="n">__name__</span><span class="p">)</span>
 
 <span class="k">if</span> <span class="n">sys</span><span class="o">.</span><span class="n">platform</span><span class="o">.</span><span class="n">count</span><span class="p">(</span><span class="s2">&quot;win32&quot;</span><span class="p">)</span> <span class="o">&gt;</span> <span class="mi">0</span><span class="p">:</span>
     <span class="n">FONT_VARIANT</span> <span class="o">=</span> <span class="mi">0</span>
-    <span class="n">PNL_WIDTH</span> <span class="o">=</span> <span class="mi">450</span>
+    <span class="n">PNL_WIDTH</span> <span class="o">=</span> <span class="mi">500</span>
     <span class="n">PNL_HEIGHT</span> <span class="o">=</span> <span class="mi">320</span>
 <span class="k">else</span><span class="p">:</span>
     <span class="n">FONT_VARIANT</span> <span class="o">=</span> <span class="mi">1</span>
-    <span class="n">PNL_WIDTH</span> <span class="o">=</span> <span class="mi">590</span>
+    <span class="n">PNL_WIDTH</span> <span class="o">=</span> <span class="mi">500</span>
     <span class="n">PNL_HEIGHT</span> <span class="o">=</span> <span class="mi">350</span>
 <span class="n">M_NAME</span> <span class="o">=</span> <span class="s1">&#39;Model&#39;</span>
 <span class="n">EDITOR_WIDTH</span> <span class="o">=</span> <span class="mi">800</span>
@@ -108,7 +116,7 @@
         <span class="k">raise</span>
 
 
-<div class="viewcode-block" id="TextDialog"><a class="viewcode-back" href="../../../../../dev/api/sas.sasgui.perspectives.calculator.html#sas.sasgui.perspectives.calculator.model_editor.TextDialog">[docs]</a><span class="k">class</span> <span class="nc">TextDialog</span><span class="p">(</span><span class="n">wx</span><span class="o">.</span><span class="n">Dialog</span><span class="p">):</span>
+<div class="viewcode-block" id="TextDialog"><a class="viewcode-back" href="../../../../../dev/sasview-api/sas.sasgui.perspectives.calculator.html#sas.sasgui.perspectives.calculator.model_editor.TextDialog">[docs]</a><span class="k">class</span> <span class="nc">TextDialog</span><span class="p">(</span><span class="n">wx</span><span class="o">.</span><span class="n">Dialog</span><span class="p">):</span>
     <span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">    Dialog for easy custom composite models.  Provides a wx.Dialog panel</span>
 <span class="sd">    to choose two existing models (including pre-existing Plugin Models which</span>
@@ -124,7 +132,7 @@
 <span class="sd">    &#39;Plugin Model Operations&#39; under &#39;Fitting&#39; menu.  This is currently called as</span>
 <span class="sd">    a Modal Dialog.</span>
 
-<span class="sd">    :TODO the build in compiler currently balks at when it tries to import</span>
+<span class="sd">    :TODO the built in compiler currently balks at when it tries to import</span>
 <span class="sd">    a model whose name contains spaces or symbols (such as + ... underscore</span>
 <span class="sd">    should be fine).  Have fixed so the editor cannot save such a file name</span>
 <span class="sd">    but if a file is dropped in the plugin directory from outside this class</span>
@@ -152,7 +160,6 @@
         <span class="bp">self</span><span class="o">.</span><span class="n">model1_string</span> <span class="o">=</span> <span class="s2">&quot;sphere&quot;</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">model2_string</span> <span class="o">=</span> <span class="s2">&quot;cylinder&quot;</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">name</span> <span class="o">=</span> <span class="s1">&#39;Sum&#39;</span> <span class="o">+</span> <span class="n">M_NAME</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">factor</span> <span class="o">=</span> <span class="s1">&#39;scale_factor&#39;</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">_notes</span> <span class="o">=</span> <span class="s1">&#39;&#39;</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">_operator</span> <span class="o">=</span> <span class="s1">&#39;+&#39;</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">_operator_choice</span> <span class="o">=</span> <span class="bp">None</span>
@@ -179,7 +186,7 @@
         <span class="bp">self</span><span class="o">.</span><span class="n">model1_name</span> <span class="o">=</span> <span class="nb">str</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">model1</span><span class="o">.</span><span class="n">GetValue</span><span class="p">())</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">model2_name</span> <span class="o">=</span> <span class="nb">str</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">model2</span><span class="o">.</span><span class="n">GetValue</span><span class="p">())</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">good_name</span> <span class="o">=</span> <span class="bp">True</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">fill_oprator_combox</span><span class="p">()</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">fill_operator_combox</span><span class="p">()</span>
 
     <span class="k">def</span> <span class="nf">_layout_name</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
         <span class="sd">&quot;&quot;&quot;</span>
@@ -330,7 +337,7 @@
         <span class="bp">self</span><span class="o">.</span><span class="n">SetSizer</span><span class="p">(</span><span class="n">mainsizer</span><span class="p">)</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">Centre</span><span class="p">()</span>
 
-<div class="viewcode-block" id="TextDialog.on_change_name"><a class="viewcode-back" href="../../../../../dev/api/sas.sasgui.perspectives.calculator.html#sas.sasgui.perspectives.calculator.model_editor.TextDialog.on_change_name">[docs]</a>    <span class="k">def</span> <span class="nf">on_change_name</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">event</span><span class="o">=</span><span class="bp">None</span><span class="p">):</span>
+<div class="viewcode-block" id="TextDialog.on_change_name"><a class="viewcode-back" href="../../../../../dev/sasview-api/sas.sasgui.perspectives.calculator.html#sas.sasgui.perspectives.calculator.model_editor.TextDialog.on_change_name">[docs]</a>    <span class="k">def</span> <span class="nf">on_change_name</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">event</span><span class="o">=</span><span class="bp">None</span><span class="p">):</span>
         <span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">        Change name</span>
 <span class="sd">        &quot;&quot;&quot;</span>
@@ -339,7 +346,7 @@
         <span class="bp">self</span><span class="o">.</span><span class="n">name_tcl</span><span class="o">.</span><span class="n">SetBackgroundColour</span><span class="p">(</span><span class="s1">&#39;white&#39;</span><span class="p">)</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">Refresh</span><span class="p">()</span></div>
 
-<div class="viewcode-block" id="TextDialog.check_name"><a class="viewcode-back" href="../../../../../dev/api/sas.sasgui.perspectives.calculator.html#sas.sasgui.perspectives.calculator.model_editor.TextDialog.check_name">[docs]</a>    <span class="k">def</span> <span class="nf">check_name</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">event</span><span class="o">=</span><span class="bp">None</span><span class="p">):</span>
+<div class="viewcode-block" id="TextDialog.check_name"><a class="viewcode-back" href="../../../../../dev/sasview-api/sas.sasgui.perspectives.calculator.html#sas.sasgui.perspectives.calculator.model_editor.TextDialog.check_name">[docs]</a>    <span class="k">def</span> <span class="nf">check_name</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">event</span><span class="o">=</span><span class="bp">None</span><span class="p">):</span>
         <span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">        Check that proposed new model name is a valid Python module name</span>
 <span class="sd">        and that it does not already exist. If not show error message and</span>
@@ -388,7 +395,7 @@
                 <span class="bp">self</span><span class="o">.</span><span class="n">good_name</span> <span class="o">=</span> <span class="bp">False</span>
                 <span class="n">msg</span> <span class="o">=</span> <span class="s2">&quot;Name exists already.&quot;</span>
 
-        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">good_name</span> <span class="o">==</span> <span class="bp">False</span><span class="p">:</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="bp">self</span><span class="o">.</span><span class="n">good_name</span><span class="p">:</span>
             <span class="bp">self</span><span class="o">.</span><span class="n">name_tcl</span><span class="o">.</span><span class="n">SetBackgroundColour</span><span class="p">(</span><span class="s1">&#39;pink&#39;</span><span class="p">)</span>
             <span class="n">info</span> <span class="o">=</span> <span class="s1">&#39;Error&#39;</span>
             <span class="n">wx</span><span class="o">.</span><span class="n">MessageBox</span><span class="p">(</span><span class="n">msg</span><span class="p">,</span> <span class="n">info</span><span class="p">)</span>
@@ -406,7 +413,7 @@
         <span class="bp">self</span><span class="o">.</span><span class="n">on_apply</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">fname</span><span class="p">)</span>
         <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">good_name</span></div>
 
-<div class="viewcode-block" id="TextDialog.on_apply"><a class="viewcode-back" href="../../../../../dev/api/sas.sasgui.perspectives.calculator.html#sas.sasgui.perspectives.calculator.model_editor.TextDialog.on_apply">[docs]</a>    <span class="k">def</span> <span class="nf">on_apply</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">path</span><span class="p">):</span>
+<div class="viewcode-block" id="TextDialog.on_apply"><a class="viewcode-back" href="../../../../../dev/sasview-api/sas.sasgui.perspectives.calculator.html#sas.sasgui.perspectives.calculator.model_editor.TextDialog.on_apply">[docs]</a>    <span class="k">def</span> <span class="nf">on_apply</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">path</span><span class="p">):</span>
         <span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">        This method is a misnomer - it is not bound to the apply button</span>
 <span class="sd">        event.  Instead the apply button event goes to check_name which</span>
@@ -435,12 +442,13 @@
             <span class="n">color</span> <span class="o">=</span> <span class="s1">&#39;red&#39;</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">_msg_box</span><span class="o">.</span><span class="n">SetLabel</span><span class="p">(</span><span class="n">msg</span><span class="p">)</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">_msg_box</span><span class="o">.</span><span class="n">SetForegroundColour</span><span class="p">(</span><span class="n">color</span><span class="p">)</span>
-        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">parent</span><span class="o">.</span><span class="n">parent</span> <span class="o">!=</span> <span class="bp">None</span><span class="p">:</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_set_model_list</span><span class="p">()</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">parent</span><span class="o">.</span><span class="n">parent</span> <span class="ow">is</span> <span class="ow">not</span> <span class="bp">None</span><span class="p">:</span>
             <span class="kn">from</span> <span class="nn">sas.sasgui.guiframe.events</span> <span class="kn">import</span> <span class="n">StatusEvent</span>
             <span class="n">wx</span><span class="o">.</span><span class="n">PostEvent</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">parent</span><span class="o">.</span><span class="n">parent</span><span class="p">,</span> <span class="n">StatusEvent</span><span class="p">(</span><span class="n">status</span><span class="o">=</span><span class="n">msg</span><span class="p">,</span>
                                                          <span class="n">info</span><span class="o">=</span><span class="n">info</span><span class="p">))</span></div>
 
-<div class="viewcode-block" id="TextDialog.on_help"><a class="viewcode-back" href="../../../../../dev/api/sas.sasgui.perspectives.calculator.html#sas.sasgui.perspectives.calculator.model_editor.TextDialog.on_help">[docs]</a>    <span class="k">def</span> <span class="nf">on_help</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">event</span><span class="p">):</span>
+<div class="viewcode-block" id="TextDialog.on_help"><a class="viewcode-back" href="../../../../../dev/sasview-api/sas.sasgui.perspectives.calculator.html#sas.sasgui.perspectives.calculator.model_editor.TextDialog.on_help">[docs]</a>    <span class="k">def</span> <span class="nf">on_help</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">event</span><span class="p">):</span>
         <span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">        Bring up the Composite Model Editor Documentation whenever</span>
 <span class="sd">        the HELP button is clicked.</span>
@@ -476,13 +484,15 @@
 
         <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">main_list</span><span class="p">)</span> <span class="o">&gt;</span> <span class="mi">1</span><span class="p">:</span>
             <span class="n">main_list</span><span class="o">.</span><span class="n">sort</span><span class="p">()</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">model1</span><span class="o">.</span><span class="n">Clear</span><span class="p">()</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">model2</span><span class="o">.</span><span class="n">Clear</span><span class="p">()</span>
         <span class="k">for</span> <span class="n">idx</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">main_list</span><span class="p">)):</span>
             <span class="bp">self</span><span class="o">.</span><span class="n">model1</span><span class="o">.</span><span class="n">Append</span><span class="p">(</span><span class="nb">str</span><span class="p">(</span><span class="n">main_list</span><span class="p">[</span><span class="n">idx</span><span class="p">]),</span> <span class="n">idx</span><span class="p">)</span>
             <span class="bp">self</span><span class="o">.</span><span class="n">model2</span><span class="o">.</span><span class="n">Append</span><span class="p">(</span><span class="nb">str</span><span class="p">(</span><span class="n">main_list</span><span class="p">[</span><span class="n">idx</span><span class="p">]),</span> <span class="n">idx</span><span class="p">)</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">model1</span><span class="o">.</span><span class="n">SetStringSelection</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">model1_string</span><span class="p">)</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">model2</span><span class="o">.</span><span class="n">SetStringSelection</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">model2_string</span><span class="p">)</span>
 
-<div class="viewcode-block" id="TextDialog.update_cm_list"><a class="viewcode-back" href="../../../../../dev/api/sas.sasgui.perspectives.calculator.html#sas.sasgui.perspectives.calculator.model_editor.TextDialog.update_cm_list">[docs]</a>    <span class="k">def</span> <span class="nf">update_cm_list</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+<div class="viewcode-block" id="TextDialog.update_cm_list"><a class="viewcode-back" href="../../../../../dev/sasview-api/sas.sasgui.perspectives.calculator.html#sas.sasgui.perspectives.calculator.model_editor.TextDialog.update_cm_list">[docs]</a>    <span class="k">def</span> <span class="nf">update_cm_list</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
         <span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">        Update custom model list</span>
 <span class="sd">        &quot;&quot;&quot;</span>
@@ -495,7 +505,7 @@
                 <span class="n">cm_list</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">name</span><span class="p">)</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">cm_list</span> <span class="o">=</span> <span class="n">cm_list</span></div>
 
-<div class="viewcode-block" id="TextDialog.on_model1"><a class="viewcode-back" href="../../../../../dev/api/sas.sasgui.perspectives.calculator.html#sas.sasgui.perspectives.calculator.model_editor.TextDialog.on_model1">[docs]</a>    <span class="k">def</span> <span class="nf">on_model1</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">event</span><span class="p">):</span>
+<div class="viewcode-block" id="TextDialog.on_model1"><a class="viewcode-back" href="../../../../../dev/sasview-api/sas.sasgui.perspectives.calculator.html#sas.sasgui.perspectives.calculator.model_editor.TextDialog.on_model1">[docs]</a>    <span class="k">def</span> <span class="nf">on_model1</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">event</span><span class="p">):</span>
         <span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">        Set model1</span>
 <span class="sd">        &quot;&quot;&quot;</span>
@@ -508,7 +518,7 @@
         <span class="k">else</span><span class="p">:</span>
             <span class="bp">self</span><span class="o">.</span><span class="n">is_p1_custom</span> <span class="o">=</span> <span class="bp">False</span></div>
 
-<div class="viewcode-block" id="TextDialog.on_model2"><a class="viewcode-back" href="../../../../../dev/api/sas.sasgui.perspectives.calculator.html#sas.sasgui.perspectives.calculator.model_editor.TextDialog.on_model2">[docs]</a>    <span class="k">def</span> <span class="nf">on_model2</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">event</span><span class="p">):</span>
+<div class="viewcode-block" id="TextDialog.on_model2"><a class="viewcode-back" href="../../../../../dev/sasview-api/sas.sasgui.perspectives.calculator.html#sas.sasgui.perspectives.calculator.model_editor.TextDialog.on_model2">[docs]</a>    <span class="k">def</span> <span class="nf">on_model2</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">event</span><span class="p">):</span>
         <span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">        Set model2</span>
 <span class="sd">        &quot;&quot;&quot;</span>
@@ -521,43 +531,45 @@
         <span class="k">else</span><span class="p">:</span>
             <span class="bp">self</span><span class="o">.</span><span class="n">is_p2_custom</span> <span class="o">=</span> <span class="bp">False</span></div>
 
-<div class="viewcode-block" id="TextDialog.on_select_operator"><a class="viewcode-back" href="../../../../../dev/api/sas.sasgui.perspectives.calculator.html#sas.sasgui.perspectives.calculator.model_editor.TextDialog.on_select_operator">[docs]</a>    <span class="k">def</span> <span class="nf">on_select_operator</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">event</span><span class="o">=</span><span class="bp">None</span><span class="p">):</span>
+<div class="viewcode-block" id="TextDialog.on_select_operator"><a class="viewcode-back" href="../../../../../dev/sasview-api/sas.sasgui.perspectives.calculator.html#sas.sasgui.perspectives.calculator.model_editor.TextDialog.on_select_operator">[docs]</a>    <span class="k">def</span> <span class="nf">on_select_operator</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">event</span><span class="o">=</span><span class="bp">None</span><span class="p">):</span>
         <span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">        On Select an Operator</span>
 <span class="sd">        &quot;&quot;&quot;</span>
         <span class="c1"># For Mac</span>
-        <span class="k">if</span> <span class="n">event</span> <span class="o">!=</span> <span class="bp">None</span><span class="p">:</span>
+        <span class="k">if</span> <span class="n">event</span> <span class="ow">is</span> <span class="ow">not</span> <span class="bp">None</span><span class="p">:</span>
             <span class="n">event</span><span class="o">.</span><span class="n">Skip</span><span class="p">()</span>
         <span class="n">item</span> <span class="o">=</span> <span class="n">event</span><span class="o">.</span><span class="n">GetEventObject</span><span class="p">()</span>
         <span class="n">text</span> <span class="o">=</span> <span class="n">item</span><span class="o">.</span><span class="n">GetValue</span><span class="p">()</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">fill_explanation_helpstring</span><span class="p">(</span><span class="n">text</span><span class="p">)</span></div>
 
-<div class="viewcode-block" id="TextDialog.fill_explanation_helpstring"><a class="viewcode-back" href="../../../../../dev/api/sas.sasgui.perspectives.calculator.html#sas.sasgui.perspectives.calculator.model_editor.TextDialog.fill_explanation_helpstring">[docs]</a>    <span class="k">def</span> <span class="nf">fill_explanation_helpstring</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">operator</span><span class="p">):</span>
+<div class="viewcode-block" id="TextDialog.fill_explanation_helpstring"><a class="viewcode-back" href="../../../../../dev/sasview-api/sas.sasgui.perspectives.calculator.html#sas.sasgui.perspectives.calculator.model_editor.TextDialog.fill_explanation_helpstring">[docs]</a>    <span class="k">def</span> <span class="nf">fill_explanation_helpstring</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">operator</span><span class="p">):</span>
         <span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">        Choose the equation to use depending on whether we now have</span>
 <span class="sd">        a sum or multiply model then create the appropriate string</span>
+<span class="sd">        </span>
+<span class="sd">        for the sum model the result will be:</span>
+<span class="sd">        scale_factor * (scale1 * model_1 + scale2 * model_2) + background</span>
+<span class="sd">        while for the multiply model it will just be:</span>
+<span class="sd">        scale_factor * (model_1* model_2) + background</span>
 <span class="sd">        &quot;&quot;&quot;</span>
-
         <span class="n">name</span> <span class="o">=</span> <span class="s1">&#39;&#39;</span>
-
         <span class="k">if</span> <span class="n">operator</span> <span class="o">==</span> <span class="s1">&#39;*&#39;</span><span class="p">:</span>
             <span class="n">name</span> <span class="o">=</span> <span class="s1">&#39;Multi&#39;</span>
-            <span class="n">factor</span> <span class="o">=</span> <span class="s1">&#39;BackGround&#39;</span>
-            <span class="n">f_oper</span> <span class="o">=</span> <span class="s1">&#39;+&#39;</span>
+            <span class="n">factor_1</span> <span class="o">=</span> <span class="s1">&#39;&#39;</span>
+            <span class="n">factor_2</span> <span class="o">=</span> <span class="s1">&#39;&#39;</span>
         <span class="k">else</span><span class="p">:</span>
             <span class="n">name</span> <span class="o">=</span> <span class="s1">&#39;Sum&#39;</span>
-            <span class="n">factor</span> <span class="o">=</span> <span class="s1">&#39;scale_factor&#39;</span>
-            <span class="n">f_oper</span> <span class="o">=</span> <span class="s1">&#39;*&#39;</span>
+            <span class="n">factor_1</span> <span class="o">=</span> <span class="s1">&#39;scale_1 * &#39;</span>
+            <span class="n">factor_2</span> <span class="o">=</span> <span class="s1">&#39;scale_2 * &#39;</span>
 
-        <span class="bp">self</span><span class="o">.</span><span class="n">factor</span> <span class="o">=</span> <span class="n">factor</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">_operator</span> <span class="o">=</span> <span class="n">operator</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">explanation</span> <span class="o">=</span> <span class="s2">&quot;  Plugin Model = </span><span class="si">%s</span><span class="s2"> </span><span class="si">%s</span><span class="s2"> (model1 </span><span class="si">%s</span><span class="s2"> model2)</span><span class="se">\n</span><span class="s2">&quot;</span> <span class="o">%</span> \
-                           <span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">factor</span><span class="p">,</span> <span class="n">f_oper</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">_operator</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">explanation</span> <span class="o">=</span> <span class="p">(</span><span class="s2">&quot;  Plugin_model = scale_factor * ({}model_1 {} &quot;</span>
+            <span class="s2">&quot;{}model_2) + background&quot;</span><span class="p">)</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">factor_1</span><span class="p">,</span><span class="n">operator</span><span class="p">,</span><span class="n">factor_2</span><span class="p">)</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">explanationctr</span><span class="o">.</span><span class="n">SetLabel</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">explanation</span><span class="p">)</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">name</span> <span class="o">=</span> <span class="n">name</span> <span class="o">+</span> <span class="n">M_NAME</span></div>
 
 
-<div class="viewcode-block" id="TextDialog.fill_oprator_combox"><a class="viewcode-back" href="../../../../../dev/api/sas.sasgui.perspectives.calculator.html#sas.sasgui.perspectives.calculator.model_editor.TextDialog.fill_oprator_combox">[docs]</a>    <span class="k">def</span> <span class="nf">fill_oprator_combox</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+<div class="viewcode-block" id="TextDialog.fill_operator_combox"><a class="viewcode-back" href="../../../../../dev/sasview-api/sas.sasgui.perspectives.calculator.html#sas.sasgui.perspectives.calculator.model_editor.TextDialog.fill_operator_combox">[docs]</a>    <span class="k">def</span> <span class="nf">fill_operator_combox</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
         <span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">        fill the current combobox with the operator</span>
 <span class="sd">        &quot;&quot;&quot;</span>
@@ -567,105 +579,44 @@
             <span class="bp">self</span><span class="o">.</span><span class="n">_operator_choice</span><span class="o">.</span><span class="n">SetClientData</span><span class="p">(</span><span class="n">pos</span><span class="p">,</span> <span class="nb">str</span><span class="p">(</span><span class="n">oper</span><span class="p">))</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">_operator_choice</span><span class="o">.</span><span class="n">SetSelection</span><span class="p">(</span><span class="mi">0</span><span class="p">)</span></div>
 
-<div class="viewcode-block" id="TextDialog.get_textnames"><a class="viewcode-back" href="../../../../../dev/api/sas.sasgui.perspectives.calculator.html#sas.sasgui.perspectives.calculator.model_editor.TextDialog.get_textnames">[docs]</a>    <span class="k">def</span> <span class="nf">get_textnames</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+<div class="viewcode-block" id="TextDialog.get_textnames"><a class="viewcode-back" href="../../../../../dev/sasview-api/sas.sasgui.perspectives.calculator.html#sas.sasgui.perspectives.calculator.model_editor.TextDialog.get_textnames">[docs]</a>    <span class="k">def</span> <span class="nf">get_textnames</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
         <span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">        Returns model name string as list</span>
 <span class="sd">        &quot;&quot;&quot;</span>
         <span class="k">return</span> <span class="p">[</span><span class="bp">self</span><span class="o">.</span><span class="n">model1_name</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">model2_name</span><span class="p">]</span></div>
 
-<div class="viewcode-block" id="TextDialog.write_string"><a class="viewcode-back" href="../../../../../dev/api/sas.sasgui.perspectives.calculator.html#sas.sasgui.perspectives.calculator.model_editor.TextDialog.write_string">[docs]</a>    <span class="k">def</span> <span class="nf">write_string</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">fname</span><span class="p">,</span> <span class="n">name1</span><span class="p">,</span> <span class="n">name2</span><span class="p">):</span>
+<div class="viewcode-block" id="TextDialog.write_string"><a class="viewcode-back" href="../../../../../dev/sasview-api/sas.sasgui.perspectives.calculator.html#sas.sasgui.perspectives.calculator.model_editor.TextDialog.write_string">[docs]</a>    <span class="k">def</span> <span class="nf">write_string</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">fname</span><span class="p">,</span> <span class="n">model1_name</span><span class="p">,</span> <span class="n">model2_name</span><span class="p">):</span>
         <span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">        Write and Save file</span>
 <span class="sd">        &quot;&quot;&quot;</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">fname</span> <span class="o">=</span> <span class="n">fname</span>
         <span class="n">description</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">desc_tcl</span><span class="o">.</span><span class="n">GetValue</span><span class="p">()</span><span class="o">.</span><span class="n">lstrip</span><span class="p">()</span><span class="o">.</span><span class="n">rstrip</span><span class="p">()</span>
-        <span class="k">if</span> <span class="n">description</span> <span class="o">==</span> <span class="s1">&#39;&#39;</span><span class="p">:</span>
-            <span class="n">description</span> <span class="o">=</span> <span class="n">name1</span> <span class="o">+</span> <span class="bp">self</span><span class="o">.</span><span class="n">_operator</span> <span class="o">+</span> <span class="n">name2</span>
-        <span class="n">text</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_operator_choice</span><span class="o">.</span><span class="n">GetValue</span><span class="p">()</span>
-        <span class="k">if</span> <span class="n">text</span><span class="o">.</span><span class="n">count</span><span class="p">(</span><span class="s1">&#39;+&#39;</span><span class="p">)</span> <span class="o">&gt;</span> <span class="mi">0</span><span class="p">:</span>
-            <span class="n">factor</span> <span class="o">=</span> <span class="s1">&#39;scale_factor&#39;</span>
-            <span class="n">f_oper</span> <span class="o">=</span> <span class="s1">&#39;*&#39;</span>
-            <span class="n">default_val</span> <span class="o">=</span> <span class="s1">&#39;1.0&#39;</span>
-        <span class="k">else</span><span class="p">:</span>
-            <span class="n">factor</span> <span class="o">=</span> <span class="s1">&#39;BackGround&#39;</span>
-            <span class="n">f_oper</span> <span class="o">=</span> <span class="s1">&#39;+&#39;</span>
-            <span class="n">default_val</span> <span class="o">=</span> <span class="s1">&#39;0.0&#39;</span>
-        <span class="n">path</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">fname</span>
-        <span class="k">try</span><span class="p">:</span>
-            <span class="n">out_f</span> <span class="o">=</span> <span class="nb">open</span><span class="p">(</span><span class="n">path</span><span class="p">,</span> <span class="s1">&#39;w&#39;</span><span class="p">)</span>
-        <span class="k">except</span><span class="p">:</span>
-            <span class="k">raise</span>
-        <span class="n">lines</span> <span class="o">=</span> <span class="n">SUM_TEMPLATE</span><span class="o">.</span><span class="n">split</span><span class="p">(</span><span class="s1">&#39;</span><span class="se">\n</span><span class="s1">&#39;</span><span class="p">)</span>
-        <span class="k">for</span> <span class="n">line</span> <span class="ow">in</span> <span class="n">lines</span><span class="p">:</span>
-            <span class="k">try</span><span class="p">:</span>
-                <span class="k">if</span> <span class="n">line</span><span class="o">.</span><span class="n">count</span><span class="p">(</span><span class="s2">&quot;scale_factor&quot;</span><span class="p">):</span>
-                    <span class="n">line</span> <span class="o">=</span> <span class="n">line</span><span class="o">.</span><span class="n">replace</span><span class="p">(</span><span class="s1">&#39;scale_factor&#39;</span><span class="p">,</span> <span class="n">factor</span><span class="p">)</span>
-                    <span class="c1">#print &quot;scale_factor&quot;, line</span>
-                <span class="k">if</span> <span class="n">line</span><span class="o">.</span><span class="n">count</span><span class="p">(</span><span class="s2">&quot;= </span><span class="si">%s</span><span class="s2">&quot;</span><span class="p">):</span>
-                    <span class="n">out_f</span><span class="o">.</span><span class="n">write</span><span class="p">(</span><span class="n">line</span> <span class="o">%</span> <span class="p">(</span><span class="n">default_val</span><span class="p">)</span> <span class="o">+</span> <span class="s2">&quot;</span><span class="se">\n</span><span class="s2">&quot;</span><span class="p">)</span>
-                <span class="k">elif</span> <span class="n">line</span><span class="o">.</span><span class="n">count</span><span class="p">(</span><span class="s2">&quot;import Model as P1&quot;</span><span class="p">):</span>
-                    <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">is_p1_custom</span><span class="p">:</span>
-                        <span class="n">line</span> <span class="o">=</span> <span class="n">line</span><span class="o">.</span><span class="n">replace</span><span class="p">(</span><span class="s1">&#39;#&#39;</span><span class="p">,</span> <span class="s1">&#39;&#39;</span><span class="p">)</span>
-                        <span class="n">out_f</span><span class="o">.</span><span class="n">write</span><span class="p">(</span><span class="n">line</span> <span class="o">%</span> <span class="n">name1</span> <span class="o">+</span> <span class="s2">&quot;</span><span class="se">\n</span><span class="s2">&quot;</span><span class="p">)</span>
-                    <span class="k">else</span><span class="p">:</span>
-                        <span class="n">out_f</span><span class="o">.</span><span class="n">write</span><span class="p">(</span><span class="n">line</span> <span class="o">+</span> <span class="s2">&quot;</span><span class="se">\n</span><span class="s2">&quot;</span><span class="p">)</span>
-                <span class="k">elif</span> <span class="n">line</span><span class="o">.</span><span class="n">count</span><span class="p">(</span><span class="s2">&quot;import </span><span class="si">%s</span><span class="s2"> as P1&quot;</span><span class="p">):</span>
-                    <span class="k">if</span> <span class="ow">not</span> <span class="bp">self</span><span class="o">.</span><span class="n">is_p1_custom</span><span class="p">:</span>
-                        <span class="n">line</span> <span class="o">=</span> <span class="n">line</span><span class="o">.</span><span class="n">replace</span><span class="p">(</span><span class="s1">&#39;#&#39;</span><span class="p">,</span> <span class="s1">&#39;&#39;</span><span class="p">)</span>
-                        <span class="n">out_f</span><span class="o">.</span><span class="n">write</span><span class="p">(</span><span class="n">line</span> <span class="o">%</span> <span class="p">(</span><span class="n">name1</span><span class="p">)</span> <span class="o">+</span> <span class="s2">&quot;</span><span class="se">\n</span><span class="s2">&quot;</span><span class="p">)</span>
-                    <span class="k">else</span><span class="p">:</span>
-                        <span class="n">out_f</span><span class="o">.</span><span class="n">write</span><span class="p">(</span><span class="n">line</span> <span class="o">+</span> <span class="s2">&quot;</span><span class="se">\n</span><span class="s2">&quot;</span><span class="p">)</span>
-                <span class="k">elif</span> <span class="n">line</span><span class="o">.</span><span class="n">count</span><span class="p">(</span><span class="s2">&quot;import Model as P2&quot;</span><span class="p">):</span>
-                    <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">is_p2_custom</span><span class="p">:</span>
-                        <span class="n">line</span> <span class="o">=</span> <span class="n">line</span><span class="o">.</span><span class="n">replace</span><span class="p">(</span><span class="s1">&#39;#&#39;</span><span class="p">,</span> <span class="s1">&#39;&#39;</span><span class="p">)</span>
-                        <span class="n">out_f</span><span class="o">.</span><span class="n">write</span><span class="p">(</span><span class="n">line</span> <span class="o">%</span> <span class="n">name2</span> <span class="o">+</span> <span class="s2">&quot;</span><span class="se">\n</span><span class="s2">&quot;</span><span class="p">)</span>
-                    <span class="k">else</span><span class="p">:</span>
-                        <span class="n">out_f</span><span class="o">.</span><span class="n">write</span><span class="p">(</span><span class="n">line</span> <span class="o">+</span> <span class="s2">&quot;</span><span class="se">\n</span><span class="s2">&quot;</span><span class="p">)</span>
-                <span class="k">elif</span> <span class="n">line</span><span class="o">.</span><span class="n">count</span><span class="p">(</span><span class="s2">&quot;import </span><span class="si">%s</span><span class="s2"> as P2&quot;</span><span class="p">):</span>
-                    <span class="k">if</span> <span class="ow">not</span> <span class="bp">self</span><span class="o">.</span><span class="n">is_p2_custom</span><span class="p">:</span>
-                        <span class="n">line</span> <span class="o">=</span> <span class="n">line</span><span class="o">.</span><span class="n">replace</span><span class="p">(</span><span class="s1">&#39;#&#39;</span><span class="p">,</span> <span class="s1">&#39;&#39;</span><span class="p">)</span>
-                        <span class="n">out_f</span><span class="o">.</span><span class="n">write</span><span class="p">(</span><span class="n">line</span> <span class="o">%</span> <span class="p">(</span><span class="n">name2</span><span class="p">)</span> <span class="o">+</span> <span class="s2">&quot;</span><span class="se">\n</span><span class="s2">&quot;</span><span class="p">)</span>
-                    <span class="k">else</span><span class="p">:</span>
-                        <span class="n">out_f</span><span class="o">.</span><span class="n">write</span><span class="p">(</span><span class="n">line</span> <span class="o">+</span> <span class="s2">&quot;</span><span class="se">\n</span><span class="s2">&quot;</span><span class="p">)</span>
-                <span class="k">elif</span> <span class="n">line</span><span class="o">.</span><span class="n">count</span><span class="p">(</span><span class="s2">&quot;P1 = find_model&quot;</span><span class="p">):</span>
-                    <span class="n">out_f</span><span class="o">.</span><span class="n">write</span><span class="p">(</span><span class="n">line</span> <span class="o">%</span> <span class="p">(</span><span class="n">name1</span><span class="p">)</span> <span class="o">+</span> <span class="s2">&quot;</span><span class="se">\n</span><span class="s2">&quot;</span><span class="p">)</span>
-                <span class="k">elif</span> <span class="n">line</span><span class="o">.</span><span class="n">count</span><span class="p">(</span><span class="s2">&quot;P2 = find_model&quot;</span><span class="p">):</span>
-                    <span class="n">out_f</span><span class="o">.</span><span class="n">write</span><span class="p">(</span><span class="n">line</span> <span class="o">%</span> <span class="p">(</span><span class="n">name2</span><span class="p">)</span> <span class="o">+</span> <span class="s2">&quot;</span><span class="se">\n</span><span class="s2">&quot;</span><span class="p">)</span>
+        <span class="n">desc_line</span> <span class="o">=</span> <span class="s1">&#39;&#39;</span>
+        <span class="k">if</span> <span class="n">description</span><span class="o">.</span><span class="n">strip</span><span class="p">()</span> <span class="o">!=</span> <span class="s1">&#39;&#39;</span><span class="p">:</span>
+            <span class="c1"># Sasmodels generates a description for us. If the user provides</span>
+            <span class="c1"># their own description, add a line to overwrite the sasmodels one</span>
+            <span class="n">desc_line</span> <span class="o">=</span> <span class="s2">&quot;</span><span class="se">\n</span><span class="s2">model_info.description = &#39;{}&#39;&quot;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">description</span><span class="p">)</span>
+        <span class="n">name</span> <span class="o">=</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">splitext</span><span class="p">(</span><span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">basename</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">fname</span><span class="p">))[</span><span class="mi">0</span><span class="p">]</span>
+        <span class="n">output</span> <span class="o">=</span> <span class="n">SUM_TEMPLATE</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">name</span><span class="o">=</span><span class="n">name</span><span class="p">,</span> <span class="n">model1</span><span class="o">=</span><span class="n">model1_name</span><span class="p">,</span>
+            <span class="n">model2</span><span class="o">=</span><span class="n">model2_name</span><span class="p">,</span> <span class="n">operator</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">_operator</span><span class="p">,</span> <span class="n">desc_line</span><span class="o">=</span><span class="n">desc_line</span><span class="p">)</span>
+        <span class="k">with</span> <span class="nb">open</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">fname</span><span class="p">,</span> <span class="s1">&#39;w&#39;</span><span class="p">)</span> <span class="k">as</span> <span class="n">out_f</span><span class="p">:</span>
+            <span class="n">out_f</span><span class="o">.</span><span class="n">write</span><span class="p">(</span><span class="n">output</span><span class="p">)</span></div>
 
-                <span class="k">elif</span> <span class="n">line</span><span class="o">.</span><span class="n">count</span><span class="p">(</span><span class="s2">&quot;self.description = &#39;</span><span class="si">%s</span><span class="s2">&#39;&quot;</span><span class="p">):</span>
-                    <span class="n">out_f</span><span class="o">.</span><span class="n">write</span><span class="p">(</span><span class="n">line</span> <span class="o">%</span> <span class="n">description</span> <span class="o">+</span> <span class="s2">&quot;</span><span class="se">\n</span><span class="s2">&quot;</span><span class="p">)</span>
-                <span class="c1">#elif line.count(&quot;run&quot;) and line.count(&quot;%s&quot;):</span>
-                <span class="c1">#    out_f.write(line % self._operator + &quot;\n&quot;)</span>
-                <span class="c1">#elif line.count(&quot;evalDistribution&quot;) and line.count(&quot;%s&quot;):</span>
-                <span class="c1">#    out_f.write(line % self._operator + &quot;\n&quot;)</span>
-                <span class="k">elif</span> <span class="n">line</span><span class="o">.</span><span class="n">count</span><span class="p">(</span><span class="s2">&quot;return&quot;</span><span class="p">)</span> <span class="ow">and</span> <span class="n">line</span><span class="o">.</span><span class="n">count</span><span class="p">(</span><span class="s2">&quot;</span><span class="si">%s</span><span class="s2">&quot;</span><span class="p">)</span> <span class="o">==</span> <span class="mi">2</span><span class="p">:</span>
-                    <span class="c1">#print &quot;line return&quot;, line</span>
-                    <span class="n">out_f</span><span class="o">.</span><span class="n">write</span><span class="p">(</span><span class="n">line</span> <span class="o">%</span> <span class="p">(</span><span class="n">f_oper</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">_operator</span><span class="p">)</span> <span class="o">+</span> <span class="s2">&quot;</span><span class="se">\n</span><span class="s2">&quot;</span><span class="p">)</span>
-                <span class="k">elif</span> <span class="n">line</span><span class="o">.</span><span class="n">count</span><span class="p">(</span><span class="s2">&quot;out2&quot;</span><span class="p">)</span><span class="ow">and</span> <span class="n">line</span><span class="o">.</span><span class="n">count</span><span class="p">(</span><span class="s2">&quot;</span><span class="si">%s</span><span class="s2">&quot;</span><span class="p">):</span>
-                    <span class="n">out_f</span><span class="o">.</span><span class="n">write</span><span class="p">(</span><span class="n">line</span> <span class="o">%</span> <span class="bp">self</span><span class="o">.</span><span class="n">_operator</span> <span class="o">+</span> <span class="s2">&quot;</span><span class="se">\n</span><span class="s2">&quot;</span><span class="p">)</span>
-                <span class="k">else</span><span class="p">:</span>
-                    <span class="n">out_f</span><span class="o">.</span><span class="n">write</span><span class="p">(</span><span class="n">line</span> <span class="o">+</span> <span class="s2">&quot;</span><span class="se">\n</span><span class="s2">&quot;</span><span class="p">)</span>
-            <span class="k">except</span><span class="p">:</span>
-                <span class="k">raise</span>
-        <span class="n">out_f</span><span class="o">.</span><span class="n">close</span><span class="p">()</span></div>
-        <span class="c1">#else:</span>
-        <span class="c1">#    msg = &quot;Name exists already.&quot;</span>
-
-<div class="viewcode-block" id="TextDialog.compile_file"><a class="viewcode-back" href="../../../../../dev/api/sas.sasgui.perspectives.calculator.html#sas.sasgui.perspectives.calculator.model_editor.TextDialog.compile_file">[docs]</a>    <span class="k">def</span> <span class="nf">compile_file</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">path</span><span class="p">):</span>
+<div class="viewcode-block" id="TextDialog.compile_file"><a class="viewcode-back" href="../../../../../dev/sasview-api/sas.sasgui.perspectives.calculator.html#sas.sasgui.perspectives.calculator.model_editor.TextDialog.compile_file">[docs]</a>    <span class="k">def</span> <span class="nf">compile_file</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">path</span><span class="p">):</span>
         <span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">        Compile the file in the path</span>
 <span class="sd">        &quot;&quot;&quot;</span>
         <span class="n">path</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">fname</span>
         <span class="n">show_model_output</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">path</span><span class="p">)</span></div>
 
-<div class="viewcode-block" id="TextDialog.delete_file"><a class="viewcode-back" href="../../../../../dev/api/sas.sasgui.perspectives.calculator.html#sas.sasgui.perspectives.calculator.model_editor.TextDialog.delete_file">[docs]</a>    <span class="k">def</span> <span class="nf">delete_file</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">path</span><span class="p">):</span>
+<div class="viewcode-block" id="TextDialog.delete_file"><a class="viewcode-back" href="../../../../../dev/sasview-api/sas.sasgui.perspectives.calculator.html#sas.sasgui.perspectives.calculator.model_editor.TextDialog.delete_file">[docs]</a>    <span class="k">def</span> <span class="nf">delete_file</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">path</span><span class="p">):</span>
         <span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">        Delete file in the path</span>
 <span class="sd">        &quot;&quot;&quot;</span>
         <span class="n">_delete_file</span><span class="p">(</span><span class="n">path</span><span class="p">)</span></div></div>
 
 
-<div class="viewcode-block" id="EditorPanel"><a class="viewcode-back" href="../../../../../dev/api/sas.sasgui.perspectives.calculator.html#sas.sasgui.perspectives.calculator.model_editor.EditorPanel">[docs]</a><span class="k">class</span> <span class="nc">EditorPanel</span><span class="p">(</span><span class="n">wx</span><span class="o">.</span><span class="n">ScrolledWindow</span><span class="p">):</span>
+<div class="viewcode-block" id="EditorPanel"><a class="viewcode-back" href="../../../../../dev/sasview-api/sas.sasgui.perspectives.calculator.html#sas.sasgui.perspectives.calculator.model_editor.EditorPanel">[docs]</a><span class="k">class</span> <span class="nc">EditorPanel</span><span class="p">(</span><span class="n">wx</span><span class="o">.</span><span class="n">ScrolledWindow</span><span class="p">):</span>
     <span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">    Simple Plugin Model function editor</span>
 <span class="sd">    &quot;&quot;&quot;</span>
@@ -689,6 +640,7 @@
         <span class="bp">self</span><span class="o">.</span><span class="n">name_sizer</span> <span class="o">=</span> <span class="bp">None</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">name_hsizer</span> <span class="o">=</span> <span class="bp">None</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">name_tcl</span> <span class="o">=</span> <span class="bp">None</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">overwrite_cb</span> <span class="o">=</span> <span class="bp">None</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">desc_sizer</span> <span class="o">=</span> <span class="bp">None</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">desc_tcl</span> <span class="o">=</span> <span class="bp">None</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">param_sizer</span> <span class="o">=</span> <span class="bp">None</span>
@@ -703,7 +655,7 @@
         <span class="bp">self</span><span class="o">.</span><span class="n">msg_sizer</span> <span class="o">=</span> <span class="bp">None</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">warning</span> <span class="o">=</span> <span class="s2">&quot;&quot;</span>
         <span class="c1">#This does not seem to be used anywhere so commenting out for now</span>
-        <span class="c1">#    -- PDB 2/26/17 </span>
+        <span class="c1">#    -- PDB 2/26/17</span>
         <span class="c1">#self._description = &quot;New Plugin Model&quot;</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">function_tcl</span> <span class="o">=</span> <span class="bp">None</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">math_combo</span> <span class="o">=</span> <span class="bp">None</span>
@@ -735,10 +687,10 @@
 <span class="sd">        &quot;&quot;&quot;</span>
         <span class="c1">#title name [string]</span>
         <span class="n">name_txt</span> <span class="o">=</span> <span class="n">wx</span><span class="o">.</span><span class="n">StaticText</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="o">-</span><span class="mi">1</span><span class="p">,</span> <span class="s1">&#39;Function Name : &#39;</span><span class="p">)</span>
-        <span class="n">overwrite_cb</span> <span class="o">=</span> <span class="n">wx</span><span class="o">.</span><span class="n">CheckBox</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="o">-</span><span class="mi">1</span><span class="p">,</span> <span class="s2">&quot;Overwrite existing plugin model of this name?&quot;</span><span class="p">,</span> <span class="p">(</span><span class="mi">10</span><span class="p">,</span> <span class="mi">10</span><span class="p">))</span>
-        <span class="n">overwrite_cb</span><span class="o">.</span><span class="n">SetValue</span><span class="p">(</span><span class="bp">False</span><span class="p">)</span>
-        <span class="n">overwrite_cb</span><span class="o">.</span><span class="n">SetToolTipString</span><span class="p">(</span><span class="s2">&quot;Overwrite it if already exists?&quot;</span><span class="p">)</span>
-        <span class="n">wx</span><span class="o">.</span><span class="n">EVT_CHECKBOX</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">overwrite_cb</span><span class="o">.</span><span class="n">GetId</span><span class="p">(),</span> <span class="bp">self</span><span class="o">.</span><span class="n">on_over_cb</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">overwrite_cb</span> <span class="o">=</span> <span class="n">wx</span><span class="o">.</span><span class="n">CheckBox</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="o">-</span><span class="mi">1</span><span class="p">,</span> <span class="s2">&quot;Overwrite existing plugin model of this name?&quot;</span><span class="p">,</span> <span class="p">(</span><span class="mi">10</span><span class="p">,</span> <span class="mi">10</span><span class="p">))</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">overwrite_cb</span><span class="o">.</span><span class="n">SetValue</span><span class="p">(</span><span class="bp">False</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">overwrite_cb</span><span class="o">.</span><span class="n">SetToolTipString</span><span class="p">(</span><span class="s2">&quot;Overwrite it if already exists?&quot;</span><span class="p">)</span>
+        <span class="n">wx</span><span class="o">.</span><span class="n">EVT_CHECKBOX</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">overwrite_cb</span><span class="o">.</span><span class="n">GetId</span><span class="p">(),</span> <span class="bp">self</span><span class="o">.</span><span class="n">on_over_cb</span><span class="p">)</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">name_tcl</span> <span class="o">=</span> <span class="n">wx</span><span class="o">.</span><span class="n">TextCtrl</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="o">-</span><span class="mi">1</span><span class="p">,</span> <span class="n">size</span><span class="o">=</span><span class="p">(</span><span class="n">PANEL_WIDTH</span> <span class="o">*</span> <span class="mi">3</span> <span class="o">/</span> <span class="mi">5</span><span class="p">,</span> <span class="o">-</span><span class="mi">1</span><span class="p">))</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">name_tcl</span><span class="o">.</span><span class="n">Bind</span><span class="p">(</span><span class="n">wx</span><span class="o">.</span><span class="n">EVT_TEXT_ENTER</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">on_change_name</span><span class="p">)</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">name_tcl</span><span class="o">.</span><span class="n">SetValue</span><span class="p">(</span><span class="s1">&#39;&#39;</span><span class="p">)</span>
@@ -746,7 +698,7 @@
         <span class="n">hint_name</span> <span class="o">=</span> <span class="s2">&quot;Unique Model Function Name.&quot;</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">name_tcl</span><span class="o">.</span><span class="n">SetToolTipString</span><span class="p">(</span><span class="n">hint_name</span><span class="p">)</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">name_hsizer</span><span class="o">.</span><span class="n">AddMany</span><span class="p">([(</span><span class="bp">self</span><span class="o">.</span><span class="n">name_tcl</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="n">wx</span><span class="o">.</span><span class="n">LEFT</span> <span class="o">|</span> <span class="n">wx</span><span class="o">.</span><span class="n">TOP</span><span class="p">,</span> <span class="mi">0</span><span class="p">),</span>
-                                  <span class="p">(</span><span class="n">overwrite_cb</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="n">wx</span><span class="o">.</span><span class="n">LEFT</span><span class="p">,</span> <span class="mi">20</span><span class="p">)])</span>
+                                  <span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">overwrite_cb</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="n">wx</span><span class="o">.</span><span class="n">LEFT</span><span class="p">,</span> <span class="mi">20</span><span class="p">)])</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">name_sizer</span><span class="o">.</span><span class="n">AddMany</span><span class="p">([(</span><span class="n">name_txt</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="n">wx</span><span class="o">.</span><span class="n">LEFT</span> <span class="o">|</span> <span class="n">wx</span><span class="o">.</span><span class="n">TOP</span><span class="p">,</span> <span class="mi">10</span><span class="p">),</span>
                                  <span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">name_hsizer</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span>
                                   <span class="n">wx</span><span class="o">.</span><span class="n">LEFT</span> <span class="o">|</span> <span class="n">wx</span><span class="o">.</span><span class="n">TOP</span> <span class="o">|</span> <span class="n">wx</span><span class="o">.</span><span class="n">BOTTOM</span><span class="p">,</span> <span class="mi">10</span><span class="p">)])</span>
@@ -769,11 +721,9 @@
         <span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">        Do the layout for parameter related widgets</span>
 <span class="sd">        &quot;&quot;&quot;</span>
-        <span class="n">param_txt</span> <span class="o">=</span> <span class="n">wx</span><span class="o">.</span><span class="n">StaticText</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="o">-</span><span class="mi">1</span><span class="p">,</span> <span class="s1">&#39;Fit Parameters NOT requiring&#39;</span> <span class="o">+</span> \
-                                  <span class="s1">&#39; polydispersity (if any): &#39;</span><span class="p">)</span>
+        <span class="n">param_txt</span> <span class="o">=</span> <span class="n">wx</span><span class="o">.</span><span class="n">StaticText</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="o">-</span><span class="mi">1</span><span class="p">,</span> <span class="s1">&#39;Fit Parameters: &#39;</span><span class="p">)</span>
 
-        <span class="n">param_tip</span> <span class="o">=</span> <span class="s2">&quot;#Set the parameters NOT requiring polydispersity &quot;</span> <span class="o">+</span> \
-        <span class="s2">&quot;and their initial values.</span><span class="se">\n</span><span class="s2">&quot;</span>
+        <span class="n">param_tip</span> <span class="o">=</span> <span class="s2">&quot;#Set the parameters and their initial values.</span><span class="se">\n</span><span class="s2">&quot;</span>
         <span class="n">param_tip</span> <span class="o">+=</span> <span class="s2">&quot;#Example:</span><span class="se">\n</span><span class="s2">&quot;</span>
         <span class="n">param_tip</span> <span class="o">+=</span> <span class="s2">&quot;A = 1</span><span class="se">\n</span><span class="s2">B = 1&quot;</span>
         <span class="c1">#param_txt.SetToolTipString(param_tip)</span>
@@ -786,24 +736,7 @@
 
         <span class="bp">self</span><span class="o">.</span><span class="n">param_sizer</span><span class="o">.</span><span class="n">AddMany</span><span class="p">([(</span><span class="n">param_txt</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="n">wx</span><span class="o">.</span><span class="n">LEFT</span><span class="p">,</span> <span class="mi">10</span><span class="p">),</span>
                                   <span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">param_tcl</span><span class="p">,</span> <span class="mi">1</span><span class="p">,</span> <span class="n">wx</span><span class="o">.</span><span class="n">EXPAND</span> <span class="o">|</span> <span class="n">wx</span><span class="o">.</span><span class="n">ALL</span><span class="p">,</span> <span class="mi">10</span><span class="p">)])</span>
-        
-        <span class="c1"># Parameters with polydispersity</span>
-        <span class="n">pd_param_txt</span> <span class="o">=</span> <span class="n">wx</span><span class="o">.</span><span class="n">StaticText</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="o">-</span><span class="mi">1</span><span class="p">,</span> <span class="s1">&#39;Fit Parameters requiring &#39;</span> <span class="o">+</span> \
-                                     <span class="s1">&#39;polydispersity (if any): &#39;</span><span class="p">)</span>
 
-        <span class="n">pd_param_tip</span> <span class="o">=</span> <span class="s2">&quot;#Set the parameters requiring polydispersity and &quot;</span> <span class="o">+</span> \
-        <span class="s2">&quot;their initial values.</span><span class="se">\n</span><span class="s2">&quot;</span>
-        <span class="n">pd_param_tip</span> <span class="o">+=</span> <span class="s2">&quot;#Example:</span><span class="se">\n</span><span class="s2">&quot;</span>
-        <span class="n">pd_param_tip</span> <span class="o">+=</span> <span class="s2">&quot;C = 2</span><span class="se">\n</span><span class="s2">D = 2&quot;</span>
-        <span class="n">newid</span> <span class="o">=</span> <span class="n">wx</span><span class="o">.</span><span class="n">NewId</span><span class="p">()</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">pd_param_tcl</span> <span class="o">=</span> <span class="n">EditWindow</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">newid</span><span class="p">,</span> <span class="n">wx</span><span class="o">.</span><span class="n">DefaultPosition</span><span class="p">,</span>
-                                    <span class="n">wx</span><span class="o">.</span><span class="n">DefaultSize</span><span class="p">,</span>
-                                    <span class="n">wx</span><span class="o">.</span><span class="n">CLIP_CHILDREN</span> <span class="o">|</span> <span class="n">wx</span><span class="o">.</span><span class="n">SUNKEN_BORDER</span><span class="p">)</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">pd_param_tcl</span><span class="o">.</span><span class="n">setDisplayLineNumbers</span><span class="p">(</span><span class="bp">True</span><span class="p">)</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">pd_param_tcl</span><span class="o">.</span><span class="n">SetToolTipString</span><span class="p">(</span><span class="n">pd_param_tip</span><span class="p">)</span>
-        
-        <span class="bp">self</span><span class="o">.</span><span class="n">param_sizer</span><span class="o">.</span><span class="n">AddMany</span><span class="p">([(</span><span class="n">pd_param_txt</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="n">wx</span><span class="o">.</span><span class="n">LEFT</span><span class="p">,</span> <span class="mi">10</span><span class="p">),</span>
-                                  <span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">pd_param_tcl</span><span class="p">,</span> <span class="mi">1</span><span class="p">,</span> <span class="n">wx</span><span class="o">.</span><span class="n">EXPAND</span> <span class="o">|</span> <span class="n">wx</span><span class="o">.</span><span class="n">ALL</span><span class="p">,</span> <span class="mi">10</span><span class="p">)])</span>
 
     <span class="k">def</span> <span class="nf">_layout_function</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
         <span class="sd">&quot;&quot;&quot;</span>
@@ -901,7 +834,7 @@
                 <span class="k">try</span><span class="p">:</span>
                     <span class="k">exec</span> <span class="s2">&quot;float(math.</span><span class="si">%s</span><span class="s2">)&quot;</span> <span class="o">%</span> <span class="n">item</span>
                     <span class="bp">self</span><span class="o">.</span><span class="n">math_combo</span><span class="o">.</span><span class="n">Append</span><span class="p">(</span><span class="nb">str</span><span class="p">(</span><span class="n">item</span><span class="p">))</span>
-                <span class="k">except</span><span class="p">:</span>
+                <span class="k">except</span> <span class="ne">Exception</span><span class="p">:</span>
                     <span class="bp">self</span><span class="o">.</span><span class="n">math_combo</span><span class="o">.</span><span class="n">Append</span><span class="p">(</span><span class="nb">str</span><span class="p">(</span><span class="n">item</span><span class="p">)</span> <span class="o">+</span> <span class="s2">&quot;()&quot;</span><span class="p">)</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">math_combo</span><span class="o">.</span><span class="n">Bind</span><span class="p">(</span><span class="n">wx</span><span class="o">.</span><span class="n">EVT_COMBOBOX</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">_on_math_select</span><span class="p">)</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">math_combo</span><span class="o">.</span><span class="n">SetSelection</span><span class="p">(</span><span class="mi">0</span><span class="p">)</span>
@@ -919,19 +852,19 @@
         <span class="bp">self</span><span class="o">.</span><span class="n">function_tcl</span><span class="o">.</span><span class="n">InsertText</span><span class="p">(</span><span class="n">pos</span><span class="p">,</span> <span class="n">label</span><span class="p">)</span>
         <span class="c1"># Put the cursor at appropriate position</span>
         <span class="n">length</span> <span class="o">=</span> <span class="nb">len</span><span class="p">(</span><span class="n">label</span><span class="p">)</span>
-        <span class="k">print</span> <span class="n">length</span>
+        <span class="k">print</span><span class="p">(</span><span class="n">length</span><span class="p">)</span>
         <span class="k">if</span> <span class="n">label</span><span class="p">[</span><span class="n">length</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span> <span class="o">==</span> <span class="s1">&#39;)&#39;</span><span class="p">:</span>
             <span class="n">length</span> <span class="o">-=</span> <span class="mi">1</span>
         <span class="n">f_pos</span> <span class="o">=</span> <span class="n">pos</span> <span class="o">+</span> <span class="n">length</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">function_tcl</span><span class="o">.</span><span class="n">GotoPos</span><span class="p">(</span><span class="n">f_pos</span><span class="p">)</span>
 
-<div class="viewcode-block" id="EditorPanel.get_notes"><a class="viewcode-back" href="../../../../../dev/api/sas.sasgui.perspectives.calculator.html#sas.sasgui.perspectives.calculator.model_editor.EditorPanel.get_notes">[docs]</a>    <span class="k">def</span> <span class="nf">get_notes</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+<div class="viewcode-block" id="EditorPanel.get_notes"><a class="viewcode-back" href="../../../../../dev/sasview-api/sas.sasgui.perspectives.calculator.html#sas.sasgui.perspectives.calculator.model_editor.EditorPanel.get_notes">[docs]</a>    <span class="k">def</span> <span class="nf">get_notes</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
         <span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">        return notes</span>
 <span class="sd">        &quot;&quot;&quot;</span>
         <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_notes</span></div>
 
-<div class="viewcode-block" id="EditorPanel.on_change_name"><a class="viewcode-back" href="../../../../../dev/api/sas.sasgui.perspectives.calculator.html#sas.sasgui.perspectives.calculator.model_editor.EditorPanel.on_change_name">[docs]</a>    <span class="k">def</span> <span class="nf">on_change_name</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">event</span><span class="o">=</span><span class="bp">None</span><span class="p">):</span>
+<div class="viewcode-block" id="EditorPanel.on_change_name"><a class="viewcode-back" href="../../../../../dev/sasview-api/sas.sasgui.perspectives.calculator.html#sas.sasgui.perspectives.calculator.model_editor.EditorPanel.on_change_name">[docs]</a>    <span class="k">def</span> <span class="nf">on_change_name</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">event</span><span class="o">=</span><span class="bp">None</span><span class="p">):</span>
         <span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">        Change name</span>
 <span class="sd">        &quot;&quot;&quot;</span>
@@ -940,7 +873,7 @@
         <span class="bp">self</span><span class="o">.</span><span class="n">name_tcl</span><span class="o">.</span><span class="n">SetBackgroundColour</span><span class="p">(</span><span class="s1">&#39;white&#39;</span><span class="p">)</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">Refresh</span><span class="p">()</span></div>
 
-<div class="viewcode-block" id="EditorPanel.check_name"><a class="viewcode-back" href="../../../../../dev/api/sas.sasgui.perspectives.calculator.html#sas.sasgui.perspectives.calculator.model_editor.EditorPanel.check_name">[docs]</a>    <span class="k">def</span> <span class="nf">check_name</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+<div class="viewcode-block" id="EditorPanel.check_name"><a class="viewcode-back" href="../../../../../dev/sasview-api/sas.sasgui.perspectives.calculator.html#sas.sasgui.perspectives.calculator.model_editor.EditorPanel.check_name">[docs]</a>    <span class="k">def</span> <span class="nf">check_name</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
         <span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">        Check name if exist already</span>
 <span class="sd">        &quot;&quot;&quot;</span>
@@ -964,7 +897,7 @@
         <span class="bp">self</span><span class="o">.</span><span class="n">_notes</span> <span class="o">+=</span> <span class="s2">&quot;to </span><span class="si">%s</span><span class="s2">. </span><span class="se">\n</span><span class="s2">&quot;</span> <span class="o">%</span> <span class="nb">str</span><span class="p">(</span><span class="n">s_title</span><span class="p">)</span>
         <span class="k">return</span> <span class="bp">True</span></div>
 
-<div class="viewcode-block" id="EditorPanel.on_over_cb"><a class="viewcode-back" href="../../../../../dev/api/sas.sasgui.perspectives.calculator.html#sas.sasgui.perspectives.calculator.model_editor.EditorPanel.on_over_cb">[docs]</a>    <span class="k">def</span> <span class="nf">on_over_cb</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">event</span><span class="p">):</span>
+<div class="viewcode-block" id="EditorPanel.on_over_cb"><a class="viewcode-back" href="../../../../../dev/sasview-api/sas.sasgui.perspectives.calculator.html#sas.sasgui.perspectives.calculator.model_editor.EditorPanel.on_over_cb">[docs]</a>    <span class="k">def</span> <span class="nf">on_over_cb</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">event</span><span class="p">):</span>
         <span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">        Set overwrite name flag on cb event</span>
 <span class="sd">        &quot;&quot;&quot;</span>
@@ -973,7 +906,7 @@
         <span class="n">cb_value</span> <span class="o">=</span> <span class="n">event</span><span class="o">.</span><span class="n">GetEventObject</span><span class="p">()</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">overwrite_name</span> <span class="o">=</span> <span class="n">cb_value</span><span class="o">.</span><span class="n">GetValue</span><span class="p">()</span></div>
 
-<div class="viewcode-block" id="EditorPanel.on_click_apply"><a class="viewcode-back" href="../../../../../dev/api/sas.sasgui.perspectives.calculator.html#sas.sasgui.perspectives.calculator.model_editor.EditorPanel.on_click_apply">[docs]</a>    <span class="k">def</span> <span class="nf">on_click_apply</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">event</span><span class="p">):</span>
+<div class="viewcode-block" id="EditorPanel.on_click_apply"><a class="viewcode-back" href="../../../../../dev/sasview-api/sas.sasgui.perspectives.calculator.html#sas.sasgui.perspectives.calculator.model_editor.EditorPanel.on_click_apply">[docs]</a>    <span class="k">def</span> <span class="nf">on_click_apply</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">event</span><span class="p">):</span>
         <span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">        Changes are saved in data object imported to edit.</span>
 
@@ -1005,13 +938,12 @@
         <span class="k">elif</span> <span class="bp">self</span><span class="o">.</span><span class="n">check_name</span><span class="p">():</span>
             <span class="n">description</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">desc_tcl</span><span class="o">.</span><span class="n">GetValue</span><span class="p">()</span>
             <span class="n">param_str</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">param_tcl</span><span class="o">.</span><span class="n">GetText</span><span class="p">()</span>
-            <span class="n">pd_param_str</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">pd_param_tcl</span><span class="o">.</span><span class="n">GetText</span><span class="p">()</span>
             <span class="n">func_str</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">function_tcl</span><span class="o">.</span><span class="n">GetText</span><span class="p">()</span>
             <span class="c1"># No input for the model function</span>
             <span class="k">if</span> <span class="n">func_str</span><span class="o">.</span><span class="n">lstrip</span><span class="p">()</span><span class="o">.</span><span class="n">rstrip</span><span class="p">():</span>
                 <span class="k">if</span> <span class="n">func_str</span><span class="o">.</span><span class="n">count</span><span class="p">(</span><span class="s1">&#39;return&#39;</span><span class="p">)</span> <span class="o">&gt;</span> <span class="mi">0</span><span class="p">:</span>
                     <span class="bp">self</span><span class="o">.</span><span class="n">write_file</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">fname</span><span class="p">,</span> <span class="n">name</span><span class="p">,</span> <span class="n">description</span><span class="p">,</span> <span class="n">param_str</span><span class="p">,</span>
-                                    <span class="n">pd_param_str</span><span class="p">,</span> <span class="n">func_str</span><span class="p">)</span>
+                                    <span class="n">func_str</span><span class="p">)</span>
                     <span class="k">try</span><span class="p">:</span>
                         <span class="n">result</span><span class="p">,</span> <span class="n">msg</span> <span class="o">=</span> <span class="n">check_model</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">fname</span><span class="p">),</span> <span class="bp">None</span>
                     <span class="k">except</span> <span class="ne">Exception</span><span class="p">:</span>
@@ -1026,21 +958,16 @@
         <span class="k">else</span><span class="p">:</span>
             <span class="n">msg</span> <span class="o">=</span> <span class="s2">&quot;Name exists already.&quot;</span>
 
-        <span class="c1"># Prepare the messagebox</span>
-        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">base</span> <span class="o">!=</span> <span class="bp">None</span> <span class="ow">and</span> <span class="ow">not</span> <span class="n">msg</span><span class="p">:</span>
+        <span class="c1">#</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">base</span> <span class="ow">is</span> <span class="ow">not</span> <span class="bp">None</span> <span class="ow">and</span> <span class="ow">not</span> <span class="n">msg</span><span class="p">:</span>
             <span class="bp">self</span><span class="o">.</span><span class="n">base</span><span class="o">.</span><span class="n">update_custom_combo</span><span class="p">()</span>
-            <span class="c1"># Passed exception in import test as it will fail for sasmodels.sasview_model class</span>
-            <span class="c1"># Should add similar test for new style?</span>
-            <span class="n">Model</span> <span class="o">=</span> <span class="bp">None</span>
-            <span class="k">try</span><span class="p">:</span>
-                <span class="k">exec</span> <span class="s2">&quot;from </span><span class="si">%s</span><span class="s2"> import Model&quot;</span> <span class="o">%</span> <span class="n">name</span>
-            <span class="k">except</span><span class="p">:</span>
-                <span class="n">logging</span><span class="o">.</span><span class="n">error</span><span class="p">(</span><span class="n">sys</span><span class="o">.</span><span class="n">exc_value</span><span class="p">)</span>
 
         <span class="c1"># Prepare the messagebox</span>
         <span class="k">if</span> <span class="n">msg</span><span class="p">:</span>
             <span class="n">info</span> <span class="o">=</span> <span class="s1">&#39;Error&#39;</span>
             <span class="n">color</span> <span class="o">=</span> <span class="s1">&#39;red&#39;</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">overwrite_cb</span><span class="o">.</span><span class="n">SetValue</span><span class="p">(</span><span class="bp">True</span><span class="p">)</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">overwrite_name</span> <span class="o">=</span> <span class="bp">True</span>
         <span class="k">else</span><span class="p">:</span>
             <span class="bp">self</span><span class="o">.</span><span class="n">_notes</span> <span class="o">=</span> <span class="n">result</span>
             <span class="n">msg</span> <span class="o">=</span> <span class="s2">&quot;Successful! Please look for </span><span class="si">%s</span><span class="s2"> in Plugin Models.&quot;</span><span class="o">%</span><span class="n">name</span>
@@ -1050,125 +977,82 @@
         <span class="bp">self</span><span class="o">.</span><span class="n">_msg_box</span><span class="o">.</span><span class="n">SetLabel</span><span class="p">(</span><span class="n">msg</span><span class="p">)</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">_msg_box</span><span class="o">.</span><span class="n">SetForegroundColour</span><span class="p">(</span><span class="n">color</span><span class="p">)</span>
         <span class="c1"># Send msg to the top window</span>
-        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">base</span> <span class="o">!=</span> <span class="bp">None</span><span class="p">:</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">base</span> <span class="ow">is</span> <span class="ow">not</span> <span class="bp">None</span><span class="p">:</span>
             <span class="kn">from</span> <span class="nn">sas.sasgui.guiframe.events</span> <span class="kn">import</span> <span class="n">StatusEvent</span>
             <span class="n">wx</span><span class="o">.</span><span class="n">PostEvent</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">base</span><span class="o">.</span><span class="n">parent</span><span class="p">,</span>
                          <span class="n">StatusEvent</span><span class="p">(</span><span class="n">status</span><span class="o">=</span><span class="n">msg</span><span class="o">+</span><span class="n">check_err</span><span class="p">,</span> <span class="n">info</span><span class="o">=</span><span class="n">info</span><span class="p">))</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">warning</span> <span class="o">=</span> <span class="n">msg</span></div>
 
-<div class="viewcode-block" id="EditorPanel.write_file"><a class="viewcode-back" href="../../../../../dev/api/sas.sasgui.perspectives.calculator.html#sas.sasgui.perspectives.calculator.model_editor.EditorPanel.write_file">[docs]</a>    <span class="k">def</span> <span class="nf">write_file</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">fname</span><span class="p">,</span> <span class="n">name</span><span class="p">,</span> <span class="n">desc_str</span><span class="p">,</span> <span class="n">param_str</span><span class="p">,</span> <span class="n">pd_param_str</span><span class="p">,</span> <span class="n">func_str</span><span class="p">):</span>
+<div class="viewcode-block" id="EditorPanel.write_file"><a class="viewcode-back" href="../../../../../dev/sasview-api/sas.sasgui.perspectives.calculator.html#sas.sasgui.perspectives.calculator.model_editor.EditorPanel.write_file">[docs]</a>    <span class="k">def</span> <span class="nf">write_file</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">fname</span><span class="p">,</span> <span class="n">name</span><span class="p">,</span> <span class="n">desc_str</span><span class="p">,</span> <span class="n">param_str</span><span class="p">,</span> <span class="n">func_str</span><span class="p">):</span>
         <span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">        Write content in file</span>
 
 <span class="sd">        :param fname: full file path</span>
 <span class="sd">        :param desc_str: content of the description strings</span>
 <span class="sd">        :param param_str: content of params; Strings</span>
-<span class="sd">        :param pd_param_str: content of params requiring polydispersity; Strings</span>
 <span class="sd">        :param func_str: content of func; Strings</span>
 <span class="sd">        &quot;&quot;&quot;</span>
-        <span class="k">try</span><span class="p">:</span>
-            <span class="n">out_f</span> <span class="o">=</span> <span class="nb">open</span><span class="p">(</span><span class="n">fname</span><span class="p">,</span> <span class="s1">&#39;w&#39;</span><span class="p">)</span>
-        <span class="k">except</span><span class="p">:</span>
-            <span class="k">raise</span>
-        <span class="c1"># Prepare the content of the function</span>
-        <span class="n">lines</span> <span class="o">=</span> <span class="n">CUSTOM_TEMPLATE</span><span class="o">.</span><span class="n">split</span><span class="p">(</span><span class="s1">&#39;</span><span class="se">\n</span><span class="s1">&#39;</span><span class="p">)</span>
+        <span class="n">out_f</span> <span class="o">=</span> <span class="nb">open</span><span class="p">(</span><span class="n">fname</span><span class="p">,</span> <span class="s1">&#39;w&#39;</span><span class="p">)</span>
 
-        <span class="n">has_scipy</span> <span class="o">=</span> <span class="n">func_str</span><span class="o">.</span><span class="n">count</span><span class="p">(</span><span class="s2">&quot;scipy.&quot;</span><span class="p">)</span>
-        <span class="k">if</span> <span class="n">has_scipy</span><span class="p">:</span>
-            <span class="n">lines</span><span class="o">.</span><span class="n">insert</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="s1">&#39;import scipy&#39;</span><span class="p">)</span>
-        
-        <span class="c1"># Think about 2D later        </span>
-        <span class="c1">#self.is_2d = func_str.count(&quot;#self.ndim = 2&quot;)</span>
-        <span class="c1">#line_2d = &#39;&#39;</span>
-        <span class="c1">#if self.is_2d:</span>
-        <span class="c1">#    line_2d = CUSTOM_2D_TEMP.split(&#39;\n&#39;)</span>
-        
-        <span class="c1"># Also think about test later        </span>
-        <span class="c1">#line_test = TEST_TEMPLATE.split(&#39;\n&#39;)</span>
-        <span class="c1">#local_params = &#39;&#39;</span>
-        <span class="c1">#spaces = &#39;        &#39;#8spaces</span>
-        <span class="n">spaces4</span>  <span class="o">=</span> <span class="s1">&#39; &#39;</span><span class="o">*</span><span class="mi">4</span>
-        <span class="n">spaces13</span> <span class="o">=</span> <span class="s1">&#39; &#39;</span><span class="o">*</span><span class="mi">13</span>
-        <span class="n">spaces16</span> <span class="o">=</span> <span class="s1">&#39; &#39;</span><span class="o">*</span><span class="mi">16</span>     
+        <span class="n">out_f</span><span class="o">.</span><span class="n">write</span><span class="p">(</span><span class="n">CUSTOM_TEMPLATE</span> <span class="o">%</span> <span class="p">{</span>
+            <span class="s1">&#39;name&#39;</span><span class="p">:</span> <span class="n">name</span><span class="p">,</span>
+            <span class="s1">&#39;title&#39;</span><span class="p">:</span> <span class="s1">&#39;User model for &#39;</span> <span class="o">+</span> <span class="n">name</span><span class="p">,</span>
+            <span class="s1">&#39;description&#39;</span><span class="p">:</span> <span class="n">desc_str</span><span class="p">,</span>
+            <span class="s1">&#39;date&#39;</span><span class="p">:</span> <span class="n">datetime</span><span class="o">.</span><span class="n">datetime</span><span class="o">.</span><span class="n">now</span><span class="p">()</span><span class="o">.</span><span class="n">strftime</span><span class="p">(</span><span class="s1">&#39;%YYYY-%mm-</span><span class="si">%d</span><span class="s1">d&#39;</span><span class="p">),</span>
+        <span class="p">})</span>
+
+        <span class="c1"># Write out parameters</span>
         <span class="n">param_names</span> <span class="o">=</span> <span class="p">[]</span>    <span class="c1"># to store parameter names</span>
-        <span class="n">has_scipy</span> <span class="o">=</span> <span class="n">func_str</span><span class="o">.</span><span class="n">count</span><span class="p">(</span><span class="s2">&quot;scipy.&quot;</span><span class="p">)</span>
-        <span class="k">if</span> <span class="n">has_scipy</span><span class="p">:</span>
-            <span class="n">lines</span><span class="o">.</span><span class="n">insert</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="s1">&#39;import scipy&#39;</span><span class="p">)</span>
+        <span class="n">out_f</span><span class="o">.</span><span class="n">write</span><span class="p">(</span><span class="s1">&#39;parameters = [ </span><span class="se">\n</span><span class="s1">&#39;</span><span class="p">)</span>
+        <span class="n">out_f</span><span class="o">.</span><span class="n">write</span><span class="p">(</span><span class="s1">&#39;#   [&quot;name&quot;, &quot;units&quot;, default, [lower, upper], &quot;type&quot;, &quot;description&quot;],</span><span class="se">\n</span><span class="s1">&#39;</span><span class="p">)</span>
+        <span class="k">for</span> <span class="n">pname</span><span class="p">,</span> <span class="n">pvalue</span><span class="p">,</span> <span class="n">desc</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">get_param_helper</span><span class="p">(</span><span class="n">param_str</span><span class="p">):</span>
+            <span class="n">param_names</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">pname</span><span class="p">)</span>
+            <span class="n">out_f</span><span class="o">.</span><span class="n">write</span><span class="p">(</span><span class="s2">&quot;    [&#39;</span><span class="si">%s</span><span class="s2">&#39;, &#39;&#39;, </span><span class="si">%s</span><span class="s2">, [-inf, inf], &#39;&#39;, &#39;</span><span class="si">%s</span><span class="s2">&#39;],</span><span class="se">\n</span><span class="s2">&quot;</span>
+                        <span class="o">%</span> <span class="p">(</span><span class="n">pname</span><span class="p">,</span> <span class="n">pvalue</span><span class="p">,</span> <span class="n">desc</span><span class="p">))</span>
+        <span class="n">out_f</span><span class="o">.</span><span class="n">write</span><span class="p">(</span><span class="s1">&#39;    ]</span><span class="se">\n</span><span class="s1">&#39;</span><span class="p">)</span>
 
-        <span class="c1"># write function here</span>
-        <span class="k">for</span> <span class="n">line</span> <span class="ow">in</span> <span class="n">lines</span><span class="p">:</span>
-            <span class="c1"># The location where to put the strings is</span>
-            <span class="c1"># hard-coded in the template as shown below.</span>
-            <span class="n">out_f</span><span class="o">.</span><span class="n">write</span><span class="p">(</span><span class="n">line</span> <span class="o">+</span> <span class="s1">&#39;</span><span class="se">\n</span><span class="s1">&#39;</span><span class="p">)</span>
-            <span class="k">if</span> <span class="n">line</span><span class="o">.</span><span class="n">count</span><span class="p">(</span><span class="s1">&#39;#name&#39;</span><span class="p">):</span>
-                <span class="n">out_f</span><span class="o">.</span><span class="n">write</span><span class="p">(</span><span class="s1">&#39;name = &quot;</span><span class="si">%s</span><span class="s1">&quot; </span><span class="se">\n</span><span class="s1">&#39;</span> <span class="o">%</span> <span class="n">name</span><span class="p">)</span>               
-            <span class="k">elif</span> <span class="n">line</span><span class="o">.</span><span class="n">count</span><span class="p">(</span><span class="s1">&#39;#title&#39;</span><span class="p">):</span>
-                <span class="n">out_f</span><span class="o">.</span><span class="n">write</span><span class="p">(</span><span class="s1">&#39;title = &quot;User model for </span><span class="si">%s</span><span class="s1">&quot;</span><span class="se">\n</span><span class="s1">&#39;</span> <span class="o">%</span> <span class="n">name</span><span class="p">)</span>               
-            <span class="k">elif</span> <span class="n">line</span><span class="o">.</span><span class="n">count</span><span class="p">(</span><span class="s1">&#39;#description&#39;</span><span class="p">):</span>
-                <span class="n">out_f</span><span class="o">.</span><span class="n">write</span><span class="p">(</span><span class="s1">&#39;description = &quot;</span><span class="si">%s</span><span class="s1">&quot;</span><span class="se">\n</span><span class="s1">&#39;</span> <span class="o">%</span> <span class="n">desc_str</span><span class="p">)</span>               
-            <span class="k">elif</span> <span class="n">line</span><span class="o">.</span><span class="n">count</span><span class="p">(</span><span class="s1">&#39;#parameters&#39;</span><span class="p">):</span>
-                <span class="n">out_f</span><span class="o">.</span><span class="n">write</span><span class="p">(</span><span class="s1">&#39;parameters = [ </span><span class="se">\n</span><span class="s1">&#39;</span><span class="p">)</span>
-                <span class="k">for</span> <span class="n">param_line</span> <span class="ow">in</span> <span class="n">param_str</span><span class="o">.</span><span class="n">split</span><span class="p">(</span><span class="s1">&#39;</span><span class="se">\n</span><span class="s1">&#39;</span><span class="p">):</span>
-                    <span class="n">p_line</span> <span class="o">=</span> <span class="n">param_line</span><span class="o">.</span><span class="n">lstrip</span><span class="p">()</span><span class="o">.</span><span class="n">rstrip</span><span class="p">()</span>
-                    <span class="k">if</span> <span class="n">p_line</span><span class="p">:</span>
-                        <span class="n">pname</span><span class="p">,</span> <span class="n">pvalue</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">get_param_helper</span><span class="p">(</span><span class="n">p_line</span><span class="p">)</span>
-                        <span class="n">param_names</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">pname</span><span class="p">)</span>
-                        <span class="n">out_f</span><span class="o">.</span><span class="n">write</span><span class="p">(</span><span class="s2">&quot;</span><span class="si">%s</span><span class="s2">[&#39;</span><span class="si">%s</span><span class="s2">&#39;, &#39;&#39;, </span><span class="si">%s</span><span class="s2">, [-numpy.inf, numpy.inf], &#39;&#39;, &#39;&#39;],</span><span class="se">\n</span><span class="s2">&quot;</span> <span class="o">%</span> <span class="p">(</span><span class="n">spaces16</span><span class="p">,</span> <span class="n">pname</span><span class="p">,</span> <span class="n">pvalue</span><span class="p">))</span>
-                <span class="k">for</span> <span class="n">param_line</span> <span class="ow">in</span> <span class="n">pd_param_str</span><span class="o">.</span><span class="n">split</span><span class="p">(</span><span class="s1">&#39;</span><span class="se">\n</span><span class="s1">&#39;</span><span class="p">):</span>
-                    <span class="n">p_line</span> <span class="o">=</span> <span class="n">param_line</span><span class="o">.</span><span class="n">lstrip</span><span class="p">()</span><span class="o">.</span><span class="n">rstrip</span><span class="p">()</span>
-                    <span class="k">if</span> <span class="n">p_line</span><span class="p">:</span>
-                        <span class="n">pname</span><span class="p">,</span> <span class="n">pvalue</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">get_param_helper</span><span class="p">(</span><span class="n">p_line</span><span class="p">)</span>
-                        <span class="n">param_names</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">pname</span><span class="p">)</span>
-                        <span class="n">out_f</span><span class="o">.</span><span class="n">write</span><span class="p">(</span><span class="s2">&quot;</span><span class="si">%s</span><span class="s2">[&#39;</span><span class="si">%s</span><span class="s2">&#39;, &#39;&#39;, </span><span class="si">%s</span><span class="s2">, [-numpy.inf, numpy.inf], &#39;volume&#39;, &#39;&#39;],</span><span class="se">\n</span><span class="s2">&quot;</span> <span class="o">%</span> <span class="p">(</span><span class="n">spaces16</span><span class="p">,</span> <span class="n">pname</span><span class="p">,</span> <span class="n">pvalue</span><span class="p">))</span>
-                <span class="n">out_f</span><span class="o">.</span><span class="n">write</span><span class="p">(</span><span class="s1">&#39;</span><span class="si">%s</span><span class="s1">]</span><span class="se">\n</span><span class="s1">&#39;</span> <span class="o">%</span> <span class="n">spaces13</span><span class="p">)</span>
-            
-        <span class="c1"># No form_volume or ER available in simple model editor</span>
-        <span class="n">out_f</span><span class="o">.</span><span class="n">write</span><span class="p">(</span><span class="s1">&#39;def form_volume(*arg): </span><span class="se">\n</span><span class="s1">&#39;</span><span class="p">)</span>
-        <span class="n">out_f</span><span class="o">.</span><span class="n">write</span><span class="p">(</span><span class="s1">&#39;    return 1.0 </span><span class="se">\n</span><span class="s1">&#39;</span><span class="p">)</span>
+        <span class="c1"># Write out function definition</span>
         <span class="n">out_f</span><span class="o">.</span><span class="n">write</span><span class="p">(</span><span class="s1">&#39;</span><span class="se">\n</span><span class="s1">&#39;</span><span class="p">)</span>
-        <span class="n">out_f</span><span class="o">.</span><span class="n">write</span><span class="p">(</span><span class="s1">&#39;def ER(*arg): </span><span class="se">\n</span><span class="s1">&#39;</span><span class="p">)</span>
-        <span class="n">out_f</span><span class="o">.</span><span class="n">write</span><span class="p">(</span><span class="s1">&#39;    return 1.0 </span><span class="se">\n</span><span class="s1">&#39;</span><span class="p">)</span>
-        
-        <span class="c1"># function to compute</span>
-        <span class="n">out_f</span><span class="o">.</span><span class="n">write</span><span class="p">(</span><span class="s1">&#39;</span><span class="se">\n</span><span class="s1">&#39;</span><span class="p">)</span>
-        <span class="n">out_f</span><span class="o">.</span><span class="n">write</span><span class="p">(</span><span class="s1">&#39;def Iq(x &#39;</span><span class="p">)</span>
-        <span class="k">for</span> <span class="n">name</span> <span class="ow">in</span> <span class="n">param_names</span><span class="p">:</span>
-            <span class="n">out_f</span><span class="o">.</span><span class="n">write</span><span class="p">(</span><span class="s1">&#39;, </span><span class="si">%s</span><span class="s1">&#39;</span> <span class="o">%</span> <span class="n">name</span><span class="p">)</span>
-        <span class="n">out_f</span><span class="o">.</span><span class="n">write</span><span class="p">(</span><span class="s1">&#39;):</span><span class="se">\n</span><span class="s1">&#39;</span><span class="p">)</span>
+        <span class="n">out_f</span><span class="o">.</span><span class="n">write</span><span class="p">(</span><span class="s1">&#39;def Iq(</span><span class="si">%s</span><span class="s1">):</span><span class="se">\n</span><span class="s1">&#39;</span> <span class="o">%</span> <span class="s1">&#39;, &#39;</span><span class="o">.</span><span class="n">join</span><span class="p">([</span><span class="s1">&#39;x&#39;</span><span class="p">]</span> <span class="o">+</span> <span class="n">param_names</span><span class="p">))</span>
+        <span class="n">out_f</span><span class="o">.</span><span class="n">write</span><span class="p">(</span><span class="s1">&#39;    &quot;&quot;&quot;Absolute scattering&quot;&quot;&quot;</span><span class="se">\n</span><span class="s1">&#39;</span><span class="p">)</span>
+        <span class="k">if</span> <span class="s2">&quot;scipy.&quot;</span> <span class="ow">in</span> <span class="n">func_str</span><span class="p">:</span>
+            <span class="n">out_f</span><span class="o">.</span><span class="n">write</span><span class="p">(</span><span class="s1">&#39;    import scipy&#39;</span><span class="p">)</span>
+        <span class="k">if</span> <span class="s2">&quot;numpy.&quot;</span> <span class="ow">in</span> <span class="n">func_str</span><span class="p">:</span>
+            <span class="n">out_f</span><span class="o">.</span><span class="n">write</span><span class="p">(</span><span class="s1">&#39;    import numpy&#39;</span><span class="p">)</span>
+        <span class="k">if</span> <span class="s2">&quot;np.&quot;</span> <span class="ow">in</span> <span class="n">func_str</span><span class="p">:</span>
+            <span class="n">out_f</span><span class="o">.</span><span class="n">write</span><span class="p">(</span><span class="s1">&#39;    import numpy as np&#39;</span><span class="p">)</span>
         <span class="k">for</span> <span class="n">func_line</span> <span class="ow">in</span> <span class="n">func_str</span><span class="o">.</span><span class="n">split</span><span class="p">(</span><span class="s1">&#39;</span><span class="se">\n</span><span class="s1">&#39;</span><span class="p">):</span>
-            <span class="n">out_f</span><span class="o">.</span><span class="n">write</span><span class="p">(</span><span class="s1">&#39;</span><span class="si">%s%s</span><span class="se">\n</span><span class="s1">&#39;</span> <span class="o">%</span> <span class="p">(</span><span class="n">spaces4</span><span class="p">,</span> <span class="n">func_line</span><span class="p">))</span>
-        
-        <span class="n">Iqxy_string</span> <span class="o">=</span> <span class="s1">&#39;return Iq(numpy.sqrt(x**2+y**2) &#39;</span>
-            
+            <span class="n">out_f</span><span class="o">.</span><span class="n">write</span><span class="p">(</span><span class="s1">&#39;</span><span class="si">%s%s</span><span class="se">\n</span><span class="s1">&#39;</span> <span class="o">%</span> <span class="p">(</span><span class="s1">&#39;    &#39;</span><span class="p">,</span> <span class="n">func_line</span><span class="p">))</span>
+        <span class="n">out_f</span><span class="o">.</span><span class="n">write</span><span class="p">(</span><span class="s1">&#39;## uncomment the following if Iq works for vector x</span><span class="se">\n</span><span class="s1">&#39;</span><span class="p">)</span>
+        <span class="n">out_f</span><span class="o">.</span><span class="n">write</span><span class="p">(</span><span class="s1">&#39;#Iq.vectorized = True</span><span class="se">\n</span><span class="s1">&#39;</span><span class="p">)</span>
+
+        <span class="c1"># Create place holder for Iqxy</span>
         <span class="n">out_f</span><span class="o">.</span><span class="n">write</span><span class="p">(</span><span class="s1">&#39;</span><span class="se">\n</span><span class="s1">&#39;</span><span class="p">)</span>
-        <span class="n">out_f</span><span class="o">.</span><span class="n">write</span><span class="p">(</span><span class="s1">&#39;def Iqxy(x, y &#39;</span><span class="p">)</span>
-        <span class="k">for</span> <span class="n">name</span> <span class="ow">in</span> <span class="n">param_names</span><span class="p">:</span>
-            <span class="n">out_f</span><span class="o">.</span><span class="n">write</span><span class="p">(</span><span class="s1">&#39;, </span><span class="si">%s</span><span class="s1">&#39;</span> <span class="o">%</span> <span class="n">name</span><span class="p">)</span>
-            <span class="n">Iqxy_string</span> <span class="o">+=</span> <span class="s1">&#39;, &#39;</span> <span class="o">+</span> <span class="n">name</span>
-        <span class="n">out_f</span><span class="o">.</span><span class="n">write</span><span class="p">(</span><span class="s1">&#39;):</span><span class="se">\n</span><span class="s1">&#39;</span><span class="p">)</span>
-        <span class="n">Iqxy_string</span> <span class="o">+=</span> <span class="s1">&#39;)&#39;</span>
-        <span class="n">out_f</span><span class="o">.</span><span class="n">write</span><span class="p">(</span><span class="s1">&#39;</span><span class="si">%s%s</span><span class="se">\n</span><span class="s1">&#39;</span> <span class="o">%</span> <span class="p">(</span><span class="n">spaces4</span><span class="p">,</span> <span class="n">Iqxy_string</span><span class="p">))</span>
+        <span class="n">out_f</span><span class="o">.</span><span class="n">write</span><span class="p">(</span><span class="s1">&#39;#def Iqxy(</span><span class="si">%s</span><span class="s1">):</span><span class="se">\n</span><span class="s1">&#39;</span> <span class="o">%</span> <span class="s1">&#39;, &#39;</span><span class="o">.</span><span class="n">join</span><span class="p">([</span><span class="s2">&quot;x&quot;</span><span class="p">,</span> <span class="s2">&quot;y&quot;</span><span class="p">]</span> <span class="o">+</span> <span class="n">param_names</span><span class="p">))</span>
+        <span class="n">out_f</span><span class="o">.</span><span class="n">write</span><span class="p">(</span><span class="s1">&#39;#    &quot;&quot;&quot;Absolute scattering of oriented particles.&quot;&quot;&quot;</span><span class="se">\n</span><span class="s1">&#39;</span><span class="p">)</span>
+        <span class="n">out_f</span><span class="o">.</span><span class="n">write</span><span class="p">(</span><span class="s1">&#39;#    ...</span><span class="se">\n</span><span class="s1">&#39;</span><span class="p">)</span>
+        <span class="n">out_f</span><span class="o">.</span><span class="n">write</span><span class="p">(</span><span class="s1">&#39;#    return oriented_form(x, y, args)</span><span class="se">\n</span><span class="s1">&#39;</span><span class="p">)</span>
+        <span class="n">out_f</span><span class="o">.</span><span class="n">write</span><span class="p">(</span><span class="s1">&#39;## uncomment the following if Iqxy works for vector x, y</span><span class="se">\n</span><span class="s1">&#39;</span><span class="p">)</span>
+        <span class="n">out_f</span><span class="o">.</span><span class="n">write</span><span class="p">(</span><span class="s1">&#39;#Iqxy.vectorized = True</span><span class="se">\n</span><span class="s1">&#39;</span><span class="p">)</span>
 
         <span class="n">out_f</span><span class="o">.</span><span class="n">close</span><span class="p">()</span></div>
 
-<div class="viewcode-block" id="EditorPanel.get_param_helper"><a class="viewcode-back" href="../../../../../dev/api/sas.sasgui.perspectives.calculator.html#sas.sasgui.perspectives.calculator.model_editor.EditorPanel.get_param_helper">[docs]</a>    <span class="k">def</span> <span class="nf">get_param_helper</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">line</span><span class="p">):</span>
+<div class="viewcode-block" id="EditorPanel.get_param_helper"><a class="viewcode-back" href="../../../../../dev/sasview-api/sas.sasgui.perspectives.calculator.html#sas.sasgui.perspectives.calculator.model_editor.EditorPanel.get_param_helper">[docs]</a>    <span class="k">def</span> <span class="nf">get_param_helper</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">param_str</span><span class="p">):</span>
         <span class="sd">&quot;&quot;&quot;</span>
-<span class="sd">        Get string in line to define the params dictionary</span>
+<span class="sd">        yield a sequence of name, value pairs for the parameters in param_str</span>
 
-<span class="sd">        :param line: one line of string got from the param_str</span>
+<span class="sd">        Parameters can be defined by one per line by name=value, or multiple</span>
+<span class="sd">        on the same line by separating the pairs by semicolon or comma.  The</span>
+<span class="sd">        value is optional and defaults to &quot;1.0&quot;.</span>
 <span class="sd">        &quot;&quot;&quot;</span>
-        <span class="n">items</span> <span class="o">=</span> <span class="n">line</span><span class="o">.</span><span class="n">split</span><span class="p">(</span><span class="s2">&quot;;&quot;</span><span class="p">)</span>
-        <span class="k">for</span> <span class="n">item</span> <span class="ow">in</span> <span class="n">items</span><span class="p">:</span>
-            <span class="n">name</span> <span class="o">=</span> <span class="n">item</span><span class="o">.</span><span class="n">split</span><span class="p">(</span><span class="s2">&quot;=&quot;</span><span class="p">)[</span><span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">lstrip</span><span class="p">()</span><span class="o">.</span><span class="n">rstrip</span><span class="p">()</span>
-            <span class="k">try</span><span class="p">:</span>
-                <span class="n">value</span> <span class="o">=</span> <span class="n">item</span><span class="o">.</span><span class="n">split</span><span class="p">(</span><span class="s2">&quot;=&quot;</span><span class="p">)[</span><span class="mi">1</span><span class="p">]</span><span class="o">.</span><span class="n">lstrip</span><span class="p">()</span><span class="o">.</span><span class="n">rstrip</span><span class="p">()</span>
-                <span class="nb">float</span><span class="p">(</span><span class="n">value</span><span class="p">)</span>
-            <span class="k">except</span><span class="p">:</span>
-                <span class="n">value</span> <span class="o">=</span> <span class="mf">1.0</span> <span class="c1"># default</span>
+        <span class="k">for</span> <span class="n">line</span> <span class="ow">in</span> <span class="n">param_str</span><span class="o">.</span><span class="n">replace</span><span class="p">(</span><span class="s1">&#39;;&#39;</span><span class="p">,</span> <span class="s1">&#39;,&#39;</span><span class="p">)</span><span class="o">.</span><span class="n">split</span><span class="p">(</span><span class="s1">&#39;</span><span class="se">\n</span><span class="s1">&#39;</span><span class="p">):</span>
+            <span class="k">for</span> <span class="n">item</span> <span class="ow">in</span> <span class="n">line</span><span class="o">.</span><span class="n">split</span><span class="p">(</span><span class="s1">&#39;,&#39;</span><span class="p">):</span>
+                <span class="n">defn</span><span class="p">,</span> <span class="n">desc</span> <span class="o">=</span> <span class="n">item</span><span class="o">.</span><span class="n">split</span><span class="p">(</span><span class="s1">&#39;#&#39;</span><span class="p">,</span> <span class="mi">1</span><span class="p">)</span> <span class="k">if</span> <span class="s1">&#39;#&#39;</span> <span class="ow">in</span> <span class="n">item</span> <span class="k">else</span> <span class="p">(</span><span class="n">item</span><span class="p">,</span> <span class="s1">&#39;&#39;</span><span class="p">)</span>
+                <span class="n">name</span><span class="p">,</span> <span class="n">value</span> <span class="o">=</span> <span class="n">defn</span><span class="o">.</span><span class="n">split</span><span class="p">(</span><span class="s1">&#39;=&#39;</span><span class="p">,</span> <span class="mi">1</span><span class="p">)</span> <span class="k">if</span> <span class="s1">&#39;=&#39;</span> <span class="ow">in</span> <span class="n">defn</span> <span class="k">else</span> <span class="p">(</span><span class="n">defn</span><span class="p">,</span> <span class="s1">&#39;1.0&#39;</span><span class="p">)</span>
+                <span class="k">if</span> <span class="n">name</span><span class="p">:</span>
+                    <span class="k">yield</span> <span class="p">[</span><span class="n">v</span><span class="o">.</span><span class="n">strip</span><span class="p">()</span> <span class="k">for</span> <span class="n">v</span> <span class="ow">in</span> <span class="p">(</span><span class="n">name</span><span class="p">,</span> <span class="n">value</span><span class="p">,</span> <span class="n">desc</span><span class="p">)]</span></div>
 
-        <span class="k">return</span> <span class="n">name</span><span class="p">,</span> <span class="n">value</span></div>
-
-<div class="viewcode-block" id="EditorPanel.set_function_helper"><a class="viewcode-back" href="../../../../../dev/api/sas.sasgui.perspectives.calculator.html#sas.sasgui.perspectives.calculator.model_editor.EditorPanel.set_function_helper">[docs]</a>    <span class="k">def</span> <span class="nf">set_function_helper</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">line</span><span class="p">):</span>
+<div class="viewcode-block" id="EditorPanel.set_function_helper"><a class="viewcode-back" href="../../../../../dev/sasview-api/sas.sasgui.perspectives.calculator.html#sas.sasgui.perspectives.calculator.model_editor.EditorPanel.set_function_helper">[docs]</a>    <span class="k">def</span> <span class="nf">set_function_helper</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">line</span><span class="p">):</span>
         <span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">        Get string in line to define the local params</span>
 
@@ -1182,13 +1066,13 @@
             <span class="n">params_str</span> <span class="o">+=</span> <span class="n">spaces</span> <span class="o">+</span> <span class="s2">&quot;</span><span class="si">%s</span><span class="s2"> = self.params[&#39;</span><span class="si">%s</span><span class="s2">&#39;]</span><span class="se">\n</span><span class="s2">&quot;</span> <span class="o">%</span> <span class="p">(</span><span class="n">name</span><span class="p">,</span> <span class="n">name</span><span class="p">)</span>
         <span class="k">return</span> <span class="n">params_str</span></div>
 
-<div class="viewcode-block" id="EditorPanel.get_warning"><a class="viewcode-back" href="../../../../../dev/api/sas.sasgui.perspectives.calculator.html#sas.sasgui.perspectives.calculator.model_editor.EditorPanel.get_warning">[docs]</a>    <span class="k">def</span> <span class="nf">get_warning</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+<div class="viewcode-block" id="EditorPanel.get_warning"><a class="viewcode-back" href="../../../../../dev/sasview-api/sas.sasgui.perspectives.calculator.html#sas.sasgui.perspectives.calculator.model_editor.EditorPanel.get_warning">[docs]</a>    <span class="k">def</span> <span class="nf">get_warning</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
         <span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">        Get the warning msg</span>
 <span class="sd">        &quot;&quot;&quot;</span>
         <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">warning</span></div>
 
-<div class="viewcode-block" id="EditorPanel.on_help"><a class="viewcode-back" href="../../../../../dev/api/sas.sasgui.perspectives.calculator.html#sas.sasgui.perspectives.calculator.model_editor.EditorPanel.on_help">[docs]</a>    <span class="k">def</span> <span class="nf">on_help</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">event</span><span class="p">):</span>
+<div class="viewcode-block" id="EditorPanel.on_help"><a class="viewcode-back" href="../../../../../dev/sasview-api/sas.sasgui.perspectives.calculator.html#sas.sasgui.perspectives.calculator.model_editor.EditorPanel.on_help">[docs]</a>    <span class="k">def</span> <span class="nf">on_help</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">event</span><span class="p">):</span>
         <span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">        Bring up the New Plugin Model Editor Documentation whenever</span>
 <span class="sd">        the HELP button is clicked.</span>
@@ -1200,22 +1084,22 @@
 <span class="sd">        webbrowser does not pass anything past the # to the browser when it is</span>
 <span class="sd">        running &quot;file:///....&quot;</span>
 
-<span class="sd">    :param evt: Triggers on clicking the help button</span>
-<span class="sd">    &quot;&quot;&quot;</span>
+<span class="sd">        :param evt: Triggers on clicking the help button</span>
+<span class="sd">        &quot;&quot;&quot;</span>
 
         <span class="n">_TreeLocation</span> <span class="o">=</span> <span class="s2">&quot;user/sasgui/perspectives/fitting/fitting_help.html&quot;</span>
         <span class="n">_PageAnchor</span> <span class="o">=</span> <span class="s2">&quot;#new-plugin-model&quot;</span>
         <span class="n">_doc_viewer</span> <span class="o">=</span> <span class="n">DocumentationWindow</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="o">-</span><span class="mi">1</span><span class="p">,</span> <span class="n">_TreeLocation</span><span class="p">,</span> <span class="n">_PageAnchor</span><span class="p">,</span>
                                           <span class="s2">&quot;Plugin Model Editor Help&quot;</span><span class="p">)</span></div>
 
-<div class="viewcode-block" id="EditorPanel.on_close"><a class="viewcode-back" href="../../../../../dev/api/sas.sasgui.perspectives.calculator.html#sas.sasgui.perspectives.calculator.model_editor.EditorPanel.on_close">[docs]</a>    <span class="k">def</span> <span class="nf">on_close</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">event</span><span class="p">):</span>
+<div class="viewcode-block" id="EditorPanel.on_close"><a class="viewcode-back" href="../../../../../dev/sasview-api/sas.sasgui.perspectives.calculator.html#sas.sasgui.perspectives.calculator.model_editor.EditorPanel.on_close">[docs]</a>    <span class="k">def</span> <span class="nf">on_close</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">event</span><span class="p">):</span>
         <span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">        leave data as it is and close</span>
 <span class="sd">        &quot;&quot;&quot;</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">parent</span><span class="o">.</span><span class="n">Show</span><span class="p">(</span><span class="bp">False</span><span class="p">)</span><span class="c1">#Close()</span>
         <span class="n">event</span><span class="o">.</span><span class="n">Skip</span><span class="p">()</span></div></div>
 
-<div class="viewcode-block" id="EditorWindow"><a class="viewcode-back" href="../../../../../dev/api/sas.sasgui.perspectives.calculator.html#sas.sasgui.perspectives.calculator.model_editor.EditorWindow">[docs]</a><span class="k">class</span> <span class="nc">EditorWindow</span><span class="p">(</span><span class="n">wx</span><span class="o">.</span><span class="n">Frame</span><span class="p">):</span>
+<div class="viewcode-block" id="EditorWindow"><a class="viewcode-back" href="../../../../../dev/sasview-api/sas.sasgui.perspectives.calculator.html#sas.sasgui.perspectives.calculator.model_editor.EditorWindow">[docs]</a><span class="k">class</span> <span class="nc">EditorWindow</span><span class="p">(</span><span class="n">wx</span><span class="o">.</span><span class="n">Frame</span><span class="p">):</span>
     <span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">    Editor Window</span>
 <span class="sd">    &quot;&quot;&quot;</span>
@@ -1233,422 +1117,60 @@
         <span class="bp">self</span><span class="o">.</span><span class="n">Show</span><span class="p">(</span><span class="bp">True</span><span class="p">)</span>
         <span class="n">wx</span><span class="o">.</span><span class="n">EVT_CLOSE</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">on_close</span><span class="p">)</span>
 
-<div class="viewcode-block" id="EditorWindow.on_close"><a class="viewcode-back" href="../../../../../dev/api/sas.sasgui.perspectives.calculator.html#sas.sasgui.perspectives.calculator.model_editor.EditorWindow.on_close">[docs]</a>    <span class="k">def</span> <span class="nf">on_close</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">event</span><span class="p">):</span>
+<div class="viewcode-block" id="EditorWindow.on_close"><a class="viewcode-back" href="../../../../../dev/sasview-api/sas.sasgui.perspectives.calculator.html#sas.sasgui.perspectives.calculator.model_editor.EditorWindow.on_close">[docs]</a>    <span class="k">def</span> <span class="nf">on_close</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">event</span><span class="p">):</span>
         <span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">        On close event</span>
 <span class="sd">        &quot;&quot;&quot;</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">Show</span><span class="p">(</span><span class="bp">False</span><span class="p">)</span></div></div>
-        <span class="c1">#if self.parent != None:</span>
+        <span class="c1">#if self.parent is not None:</span>
         <span class="c1">#    self.parent.new_model_frame = None</span>
         <span class="c1">#self.Destroy()</span>
 
 <span class="c1">## Templates for plugin models</span>
 
-<span class="n">CUSTOM_TEMPLATE</span> <span class="o">=</span> <span class="s2">&quot;&quot;&quot;</span>
-<span class="s2">from math import *</span>
-<span class="s2">import os</span>
-<span class="s2">import sys</span>
-<span class="s2">import numpy</span>
+<span class="n">CUSTOM_TEMPLATE</span> <span class="o">=</span> <span class="s1">&#39;&#39;&#39;</span><span class="se">\</span>
+<span class="s1">r&quot;&quot;&quot;</span>
+<span class="s1">Definition</span>
+<span class="s1">----------</span>
 
-<span class="s2">#name </span>
+<span class="s1">Calculates </span><span class="si">%(name)s</span><span class="s1">.</span>
 
-<span class="s2">#title</span>
+<span class="si">%(description)s</span><span class="s1"></span>
 
-<span class="s2">#description</span>
+<span class="s1">References</span>
+<span class="s1">----------</span>
 
-<span class="s2">#parameters </span>
+<span class="s1">Authorship and Verification</span>
+<span class="s1">---------------------------</span>
 
-<span class="s2">&quot;&quot;&quot;</span>
+<span class="s1">* **Author:** --- **Date:** </span><span class="si">%(date)s</span><span class="s1"></span>
+<span class="s1">* **Last Modified by:** --- **Date:** </span><span class="si">%(date)s</span><span class="s1"></span>
+<span class="s1">* **Last Reviewed by:** --- **Date:** </span><span class="si">%(date)s</span><span class="s1"></span>
+<span class="s1">&quot;&quot;&quot;</span>
 
-<span class="n">CUSTOM_2D_TEMP</span> <span class="o">=</span> <span class="s2">&quot;&quot;&quot;</span>
-<span class="s2">    def run(self, x=0.0, y=0.0):</span>
-<span class="s2">        if x.__class__.__name__ == &#39;list&#39;:</span>
-<span class="s2">            x_val = x[0]</span>
-<span class="s2">            y_val = y[0]*0.0</span>
-<span class="s2">            return self.function(x_val, y_val)</span>
-<span class="s2">        elif x.__class__.__name__ == &#39;tuple&#39;:</span>
-<span class="s2">            msg = &quot;Tuples are not allowed as input to BaseComponent models&quot;</span>
-<span class="s2">            raise ValueError, msg</span>
-<span class="s2">        else:</span>
-<span class="s2">            return self.function(x, 0.0)</span>
-<span class="s2">    def runXY(self, x=0.0, y=0.0):</span>
-<span class="s2">        if x.__class__.__name__ == &#39;list&#39;:</span>
-<span class="s2">            return self.function(x, y)</span>
-<span class="s2">        elif x.__class__.__name__ == &#39;tuple&#39;:</span>
-<span class="s2">            msg = &quot;Tuples are not allowed as input to BaseComponent models&quot;</span>
-<span class="s2">            raise ValueError, msg</span>
-<span class="s2">        else:</span>
-<span class="s2">            return self.function(x, y)</span>
-<span class="s2">    def evalDistribution(self, qdist):</span>
-<span class="s2">        if qdist.__class__.__name__ == &#39;list&#39;:</span>
-<span class="s2">            msg = &quot;evalDistribution expects a list of 2 ndarrays&quot;</span>
-<span class="s2">            if len(qdist)!=2:</span>
-<span class="s2">                raise RuntimeError, msg</span>
-<span class="s2">            if qdist[0].__class__.__name__ != &#39;ndarray&#39;:</span>
-<span class="s2">                raise RuntimeError, msg</span>
-<span class="s2">            if qdist[1].__class__.__name__ != &#39;ndarray&#39;:</span>
-<span class="s2">                raise RuntimeError, msg</span>
-<span class="s2">            v_model = numpy.vectorize(self.runXY, otypes=[float])</span>
-<span class="s2">            iq_array = v_model(qdist[0], qdist[1])</span>
-<span class="s2">            return iq_array</span>
-<span class="s2">        elif qdist.__class__.__name__ == &#39;ndarray&#39;:</span>
-<span class="s2">            v_model = numpy.vectorize(self.runXY, otypes=[float])</span>
-<span class="s2">            iq_array = v_model(qdist)</span>
-<span class="s2">            return iq_array</span>
-<span class="s2">&quot;&quot;&quot;</span>
-<span class="n">TEST_TEMPLATE</span> <span class="o">=</span> <span class="s2">&quot;&quot;&quot;</span>
-<span class="s2">######################################################################</span>
-<span class="s2">## THIS IS FOR TEST. DO NOT MODIFY THE FOLLOWING LINES!!!!!!!!!!!!!!!!</span>
-<span class="s2">if __name__ == &quot;__main__&quot;:</span>
-<span class="s2">    m= Model()</span>
-<span class="s2">    out1 = m.runXY(0.0)</span>
-<span class="s2">    out2 = m.runXY(0.01)</span>
-<span class="s2">    isfine1 = numpy.isfinite(out1)</span>
-<span class="s2">    isfine2 = numpy.isfinite(out2)</span>
-<span class="s2">    print &quot;Testing the value at Q = 0.0:&quot;</span>
-<span class="s2">    print out1, &quot; : finite? &quot;, isfine1</span>
-<span class="s2">    print &quot;Testing the value at Q = 0.01:&quot;</span>
-<span class="s2">    print out2, &quot; : finite? &quot;, isfine2</span>
-<span class="s2">    if isfine1 and isfine2:</span>
-<span class="s2">        print &quot;===&gt; Simple Test: Passed!&quot;</span>
-<span class="s2">    else:</span>
-<span class="s2">        print &quot;===&gt; Simple Test: Failed!&quot;</span>
-<span class="s2">&quot;&quot;&quot;</span>
+<span class="s1">from math import *</span>
+<span class="s1">from numpy import inf</span>
+
+<span class="s1">name = &quot;</span><span class="si">%(name)s</span><span class="s1">&quot;</span>
+<span class="s1">title = &quot;</span><span class="si">%(title)s</span><span class="s1">&quot;</span>
+<span class="s1">description = &quot;&quot;&quot;</span><span class="si">%(description)s</span><span class="s1">&quot;&quot;&quot;</span>
+
+<span class="s1">&#39;&#39;&#39;</span>
+
 <span class="n">SUM_TEMPLATE</span> <span class="o">=</span> <span class="s2">&quot;&quot;&quot;</span>
-<span class="s2"># A sample of an experimental model function for Sum/Multiply(Pmodel1,Pmodel2)</span>
-<span class="s2">import os</span>
-<span class="s2">import sys</span>
-<span class="s2">import copy</span>
-<span class="s2">import collections</span>
+<span class="s2">from sasmodels.core import load_model_info</span>
+<span class="s2">from sasmodels.sasview_model import make_model_from_info</span>
 
-<span class="s2">import numpy</span>
-
-<span class="s2">from sas.sascalc.fit.pluginmodel import Model1DPlugin</span>
-<span class="s2">from sasmodels.sasview_model import find_model</span>
-
-<span class="s2">class Model(Model1DPlugin):</span>
-<span class="s2">    name = os.path.splitext(os.path.basename(__file__))[0]</span>
-<span class="s2">    is_multiplicity_model = False</span>
-<span class="s2">    def __init__(self, multiplicity=1):</span>
-<span class="s2">        Model1DPlugin.__init__(self, name=&#39;&#39;)</span>
-<span class="s2">        P1 = find_model(&#39;</span><span class="si">%s</span><span class="s2">&#39;)</span>
-<span class="s2">        P2 = find_model(&#39;</span><span class="si">%s</span><span class="s2">&#39;)</span>
-<span class="s2">        p_model1 = P1()</span>
-<span class="s2">        p_model2 = P2()</span>
-<span class="s2">        ## Setting  model name model description</span>
-<span class="s2">        self.description = &#39;</span><span class="si">%s</span><span class="s2">&#39;</span>
-<span class="s2">        if self.name.rstrip().lstrip() == &#39;&#39;:</span>
-<span class="s2">            self.name = self._get_name(p_model1.name, p_model2.name)</span>
-<span class="s2">        if self.description.rstrip().lstrip() == &#39;&#39;:</span>
-<span class="s2">            self.description = p_model1.name</span>
-<span class="s2">            self.description += p_model2.name</span>
-<span class="s2">            self.fill_description(p_model1, p_model2)</span>
-
-<span class="s2">        ## Define parameters</span>
-<span class="s2">        self.params = collections.OrderedDict()</span>
-
-<span class="s2">        ## Parameter details [units, min, max]</span>
-<span class="s2">        self.details = {}</span>
-<span class="s2">        ## Magnetic Panrameters</span>
-<span class="s2">        self.magnetic_params = []</span>
-<span class="s2">        # non-fittable parameters</span>
-<span class="s2">        self.non_fittable = p_model1.non_fittable</span>
-<span class="s2">        self.non_fittable += p_model2.non_fittable</span>
-
-<span class="s2">        ##models</span>
-<span class="s2">        self.p_model1= p_model1</span>
-<span class="s2">        self.p_model2= p_model2</span>
-
-
-<span class="s2">        ## dispersion</span>
-<span class="s2">        self._set_dispersion()</span>
-<span class="s2">        ## Define parameters</span>
-<span class="s2">        self._set_params()</span>
-<span class="s2">        ## New parameter:scaling_factor</span>
-<span class="s2">        self.params[&#39;scale_factor&#39;] = </span><span class="si">%s</span><span class="s2"></span>
-
-<span class="s2">        ## Parameter details [units, min, max]</span>
-<span class="s2">        self._set_details()</span>
-<span class="s2">        self.details[&#39;scale_factor&#39;] = [&#39;&#39;, 0.0, numpy.inf]</span>
-
-
-<span class="s2">        #list of parameter that can be fitted</span>
-<span class="s2">        self._set_fixed_params()</span>
-
-<span class="s2">        ## parameters with orientation</span>
-<span class="s2">        self.orientation_params = []</span>
-<span class="s2">        for item in self.p_model1.orientation_params:</span>
-<span class="s2">            new_item = &quot;p1_&quot; + item</span>
-<span class="s2">            if not new_item in self.orientation_params:</span>
-<span class="s2">                self.orientation_params.append(new_item)</span>
-
-<span class="s2">        for item in self.p_model2.orientation_params:</span>
-<span class="s2">            new_item = &quot;p2_&quot; + item</span>
-<span class="s2">            if not new_item in self.orientation_params:</span>
-<span class="s2">                self.orientation_params.append(new_item)</span>
-<span class="s2">        ## magnetic params</span>
-<span class="s2">        self.magnetic_params = []</span>
-<span class="s2">        for item in self.p_model1.magnetic_params:</span>
-<span class="s2">            new_item = &quot;p1_&quot; + item</span>
-<span class="s2">            if not new_item in self.magnetic_params:</span>
-<span class="s2">                self.magnetic_params.append(new_item)</span>
-
-<span class="s2">        for item in self.p_model2.magnetic_params:</span>
-<span class="s2">            new_item = &quot;p2_&quot; + item</span>
-<span class="s2">            if not new_item in self.magnetic_params:</span>
-<span class="s2">                self.magnetic_params.append(new_item)</span>
-<span class="s2">        # get multiplicity if model provide it, else 1.</span>
-<span class="s2">        try:</span>
-<span class="s2">            multiplicity1 = p_model1.multiplicity</span>
-<span class="s2">            try:</span>
-<span class="s2">                multiplicity2 = p_model2.multiplicity</span>
-<span class="s2">            except:</span>
-<span class="s2">                multiplicity2 = 1</span>
-<span class="s2">        except:</span>
-<span class="s2">            multiplicity1 = 1</span>
-<span class="s2">            multiplicity2 = 1</span>
-<span class="s2">        ## functional multiplicity of the model</span>
-<span class="s2">        self.multiplicity1 = multiplicity1</span>
-<span class="s2">        self.multiplicity2 = multiplicity2</span>
-<span class="s2">        self.multiplicity_info = []</span>
-
-<span class="s2">    def _clone(self, obj):</span>
-<span class="s2">        import copy</span>
-<span class="s2">        obj.params     = copy.deepcopy(self.params)</span>
-<span class="s2">        obj.description     = copy.deepcopy(self.description)</span>
-<span class="s2">        obj.details    = copy.deepcopy(self.details)</span>
-<span class="s2">        obj.dispersion = copy.deepcopy(self.dispersion)</span>
-<span class="s2">        obj.p_model1  = self.p_model1.clone()</span>
-<span class="s2">        obj.p_model2  = self.p_model2.clone()</span>
-<span class="s2">        #obj = copy.deepcopy(self)</span>
-<span class="s2">        return obj</span>
-
-<span class="s2">    def _get_name(self, name1, name2):</span>
-<span class="s2">        p1_name = self._get_upper_name(name1)</span>
-<span class="s2">        if not p1_name:</span>
-<span class="s2">            p1_name = name1</span>
-<span class="s2">        name = p1_name</span>
-<span class="s2">        name += &quot;_and_&quot;</span>
-<span class="s2">        p2_name = self._get_upper_name(name2)</span>
-<span class="s2">        if not p2_name:</span>
-<span class="s2">            p2_name = name2</span>
-<span class="s2">        name += p2_name</span>
-<span class="s2">        return name</span>
-
-<span class="s2">    def _get_upper_name(self, name=None):</span>
-<span class="s2">        if name == None:</span>
-<span class="s2">            return &quot;&quot;</span>
-<span class="s2">        upper_name = &quot;&quot;</span>
-<span class="s2">        str_name = str(name)</span>
-<span class="s2">        for index in range(len(str_name)):</span>
-<span class="s2">            if str_name[index].isupper():</span>
-<span class="s2">                upper_name += str_name[index]</span>
-<span class="s2">        return upper_name</span>
-
-<span class="s2">    def _set_dispersion(self):</span>
-<span class="s2">        self.dispersion = collections.OrderedDict()</span>
-<span class="s2">        ##set dispersion only from p_model</span>
-<span class="s2">        for name , value in self.p_model1.dispersion.iteritems():</span>
-<span class="s2">            #if name.lower() not in self.p_model1.orientation_params:</span>
-<span class="s2">            new_name = &quot;p1_&quot; + name</span>
-<span class="s2">            self.dispersion[new_name]= value</span>
-<span class="s2">        for name , value in self.p_model2.dispersion.iteritems():</span>
-<span class="s2">            #if name.lower() not in self.p_model2.orientation_params:</span>
-<span class="s2">            new_name = &quot;p2_&quot; + name</span>
-<span class="s2">            self.dispersion[new_name]= value</span>
-
-<span class="s2">    def function(self, x=0.0):</span>
-<span class="s2">        return 0</span>
-
-<span class="s2">    def getProfile(self):</span>
-<span class="s2">        try:</span>
-<span class="s2">            x,y = self.p_model1.getProfile()</span>
-<span class="s2">        except:</span>
-<span class="s2">            x = None</span>
-<span class="s2">            y = None</span>
-
-<span class="s2">        return x, y</span>
-
-<span class="s2">    def _set_params(self):</span>
-<span class="s2">        for name , value in self.p_model1.params.iteritems():</span>
-<span class="s2">            # No 2D-supported</span>
-<span class="s2">            #if name not in self.p_model1.orientation_params:</span>
-<span class="s2">            new_name = &quot;p1_&quot; + name</span>
-<span class="s2">            self.params[new_name]= value</span>
-
-<span class="s2">        for name , value in self.p_model2.params.iteritems():</span>
-<span class="s2">            # No 2D-supported</span>
-<span class="s2">            #if name not in self.p_model2.orientation_params:</span>
-<span class="s2">            new_name = &quot;p2_&quot; + name</span>
-<span class="s2">            self.params[new_name]= value</span>
-
-<span class="s2">        # Set &quot;scale&quot; as initializing</span>
-<span class="s2">        self._set_scale_factor()</span>
-
-
-<span class="s2">    def _set_details(self):</span>
-<span class="s2">        for name ,detail in self.p_model1.details.iteritems():</span>
-<span class="s2">            new_name = &quot;p1_&quot; + name</span>
-<span class="s2">            #if new_name not in self.orientation_params:</span>
-<span class="s2">            self.details[new_name]= detail</span>
-
-<span class="s2">        for name ,detail in self.p_model2.details.iteritems():</span>
-<span class="s2">            new_name = &quot;p2_&quot; + name</span>
-<span class="s2">            #if new_name not in self.orientation_params:</span>
-<span class="s2">            self.details[new_name]= detail</span>
-
-<span class="s2">    def _set_scale_factor(self):</span>
-<span class="s2">        pass</span>
-
-
-<span class="s2">    def setParam(self, name, value):</span>
-<span class="s2">        # set param to this (p1, p2) model</span>
-<span class="s2">        self._setParamHelper(name, value)</span>
-
-<span class="s2">        ## setParam to p model</span>
-<span class="s2">        model_pre = &#39;&#39;</span>
-<span class="s2">        new_name = &#39;&#39;</span>
-<span class="s2">        name_split = name.split(&#39;_&#39;, 1)</span>
-<span class="s2">        if len(name_split) == 2:</span>
-<span class="s2">            model_pre = name.split(&#39;_&#39;, 1)[0]</span>
-<span class="s2">            new_name = name.split(&#39;_&#39;, 1)[1]</span>
-<span class="s2">        if model_pre == &quot;p1&quot;:</span>
-<span class="s2">            if new_name in self.p_model1.getParamList():</span>
-<span class="s2">                self.p_model1.setParam(new_name, value)</span>
-<span class="s2">        elif model_pre == &quot;p2&quot;:</span>
-<span class="s2">             if new_name in self.p_model2.getParamList():</span>
-<span class="s2">                self.p_model2.setParam(new_name, value)</span>
-<span class="s2">        elif name == &#39;scale_factor&#39;:</span>
-<span class="s2">            self.params[&#39;scale_factor&#39;] = value</span>
-<span class="s2">        else:</span>
-<span class="s2">            raise ValueError, &quot;Model does not contain parameter </span><span class="si">%s</span><span class="s2">&quot; % name</span>
-
-<span class="s2">    def getParam(self, name):</span>
-<span class="s2">        # Look for dispersion parameters</span>
-<span class="s2">        toks = name.split(&#39;.&#39;)</span>
-<span class="s2">        if len(toks)==2:</span>
-<span class="s2">            for item in self.dispersion.keys():</span>
-<span class="s2">                # 2D not supported</span>
-<span class="s2">                if item.lower()==toks[0].lower():</span>
-<span class="s2">                    for par in self.dispersion[item]:</span>
-<span class="s2">                        if par.lower() == toks[1].lower():</span>
-<span class="s2">                            return self.dispersion[item][par]</span>
-<span class="s2">        else:</span>
-<span class="s2">            # Look for standard parameter</span>
-<span class="s2">            for item in self.params.keys():</span>
-<span class="s2">                if item.lower()==name.lower():</span>
-<span class="s2">                    return self.params[item]</span>
-<span class="s2">        return</span>
-<span class="s2">        #raise ValueError, &quot;Model does not contain parameter </span><span class="si">%s</span><span class="s2">&quot; % name</span>
-
-<span class="s2">    def _setParamHelper(self, name, value):</span>
-<span class="s2">        # Look for dispersion parameters</span>
-<span class="s2">        toks = name.split(&#39;.&#39;)</span>
-<span class="s2">        if len(toks)== 2:</span>
-<span class="s2">            for item in self.dispersion.keys():</span>
-<span class="s2">                if item.lower()== toks[0].lower():</span>
-<span class="s2">                    for par in self.dispersion[item]:</span>
-<span class="s2">                        if par.lower() == toks[1].lower():</span>
-<span class="s2">                            self.dispersion[item][par] = value</span>
-<span class="s2">                            return</span>
-<span class="s2">        else:</span>
-<span class="s2">            # Look for standard parameter</span>
-<span class="s2">            for item in self.params.keys():</span>
-<span class="s2">                if item.lower()== name.lower():</span>
-<span class="s2">                    self.params[item] = value</span>
-<span class="s2">                    return</span>
-
-<span class="s2">        raise ValueError, &quot;Model does not contain parameter </span><span class="si">%s</span><span class="s2">&quot; % name</span>
-
-
-<span class="s2">    def _set_fixed_params(self):</span>
-<span class="s2">        self.fixed = []</span>
-<span class="s2">        for item in self.p_model1.fixed:</span>
-<span class="s2">            new_item = &quot;p1&quot; + item</span>
-<span class="s2">            self.fixed.append(new_item)</span>
-<span class="s2">        for item in self.p_model2.fixed:</span>
-<span class="s2">            new_item = &quot;p2&quot; + item</span>
-<span class="s2">            self.fixed.append(new_item)</span>
-
-<span class="s2">        self.fixed.sort()</span>
-
-
-<span class="s2">    def run(self, x = 0.0):</span>
-<span class="s2">        self._set_scale_factor()</span>
-<span class="s2">        return self.params[&#39;scale_factor&#39;] </span><span class="si">%s</span><span class="s2"> </span><span class="se">\</span>
-<span class="s2">(self.p_model1.run(x) </span><span class="si">%s</span><span class="s2"> self.p_model2.run(x))</span>
-
-<span class="s2">    def runXY(self, x = 0.0):</span>
-<span class="s2">        self._set_scale_factor()</span>
-<span class="s2">        return self.params[&#39;scale_factor&#39;] </span><span class="si">%s</span><span class="s2"> </span><span class="se">\</span>
-<span class="s2">(self.p_model1.runXY(x) </span><span class="si">%s</span><span class="s2"> self.p_model2.runXY(x))</span>
-
-<span class="s2">    ## Now (May27,10) directly uses the model eval function</span>
-<span class="s2">    ## instead of the for-loop in Base Component.</span>
-<span class="s2">    def evalDistribution(self, x = []):</span>
-<span class="s2">        self._set_scale_factor()</span>
-<span class="s2">        return self.params[&#39;scale_factor&#39;] </span><span class="si">%s</span><span class="s2"> </span><span class="se">\</span>
-<span class="s2">(self.p_model1.evalDistribution(x) </span><span class="si">%s</span><span class="s2"> </span><span class="se">\</span>
-<span class="s2">self.p_model2.evalDistribution(x))</span>
-
-<span class="s2">    def set_dispersion(self, parameter, dispersion):</span>
-<span class="s2">        value= None</span>
-<span class="s2">        new_pre = parameter.split(&quot;_&quot;, 1)[0]</span>
-<span class="s2">        new_parameter = parameter.split(&quot;_&quot;, 1)[1]</span>
-<span class="s2">        try:</span>
-<span class="s2">            if new_pre == &#39;p1&#39; and </span><span class="se">\</span>
-<span class="s2">new_parameter in self.p_model1.dispersion.keys():</span>
-<span class="s2">                value= self.p_model1.set_dispersion(new_parameter, dispersion)</span>
-<span class="s2">            if new_pre == &#39;p2&#39; and </span><span class="se">\</span>
-<span class="s2">new_parameter in self.p_model2.dispersion.keys():</span>
-<span class="s2">                value= self.p_model2.set_dispersion(new_parameter, dispersion)</span>
-<span class="s2">            self._set_dispersion()</span>
-<span class="s2">            return value</span>
-<span class="s2">        except:</span>
-<span class="s2">            raise</span>
-
-<span class="s2">    def fill_description(self, p_model1, p_model2):</span>
-<span class="s2">        description = &quot;&quot;</span>
-<span class="s2">        description += &quot;This model gives the summation or multiplication of&quot;</span>
-<span class="s2">        description += &quot;</span><span class="si">%s</span><span class="s2"> and </span><span class="si">%s</span><span class="s2">. &quot;% ( p_model1.name, p_model2.name )</span>
-<span class="s2">        self.description += description</span>
-
-<span class="s2">if __name__ == &quot;__main__&quot;:</span>
-<span class="s2">    m1= Model()</span>
-<span class="s2">    #m1.setParam(&quot;p1_scale&quot;, 25)</span>
-<span class="s2">    #m1.setParam(&quot;p1_length&quot;, 1000)</span>
-<span class="s2">    #m1.setParam(&quot;p2_scale&quot;, 100)</span>
-<span class="s2">    #m1.setParam(&quot;p2_rg&quot;, 100)</span>
-<span class="s2">    out1 = m1.runXY(0.01)</span>
-
-<span class="s2">    m2= Model()</span>
-<span class="s2">    #m2.p_model1.setParam(&quot;scale&quot;, 25)</span>
-<span class="s2">    #m2.p_model1.setParam(&quot;length&quot;, 1000)</span>
-<span class="s2">    #m2.p_model2.setParam(&quot;scale&quot;, 100)</span>
-<span class="s2">    #m2.p_model2.setParam(&quot;rg&quot;, 100)</span>
-<span class="s2">    out2 = m2.p_model1.runXY(0.01) </span><span class="si">%s</span><span class="s2"> m2.p_model2.runXY(0.01)</span><span class="se">\n</span><span class="s2"></span>
-<span class="s2">    print &quot;My name is </span><span class="si">%s</span><span class="s2">.&quot;% m1.name</span>
-<span class="s2">    print out1, &quot; = &quot;, out2</span>
-<span class="s2">    if out1 == out2:</span>
-<span class="s2">        print &quot;===&gt; Simple Test: Passed!&quot;</span>
-<span class="s2">    else:</span>
-<span class="s2">        print &quot;===&gt; Simple Test: Failed!&quot;</span>
+<span class="s2">model_info = load_model_info(&#39;{model1}{operator}{model2}&#39;)</span>
+<span class="s2">model_info.name = &#39;{name}&#39;{desc_line}</span>
+<span class="s2">Model = make_model_from_info(model_info)</span>
 <span class="s2">&quot;&quot;&quot;</span>
-
 <span class="k">if</span> <span class="n">__name__</span> <span class="o">==</span> <span class="s2">&quot;__main__&quot;</span><span class="p">:</span>
-<span class="c1">#    app = wx.PySimpleApp()</span>
     <span class="n">main_app</span> <span class="o">=</span> <span class="n">wx</span><span class="o">.</span><span class="n">App</span><span class="p">()</span>
     <span class="n">main_frame</span> <span class="o">=</span> <span class="n">TextDialog</span><span class="p">(</span><span class="nb">id</span><span class="o">=</span><span class="mi">1</span><span class="p">,</span> <span class="n">model_list</span><span class="o">=</span><span class="p">[</span><span class="s2">&quot;SphereModel&quot;</span><span class="p">,</span> <span class="s2">&quot;CylinderModel&quot;</span><span class="p">],</span>
-                       <span class="n">plugin_dir</span><span class="o">=</span><span class="s1">&#39;../fitting/plugin_models&#39;</span><span class="p">)</span>
+                            <span class="n">plugin_dir</span><span class="o">=</span><span class="s1">&#39;../fitting/plugin_models&#39;</span><span class="p">)</span>
     <span class="n">main_frame</span><span class="o">.</span><span class="n">ShowModal</span><span class="p">()</span>
     <span class="n">main_app</span><span class="o">.</span><span class="n">MainLoop</span><span class="p">()</span>
-
-<span class="c1">#if __name__ == &quot;__main__&quot;:</span>
-<span class="c1">#    from sas.sasgui.perspectives.fitting import models</span>
-<span class="c1">#    dir_path = models.find_plugins_dir()</span>
-<span class="c1">#    app = wx.App()</span>
-<span class="c1">#    window = EditorWindow(parent=None, base=None, path=dir_path, title=&quot;Editor&quot;)</span>
-<span class="c1">#    app.MainLoop()</span>
 </pre></div>
 
           </div>
@@ -1679,13 +1201,14 @@
         <li class="right" >
           <a href="../../../../../py-modindex.html" title="Python Module Index"
              >modules</a> |</li>
-        <li class="nav-item nav-item-0"><a href="../../../../../index.html">SasView 4.1.2 documentation</a> &raquo;</li>
+        <li class="nav-item nav-item-0"><a href="../../../../../index.html">SasView 4.2.0 documentation</a> &raquo;</li>
           <li class="nav-item nav-item-1"><a href="../../../../index.html" >Module code</a> &raquo;</li>
-          <li class="nav-item nav-item-2"><a href="../calculator.html" >sas.sasgui.perspectives.calculator</a> &raquo;</li> 
+          <li class="nav-item nav-item-2"><a href="../../../../sas.html" >sas</a> &raquo;</li>
+          <li class="nav-item nav-item-3"><a href="../calculator.html" >sas.sasgui.perspectives.calculator</a> &raquo;</li> 
       </ul>
     </div>
     <div class="footer" role="contentinfo">
-        &copy; Copyright 2017, The SasView Project.
+        &copy; Copyright 2018, The SasView Project.
       Created using <a href="http://sphinx-doc.org/">Sphinx</a> 1.4.1.
     </div>
   </body>

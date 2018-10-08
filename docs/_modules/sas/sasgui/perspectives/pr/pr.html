@@ -6,7 +6,7 @@
   <head>
     <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
     
-    <title>sas.sasgui.perspectives.pr.pr &mdash; SasView 4.1.2 documentation</title>
+    <title>sas.sasgui.perspectives.pr.pr &mdash; SasView 4.2.0 documentation</title>
     
     <link rel="stylesheet" href="../../../../../_static/classic.css" type="text/css" />
     <link rel="stylesheet" href="../../../../../_static/pygments.css" type="text/css" />
@@ -14,7 +14,7 @@
     <script type="text/javascript">
       var DOCUMENTATION_OPTIONS = {
         URL_ROOT:    '../../../../../',
-        VERSION:     '4.1.2',
+        VERSION:     '4.2.0',
         COLLAPSE_INDEX: false,
         FILE_SUFFIX: '.html',
         HAS_SOURCE:  true
@@ -24,8 +24,8 @@
     <script type="text/javascript" src="../../../../../_static/underscore.js"></script>
     <script type="text/javascript" src="../../../../../_static/doctools.js"></script>
     <script type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.1/MathJax.js?config=TeX-MML-AM_CHTML"></script>
-    <link rel="top" title="SasView 4.1.2 documentation" href="../../../../../index.html" />
-    <link rel="up" title="Module code" href="../../../../index.html" /> 
+    <link rel="top" title="SasView 4.2.0 documentation" href="../../../../../index.html" />
+    <link rel="up" title="sas" href="../../../../sas.html" /> 
   </head>
   <body role="document">
     <div class="related" role="navigation" aria-label="related navigation">
@@ -37,8 +37,9 @@
         <li class="right" >
           <a href="../../../../../py-modindex.html" title="Python Module Index"
              >modules</a> |</li>
-        <li class="nav-item nav-item-0"><a href="../../../../../index.html">SasView 4.1.2 documentation</a> &raquo;</li>
-          <li class="nav-item nav-item-1"><a href="../../../../index.html" accesskey="U">Module code</a> &raquo;</li> 
+        <li class="nav-item nav-item-0"><a href="../../../../../index.html">SasView 4.2.0 documentation</a> &raquo;</li>
+          <li class="nav-item nav-item-1"><a href="../../../../index.html" >Module code</a> &raquo;</li>
+          <li class="nav-item nav-item-2"><a href="../../../../sas.html" accesskey="U">sas</a> &raquo;</li> 
       </ul>
     </div>  
 
@@ -64,13 +65,14 @@
 
 <span class="c1"># Make sure the option of saving each curve is available</span>
 <span class="c1"># Use the I(q) curve as input and compare the output to P(r)</span>
+<span class="kn">from</span> <span class="nn">__future__</span> <span class="kn">import</span> <span class="n">print_function</span>
 
 <span class="kn">import</span> <span class="nn">sys</span>
 <span class="kn">import</span> <span class="nn">wx</span>
 <span class="kn">import</span> <span class="nn">logging</span>
 <span class="kn">import</span> <span class="nn">time</span>
 <span class="kn">import</span> <span class="nn">math</span>
-<span class="kn">import</span> <span class="nn">numpy</span>
+<span class="kn">import</span> <span class="nn">numpy</span> <span class="kn">as</span> <span class="nn">np</span>
 <span class="kn">import</span> <span class="nn">pylab</span>
 <span class="kn">from</span> <span class="nn">sas.sasgui.guiframe.gui_manager</span> <span class="kn">import</span> <span class="n">MDIFrame</span>
 <span class="kn">from</span> <span class="nn">sas.sasgui.guiframe.dataFitting</span> <span class="kn">import</span> <span class="n">Data1D</span>
@@ -84,6 +86,8 @@
 <span class="kn">from</span> <span class="nn">pr_widgets</span> <span class="kn">import</span> <span class="n">load_error</span>
 <span class="kn">from</span> <span class="nn">sas.sasgui.guiframe.plugin_base</span> <span class="kn">import</span> <span class="n">PluginBase</span>
 
+<span class="n">logger</span> <span class="o">=</span> <span class="n">logging</span><span class="o">.</span><span class="n">getLogger</span><span class="p">(</span><span class="n">__name__</span><span class="p">)</span>
+
 
 <span class="n">PR_FIT_LABEL</span> <span class="o">=</span> <span class="s2">r&quot;$P_{fit}(r)$&quot;</span>
 <span class="n">PR_LOADED_LABEL</span> <span class="o">=</span> <span class="s2">r&quot;$P_{loaded}(r)$&quot;</span>
@@ -95,7 +99,7 @@
 
 
 
-<div class="viewcode-block" id="Plugin"><a class="viewcode-back" href="../../../../../dev/api/sas.sasgui.perspectives.pr.html#sas.sasgui.perspectives.pr.pr.Plugin">[docs]</a><span class="k">class</span> <span class="nc">Plugin</span><span class="p">(</span><span class="n">PluginBase</span><span class="p">):</span>
+<div class="viewcode-block" id="Plugin"><a class="viewcode-back" href="../../../../../dev/sasview-api/sas.sasgui.perspectives.pr.html#sas.sasgui.perspectives.pr.pr.Plugin">[docs]</a><span class="k">class</span> <span class="nc">Plugin</span><span class="p">(</span><span class="n">PluginBase</span><span class="p">):</span>
     <span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">        P(r) inversion perspective</span>
 <span class="sd">    &quot;&quot;&quot;</span>
@@ -114,7 +118,8 @@
         <span class="bp">self</span><span class="o">.</span><span class="n">max_length</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">DEFAULT_DMAX</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">q_min</span> <span class="o">=</span> <span class="bp">None</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">q_max</span> <span class="o">=</span> <span class="bp">None</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">has_bck</span> <span class="o">=</span> <span class="bp">False</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">est_bck</span> <span class="o">=</span> <span class="bp">False</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">bck_val</span> <span class="o">=</span> <span class="mi">0</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">slit_height</span> <span class="o">=</span> <span class="mi">0</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">slit_width</span> <span class="o">=</span> <span class="mi">0</span>
         <span class="c1">## Remember last plottable processed</span>
@@ -162,21 +167,21 @@
         <span class="c1">#l.associate_file_reader(&quot;.svs&quot;, self.state_reader)</span>
 
         <span class="c1"># Log startup</span>
-        <span class="n">logging</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="s2">&quot;Pr(r) plug-in started&quot;</span><span class="p">)</span>
+        <span class="n">logger</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="s2">&quot;Pr(r) plug-in started&quot;</span><span class="p">)</span>
 
-<div class="viewcode-block" id="Plugin.delete_data"><a class="viewcode-back" href="../../../../../dev/api/sas.sasgui.perspectives.pr.html#sas.sasgui.perspectives.pr.pr.Plugin.delete_data">[docs]</a>    <span class="k">def</span> <span class="nf">delete_data</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">data_id</span><span class="p">):</span>
+<div class="viewcode-block" id="Plugin.delete_data"><a class="viewcode-back" href="../../../../../dev/sasview-api/sas.sasgui.perspectives.pr.html#sas.sasgui.perspectives.pr.pr.Plugin.delete_data">[docs]</a>    <span class="k">def</span> <span class="nf">delete_data</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">data_id</span><span class="p">):</span>
         <span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">        delete the data association with prview</span>
 <span class="sd">        &quot;&quot;&quot;</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">control_panel</span><span class="o">.</span><span class="n">clear_panel</span><span class="p">()</span></div>
 
-<div class="viewcode-block" id="Plugin.get_data"><a class="viewcode-back" href="../../../../../dev/api/sas.sasgui.perspectives.pr.html#sas.sasgui.perspectives.pr.pr.Plugin.get_data">[docs]</a>    <span class="k">def</span> <span class="nf">get_data</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+<div class="viewcode-block" id="Plugin.get_data"><a class="viewcode-back" href="../../../../../dev/sasview-api/sas.sasgui.perspectives.pr.html#sas.sasgui.perspectives.pr.pr.Plugin.get_data">[docs]</a>    <span class="k">def</span> <span class="nf">get_data</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
         <span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">            Returns the current data</span>
 <span class="sd">        &quot;&quot;&quot;</span>
         <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">current_plottable</span></div>
 
-<div class="viewcode-block" id="Plugin.set_state"><a class="viewcode-back" href="../../../../../dev/api/sas.sasgui.perspectives.pr.html#sas.sasgui.perspectives.pr.pr.Plugin.set_state">[docs]</a>    <span class="k">def</span> <span class="nf">set_state</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">state</span><span class="o">=</span><span class="bp">None</span><span class="p">,</span> <span class="n">datainfo</span><span class="o">=</span><span class="bp">None</span><span class="p">):</span>
+<div class="viewcode-block" id="Plugin.set_state"><a class="viewcode-back" href="../../../../../dev/sasview-api/sas.sasgui.perspectives.pr.html#sas.sasgui.perspectives.pr.pr.Plugin.set_state">[docs]</a>    <span class="k">def</span> <span class="nf">set_state</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">state</span><span class="o">=</span><span class="bp">None</span><span class="p">,</span> <span class="n">datainfo</span><span class="o">=</span><span class="bp">None</span><span class="p">):</span>
         <span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">        Call-back method for the inversion state reader.</span>
 <span class="sd">        This method is called when a .prv file is loaded.</span>
@@ -230,10 +235,10 @@
                                                    <span class="n">title</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">current_plottable</span><span class="o">.</span><span class="n">title</span><span class="p">))</span>
             <span class="bp">self</span><span class="o">.</span><span class="n">control_panel</span><span class="o">.</span><span class="n">set_state</span><span class="p">(</span><span class="n">state</span><span class="p">)</span>
         <span class="k">except</span><span class="p">:</span>
-            <span class="n">logging</span><span class="o">.</span><span class="n">error</span><span class="p">(</span><span class="s2">&quot;prview.set_state: </span><span class="si">%s</span><span class="s2">&quot;</span> <span class="o">%</span> <span class="n">sys</span><span class="o">.</span><span class="n">exc_value</span><span class="p">)</span></div>
+            <span class="n">logger</span><span class="o">.</span><span class="n">error</span><span class="p">(</span><span class="s2">&quot;prview.set_state: </span><span class="si">%s</span><span class="s2">&quot;</span> <span class="o">%</span> <span class="n">sys</span><span class="o">.</span><span class="n">exc_value</span><span class="p">)</span></div>
 
 
-<div class="viewcode-block" id="Plugin.help"><a class="viewcode-back" href="../../../../../dev/api/sas.sasgui.perspectives.pr.html#sas.sasgui.perspectives.pr.pr.Plugin.help">[docs]</a>    <span class="k">def</span> <span class="nf">help</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">evt</span><span class="p">):</span>
+<div class="viewcode-block" id="Plugin.help"><a class="viewcode-back" href="../../../../../dev/sasview-api/sas.sasgui.perspectives.pr.html#sas.sasgui.perspectives.pr.pr.Plugin.help">[docs]</a>    <span class="k">def</span> <span class="nf">help</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">evt</span><span class="p">):</span>
         <span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">        Show a general help dialog.</span>
 
@@ -256,8 +261,8 @@
 
         <span class="n">r</span> <span class="o">=</span> <span class="n">pylab</span><span class="o">.</span><span class="n">arange</span><span class="p">(</span><span class="mf">0.01</span><span class="p">,</span> <span class="n">d_max</span><span class="p">,</span> <span class="n">d_max</span> <span class="o">/</span> <span class="mf">51.0</span><span class="p">)</span>
         <span class="n">M</span> <span class="o">=</span> <span class="nb">len</span><span class="p">(</span><span class="n">r</span><span class="p">)</span>
-        <span class="n">y</span> <span class="o">=</span> <span class="n">numpy</span><span class="o">.</span><span class="n">zeros</span><span class="p">(</span><span class="n">M</span><span class="p">)</span>
-        <span class="n">pr_err</span> <span class="o">=</span> <span class="n">numpy</span><span class="o">.</span><span class="n">zeros</span><span class="p">(</span><span class="n">M</span><span class="p">)</span>
+        <span class="n">y</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">zeros</span><span class="p">(</span><span class="n">M</span><span class="p">)</span>
+        <span class="n">pr_err</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">zeros</span><span class="p">(</span><span class="n">M</span><span class="p">)</span>
 
         <span class="n">total</span> <span class="o">=</span> <span class="mf">0.0</span>
         <span class="k">for</span> <span class="n">j</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">M</span><span class="p">):</span>
@@ -277,7 +282,7 @@
         <span class="n">pr</span><span class="o">.</span><span class="n">err</span> <span class="o">=</span> <span class="n">pr_err</span>
         <span class="n">out</span><span class="p">,</span> <span class="n">cov</span> <span class="o">=</span> <span class="n">pr</span><span class="o">.</span><span class="n">pr_fit</span><span class="p">()</span>
         <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">out</span><span class="p">)):</span>
-            <span class="k">print</span> <span class="s2">&quot;</span><span class="si">%g</span><span class="s2"> +- </span><span class="si">%g</span><span class="s2">&quot;</span> <span class="o">%</span> <span class="p">(</span><span class="n">out</span><span class="p">[</span><span class="n">i</span><span class="p">],</span> <span class="n">math</span><span class="o">.</span><span class="n">sqrt</span><span class="p">(</span><span class="n">cov</span><span class="p">[</span><span class="n">i</span><span class="p">][</span><span class="n">i</span><span class="p">]))</span>
+            <span class="k">print</span><span class="p">(</span><span class="s2">&quot;</span><span class="si">%g</span><span class="s2"> +- </span><span class="si">%g</span><span class="s2">&quot;</span> <span class="o">%</span> <span class="p">(</span><span class="n">out</span><span class="p">[</span><span class="n">i</span><span class="p">],</span> <span class="n">math</span><span class="o">.</span><span class="n">sqrt</span><span class="p">(</span><span class="n">cov</span><span class="p">[</span><span class="n">i</span><span class="p">][</span><span class="n">i</span><span class="p">])))</span>
 
         <span class="c1"># Show input P(r)</span>
         <span class="n">title</span> <span class="o">=</span> <span class="s2">&quot;Pr&quot;</span>
@@ -298,11 +303,11 @@
         <span class="n">q</span> <span class="o">=</span> <span class="n">pylab</span><span class="o">.</span><span class="n">arange</span><span class="p">(</span><span class="mf">0.001</span><span class="p">,</span> <span class="mf">0.1</span><span class="p">,</span> <span class="mf">0.01</span> <span class="o">/</span> <span class="mf">51.0</span><span class="p">)</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">show_iq</span><span class="p">(</span><span class="n">out</span><span class="p">,</span> <span class="n">pr</span><span class="p">,</span> <span class="n">q</span><span class="p">)</span>
 
-<div class="viewcode-block" id="Plugin.show_shpere"><a class="viewcode-back" href="../../../../../dev/api/sas.sasgui.perspectives.pr.html#sas.sasgui.perspectives.pr.pr.Plugin.show_shpere">[docs]</a>    <span class="k">def</span> <span class="nf">show_shpere</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">x</span><span class="p">,</span> <span class="n">radius</span><span class="o">=</span><span class="mf">70.0</span><span class="p">,</span> <span class="n">x_range</span><span class="o">=</span><span class="mf">70.0</span><span class="p">):</span>
+<div class="viewcode-block" id="Plugin.show_shpere"><a class="viewcode-back" href="../../../../../dev/sasview-api/sas.sasgui.perspectives.pr.html#sas.sasgui.perspectives.pr.pr.Plugin.show_shpere">[docs]</a>    <span class="k">def</span> <span class="nf">show_shpere</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">x</span><span class="p">,</span> <span class="n">radius</span><span class="o">=</span><span class="mf">70.0</span><span class="p">,</span> <span class="n">x_range</span><span class="o">=</span><span class="mf">70.0</span><span class="p">):</span>
         <span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">        &quot;&quot;&quot;</span>
         <span class="c1"># Show P(r)</span>
-        <span class="n">y_true</span> <span class="o">=</span> <span class="n">numpy</span><span class="o">.</span><span class="n">zeros</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">x</span><span class="p">))</span>
+        <span class="n">y_true</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">zeros</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">x</span><span class="p">))</span>
 
         <span class="n">sum_true</span> <span class="o">=</span> <span class="mf">0.0</span>
         <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">x</span><span class="p">)):</span>
@@ -324,7 +329,7 @@
         <span class="n">wx</span><span class="o">.</span><span class="n">PostEvent</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">parent</span><span class="p">,</span> <span class="n">NewPlotEvent</span><span class="p">(</span><span class="n">plot</span><span class="o">=</span><span class="n">new_plot</span><span class="p">,</span>
                                                <span class="n">title</span><span class="o">=</span><span class="s2">&quot;Sphere P(r)&quot;</span><span class="p">))</span></div>
 
-<div class="viewcode-block" id="Plugin.get_npts"><a class="viewcode-back" href="../../../../../dev/api/sas.sasgui.perspectives.pr.html#sas.sasgui.perspectives.pr.pr.Plugin.get_npts">[docs]</a>    <span class="k">def</span> <span class="nf">get_npts</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+<div class="viewcode-block" id="Plugin.get_npts"><a class="viewcode-back" href="../../../../../dev/sasview-api/sas.sasgui.perspectives.pr.html#sas.sasgui.perspectives.pr.pr.Plugin.get_npts">[docs]</a>    <span class="k">def</span> <span class="nf">get_npts</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
         <span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">        Returns the number of points in the I(q) data</span>
 <span class="sd">        &quot;&quot;&quot;</span>
@@ -333,12 +338,12 @@
         <span class="k">except</span><span class="p">:</span>
             <span class="k">return</span> <span class="mi">0</span></div>
 
-<div class="viewcode-block" id="Plugin.show_iq"><a class="viewcode-back" href="../../../../../dev/api/sas.sasgui.perspectives.pr.html#sas.sasgui.perspectives.pr.pr.Plugin.show_iq">[docs]</a>    <span class="k">def</span> <span class="nf">show_iq</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">out</span><span class="p">,</span> <span class="n">pr</span><span class="p">,</span> <span class="n">q</span><span class="o">=</span><span class="bp">None</span><span class="p">):</span>
+<div class="viewcode-block" id="Plugin.show_iq"><a class="viewcode-back" href="../../../../../dev/sasview-api/sas.sasgui.perspectives.pr.html#sas.sasgui.perspectives.pr.pr.Plugin.show_iq">[docs]</a>    <span class="k">def</span> <span class="nf">show_iq</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">out</span><span class="p">,</span> <span class="n">pr</span><span class="p">,</span> <span class="n">q</span><span class="o">=</span><span class="bp">None</span><span class="p">):</span>
         <span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">            Display computed I(q)</span>
 <span class="sd">        &quot;&quot;&quot;</span>
         <span class="n">qtemp</span> <span class="o">=</span> <span class="n">pr</span><span class="o">.</span><span class="n">x</span>
-        <span class="k">if</span> <span class="ow">not</span> <span class="n">q</span> <span class="o">==</span> <span class="bp">None</span><span class="p">:</span>
+        <span class="k">if</span> <span class="n">q</span> <span class="ow">is</span> <span class="ow">not</span> <span class="bp">None</span><span class="p">:</span>
             <span class="n">qtemp</span> <span class="o">=</span> <span class="n">q</span>
 
         <span class="c1"># Make a plot</span>
@@ -350,14 +355,14 @@
         <span class="n">minq</span> <span class="o">=</span> <span class="mf">0.001</span>
 
         <span class="c1"># Check for user min/max</span>
-        <span class="k">if</span> <span class="ow">not</span> <span class="n">pr</span><span class="o">.</span><span class="n">q_min</span> <span class="o">==</span> <span class="bp">None</span><span class="p">:</span>
+        <span class="k">if</span> <span class="n">pr</span><span class="o">.</span><span class="n">q_min</span> <span class="ow">is</span> <span class="ow">not</span> <span class="bp">None</span><span class="p">:</span>
             <span class="n">minq</span> <span class="o">=</span> <span class="n">pr</span><span class="o">.</span><span class="n">q_min</span>
-        <span class="k">if</span> <span class="ow">not</span> <span class="n">pr</span><span class="o">.</span><span class="n">q_max</span> <span class="o">==</span> <span class="bp">None</span><span class="p">:</span>
+        <span class="k">if</span> <span class="n">pr</span><span class="o">.</span><span class="n">q_max</span> <span class="ow">is</span> <span class="ow">not</span> <span class="bp">None</span><span class="p">:</span>
             <span class="n">maxq</span> <span class="o">=</span> <span class="n">pr</span><span class="o">.</span><span class="n">q_max</span>
 
         <span class="n">x</span> <span class="o">=</span> <span class="n">pylab</span><span class="o">.</span><span class="n">arange</span><span class="p">(</span><span class="n">minq</span><span class="p">,</span> <span class="n">maxq</span><span class="p">,</span> <span class="n">maxq</span> <span class="o">/</span> <span class="mf">301.0</span><span class="p">)</span>
-        <span class="n">y</span> <span class="o">=</span> <span class="n">numpy</span><span class="o">.</span><span class="n">zeros</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">x</span><span class="p">))</span>
-        <span class="n">err</span> <span class="o">=</span> <span class="n">numpy</span><span class="o">.</span><span class="n">zeros</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">x</span><span class="p">))</span>
+        <span class="n">y</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">zeros</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">x</span><span class="p">))</span>
+        <span class="n">err</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">zeros</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">x</span><span class="p">))</span>
         <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">x</span><span class="p">)):</span>
             <span class="n">value</span> <span class="o">=</span> <span class="n">pr</span><span class="o">.</span><span class="n">iq</span><span class="p">(</span><span class="n">out</span><span class="p">,</span> <span class="n">x</span><span class="p">[</span><span class="n">i</span><span class="p">])</span>
             <span class="n">y</span><span class="p">[</span><span class="n">i</span><span class="p">]</span> <span class="o">=</span> <span class="n">value</span>
@@ -365,7 +370,7 @@
                 <span class="n">err</span><span class="p">[</span><span class="n">i</span><span class="p">]</span> <span class="o">=</span> <span class="n">math</span><span class="o">.</span><span class="n">sqrt</span><span class="p">(</span><span class="n">math</span><span class="o">.</span><span class="n">fabs</span><span class="p">(</span><span class="n">value</span><span class="p">))</span>
             <span class="k">except</span><span class="p">:</span>
                 <span class="n">err</span><span class="p">[</span><span class="n">i</span><span class="p">]</span> <span class="o">=</span> <span class="mf">1.0</span>
-                <span class="k">print</span> <span class="s2">&quot;Error getting error&quot;</span><span class="p">,</span> <span class="n">value</span><span class="p">,</span> <span class="n">x</span><span class="p">[</span><span class="n">i</span><span class="p">]</span>
+                <span class="k">print</span><span class="p">(</span><span class="s2">&quot;Error getting error&quot;</span><span class="p">,</span> <span class="n">value</span><span class="p">,</span> <span class="n">x</span><span class="p">[</span><span class="n">i</span><span class="p">])</span>
 
         <span class="n">new_plot</span> <span class="o">=</span> <span class="n">Data1D</span><span class="p">(</span><span class="n">x</span><span class="p">,</span> <span class="n">y</span><span class="p">)</span>
         <span class="n">new_plot</span><span class="o">.</span><span class="n">symbol</span> <span class="o">=</span> <span class="n">GUIFRAME_ID</span><span class="o">.</span><span class="n">CURVE_SYMBOL_NUM</span>
@@ -376,7 +381,7 @@
         <span class="n">new_plot</span><span class="o">.</span><span class="n">title</span> <span class="o">=</span> <span class="n">title</span>
 
         <span class="c1"># If we have a group ID, use it</span>
-        <span class="k">if</span> <span class="n">pr</span><span class="o">.</span><span class="n">info</span><span class="o">.</span><span class="n">has_key</span><span class="p">(</span><span class="s2">&quot;plot_group_id&quot;</span><span class="p">):</span>
+        <span class="k">if</span> <span class="s1">&#39;plot_group_id&#39;</span> <span class="ow">in</span> <span class="n">pr</span><span class="o">.</span><span class="n">info</span><span class="p">:</span>
             <span class="n">new_plot</span><span class="o">.</span><span class="n">group_id</span> <span class="o">=</span> <span class="n">pr</span><span class="o">.</span><span class="n">info</span><span class="p">[</span><span class="s2">&quot;plot_group_id&quot;</span><span class="p">]</span>
         <span class="n">new_plot</span><span class="o">.</span><span class="n">id</span> <span class="o">=</span> <span class="n">IQ_FIT_LABEL</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">parent</span><span class="o">.</span><span class="n">update_theory</span><span class="p">(</span><span class="n">data_id</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">data_id</span><span class="p">,</span> <span class="n">theory</span><span class="o">=</span><span class="n">new_plot</span><span class="p">)</span>
@@ -386,8 +391,8 @@
         <span class="c1"># If we have used slit smearing, plot the smeared I(q) too</span>
         <span class="k">if</span> <span class="n">pr</span><span class="o">.</span><span class="n">slit_width</span> <span class="o">&gt;</span> <span class="mi">0</span> <span class="ow">or</span> <span class="n">pr</span><span class="o">.</span><span class="n">slit_height</span> <span class="o">&gt;</span> <span class="mi">0</span><span class="p">:</span>
             <span class="n">x</span> <span class="o">=</span> <span class="n">pylab</span><span class="o">.</span><span class="n">arange</span><span class="p">(</span><span class="n">minq</span><span class="p">,</span> <span class="n">maxq</span><span class="p">,</span> <span class="n">maxq</span> <span class="o">/</span> <span class="mf">301.0</span><span class="p">)</span>
-            <span class="n">y</span> <span class="o">=</span> <span class="n">numpy</span><span class="o">.</span><span class="n">zeros</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">x</span><span class="p">))</span>
-            <span class="n">err</span> <span class="o">=</span> <span class="n">numpy</span><span class="o">.</span><span class="n">zeros</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">x</span><span class="p">))</span>
+            <span class="n">y</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">zeros</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">x</span><span class="p">))</span>
+            <span class="n">err</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">zeros</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">x</span><span class="p">))</span>
             <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">x</span><span class="p">)):</span>
                 <span class="n">value</span> <span class="o">=</span> <span class="n">pr</span><span class="o">.</span><span class="n">iq_smeared</span><span class="p">(</span><span class="n">out</span><span class="p">,</span> <span class="n">x</span><span class="p">[</span><span class="n">i</span><span class="p">])</span>
                 <span class="n">y</span><span class="p">[</span><span class="n">i</span><span class="p">]</span> <span class="o">=</span> <span class="n">value</span>
@@ -395,7 +400,7 @@
                     <span class="n">err</span><span class="p">[</span><span class="n">i</span><span class="p">]</span> <span class="o">=</span> <span class="n">math</span><span class="o">.</span><span class="n">sqrt</span><span class="p">(</span><span class="n">math</span><span class="o">.</span><span class="n">fabs</span><span class="p">(</span><span class="n">value</span><span class="p">))</span>
                 <span class="k">except</span><span class="p">:</span>
                     <span class="n">err</span><span class="p">[</span><span class="n">i</span><span class="p">]</span> <span class="o">=</span> <span class="mf">1.0</span>
-                    <span class="k">print</span> <span class="s2">&quot;Error getting error&quot;</span><span class="p">,</span> <span class="n">value</span><span class="p">,</span> <span class="n">x</span><span class="p">[</span><span class="n">i</span><span class="p">]</span>
+                    <span class="k">print</span><span class="p">(</span><span class="s2">&quot;Error getting error&quot;</span><span class="p">,</span> <span class="n">value</span><span class="p">,</span> <span class="n">x</span><span class="p">[</span><span class="n">i</span><span class="p">])</span>
 
             <span class="n">new_plot</span> <span class="o">=</span> <span class="n">Data1D</span><span class="p">(</span><span class="n">x</span><span class="p">,</span> <span class="n">y</span><span class="p">)</span>
             <span class="n">new_plot</span><span class="o">.</span><span class="n">symbol</span> <span class="o">=</span> <span class="n">GUIFRAME_ID</span><span class="o">.</span><span class="n">CURVE_SYMBOL_NUM</span>
@@ -403,7 +408,7 @@
             <span class="n">new_plot</span><span class="o">.</span><span class="n">xaxis</span><span class="p">(</span><span class="s2">&quot;</span><span class="se">\\</span><span class="s2">rm{Q}&quot;</span><span class="p">,</span> <span class="s1">&#39;A^{-1}&#39;</span><span class="p">)</span>
             <span class="n">new_plot</span><span class="o">.</span><span class="n">yaxis</span><span class="p">(</span><span class="s2">&quot;</span><span class="se">\\</span><span class="s2">rm{Intensity} &quot;</span><span class="p">,</span> <span class="s2">&quot;cm^{-1}&quot;</span><span class="p">)</span>
             <span class="c1"># If we have a group ID, use it</span>
-            <span class="k">if</span> <span class="n">pr</span><span class="o">.</span><span class="n">info</span><span class="o">.</span><span class="n">has_key</span><span class="p">(</span><span class="s2">&quot;plot_group_id&quot;</span><span class="p">):</span>
+            <span class="k">if</span> <span class="s1">&#39;plot_group_id&#39;</span> <span class="ow">in</span> <span class="n">pr</span><span class="o">.</span><span class="n">info</span><span class="p">:</span>
                 <span class="n">new_plot</span><span class="o">.</span><span class="n">group_id</span> <span class="o">=</span> <span class="n">pr</span><span class="o">.</span><span class="n">info</span><span class="p">[</span><span class="s2">&quot;plot_group_id&quot;</span><span class="p">]</span>
             <span class="n">new_plot</span><span class="o">.</span><span class="n">id</span> <span class="o">=</span> <span class="n">IQ_SMEARED_LABEL</span>
             <span class="n">new_plot</span><span class="o">.</span><span class="n">title</span> <span class="o">=</span> <span class="n">title</span>
@@ -425,22 +430,22 @@
             <span class="n">dialog</span><span class="o">.</span><span class="n">Destroy</span><span class="p">()</span>
 
 
-<div class="viewcode-block" id="Plugin.show_pr"><a class="viewcode-back" href="../../../../../dev/api/sas.sasgui.perspectives.pr.html#sas.sasgui.perspectives.pr.pr.Plugin.show_pr">[docs]</a>    <span class="k">def</span> <span class="nf">show_pr</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">out</span><span class="p">,</span> <span class="n">pr</span><span class="p">,</span> <span class="n">cov</span><span class="o">=</span><span class="bp">None</span><span class="p">):</span>
+<div class="viewcode-block" id="Plugin.show_pr"><a class="viewcode-back" href="../../../../../dev/sasview-api/sas.sasgui.perspectives.pr.html#sas.sasgui.perspectives.pr.pr.Plugin.show_pr">[docs]</a>    <span class="k">def</span> <span class="nf">show_pr</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">out</span><span class="p">,</span> <span class="n">pr</span><span class="p">,</span> <span class="n">cov</span><span class="o">=</span><span class="bp">None</span><span class="p">):</span>
         <span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">        &quot;&quot;&quot;</span>
         <span class="c1"># Show P(r)</span>
         <span class="n">x</span> <span class="o">=</span> <span class="n">pylab</span><span class="o">.</span><span class="n">arange</span><span class="p">(</span><span class="mf">0.0</span><span class="p">,</span> <span class="n">pr</span><span class="o">.</span><span class="n">d_max</span><span class="p">,</span> <span class="n">pr</span><span class="o">.</span><span class="n">d_max</span> <span class="o">/</span> <span class="bp">self</span><span class="o">.</span><span class="n">_pr_npts</span><span class="p">)</span>
 
-        <span class="n">y</span> <span class="o">=</span> <span class="n">numpy</span><span class="o">.</span><span class="n">zeros</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">x</span><span class="p">))</span>
-        <span class="n">dy</span> <span class="o">=</span> <span class="n">numpy</span><span class="o">.</span><span class="n">zeros</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">x</span><span class="p">))</span>
-        <span class="n">y_true</span> <span class="o">=</span> <span class="n">numpy</span><span class="o">.</span><span class="n">zeros</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">x</span><span class="p">))</span>
+        <span class="n">y</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">zeros</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">x</span><span class="p">))</span>
+        <span class="n">dy</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">zeros</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">x</span><span class="p">))</span>
+        <span class="n">y_true</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">zeros</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">x</span><span class="p">))</span>
 
         <span class="n">total</span> <span class="o">=</span> <span class="mf">0.0</span>
         <span class="n">pmax</span> <span class="o">=</span> <span class="mf">0.0</span>
-        <span class="n">cov2</span> <span class="o">=</span> <span class="n">numpy</span><span class="o">.</span><span class="n">ascontiguousarray</span><span class="p">(</span><span class="n">cov</span><span class="p">)</span>
+        <span class="n">cov2</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">ascontiguousarray</span><span class="p">(</span><span class="n">cov</span><span class="p">)</span>
 
         <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">x</span><span class="p">)):</span>
-            <span class="k">if</span> <span class="n">cov2</span> <span class="o">==</span> <span class="bp">None</span><span class="p">:</span>
+            <span class="k">if</span> <span class="n">cov2</span> <span class="ow">is</span> <span class="bp">None</span><span class="p">:</span>
                 <span class="n">value</span> <span class="o">=</span> <span class="n">pr</span><span class="o">.</span><span class="n">pr</span><span class="p">(</span><span class="n">out</span><span class="p">,</span> <span class="n">x</span><span class="p">[</span><span class="n">i</span><span class="p">])</span>
             <span class="k">else</span><span class="p">:</span>
                 <span class="p">(</span><span class="n">value</span><span class="p">,</span> <span class="n">dy</span><span class="p">[</span><span class="n">i</span><span class="p">])</span> <span class="o">=</span> <span class="n">pr</span><span class="o">.</span><span class="n">pr_err</span><span class="p">(</span><span class="n">out</span><span class="p">,</span> <span class="n">cov2</span><span class="p">,</span> <span class="n">x</span><span class="p">[</span><span class="n">i</span><span class="p">])</span>
@@ -452,14 +457,14 @@
 
             <span class="n">y</span><span class="p">[</span><span class="n">i</span><span class="p">]</span> <span class="o">=</span> <span class="n">value</span>
 
-        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">_normalize_output</span> <span class="o">==</span> <span class="bp">True</span><span class="p">:</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">_normalize_output</span><span class="p">:</span>
             <span class="n">y</span> <span class="o">=</span> <span class="n">y</span> <span class="o">/</span> <span class="n">total</span>
             <span class="n">dy</span> <span class="o">=</span> <span class="n">dy</span> <span class="o">/</span> <span class="n">total</span>
-        <span class="k">elif</span> <span class="bp">self</span><span class="o">.</span><span class="n">_scale_output_unity</span> <span class="o">==</span> <span class="bp">True</span><span class="p">:</span>
+        <span class="k">elif</span> <span class="bp">self</span><span class="o">.</span><span class="n">_scale_output_unity</span><span class="p">:</span>
             <span class="n">y</span> <span class="o">=</span> <span class="n">y</span> <span class="o">/</span> <span class="n">pmax</span>
             <span class="n">dy</span> <span class="o">=</span> <span class="n">dy</span> <span class="o">/</span> <span class="n">pmax</span>
 
-        <span class="k">if</span> <span class="n">cov2</span> <span class="o">==</span> <span class="bp">None</span><span class="p">:</span>
+        <span class="k">if</span> <span class="n">cov2</span> <span class="ow">is</span> <span class="bp">None</span><span class="p">:</span>
             <span class="n">new_plot</span> <span class="o">=</span> <span class="n">Data1D</span><span class="p">(</span><span class="n">x</span><span class="p">,</span> <span class="n">y</span><span class="p">)</span>
             <span class="n">new_plot</span><span class="o">.</span><span class="n">symbol</span> <span class="o">=</span> <span class="n">GUIFRAME_ID</span><span class="o">.</span><span class="n">CURVE_SYMBOL_NUM</span>
         <span class="k">else</span><span class="p">:</span>
@@ -477,7 +482,7 @@
         <span class="n">wx</span><span class="o">.</span><span class="n">PostEvent</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">parent</span><span class="p">,</span> <span class="n">NewPlotEvent</span><span class="p">(</span><span class="n">plot</span><span class="o">=</span><span class="n">new_plot</span><span class="p">,</span> <span class="n">title</span><span class="o">=</span><span class="s2">&quot;P(r) fit&quot;</span><span class="p">))</span>
         <span class="k">return</span> <span class="n">x</span><span class="p">,</span> <span class="n">pr</span><span class="o">.</span><span class="n">d_max</span></div>
 
-<div class="viewcode-block" id="Plugin.load"><a class="viewcode-back" href="../../../../../dev/api/sas.sasgui.perspectives.pr.html#sas.sasgui.perspectives.pr.pr.Plugin.load">[docs]</a>    <span class="k">def</span> <span class="nf">load</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">data</span><span class="p">):</span>
+<div class="viewcode-block" id="Plugin.load"><a class="viewcode-back" href="../../../../../dev/sasview-api/sas.sasgui.perspectives.pr.html#sas.sasgui.perspectives.pr.pr.Plugin.load">[docs]</a>    <span class="k">def</span> <span class="nf">load</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">data</span><span class="p">):</span>
         <span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">        Load data. This will eventually be replaced</span>
 <span class="sd">        by our standard DataLoader class.</span>
@@ -524,17 +529,17 @@
         <span class="bp">self</span><span class="o">.</span><span class="n">_current_file_data</span><span class="o">.</span><span class="n">err</span> <span class="o">=</span> <span class="n">err</span>
         <span class="k">return</span> <span class="n">x</span><span class="p">,</span> <span class="n">y</span><span class="p">,</span> <span class="n">err</span></div>
 
-<div class="viewcode-block" id="Plugin.load_columns"><a class="viewcode-back" href="../../../../../dev/api/sas.sasgui.perspectives.pr.html#sas.sasgui.perspectives.pr.pr.Plugin.load_columns">[docs]</a>    <span class="k">def</span> <span class="nf">load_columns</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">path</span><span class="o">=</span><span class="s2">&quot;sphere_60_q0_2.txt&quot;</span><span class="p">):</span>
+<div class="viewcode-block" id="Plugin.load_columns"><a class="viewcode-back" href="../../../../../dev/sasview-api/sas.sasgui.perspectives.pr.html#sas.sasgui.perspectives.pr.pr.Plugin.load_columns">[docs]</a>    <span class="k">def</span> <span class="nf">load_columns</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">path</span><span class="o">=</span><span class="s2">&quot;sphere_60_q0_2.txt&quot;</span><span class="p">):</span>
         <span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">        Load 2- or 3- column ascii</span>
 <span class="sd">        &quot;&quot;&quot;</span>
         <span class="c1"># Read the data from the data file</span>
-        <span class="n">data_x</span> <span class="o">=</span> <span class="n">numpy</span><span class="o">.</span><span class="n">zeros</span><span class="p">(</span><span class="mi">0</span><span class="p">)</span>
-        <span class="n">data_y</span> <span class="o">=</span> <span class="n">numpy</span><span class="o">.</span><span class="n">zeros</span><span class="p">(</span><span class="mi">0</span><span class="p">)</span>
-        <span class="n">data_err</span> <span class="o">=</span> <span class="n">numpy</span><span class="o">.</span><span class="n">zeros</span><span class="p">(</span><span class="mi">0</span><span class="p">)</span>
+        <span class="n">data_x</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">zeros</span><span class="p">(</span><span class="mi">0</span><span class="p">)</span>
+        <span class="n">data_y</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">zeros</span><span class="p">(</span><span class="mi">0</span><span class="p">)</span>
+        <span class="n">data_err</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">zeros</span><span class="p">(</span><span class="mi">0</span><span class="p">)</span>
         <span class="n">scale</span> <span class="o">=</span> <span class="bp">None</span>
         <span class="n">min_err</span> <span class="o">=</span> <span class="mf">0.0</span>
-        <span class="k">if</span> <span class="ow">not</span> <span class="n">path</span> <span class="o">==</span> <span class="bp">None</span><span class="p">:</span>
+        <span class="k">if</span> <span class="n">path</span> <span class="ow">is</span> <span class="ow">not</span> <span class="bp">None</span><span class="p">:</span>
             <span class="n">input_f</span> <span class="o">=</span> <span class="nb">open</span><span class="p">(</span><span class="n">path</span><span class="p">,</span> <span class="s1">&#39;r&#39;</span><span class="p">)</span>
             <span class="n">buff</span> <span class="o">=</span> <span class="n">input_f</span><span class="o">.</span><span class="n">read</span><span class="p">()</span>
             <span class="n">lines</span> <span class="o">=</span> <span class="n">buff</span><span class="o">.</span><span class="n">split</span><span class="p">(</span><span class="s1">&#39;</span><span class="se">\n</span><span class="s1">&#39;</span><span class="p">)</span>
@@ -546,20 +551,20 @@
                     <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">toks</span><span class="p">)</span> <span class="o">&gt;</span> <span class="mi">2</span><span class="p">:</span>
                         <span class="n">err</span> <span class="o">=</span> <span class="nb">float</span><span class="p">(</span><span class="n">toks</span><span class="p">[</span><span class="mi">2</span><span class="p">])</span>
                     <span class="k">else</span><span class="p">:</span>
-                        <span class="k">if</span> <span class="n">scale</span> <span class="o">==</span> <span class="bp">None</span><span class="p">:</span>
+                        <span class="k">if</span> <span class="n">scale</span> <span class="ow">is</span> <span class="bp">None</span><span class="p">:</span>
                             <span class="n">scale</span> <span class="o">=</span> <span class="mf">0.05</span> <span class="o">*</span> <span class="n">math</span><span class="o">.</span><span class="n">sqrt</span><span class="p">(</span><span class="n">y</span><span class="p">)</span>
                             <span class="c1">#scale = 0.05/math.sqrt(y)</span>
                             <span class="n">min_err</span> <span class="o">=</span> <span class="mf">0.01</span> <span class="o">*</span> <span class="n">y</span>
                         <span class="n">err</span> <span class="o">=</span> <span class="n">scale</span> <span class="o">*</span> <span class="n">math</span><span class="o">.</span><span class="n">sqrt</span><span class="p">(</span><span class="n">y</span><span class="p">)</span> <span class="o">+</span> <span class="n">min_err</span>
                         <span class="c1">#err = 0</span>
 
-                    <span class="n">data_x</span> <span class="o">=</span> <span class="n">numpy</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">data_x</span><span class="p">,</span> <span class="n">x</span><span class="p">)</span>
-                    <span class="n">data_y</span> <span class="o">=</span> <span class="n">numpy</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">data_y</span><span class="p">,</span> <span class="n">y</span><span class="p">)</span>
-                    <span class="n">data_err</span> <span class="o">=</span> <span class="n">numpy</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">data_err</span><span class="p">,</span> <span class="n">err</span><span class="p">)</span>
+                    <span class="n">data_x</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">data_x</span><span class="p">,</span> <span class="n">x</span><span class="p">)</span>
+                    <span class="n">data_y</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">data_y</span><span class="p">,</span> <span class="n">y</span><span class="p">)</span>
+                    <span class="n">data_err</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">data_err</span><span class="p">,</span> <span class="n">err</span><span class="p">)</span>
                 <span class="k">except</span><span class="p">:</span>
-                    <span class="n">logging</span><span class="o">.</span><span class="n">error</span><span class="p">(</span><span class="n">sys</span><span class="o">.</span><span class="n">exc_value</span><span class="p">)</span>
+                    <span class="n">logger</span><span class="o">.</span><span class="n">error</span><span class="p">(</span><span class="n">sys</span><span class="o">.</span><span class="n">exc_value</span><span class="p">)</span>
 
-        <span class="k">if</span> <span class="ow">not</span> <span class="n">scale</span> <span class="o">==</span> <span class="bp">None</span><span class="p">:</span>
+        <span class="k">if</span> <span class="n">scale</span> <span class="ow">is</span> <span class="ow">not</span> <span class="bp">None</span><span class="p">:</span>
             <span class="n">message</span> <span class="o">=</span> <span class="s2">&quot;The loaded file had no error bars, statistical errors are assumed.&quot;</span>
             <span class="n">wx</span><span class="o">.</span><span class="n">PostEvent</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">parent</span><span class="p">,</span> <span class="n">StatusEvent</span><span class="p">(</span><span class="n">status</span><span class="o">=</span><span class="n">message</span><span class="p">))</span>
         <span class="k">else</span><span class="p">:</span>
@@ -567,7 +572,7 @@
 
         <span class="k">return</span> <span class="n">data_x</span><span class="p">,</span> <span class="n">data_y</span><span class="p">,</span> <span class="n">data_err</span></div>
 
-<div class="viewcode-block" id="Plugin.load_abs"><a class="viewcode-back" href="../../../../../dev/api/sas.sasgui.perspectives.pr.html#sas.sasgui.perspectives.pr.pr.Plugin.load_abs">[docs]</a>    <span class="k">def</span> <span class="nf">load_abs</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">path</span><span class="p">):</span>
+<div class="viewcode-block" id="Plugin.load_abs"><a class="viewcode-back" href="../../../../../dev/sasview-api/sas.sasgui.perspectives.pr.html#sas.sasgui.perspectives.pr.pr.Plugin.load_abs">[docs]</a>    <span class="k">def</span> <span class="nf">load_abs</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">path</span><span class="p">):</span>
         <span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">        Load an IGOR .ABS reduced file</span>
 
@@ -577,19 +582,19 @@
 
 <span class="sd">        &quot;&quot;&quot;</span>
         <span class="c1"># Read the data from the data file</span>
-        <span class="n">data_x</span> <span class="o">=</span> <span class="n">numpy</span><span class="o">.</span><span class="n">zeros</span><span class="p">(</span><span class="mi">0</span><span class="p">)</span>
-        <span class="n">data_y</span> <span class="o">=</span> <span class="n">numpy</span><span class="o">.</span><span class="n">zeros</span><span class="p">(</span><span class="mi">0</span><span class="p">)</span>
-        <span class="n">data_err</span> <span class="o">=</span> <span class="n">numpy</span><span class="o">.</span><span class="n">zeros</span><span class="p">(</span><span class="mi">0</span><span class="p">)</span>
+        <span class="n">data_x</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">zeros</span><span class="p">(</span><span class="mi">0</span><span class="p">)</span>
+        <span class="n">data_y</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">zeros</span><span class="p">(</span><span class="mi">0</span><span class="p">)</span>
+        <span class="n">data_err</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">zeros</span><span class="p">(</span><span class="mi">0</span><span class="p">)</span>
         <span class="n">scale</span> <span class="o">=</span> <span class="bp">None</span>
         <span class="n">min_err</span> <span class="o">=</span> <span class="mf">0.0</span>
 
         <span class="n">data_started</span> <span class="o">=</span> <span class="bp">False</span>
-        <span class="k">if</span> <span class="ow">not</span> <span class="n">path</span> <span class="o">==</span> <span class="bp">None</span><span class="p">:</span>
+        <span class="k">if</span> <span class="n">path</span> <span class="ow">is</span> <span class="ow">not</span> <span class="bp">None</span><span class="p">:</span>
             <span class="n">input_f</span> <span class="o">=</span> <span class="nb">open</span><span class="p">(</span><span class="n">path</span><span class="p">,</span> <span class="s1">&#39;r&#39;</span><span class="p">)</span>
             <span class="n">buff</span> <span class="o">=</span> <span class="n">input_f</span><span class="o">.</span><span class="n">read</span><span class="p">()</span>
             <span class="n">lines</span> <span class="o">=</span> <span class="n">buff</span><span class="o">.</span><span class="n">split</span><span class="p">(</span><span class="s1">&#39;</span><span class="se">\n</span><span class="s1">&#39;</span><span class="p">)</span>
             <span class="k">for</span> <span class="n">line</span> <span class="ow">in</span> <span class="n">lines</span><span class="p">:</span>
-                <span class="k">if</span> <span class="n">data_started</span> <span class="o">==</span> <span class="bp">True</span><span class="p">:</span>
+                <span class="k">if</span> <span class="n">data_started</span><span class="p">:</span>
                     <span class="k">try</span><span class="p">:</span>
                         <span class="n">toks</span> <span class="o">=</span> <span class="n">line</span><span class="o">.</span><span class="n">split</span><span class="p">()</span>
                         <span class="n">x</span> <span class="o">=</span> <span class="nb">float</span><span class="p">(</span><span class="n">toks</span><span class="p">[</span><span class="mi">0</span><span class="p">])</span>
@@ -597,22 +602,22 @@
                         <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">toks</span><span class="p">)</span> <span class="o">&gt;</span> <span class="mi">2</span><span class="p">:</span>
                             <span class="n">err</span> <span class="o">=</span> <span class="nb">float</span><span class="p">(</span><span class="n">toks</span><span class="p">[</span><span class="mi">2</span><span class="p">])</span>
                         <span class="k">else</span><span class="p">:</span>
-                            <span class="k">if</span> <span class="n">scale</span> <span class="o">==</span> <span class="bp">None</span><span class="p">:</span>
+                            <span class="k">if</span> <span class="n">scale</span> <span class="ow">is</span> <span class="bp">None</span><span class="p">:</span>
                                 <span class="n">scale</span> <span class="o">=</span> <span class="mf">0.05</span> <span class="o">*</span> <span class="n">math</span><span class="o">.</span><span class="n">sqrt</span><span class="p">(</span><span class="n">y</span><span class="p">)</span>
                                 <span class="c1">#scale = 0.05/math.sqrt(y)</span>
                                 <span class="n">min_err</span> <span class="o">=</span> <span class="mf">0.01</span> <span class="o">*</span> <span class="n">y</span>
                             <span class="n">err</span> <span class="o">=</span> <span class="n">scale</span> <span class="o">*</span> <span class="n">math</span><span class="o">.</span><span class="n">sqrt</span><span class="p">(</span><span class="n">y</span><span class="p">)</span> <span class="o">+</span> <span class="n">min_err</span>
                             <span class="c1">#err = 0</span>
 
-                        <span class="n">data_x</span> <span class="o">=</span> <span class="n">numpy</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">data_x</span><span class="p">,</span> <span class="n">x</span><span class="p">)</span>
-                        <span class="n">data_y</span> <span class="o">=</span> <span class="n">numpy</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">data_y</span><span class="p">,</span> <span class="n">y</span><span class="p">)</span>
-                        <span class="n">data_err</span> <span class="o">=</span> <span class="n">numpy</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">data_err</span><span class="p">,</span> <span class="n">err</span><span class="p">)</span>
+                        <span class="n">data_x</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">data_x</span><span class="p">,</span> <span class="n">x</span><span class="p">)</span>
+                        <span class="n">data_y</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">data_y</span><span class="p">,</span> <span class="n">y</span><span class="p">)</span>
+                        <span class="n">data_err</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">data_err</span><span class="p">,</span> <span class="n">err</span><span class="p">)</span>
                     <span class="k">except</span><span class="p">:</span>
-                        <span class="n">logging</span><span class="o">.</span><span class="n">error</span><span class="p">(</span><span class="n">sys</span><span class="o">.</span><span class="n">exc_value</span><span class="p">)</span>
+                        <span class="n">logger</span><span class="o">.</span><span class="n">error</span><span class="p">(</span><span class="n">sys</span><span class="o">.</span><span class="n">exc_value</span><span class="p">)</span>
                 <span class="k">elif</span> <span class="n">line</span><span class="o">.</span><span class="n">find</span><span class="p">(</span><span class="s2">&quot;The 6 columns&quot;</span><span class="p">)</span> <span class="o">&gt;=</span> <span class="mi">0</span><span class="p">:</span>
                     <span class="n">data_started</span> <span class="o">=</span> <span class="bp">True</span>
 
-        <span class="k">if</span> <span class="ow">not</span> <span class="n">scale</span> <span class="o">==</span> <span class="bp">None</span><span class="p">:</span>
+        <span class="k">if</span> <span class="n">scale</span> <span class="ow">is</span> <span class="ow">not</span> <span class="bp">None</span><span class="p">:</span>
             <span class="n">message</span> <span class="o">=</span> <span class="s2">&quot;The loaded file had no error bars, statistical errors are assumed.&quot;</span>
             <span class="n">wx</span><span class="o">.</span><span class="n">PostEvent</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">parent</span><span class="p">,</span> <span class="n">StatusEvent</span><span class="p">(</span><span class="n">status</span><span class="o">=</span><span class="n">message</span><span class="p">))</span>
         <span class="k">else</span><span class="p">:</span>
@@ -620,7 +625,7 @@
 
         <span class="k">return</span> <span class="n">data_x</span><span class="p">,</span> <span class="n">data_y</span><span class="p">,</span> <span class="n">data_err</span></div>
 
-<div class="viewcode-block" id="Plugin.pr_theory"><a class="viewcode-back" href="../../../../../dev/api/sas.sasgui.perspectives.pr.html#sas.sasgui.perspectives.pr.pr.Plugin.pr_theory">[docs]</a>    <span class="k">def</span> <span class="nf">pr_theory</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">r</span><span class="p">,</span> <span class="n">R</span><span class="p">):</span>
+<div class="viewcode-block" id="Plugin.pr_theory"><a class="viewcode-back" href="../../../../../dev/sasview-api/sas.sasgui.perspectives.pr.html#sas.sasgui.perspectives.pr.pr.Plugin.pr_theory">[docs]</a>    <span class="k">def</span> <span class="nf">pr_theory</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">r</span><span class="p">,</span> <span class="n">R</span><span class="p">):</span>
         <span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">            Return P(r) of a sphere for a given R</span>
 <span class="sd">            For test purposes</span>
@@ -630,7 +635,7 @@
         <span class="k">else</span><span class="p">:</span>
             <span class="k">return</span> <span class="mf">0.0</span></div>
 
-<div class="viewcode-block" id="Plugin.get_context_menu"><a class="viewcode-back" href="../../../../../dev/api/sas.sasgui.perspectives.pr.html#sas.sasgui.perspectives.pr.pr.Plugin.get_context_menu">[docs]</a>    <span class="k">def</span> <span class="nf">get_context_menu</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">plotpanel</span><span class="o">=</span><span class="bp">None</span><span class="p">):</span>
+<div class="viewcode-block" id="Plugin.get_context_menu"><a class="viewcode-back" href="../../../../../dev/sasview-api/sas.sasgui.perspectives.pr.html#sas.sasgui.perspectives.pr.pr.Plugin.get_context_menu">[docs]</a>    <span class="k">def</span> <span class="nf">get_context_menu</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">plotpanel</span><span class="o">=</span><span class="bp">None</span><span class="p">):</span>
         <span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">        Get the context menu items available for P(r)</span>
 
@@ -689,7 +694,7 @@
 
         <span class="c1"># Now replot the original added data</span>
         <span class="k">for</span> <span class="n">plot</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">_added_plots</span><span class="p">:</span>
-            <span class="bp">self</span><span class="o">.</span><span class="n">_added_plots</span><span class="p">[</span><span class="n">plot</span><span class="p">]</span><span class="o">.</span><span class="n">y</span> <span class="o">=</span> <span class="n">numpy</span><span class="o">.</span><span class="n">copy</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_default_Iq</span><span class="p">[</span><span class="n">plot</span><span class="p">])</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_added_plots</span><span class="p">[</span><span class="n">plot</span><span class="p">]</span><span class="o">.</span><span class="n">y</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">copy</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_default_Iq</span><span class="p">[</span><span class="n">plot</span><span class="p">])</span>
             <span class="n">wx</span><span class="o">.</span><span class="n">PostEvent</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">parent</span><span class="p">,</span>
                          <span class="n">NewPlotEvent</span><span class="p">(</span><span class="n">plot</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">_added_plots</span><span class="p">[</span><span class="n">plot</span><span class="p">],</span>
                                       <span class="n">title</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">_added_plots</span><span class="p">[</span><span class="n">plot</span><span class="p">]</span><span class="o">.</span><span class="n">name</span><span class="p">,</span>
@@ -713,7 +718,7 @@
 
         <span class="c1"># Now scale the added plots too</span>
         <span class="k">for</span> <span class="n">plot</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">_added_plots</span><span class="p">:</span>
-            <span class="n">total</span> <span class="o">=</span> <span class="n">numpy</span><span class="o">.</span><span class="n">sum</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_added_plots</span><span class="p">[</span><span class="n">plot</span><span class="p">]</span><span class="o">.</span><span class="n">y</span><span class="p">)</span>
+            <span class="n">total</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">sum</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_added_plots</span><span class="p">[</span><span class="n">plot</span><span class="p">]</span><span class="o">.</span><span class="n">y</span><span class="p">)</span>
             <span class="n">npts</span> <span class="o">=</span> <span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_added_plots</span><span class="p">[</span><span class="n">plot</span><span class="p">]</span><span class="o">.</span><span class="n">x</span><span class="p">)</span>
             <span class="n">total</span> <span class="o">*=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_added_plots</span><span class="p">[</span><span class="n">plot</span><span class="p">]</span><span class="o">.</span><span class="n">x</span><span class="p">[</span><span class="n">npts</span> <span class="o">-</span> <span class="mi">1</span><span class="p">]</span> <span class="o">/</span> <span class="n">npts</span>
             <span class="n">y</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_added_plots</span><span class="p">[</span><span class="n">plot</span><span class="p">]</span><span class="o">.</span><span class="n">y</span> <span class="o">/</span> <span class="n">total</span>
@@ -761,14 +766,14 @@
                          <span class="n">NewPlotEvent</span><span class="p">(</span><span class="n">plot</span><span class="o">=</span><span class="n">new_plot</span><span class="p">,</span> <span class="n">update</span><span class="o">=</span><span class="bp">True</span><span class="p">,</span>
                                       <span class="n">title</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">_added_plots</span><span class="p">[</span><span class="n">plot</span><span class="p">]</span><span class="o">.</span><span class="n">name</span><span class="p">))</span>
 
-<div class="viewcode-block" id="Plugin.start_thread"><a class="viewcode-back" href="../../../../../dev/api/sas.sasgui.perspectives.pr.html#sas.sasgui.perspectives.pr.pr.Plugin.start_thread">[docs]</a>    <span class="k">def</span> <span class="nf">start_thread</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+<div class="viewcode-block" id="Plugin.start_thread"><a class="viewcode-back" href="../../../../../dev/sasview-api/sas.sasgui.perspectives.pr.html#sas.sasgui.perspectives.pr.pr.Plugin.start_thread">[docs]</a>    <span class="k">def</span> <span class="nf">start_thread</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
         <span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">            Start a calculation thread</span>
 <span class="sd">        &quot;&quot;&quot;</span>
         <span class="kn">from</span> <span class="nn">pr_thread</span> <span class="kn">import</span> <span class="n">CalcPr</span>
 
         <span class="c1"># If a thread is already started, stop it</span>
-        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">calc_thread</span> <span class="o">!=</span> <span class="bp">None</span> <span class="ow">and</span> <span class="bp">self</span><span class="o">.</span><span class="n">calc_thread</span><span class="o">.</span><span class="n">isrunning</span><span class="p">():</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">calc_thread</span> <span class="ow">is</span> <span class="ow">not</span> <span class="bp">None</span> <span class="ow">and</span> <span class="bp">self</span><span class="o">.</span><span class="n">calc_thread</span><span class="o">.</span><span class="n">isrunning</span><span class="p">():</span>
             <span class="bp">self</span><span class="o">.</span><span class="n">calc_thread</span><span class="o">.</span><span class="n">stop</span><span class="p">()</span>
             <span class="c1">## stop just raises the flag -- the thread is supposed to</span>
             <span class="c1">## then kill itself. In August 2014 it was shown that this is</span>
@@ -808,7 +813,7 @@
         <span class="c1"># Save useful info</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">elapsed</span> <span class="o">=</span> <span class="n">elapsed</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">control_panel</span><span class="o">.</span><span class="n">alpha_estimate</span> <span class="o">=</span> <span class="n">alpha</span>
-        <span class="k">if</span> <span class="ow">not</span> <span class="n">message</span> <span class="o">==</span> <span class="bp">None</span><span class="p">:</span>
+        <span class="k">if</span> <span class="n">message</span> <span class="ow">is</span> <span class="ow">not</span> <span class="bp">None</span><span class="p">:</span>
             <span class="n">wx</span><span class="o">.</span><span class="n">PostEvent</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">parent</span><span class="p">,</span> <span class="n">StatusEvent</span><span class="p">(</span><span class="n">status</span><span class="o">=</span><span class="nb">str</span><span class="p">(</span><span class="n">message</span><span class="p">)))</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">perform_estimateNT</span><span class="p">()</span>
 
@@ -826,7 +831,7 @@
         <span class="bp">self</span><span class="o">.</span><span class="n">elapsed</span> <span class="o">=</span> <span class="n">elapsed</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">control_panel</span><span class="o">.</span><span class="n">nterms_estimate</span> <span class="o">=</span> <span class="n">nterms</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">control_panel</span><span class="o">.</span><span class="n">alpha_estimate</span> <span class="o">=</span> <span class="n">alpha</span>
-        <span class="k">if</span> <span class="ow">not</span> <span class="n">message</span> <span class="o">==</span> <span class="bp">None</span><span class="p">:</span>
+        <span class="k">if</span> <span class="n">message</span> <span class="ow">is</span> <span class="ow">not</span> <span class="bp">None</span><span class="p">:</span>
             <span class="n">wx</span><span class="o">.</span><span class="n">PostEvent</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">parent</span><span class="p">,</span> <span class="n">StatusEvent</span><span class="p">(</span><span class="n">status</span><span class="o">=</span><span class="nb">str</span><span class="p">(</span><span class="n">message</span><span class="p">)))</span>
 
     <span class="k">def</span> <span class="nf">_completed</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">out</span><span class="p">,</span> <span class="n">cov</span><span class="p">,</span> <span class="n">pr</span><span class="p">,</span> <span class="n">elapsed</span><span class="p">):</span>
@@ -863,7 +868,7 @@
 
         <span class="c1"># Save Pr invertor</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">pr</span> <span class="o">=</span> <span class="n">pr</span>
-        <span class="n">cov</span> <span class="o">=</span> <span class="n">numpy</span><span class="o">.</span><span class="n">ascontiguousarray</span><span class="p">(</span><span class="n">cov</span><span class="p">)</span>
+        <span class="n">cov</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">ascontiguousarray</span><span class="p">(</span><span class="n">cov</span><span class="p">)</span>
 
         <span class="c1"># Show result on control panel</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">control_panel</span><span class="o">.</span><span class="n">chi2</span> <span class="o">=</span> <span class="n">pr</span><span class="o">.</span><span class="n">chi2</span>
@@ -874,6 +879,7 @@
         <span class="bp">self</span><span class="o">.</span><span class="n">control_panel</span><span class="o">.</span><span class="n">rg</span> <span class="o">=</span> <span class="n">pr</span><span class="o">.</span><span class="n">rg</span><span class="p">(</span><span class="n">out</span><span class="p">)</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">control_panel</span><span class="o">.</span><span class="n">iq0</span> <span class="o">=</span> <span class="n">pr</span><span class="o">.</span><span class="n">iq0</span><span class="p">(</span><span class="n">out</span><span class="p">)</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">control_panel</span><span class="o">.</span><span class="n">bck</span> <span class="o">=</span> <span class="n">pr</span><span class="o">.</span><span class="n">background</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">control_panel</span><span class="o">.</span><span class="n">bck_input</span><span class="o">.</span><span class="n">SetValue</span><span class="p">(</span><span class="s2">&quot;{:.2g}&quot;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">pr</span><span class="o">.</span><span class="n">background</span><span class="p">))</span>
 
         <span class="c1"># Show I(q) fit</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">show_iq</span><span class="p">(</span><span class="n">out</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">pr</span><span class="p">)</span>
@@ -881,7 +887,7 @@
         <span class="c1"># Show P(r) fit</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">show_pr</span><span class="p">(</span><span class="n">out</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">pr</span><span class="p">,</span> <span class="n">cov</span><span class="p">)</span>
 
-<div class="viewcode-block" id="Plugin.show_data"><a class="viewcode-back" href="../../../../../dev/api/sas.sasgui.perspectives.pr.html#sas.sasgui.perspectives.pr.pr.Plugin.show_data">[docs]</a>    <span class="k">def</span> <span class="nf">show_data</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">path</span><span class="o">=</span><span class="bp">None</span><span class="p">,</span> <span class="n">data</span><span class="o">=</span><span class="bp">None</span><span class="p">,</span> <span class="n">reset</span><span class="o">=</span><span class="bp">False</span><span class="p">):</span>
+<div class="viewcode-block" id="Plugin.show_data"><a class="viewcode-back" href="../../../../../dev/sasview-api/sas.sasgui.perspectives.pr.html#sas.sasgui.perspectives.pr.pr.Plugin.show_data">[docs]</a>    <span class="k">def</span> <span class="nf">show_data</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">path</span><span class="o">=</span><span class="bp">None</span><span class="p">,</span> <span class="n">data</span><span class="o">=</span><span class="bp">None</span><span class="p">,</span> <span class="n">reset</span><span class="o">=</span><span class="bp">False</span><span class="p">):</span>
         <span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">        Show data read from a file</span>
 
@@ -905,7 +911,7 @@
             <span class="bp">self</span><span class="o">.</span><span class="n">pr</span> <span class="o">=</span> <span class="n">pr</span>
 
         <span class="c1"># Make a plot of I(q) data</span>
-        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">pr</span><span class="o">.</span><span class="n">err</span> <span class="o">==</span> <span class="bp">None</span><span class="p">:</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">pr</span><span class="o">.</span><span class="n">err</span> <span class="ow">is</span> <span class="bp">None</span><span class="p">:</span>
             <span class="n">new_plot</span> <span class="o">=</span> <span class="n">Data1D</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">pr</span><span class="o">.</span><span class="n">x</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">pr</span><span class="o">.</span><span class="n">y</span><span class="p">)</span>
             <span class="n">new_plot</span><span class="o">.</span><span class="n">symbol</span> <span class="o">=</span> <span class="n">GUIFRAME_ID</span><span class="o">.</span><span class="n">CURVE_SYMBOL_NUM</span>
         <span class="k">else</span><span class="p">:</span>
@@ -925,7 +931,7 @@
         <span class="bp">self</span><span class="o">.</span><span class="n">control_panel</span><span class="o">.</span><span class="n">q_min</span> <span class="o">=</span> <span class="nb">min</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">pr</span><span class="o">.</span><span class="n">x</span><span class="p">)</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">control_panel</span><span class="o">.</span><span class="n">q_max</span> <span class="o">=</span> <span class="nb">max</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">pr</span><span class="o">.</span><span class="n">x</span><span class="p">)</span></div>
 
-<div class="viewcode-block" id="Plugin.save_data"><a class="viewcode-back" href="../../../../../dev/api/sas.sasgui.perspectives.pr.html#sas.sasgui.perspectives.pr.pr.Plugin.save_data">[docs]</a>    <span class="k">def</span> <span class="nf">save_data</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">filepath</span><span class="p">,</span> <span class="n">prstate</span><span class="o">=</span><span class="bp">None</span><span class="p">):</span>
+<div class="viewcode-block" id="Plugin.save_data"><a class="viewcode-back" href="../../../../../dev/sasview-api/sas.sasgui.perspectives.pr.html#sas.sasgui.perspectives.pr.pr.Plugin.save_data">[docs]</a>    <span class="k">def</span> <span class="nf">save_data</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">filepath</span><span class="p">,</span> <span class="n">prstate</span><span class="o">=</span><span class="bp">None</span><span class="p">):</span>
         <span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">        Save data in provided state object.</span>
 
@@ -952,8 +958,8 @@
             <span class="n">msg</span> <span class="o">+=</span> <span class="s2">&quot; sas.data_info.Data1D object&quot;</span>
             <span class="k">raise</span> <span class="ne">RuntimeError</span><span class="p">,</span> <span class="n">msg</span></div>
 
-<div class="viewcode-block" id="Plugin.setup_plot_inversion"><a class="viewcode-back" href="../../../../../dev/api/sas.sasgui.perspectives.pr.html#sas.sasgui.perspectives.pr.pr.Plugin.setup_plot_inversion">[docs]</a>    <span class="k">def</span> <span class="nf">setup_plot_inversion</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">alpha</span><span class="p">,</span> <span class="n">nfunc</span><span class="p">,</span> <span class="n">d_max</span><span class="p">,</span> <span class="n">q_min</span><span class="o">=</span><span class="bp">None</span><span class="p">,</span> <span class="n">q_max</span><span class="o">=</span><span class="bp">None</span><span class="p">,</span>
-                             <span class="n">bck</span><span class="o">=</span><span class="bp">False</span><span class="p">,</span> <span class="n">height</span><span class="o">=</span><span class="mi">0</span><span class="p">,</span> <span class="n">width</span><span class="o">=</span><span class="mi">0</span><span class="p">):</span>
+<div class="viewcode-block" id="Plugin.setup_plot_inversion"><a class="viewcode-back" href="../../../../../dev/sasview-api/sas.sasgui.perspectives.pr.html#sas.sasgui.perspectives.pr.pr.Plugin.setup_plot_inversion">[docs]</a>    <span class="k">def</span> <span class="nf">setup_plot_inversion</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">alpha</span><span class="p">,</span> <span class="n">nfunc</span><span class="p">,</span> <span class="n">d_max</span><span class="p">,</span> <span class="n">q_min</span><span class="o">=</span><span class="bp">None</span><span class="p">,</span> <span class="n">q_max</span><span class="o">=</span><span class="bp">None</span><span class="p">,</span>
+                             <span class="n">est_bck</span><span class="o">=</span><span class="bp">False</span><span class="p">,</span> <span class="n">bck_val</span><span class="o">=</span><span class="mi">0</span><span class="p">,</span> <span class="n">height</span><span class="o">=</span><span class="mi">0</span><span class="p">,</span> <span class="n">width</span><span class="o">=</span><span class="mi">0</span><span class="p">):</span>
         <span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">            Set up inversion from plotted data</span>
 <span class="sd">        &quot;&quot;&quot;</span>
@@ -962,21 +968,22 @@
         <span class="bp">self</span><span class="o">.</span><span class="n">max_length</span> <span class="o">=</span> <span class="n">d_max</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">q_min</span> <span class="o">=</span> <span class="n">q_min</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">q_max</span> <span class="o">=</span> <span class="n">q_max</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">has_bck</span> <span class="o">=</span> <span class="n">bck</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">est_bck</span> <span class="o">=</span> <span class="n">est_bck</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">bck_val</span> <span class="o">=</span> <span class="n">bck_val</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">slit_height</span> <span class="o">=</span> <span class="n">height</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">slit_width</span> <span class="o">=</span> <span class="n">width</span>
 
         <span class="k">try</span><span class="p">:</span>
             <span class="n">pr</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_create_plot_pr</span><span class="p">()</span>
-            <span class="k">if</span> <span class="ow">not</span> <span class="n">pr</span> <span class="o">==</span> <span class="bp">None</span><span class="p">:</span>
+            <span class="k">if</span> <span class="n">pr</span> <span class="ow">is</span> <span class="ow">not</span> <span class="bp">None</span><span class="p">:</span>
                 <span class="bp">self</span><span class="o">.</span><span class="n">pr</span> <span class="o">=</span> <span class="n">pr</span>
                 <span class="bp">self</span><span class="o">.</span><span class="n">perform_inversion</span><span class="p">()</span>
         <span class="k">except</span><span class="p">:</span>
             <span class="n">wx</span><span class="o">.</span><span class="n">PostEvent</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">parent</span><span class="p">,</span> <span class="n">StatusEvent</span><span class="p">(</span><span class="n">status</span><span class="o">=</span><span class="n">sys</span><span class="o">.</span><span class="n">exc_value</span><span class="p">))</span></div>
 
-<div class="viewcode-block" id="Plugin.estimate_plot_inversion"><a class="viewcode-back" href="../../../../../dev/api/sas.sasgui.perspectives.pr.html#sas.sasgui.perspectives.pr.pr.Plugin.estimate_plot_inversion">[docs]</a>    <span class="k">def</span> <span class="nf">estimate_plot_inversion</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">alpha</span><span class="p">,</span> <span class="n">nfunc</span><span class="p">,</span> <span class="n">d_max</span><span class="p">,</span>
+<div class="viewcode-block" id="Plugin.estimate_plot_inversion"><a class="viewcode-back" href="../../../../../dev/sasview-api/sas.sasgui.perspectives.pr.html#sas.sasgui.perspectives.pr.pr.Plugin.estimate_plot_inversion">[docs]</a>    <span class="k">def</span> <span class="nf">estimate_plot_inversion</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">alpha</span><span class="p">,</span> <span class="n">nfunc</span><span class="p">,</span> <span class="n">d_max</span><span class="p">,</span>
                                 <span class="n">q_min</span><span class="o">=</span><span class="bp">None</span><span class="p">,</span> <span class="n">q_max</span><span class="o">=</span><span class="bp">None</span><span class="p">,</span>
-                                <span class="n">bck</span><span class="o">=</span><span class="bp">False</span><span class="p">,</span> <span class="n">height</span><span class="o">=</span><span class="mi">0</span><span class="p">,</span> <span class="n">width</span><span class="o">=</span><span class="mi">0</span><span class="p">):</span>
+                                <span class="n">est_bck</span><span class="o">=</span><span class="bp">False</span><span class="p">,</span> <span class="n">bck_val</span><span class="o">=</span><span class="mi">0</span><span class="p">,</span> <span class="n">height</span><span class="o">=</span><span class="mi">0</span><span class="p">,</span> <span class="n">width</span><span class="o">=</span><span class="mi">0</span><span class="p">):</span>
         <span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">            Estimate parameters from plotted data</span>
 <span class="sd">        &quot;&quot;&quot;</span>
@@ -985,13 +992,14 @@
         <span class="bp">self</span><span class="o">.</span><span class="n">max_length</span> <span class="o">=</span> <span class="n">d_max</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">q_min</span> <span class="o">=</span> <span class="n">q_min</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">q_max</span> <span class="o">=</span> <span class="n">q_max</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">has_bck</span> <span class="o">=</span> <span class="n">bck</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">est_bck</span> <span class="o">=</span> <span class="n">est_bck</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">bck_val</span> <span class="o">=</span> <span class="n">bck_val</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">slit_height</span> <span class="o">=</span> <span class="n">height</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">slit_width</span> <span class="o">=</span> <span class="n">width</span>
 
         <span class="k">try</span><span class="p">:</span>
             <span class="n">pr</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_create_plot_pr</span><span class="p">()</span>
-            <span class="k">if</span> <span class="ow">not</span> <span class="n">pr</span> <span class="o">==</span> <span class="bp">None</span><span class="p">:</span>
+            <span class="k">if</span> <span class="n">pr</span> <span class="ow">is</span> <span class="ow">not</span> <span class="bp">None</span><span class="p">:</span>
                 <span class="bp">self</span><span class="o">.</span><span class="n">pr</span> <span class="o">=</span> <span class="n">pr</span>
                 <span class="bp">self</span><span class="o">.</span><span class="n">perform_estimate</span><span class="p">()</span>
         <span class="k">except</span><span class="p">:</span>
@@ -1019,9 +1027,10 @@
         <span class="n">pr</span><span class="o">.</span><span class="n">q_max</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">q_max</span>
         <span class="n">pr</span><span class="o">.</span><span class="n">x</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">current_plottable</span><span class="o">.</span><span class="n">x</span>
         <span class="n">pr</span><span class="o">.</span><span class="n">y</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">current_plottable</span><span class="o">.</span><span class="n">y</span>
-        <span class="n">pr</span><span class="o">.</span><span class="n">has_bck</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">has_bck</span>
+        <span class="n">pr</span><span class="o">.</span><span class="n">est_bck</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">est_bck</span>
         <span class="n">pr</span><span class="o">.</span><span class="n">slit_height</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">slit_height</span>
         <span class="n">pr</span><span class="o">.</span><span class="n">slit_width</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">slit_width</span>
+        <span class="n">pr</span><span class="o">.</span><span class="n">background</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">bck_val</span>
 
         <span class="c1"># Keep track of the plot window title to ensure that</span>
         <span class="c1"># we can overlay the plots</span>
@@ -1030,8 +1039,8 @@
         <span class="c1"># Fill in errors if none were provided</span>
         <span class="n">err</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">current_plottable</span><span class="o">.</span><span class="n">dy</span>
         <span class="n">all_zeros</span> <span class="o">=</span> <span class="bp">True</span>
-        <span class="k">if</span> <span class="n">err</span> <span class="o">==</span> <span class="bp">None</span><span class="p">:</span>
-            <span class="n">err</span> <span class="o">=</span> <span class="n">numpy</span><span class="o">.</span><span class="n">zeros</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">pr</span><span class="o">.</span><span class="n">y</span><span class="p">))</span>
+        <span class="k">if</span> <span class="n">err</span> <span class="ow">is</span> <span class="bp">None</span><span class="p">:</span>
+            <span class="n">err</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">zeros</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">pr</span><span class="o">.</span><span class="n">y</span><span class="p">))</span>
         <span class="k">else</span><span class="p">:</span>
             <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">err</span><span class="p">)):</span>
                 <span class="k">if</span> <span class="n">err</span><span class="p">[</span><span class="n">i</span><span class="p">]</span> <span class="o">&gt;</span> <span class="mi">0</span><span class="p">:</span>
@@ -1042,7 +1051,7 @@
             <span class="n">min_err</span> <span class="o">=</span> <span class="mf">0.0</span>
             <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">pr</span><span class="o">.</span><span class="n">y</span><span class="p">)):</span>
                 <span class="c1"># Scale the error so that we can fit over several decades of Q</span>
-                <span class="k">if</span> <span class="n">scale</span> <span class="o">==</span> <span class="bp">None</span><span class="p">:</span>
+                <span class="k">if</span> <span class="n">scale</span> <span class="ow">is</span> <span class="bp">None</span><span class="p">:</span>
                     <span class="n">scale</span> <span class="o">=</span> <span class="mf">0.05</span> <span class="o">*</span> <span class="n">math</span><span class="o">.</span><span class="n">sqrt</span><span class="p">(</span><span class="n">pr</span><span class="o">.</span><span class="n">y</span><span class="p">[</span><span class="n">i</span><span class="p">])</span>
                     <span class="n">min_err</span> <span class="o">=</span> <span class="mf">0.01</span> <span class="o">*</span> <span class="n">pr</span><span class="o">.</span><span class="n">y</span><span class="p">[</span><span class="n">i</span><span class="p">]</span>
                 <span class="n">err</span><span class="p">[</span><span class="n">i</span><span class="p">]</span> <span class="o">=</span> <span class="n">scale</span> <span class="o">*</span> <span class="n">math</span><span class="o">.</span><span class="n">sqrt</span><span class="p">(</span><span class="n">math</span><span class="o">.</span><span class="n">fabs</span><span class="p">(</span><span class="n">pr</span><span class="o">.</span><span class="n">y</span><span class="p">[</span><span class="n">i</span><span class="p">]))</span> <span class="o">+</span> <span class="n">min_err</span>
@@ -1054,7 +1063,7 @@
 
         <span class="k">return</span> <span class="n">pr</span>
 
-<div class="viewcode-block" id="Plugin.setup_file_inversion"><a class="viewcode-back" href="../../../../../dev/api/sas.sasgui.perspectives.pr.html#sas.sasgui.perspectives.pr.pr.Plugin.setup_file_inversion">[docs]</a>    <span class="k">def</span> <span class="nf">setup_file_inversion</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">alpha</span><span class="p">,</span> <span class="n">nfunc</span><span class="p">,</span> <span class="n">d_max</span><span class="p">,</span> <span class="n">data</span><span class="p">,</span>
+<div class="viewcode-block" id="Plugin.setup_file_inversion"><a class="viewcode-back" href="../../../../../dev/sasview-api/sas.sasgui.perspectives.pr.html#sas.sasgui.perspectives.pr.pr.Plugin.setup_file_inversion">[docs]</a>    <span class="k">def</span> <span class="nf">setup_file_inversion</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">alpha</span><span class="p">,</span> <span class="n">nfunc</span><span class="p">,</span> <span class="n">d_max</span><span class="p">,</span> <span class="n">data</span><span class="p">,</span>
                              <span class="n">path</span><span class="o">=</span><span class="bp">None</span><span class="p">,</span> <span class="n">q_min</span><span class="o">=</span><span class="bp">None</span><span class="p">,</span> <span class="n">q_max</span><span class="o">=</span><span class="bp">None</span><span class="p">,</span>
                              <span class="n">bck</span><span class="o">=</span><span class="bp">False</span><span class="p">,</span> <span class="n">height</span><span class="o">=</span><span class="mi">0</span><span class="p">,</span> <span class="n">width</span><span class="o">=</span><span class="mi">0</span><span class="p">):</span>
         <span class="sd">&quot;&quot;&quot;</span>
@@ -1065,19 +1074,19 @@
         <span class="bp">self</span><span class="o">.</span><span class="n">max_length</span> <span class="o">=</span> <span class="n">d_max</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">q_min</span> <span class="o">=</span> <span class="n">q_min</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">q_max</span> <span class="o">=</span> <span class="n">q_max</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">has_bck</span> <span class="o">=</span> <span class="n">bck</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">est_bck</span> <span class="o">=</span> <span class="n">bck</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">slit_height</span> <span class="o">=</span> <span class="n">height</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">slit_width</span> <span class="o">=</span> <span class="n">width</span>
 
         <span class="k">try</span><span class="p">:</span>
             <span class="n">pr</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_create_file_pr</span><span class="p">(</span><span class="n">data</span><span class="p">)</span>
-            <span class="k">if</span> <span class="ow">not</span> <span class="n">pr</span> <span class="o">==</span> <span class="bp">None</span><span class="p">:</span>
+            <span class="k">if</span> <span class="n">pr</span> <span class="ow">is</span> <span class="ow">not</span> <span class="bp">None</span><span class="p">:</span>
                 <span class="bp">self</span><span class="o">.</span><span class="n">pr</span> <span class="o">=</span> <span class="n">pr</span>
                 <span class="bp">self</span><span class="o">.</span><span class="n">perform_inversion</span><span class="p">()</span>
         <span class="k">except</span><span class="p">:</span>
             <span class="n">wx</span><span class="o">.</span><span class="n">PostEvent</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">parent</span><span class="p">,</span> <span class="n">StatusEvent</span><span class="p">(</span><span class="n">status</span><span class="o">=</span><span class="n">sys</span><span class="o">.</span><span class="n">exc_value</span><span class="p">))</span></div>
 
-<div class="viewcode-block" id="Plugin.estimate_file_inversion"><a class="viewcode-back" href="../../../../../dev/api/sas.sasgui.perspectives.pr.html#sas.sasgui.perspectives.pr.pr.Plugin.estimate_file_inversion">[docs]</a>    <span class="k">def</span> <span class="nf">estimate_file_inversion</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">alpha</span><span class="p">,</span> <span class="n">nfunc</span><span class="p">,</span> <span class="n">d_max</span><span class="p">,</span> <span class="n">data</span><span class="p">,</span>
+<div class="viewcode-block" id="Plugin.estimate_file_inversion"><a class="viewcode-back" href="../../../../../dev/sasview-api/sas.sasgui.perspectives.pr.html#sas.sasgui.perspectives.pr.pr.Plugin.estimate_file_inversion">[docs]</a>    <span class="k">def</span> <span class="nf">estimate_file_inversion</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">alpha</span><span class="p">,</span> <span class="n">nfunc</span><span class="p">,</span> <span class="n">d_max</span><span class="p">,</span> <span class="n">data</span><span class="p">,</span>
                                 <span class="n">path</span><span class="o">=</span><span class="bp">None</span><span class="p">,</span> <span class="n">q_min</span><span class="o">=</span><span class="bp">None</span><span class="p">,</span> <span class="n">q_max</span><span class="o">=</span><span class="bp">None</span><span class="p">,</span>
                                 <span class="n">bck</span><span class="o">=</span><span class="bp">False</span><span class="p">,</span> <span class="n">height</span><span class="o">=</span><span class="mi">0</span><span class="p">,</span> <span class="n">width</span><span class="o">=</span><span class="mi">0</span><span class="p">):</span>
         <span class="sd">&quot;&quot;&quot;</span>
@@ -1088,13 +1097,13 @@
         <span class="bp">self</span><span class="o">.</span><span class="n">max_length</span> <span class="o">=</span> <span class="n">d_max</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">q_min</span> <span class="o">=</span> <span class="n">q_min</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">q_max</span> <span class="o">=</span> <span class="n">q_max</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">has_bck</span> <span class="o">=</span> <span class="n">bck</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">est_bck</span> <span class="o">=</span> <span class="n">bck</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">slit_height</span> <span class="o">=</span> <span class="n">height</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">slit_width</span> <span class="o">=</span> <span class="n">width</span>
 
         <span class="k">try</span><span class="p">:</span>
             <span class="n">pr</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_create_file_pr</span><span class="p">(</span><span class="n">data</span><span class="p">)</span>
-            <span class="k">if</span> <span class="ow">not</span> <span class="n">pr</span> <span class="ow">is</span> <span class="bp">None</span><span class="p">:</span>
+            <span class="k">if</span> <span class="n">pr</span> <span class="ow">is</span> <span class="ow">not</span> <span class="bp">None</span><span class="p">:</span>
                 <span class="bp">self</span><span class="o">.</span><span class="n">pr</span> <span class="o">=</span> <span class="n">pr</span>
                 <span class="bp">self</span><span class="o">.</span><span class="n">perform_estimate</span><span class="p">()</span>
         <span class="k">except</span><span class="p">:</span>
@@ -1137,13 +1146,13 @@
 
         <span class="c1"># If we have not errors, add statistical errors</span>
         <span class="k">if</span> <span class="n">y</span> <span class="ow">is</span> <span class="ow">not</span> <span class="bp">None</span><span class="p">:</span>
-            <span class="k">if</span> <span class="n">err</span> <span class="o">==</span> <span class="bp">None</span> <span class="ow">or</span> <span class="n">numpy</span><span class="o">.</span><span class="n">all</span><span class="p">(</span><span class="n">err</span><span class="p">)</span> <span class="o">==</span> <span class="mi">0</span><span class="p">:</span>
-                <span class="n">err</span> <span class="o">=</span> <span class="n">numpy</span><span class="o">.</span><span class="n">zeros</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">y</span><span class="p">))</span>
+            <span class="k">if</span> <span class="n">err</span> <span class="ow">is</span> <span class="bp">None</span> <span class="ow">or</span> <span class="n">np</span><span class="o">.</span><span class="n">all</span><span class="p">(</span><span class="n">err</span><span class="p">)</span> <span class="o">==</span> <span class="mi">0</span><span class="p">:</span>
+                <span class="n">err</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">zeros</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">y</span><span class="p">))</span>
                 <span class="n">scale</span> <span class="o">=</span> <span class="bp">None</span>
                 <span class="n">min_err</span> <span class="o">=</span> <span class="mf">0.0</span>
                 <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">y</span><span class="p">)):</span>
                     <span class="c1"># Scale the error so that we can fit over several decades of Q</span>
-                    <span class="k">if</span> <span class="n">scale</span> <span class="o">==</span> <span class="bp">None</span><span class="p">:</span>
+                    <span class="k">if</span> <span class="n">scale</span> <span class="ow">is</span> <span class="bp">None</span><span class="p">:</span>
                         <span class="n">scale</span> <span class="o">=</span> <span class="mf">0.05</span> <span class="o">*</span> <span class="n">math</span><span class="o">.</span><span class="n">sqrt</span><span class="p">(</span><span class="n">y</span><span class="p">[</span><span class="n">i</span><span class="p">])</span>
                         <span class="n">min_err</span> <span class="o">=</span> <span class="mf">0.01</span> <span class="o">*</span> <span class="n">y</span><span class="p">[</span><span class="n">i</span><span class="p">]</span>
                     <span class="n">err</span><span class="p">[</span><span class="n">i</span><span class="p">]</span> <span class="o">=</span> <span class="n">scale</span> <span class="o">*</span> <span class="n">math</span><span class="o">.</span><span class="n">sqrt</span><span class="p">(</span><span class="n">math</span><span class="o">.</span><span class="n">fabs</span><span class="p">(</span><span class="n">y</span><span class="p">[</span><span class="n">i</span><span class="p">]))</span> <span class="o">+</span> <span class="n">min_err</span>
@@ -1161,7 +1170,7 @@
             <span class="n">pr</span><span class="o">.</span><span class="n">x</span> <span class="o">=</span> <span class="n">x</span>
             <span class="n">pr</span><span class="o">.</span><span class="n">y</span> <span class="o">=</span> <span class="n">y</span>
             <span class="n">pr</span><span class="o">.</span><span class="n">err</span> <span class="o">=</span> <span class="n">err</span>
-            <span class="n">pr</span><span class="o">.</span><span class="n">has_bck</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">has_bck</span>
+            <span class="n">pr</span><span class="o">.</span><span class="n">est_bck</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">est_bck</span>
             <span class="n">pr</span><span class="o">.</span><span class="n">slit_height</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">slit_height</span>
             <span class="n">pr</span><span class="o">.</span><span class="n">slit_width</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">slit_width</span>
             <span class="k">return</span> <span class="n">pr</span>
@@ -1169,14 +1178,14 @@
             <span class="n">load_error</span><span class="p">(</span><span class="n">sys</span><span class="o">.</span><span class="n">exc_value</span><span class="p">)</span>
         <span class="k">return</span> <span class="bp">None</span>
 
-<div class="viewcode-block" id="Plugin.perform_estimate"><a class="viewcode-back" href="../../../../../dev/api/sas.sasgui.perspectives.pr.html#sas.sasgui.perspectives.pr.pr.Plugin.perform_estimate">[docs]</a>    <span class="k">def</span> <span class="nf">perform_estimate</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+<div class="viewcode-block" id="Plugin.perform_estimate"><a class="viewcode-back" href="../../../../../dev/sasview-api/sas.sasgui.perspectives.pr.html#sas.sasgui.perspectives.pr.pr.Plugin.perform_estimate">[docs]</a>    <span class="k">def</span> <span class="nf">perform_estimate</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
         <span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">            Perform parameter estimation</span>
 <span class="sd">        &quot;&quot;&quot;</span>
         <span class="kn">from</span> <span class="nn">pr_thread</span> <span class="kn">import</span> <span class="n">EstimatePr</span>
 
         <span class="c1"># If a thread is already started, stop it</span>
-        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">estimation_thread</span> <span class="o">!=</span> <span class="bp">None</span> <span class="ow">and</span> \
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">estimation_thread</span> <span class="ow">is</span> <span class="ow">not</span> <span class="bp">None</span> <span class="ow">and</span> \
             <span class="bp">self</span><span class="o">.</span><span class="n">estimation_thread</span><span class="o">.</span><span class="n">isrunning</span><span class="p">():</span>
             <span class="bp">self</span><span class="o">.</span><span class="n">estimation_thread</span><span class="o">.</span><span class="n">stop</span><span class="p">()</span>
             <span class="c1">## stop just raises the flag -- the thread is supposed to</span>
@@ -1199,14 +1208,14 @@
         <span class="bp">self</span><span class="o">.</span><span class="n">estimation_thread</span><span class="o">.</span><span class="n">queue</span><span class="p">()</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">estimation_thread</span><span class="o">.</span><span class="n">ready</span><span class="p">(</span><span class="mf">2.5</span><span class="p">)</span></div>
 
-<div class="viewcode-block" id="Plugin.perform_estimateNT"><a class="viewcode-back" href="../../../../../dev/api/sas.sasgui.perspectives.pr.html#sas.sasgui.perspectives.pr.pr.Plugin.perform_estimateNT">[docs]</a>    <span class="k">def</span> <span class="nf">perform_estimateNT</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+<div class="viewcode-block" id="Plugin.perform_estimateNT"><a class="viewcode-back" href="../../../../../dev/sasview-api/sas.sasgui.perspectives.pr.html#sas.sasgui.perspectives.pr.pr.Plugin.perform_estimateNT">[docs]</a>    <span class="k">def</span> <span class="nf">perform_estimateNT</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
         <span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">            Perform parameter estimation</span>
 <span class="sd">        &quot;&quot;&quot;</span>
         <span class="kn">from</span> <span class="nn">pr_thread</span> <span class="kn">import</span> <span class="n">EstimateNT</span>
 
         <span class="c1"># If a thread is already started, stop it</span>
-        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">estimation_thread</span> <span class="o">!=</span> <span class="bp">None</span> <span class="ow">and</span> <span class="bp">self</span><span class="o">.</span><span class="n">estimation_thread</span><span class="o">.</span><span class="n">isrunning</span><span class="p">():</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">estimation_thread</span> <span class="ow">is</span> <span class="ow">not</span> <span class="bp">None</span> <span class="ow">and</span> <span class="bp">self</span><span class="o">.</span><span class="n">estimation_thread</span><span class="o">.</span><span class="n">isrunning</span><span class="p">():</span>
             <span class="bp">self</span><span class="o">.</span><span class="n">estimation_thread</span><span class="o">.</span><span class="n">stop</span><span class="p">()</span>
             <span class="c1">## stop just raises the flag -- the thread is supposed to</span>
             <span class="c1">## then kill itself. In August 2014 it was shown that this is</span>
@@ -1232,7 +1241,7 @@
         <span class="bp">self</span><span class="o">.</span><span class="n">estimation_thread</span><span class="o">.</span><span class="n">queue</span><span class="p">()</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">estimation_thread</span><span class="o">.</span><span class="n">ready</span><span class="p">(</span><span class="mf">2.5</span><span class="p">)</span></div>
 
-<div class="viewcode-block" id="Plugin.perform_inversion"><a class="viewcode-back" href="../../../../../dev/api/sas.sasgui.perspectives.pr.html#sas.sasgui.perspectives.pr.pr.Plugin.perform_inversion">[docs]</a>    <span class="k">def</span> <span class="nf">perform_inversion</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+<div class="viewcode-block" id="Plugin.perform_inversion"><a class="viewcode-back" href="../../../../../dev/sasview-api/sas.sasgui.perspectives.pr.html#sas.sasgui.perspectives.pr.pr.Plugin.perform_inversion">[docs]</a>    <span class="k">def</span> <span class="nf">perform_inversion</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
         <span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">            Perform inversion</span>
 <span class="sd">        &quot;&quot;&quot;</span>
@@ -1250,7 +1259,7 @@
             <span class="n">panel</span><span class="o">.</span><span class="n">graph</span><span class="o">.</span><span class="n">selected_plottable</span> <span class="ow">in</span> <span class="n">panel</span><span class="o">.</span><span class="n">plots</span><span class="p">:</span>
             <span class="n">dataset</span> <span class="o">=</span> <span class="n">panel</span><span class="o">.</span><span class="n">plots</span><span class="p">[</span><span class="n">panel</span><span class="o">.</span><span class="n">graph</span><span class="o">.</span><span class="n">selected_plottable</span><span class="p">]</span><span class="o">.</span><span class="n">name</span>
         <span class="k">else</span><span class="p">:</span>
-            <span class="n">logging</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="s2">&quot;Prview Error: No data is available&quot;</span><span class="p">)</span>
+            <span class="n">logger</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="s2">&quot;Prview Error: No data is available&quot;</span><span class="p">)</span>
             <span class="k">return</span>
 
         <span class="c1"># Store a reference to the current plottable</span>
@@ -1260,13 +1269,13 @@
             <span class="bp">self</span><span class="o">.</span><span class="n">control_panel</span><span class="o">.</span><span class="n">alpha</span> <span class="o">=</span> <span class="n">estimate</span>
         <span class="k">except</span><span class="p">:</span>
             <span class="bp">self</span><span class="o">.</span><span class="n">control_panel</span><span class="o">.</span><span class="n">alpha</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">alpha</span>
-            <span class="n">logging</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="s2">&quot;Prview :Alpha Not estimate yet&quot;</span><span class="p">)</span>
+            <span class="n">logger</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="s2">&quot;Prview :Alpha Not estimate yet&quot;</span><span class="p">)</span>
         <span class="k">try</span><span class="p">:</span>
             <span class="n">estimate</span> <span class="o">=</span> <span class="nb">int</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">control_panel</span><span class="o">.</span><span class="n">nterms_estimate</span><span class="p">)</span>
             <span class="bp">self</span><span class="o">.</span><span class="n">control_panel</span><span class="o">.</span><span class="n">nfunc</span> <span class="o">=</span> <span class="n">estimate</span>
         <span class="k">except</span><span class="p">:</span>
             <span class="bp">self</span><span class="o">.</span><span class="n">control_panel</span><span class="o">.</span><span class="n">nfunc</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">nfunc</span>
-            <span class="n">logging</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="s2">&quot;Prview : ntemrs Not estimate yet&quot;</span><span class="p">)</span>
+            <span class="n">logger</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="s2">&quot;Prview : ntemrs Not estimate yet&quot;</span><span class="p">)</span>
 
         <span class="bp">self</span><span class="o">.</span><span class="n">current_plottable</span> <span class="o">=</span> <span class="n">panel</span><span class="o">.</span><span class="n">plots</span><span class="p">[</span><span class="n">panel</span><span class="o">.</span><span class="n">graph</span><span class="o">.</span><span class="n">selected_plottable</span><span class="p">]</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">set_data</span><span class="p">([</span><span class="bp">self</span><span class="o">.</span><span class="n">current_plottable</span><span class="p">])</span>
@@ -1276,7 +1285,7 @@
         <span class="c1">#self.parent.set_perspective(self.perspective)</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">control_panel</span><span class="o">.</span><span class="n">_on_invert</span><span class="p">(</span><span class="bp">None</span><span class="p">)</span>
 
-<div class="viewcode-block" id="Plugin.get_panels"><a class="viewcode-back" href="../../../../../dev/api/sas.sasgui.perspectives.pr.html#sas.sasgui.perspectives.pr.pr.Plugin.get_panels">[docs]</a>    <span class="k">def</span> <span class="nf">get_panels</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">parent</span><span class="p">):</span>
+<div class="viewcode-block" id="Plugin.get_panels"><a class="viewcode-back" href="../../../../../dev/sasview-api/sas.sasgui.perspectives.pr.html#sas.sasgui.perspectives.pr.pr.Plugin.get_panels">[docs]</a>    <span class="k">def</span> <span class="nf">get_panels</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">parent</span><span class="p">):</span>
         <span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">            Create and return a list of panel objects</span>
 <span class="sd">        &quot;&quot;&quot;</span>
@@ -1297,7 +1306,7 @@
 
         <span class="k">return</span> <span class="p">[</span><span class="bp">self</span><span class="o">.</span><span class="n">control_panel</span><span class="p">]</span></div>
 
-<div class="viewcode-block" id="Plugin.set_data"><a class="viewcode-back" href="../../../../../dev/api/sas.sasgui.perspectives.pr.html#sas.sasgui.perspectives.pr.pr.Plugin.set_data">[docs]</a>    <span class="k">def</span> <span class="nf">set_data</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">data_list</span><span class="o">=</span><span class="bp">None</span><span class="p">):</span>
+<div class="viewcode-block" id="Plugin.set_data"><a class="viewcode-back" href="../../../../../dev/sasview-api/sas.sasgui.perspectives.pr.html#sas.sasgui.perspectives.pr.pr.Plugin.set_data">[docs]</a>    <span class="k">def</span> <span class="nf">set_data</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">data_list</span><span class="o">=</span><span class="bp">None</span><span class="p">):</span>
         <span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">        receive a list of data to compute pr</span>
 <span class="sd">        &quot;&quot;&quot;</span>
@@ -1358,7 +1367,7 @@
             <span class="n">msg</span> <span class="o">=</span> <span class="s2">&quot;Pr contain no data&quot;</span>
             <span class="n">wx</span><span class="o">.</span><span class="n">PostEvent</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">parent</span><span class="p">,</span> <span class="n">StatusEvent</span><span class="p">(</span><span class="n">status</span><span class="o">=</span><span class="n">msg</span><span class="p">,</span> <span class="n">info</span><span class="o">=</span><span class="s1">&#39;warning&#39;</span><span class="p">))</span></div>
 
-<div class="viewcode-block" id="Plugin.post_init"><a class="viewcode-back" href="../../../../../dev/api/sas.sasgui.perspectives.pr.html#sas.sasgui.perspectives.pr.pr.Plugin.post_init">[docs]</a>    <span class="k">def</span> <span class="nf">post_init</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+<div class="viewcode-block" id="Plugin.post_init"><a class="viewcode-back" href="../../../../../dev/sasview-api/sas.sasgui.perspectives.pr.html#sas.sasgui.perspectives.pr.pr.Plugin.post_init">[docs]</a>    <span class="k">def</span> <span class="nf">post_init</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
         <span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">            Post initialization call back to close the loose ends</span>
 <span class="sd">            [Somehow openGL needs this call]</span>
@@ -1394,12 +1403,13 @@
         <li class="right" >
           <a href="../../../../../py-modindex.html" title="Python Module Index"
              >modules</a> |</li>
-        <li class="nav-item nav-item-0"><a href="../../../../../index.html">SasView 4.1.2 documentation</a> &raquo;</li>
-          <li class="nav-item nav-item-1"><a href="../../../../index.html" >Module code</a> &raquo;</li> 
+        <li class="nav-item nav-item-0"><a href="../../../../../index.html">SasView 4.2.0 documentation</a> &raquo;</li>
+          <li class="nav-item nav-item-1"><a href="../../../../index.html" >Module code</a> &raquo;</li>
+          <li class="nav-item nav-item-2"><a href="../../../../sas.html" >sas</a> &raquo;</li> 
       </ul>
     </div>
     <div class="footer" role="contentinfo">
-        &copy; Copyright 2017, The SasView Project.
+        &copy; Copyright 2018, The SasView Project.
       Created using <a href="http://sphinx-doc.org/">Sphinx</a> 1.4.1.
     </div>
   </body>

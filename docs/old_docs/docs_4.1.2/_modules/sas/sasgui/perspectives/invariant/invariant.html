@@ -1,0 +1,449 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+  "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+    
+    <title>sas.sasgui.perspectives.invariant.invariant &mdash; SasView 4.1.2 documentation</title>
+    
+    <link rel="stylesheet" href="../../../../../_static/classic.css" type="text/css" />
+    <link rel="stylesheet" href="../../../../../_static/pygments.css" type="text/css" />
+    
+    <script type="text/javascript">
+      var DOCUMENTATION_OPTIONS = {
+        URL_ROOT:    '../../../../../',
+        VERSION:     '4.1.2',
+        COLLAPSE_INDEX: false,
+        FILE_SUFFIX: '.html',
+        HAS_SOURCE:  true
+      };
+    </script>
+    <script type="text/javascript" src="../../../../../_static/jquery.js"></script>
+    <script type="text/javascript" src="../../../../../_static/underscore.js"></script>
+    <script type="text/javascript" src="../../../../../_static/doctools.js"></script>
+    <script type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.1/MathJax.js?config=TeX-MML-AM_CHTML"></script>
+    <link rel="top" title="SasView 4.1.2 documentation" href="../../../../../index.html" />
+    <link rel="up" title="sas.sasgui.perspectives.invariant" href="../invariant.html" /> 
+  </head>
+  <body role="document">
+    <div class="related" role="navigation" aria-label="related navigation">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="../../../../../genindex.html" title="General Index"
+             accesskey="I">index</a></li>
+        <li class="right" >
+          <a href="../../../../../py-modindex.html" title="Python Module Index"
+             >modules</a> |</li>
+        <li class="nav-item nav-item-0"><a href="../../../../../index.html">SasView 4.1.2 documentation</a> &raquo;</li>
+          <li class="nav-item nav-item-1"><a href="../../../../index.html" >Module code</a> &raquo;</li>
+          <li class="nav-item nav-item-2"><a href="../invariant.html" accesskey="U">sas.sasgui.perspectives.invariant</a> &raquo;</li> 
+      </ul>
+    </div>  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          <div class="body" role="main">
+            
+  <h1>Source code for sas.sasgui.perspectives.invariant.invariant</h1><div class="highlight"><pre>
+<span></span>
+
+
+<span class="c1">################################################################################</span>
+<span class="c1"># This software was developed by the University of Tennessee as part of the</span>
+<span class="c1"># Distributed Data Analysis of Neutron Scattering Experiments (DANSE)</span>
+<span class="c1"># project funded by the US National Science Foundation.</span>
+<span class="c1">#</span>
+<span class="c1"># See the license text in license.txt</span>
+<span class="c1">#</span>
+<span class="c1"># copyright 2009, University of Tennessee</span>
+<span class="c1">################################################################################</span>
+
+
+<span class="kn">import</span> <span class="nn">sys</span>
+<span class="kn">import</span> <span class="nn">wx</span>
+<span class="kn">import</span> <span class="nn">copy</span>
+<span class="kn">import</span> <span class="nn">logging</span>
+<span class="kn">from</span> <span class="nn">sas.sasgui.guiframe.gui_manager</span> <span class="kn">import</span> <span class="n">MDIFrame</span>
+<span class="kn">from</span> <span class="nn">sas.sasgui.guiframe.dataFitting</span> <span class="kn">import</span> <span class="n">Data1D</span>
+<span class="kn">from</span> <span class="nn">sas.sasgui.guiframe.events</span> <span class="kn">import</span> <span class="n">NewPlotEvent</span>
+<span class="kn">from</span> <span class="nn">sas.sasgui.guiframe.events</span> <span class="kn">import</span> <span class="n">StatusEvent</span>
+<span class="kn">from</span> <span class="nn">sas.sasgui.guiframe.gui_style</span> <span class="kn">import</span> <span class="n">GUIFRAME_ID</span>
+<span class="kn">from</span> <span class="nn">sas.sasgui.perspectives.invariant.invariant_state</span> <span class="kn">import</span> <span class="n">Reader</span> <span class="k">as</span> <span class="n">reader</span>
+<span class="kn">from</span> <span class="nn">sas.sascalc.dataloader.loader</span> <span class="kn">import</span> <span class="n">Loader</span>
+<span class="kn">from</span> <span class="nn">sas.sasgui.perspectives.invariant.invariant_panel</span> <span class="kn">import</span> <span class="n">InvariantPanel</span>
+<span class="kn">from</span> <span class="nn">sas.sasgui.guiframe.plugin_base</span> <span class="kn">import</span> <span class="n">PluginBase</span>
+
+<div class="viewcode-block" id="Plugin"><a class="viewcode-back" href="../../../../../dev/api/sas.sasgui.perspectives.invariant.html#sas.sasgui.perspectives.invariant.invariant.Plugin">[docs]</a><span class="k">class</span> <span class="nc">Plugin</span><span class="p">(</span><span class="n">PluginBase</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    This class defines the interface for invariant Plugin class</span>
+<span class="sd">    that can be used by the gui_manager.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+
+    <span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="n">PluginBase</span><span class="o">.</span><span class="n">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">name</span><span class="o">=</span><span class="s2">&quot;Invariant&quot;</span><span class="p">)</span>
+
+        <span class="c1"># dictionary containing data name and error on dy of that data</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">err_dy</span> <span class="o">=</span> <span class="p">{}</span>
+
+        <span class="c1"># default state objects</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">state_reader</span> <span class="o">=</span> <span class="bp">None</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_extensions</span> <span class="o">=</span> <span class="s1">&#39;.inv&#39;</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">temp_state</span> <span class="o">=</span> <span class="bp">None</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">__data</span> <span class="o">=</span> <span class="bp">None</span>
+
+        <span class="c1"># Log startup</span>
+        <span class="n">logging</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="s2">&quot;Invariant plug-in started&quot;</span><span class="p">)</span>
+
+<div class="viewcode-block" id="Plugin.get_data"><a class="viewcode-back" href="../../../../../dev/api/sas.sasgui.perspectives.invariant.html#sas.sasgui.perspectives.invariant.invariant.Plugin.get_data">[docs]</a>    <span class="k">def</span> <span class="nf">get_data</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">__data</span></div>
+
+<div class="viewcode-block" id="Plugin.get_panels"><a class="viewcode-back" href="../../../../../dev/api/sas.sasgui.perspectives.invariant.html#sas.sasgui.perspectives.invariant.invariant.Plugin.get_panels">[docs]</a>    <span class="k">def</span> <span class="nf">get_panels</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">parent</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Create and return the list of wx.Panels for your plug-in.</span>
+<span class="sd">        Define the plug-in perspective.</span>
+
+<span class="sd">        Panels should inherit from DefaultPanel defined below,</span>
+<span class="sd">        or should present the same interface. They must define</span>
+<span class="sd">        &quot;window_caption&quot; and &quot;window_name&quot;.</span>
+
+<span class="sd">        :param parent: parent window</span>
+
+<span class="sd">        :return: list of panels</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="c1"># # Save a reference to the parent</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">parent</span> <span class="o">=</span> <span class="n">parent</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">frame</span> <span class="o">=</span> <span class="n">MDIFrame</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">parent</span><span class="p">,</span> <span class="bp">None</span><span class="p">,</span> <span class="s1">&#39;None&#39;</span><span class="p">,</span> <span class="p">(</span><span class="mi">100</span><span class="p">,</span> <span class="mi">200</span><span class="p">))</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">invariant_panel</span> <span class="o">=</span> <span class="n">InvariantPanel</span><span class="p">(</span><span class="n">parent</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">frame</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">frame</span><span class="o">.</span><span class="n">set_panel</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">invariant_panel</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_frame_set_helper</span><span class="p">()</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">invariant_panel</span><span class="o">.</span><span class="n">set_manager</span><span class="p">(</span><span class="n">manager</span><span class="o">=</span><span class="bp">self</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">perspective</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">invariant_panel</span><span class="o">.</span><span class="n">window_name</span><span class="p">)</span>
+        <span class="c1"># Create reader when fitting panel are created</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">state_reader</span> <span class="o">=</span> <span class="n">reader</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">set_state</span><span class="p">)</span>
+        <span class="c1"># append that reader to list of available reader</span>
+        <span class="n">loader</span> <span class="o">=</span> <span class="n">Loader</span><span class="p">()</span>
+        <span class="n">loader</span><span class="o">.</span><span class="n">associate_file_reader</span><span class="p">(</span><span class="s2">&quot;.inv&quot;</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">state_reader</span><span class="p">)</span>
+        <span class="c1"># loader.associate_file_reader(&quot;.svs&quot;, self.state_reader)</span>
+        <span class="c1"># Return the list of panels</span>
+        <span class="k">return</span> <span class="p">[</span><span class="bp">self</span><span class="o">.</span><span class="n">invariant_panel</span><span class="p">]</span></div>
+
+<div class="viewcode-block" id="Plugin.get_context_menu"><a class="viewcode-back" href="../../../../../dev/api/sas.sasgui.perspectives.invariant.html#sas.sasgui.perspectives.invariant.invariant.Plugin.get_context_menu">[docs]</a>    <span class="k">def</span> <span class="nf">get_context_menu</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">plotpanel</span><span class="o">=</span><span class="bp">None</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        This method is optional.</span>
+
+<span class="sd">        When the context menu of a plot is rendered, the</span>
+<span class="sd">        get_context_menu method will be called to give you a</span>
+<span class="sd">        chance to add a menu item to the context menu.</span>
+
+<span class="sd">        A ref to a Graph object is passed so that you can</span>
+<span class="sd">        investigate the plot content and decide whether you</span>
+<span class="sd">        need to add items to the context menu.</span>
+
+<span class="sd">        This method returns a list of menu items.</span>
+<span class="sd">        Each item is itself a list defining the text to</span>
+<span class="sd">        appear in the menu, a tool-tip help text, and a</span>
+<span class="sd">        call-back method.</span>
+
+<span class="sd">        :param graph: the Graph object to which we attach the context menu</span>
+
+<span class="sd">        :return: a list of menu items with call-back function</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">graph</span> <span class="o">=</span> <span class="n">plotpanel</span><span class="o">.</span><span class="n">graph</span>
+        <span class="n">invariant_option</span> <span class="o">=</span> <span class="s2">&quot;Compute invariant&quot;</span>
+        <span class="n">invariant_hint</span> <span class="o">=</span> <span class="s2">&quot;Will displays the invariant panel for&quot;</span>
+        <span class="n">invariant_hint</span> <span class="o">+=</span> <span class="s2">&quot; further computation&quot;</span>
+
+        <span class="k">if</span> <span class="n">graph</span><span class="o">.</span><span class="n">selected_plottable</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">plotpanel</span><span class="o">.</span><span class="n">plots</span><span class="p">:</span>
+            <span class="k">return</span> <span class="p">[]</span>
+        <span class="n">data</span> <span class="o">=</span> <span class="n">plotpanel</span><span class="o">.</span><span class="n">plots</span><span class="p">[</span><span class="n">graph</span><span class="o">.</span><span class="n">selected_plottable</span><span class="p">]</span>
+
+        <span class="k">if</span> <span class="nb">issubclass</span><span class="p">(</span><span class="n">data</span><span class="o">.</span><span class="n">__class__</span><span class="p">,</span> <span class="n">Data1D</span><span class="p">):</span>
+            <span class="k">if</span> <span class="n">data</span><span class="o">.</span><span class="n">name</span> <span class="o">!=</span> <span class="s2">&quot;$I_{obs}(q)$&quot;</span> <span class="ow">and</span>  <span class="n">data</span><span class="o">.</span><span class="n">name</span> <span class="o">!=</span> <span class="s2">&quot; $P_{fit}(r)$&quot;</span><span class="p">:</span>
+                <span class="k">return</span> <span class="p">[[</span><span class="n">invariant_option</span><span class="p">,</span> <span class="n">invariant_hint</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">_compute_invariant</span><span class="p">]]</span>
+        <span class="k">return</span> <span class="p">[]</span></div>
+
+    <span class="k">def</span> <span class="nf">_compute_invariant</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">event</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Open the invariant panel to invariant computation</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">panel</span> <span class="o">=</span> <span class="n">event</span><span class="o">.</span><span class="n">GetEventObject</span><span class="p">()</span>
+        <span class="n">Plugin</span><span class="o">.</span><span class="n">on_perspective</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">event</span><span class="o">=</span><span class="n">event</span><span class="p">)</span>
+        <span class="nb">id</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">panel</span><span class="o">.</span><span class="n">graph</span><span class="o">.</span><span class="n">selected_plottable</span>
+        <span class="n">data</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">panel</span><span class="o">.</span><span class="n">plots</span><span class="p">[</span><span class="bp">self</span><span class="o">.</span><span class="n">panel</span><span class="o">.</span><span class="n">graph</span><span class="o">.</span><span class="n">selected_plottable</span><span class="p">]</span>
+        <span class="k">if</span> <span class="n">data</span> <span class="ow">is</span> <span class="bp">None</span><span class="p">:</span>
+            <span class="k">return</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="nb">issubclass</span><span class="p">(</span><span class="n">data</span><span class="o">.</span><span class="n">__class__</span><span class="p">,</span> <span class="n">Data1D</span><span class="p">):</span>
+            <span class="n">name</span> <span class="o">=</span> <span class="n">data</span><span class="o">.</span><span class="n">__class__</span><span class="o">.</span><span class="n">__name__</span>
+            <span class="n">msg</span> <span class="o">=</span> <span class="s2">&quot;Invariant use only Data1D got: [</span><span class="si">%s</span><span class="s2">] &quot;</span> <span class="o">%</span> <span class="nb">str</span><span class="p">(</span><span class="n">name</span><span class="p">)</span>
+            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">,</span> <span class="n">msg</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">compute_helper</span><span class="p">(</span><span class="n">data</span><span class="o">=</span><span class="n">data</span><span class="p">)</span>
+
+<div class="viewcode-block" id="Plugin.set_data"><a class="viewcode-back" href="../../../../../dev/api/sas.sasgui.perspectives.invariant.html#sas.sasgui.perspectives.invariant.invariant.Plugin.set_data">[docs]</a>    <span class="k">def</span> <span class="nf">set_data</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">data_list</span><span class="o">=</span><span class="bp">None</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        receive a list of data and compute invariant</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">msg</span> <span class="o">=</span> <span class="s2">&quot;&quot;</span>
+        <span class="n">data</span> <span class="o">=</span> <span class="bp">None</span>
+        <span class="k">if</span> <span class="n">data_list</span> <span class="ow">is</span> <span class="bp">None</span><span class="p">:</span>
+            <span class="n">data_list</span> <span class="o">=</span> <span class="p">[]</span>
+        <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">data_list</span><span class="p">)</span> <span class="o">&gt;=</span> <span class="mi">1</span><span class="p">:</span>
+            <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">data_list</span><span class="p">)</span> <span class="o">==</span> <span class="mi">1</span><span class="p">:</span>
+                <span class="n">data</span> <span class="o">=</span> <span class="n">data_list</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
+            <span class="k">else</span><span class="p">:</span>
+                <span class="n">data_1d_list</span> <span class="o">=</span> <span class="p">[]</span>
+                <span class="n">data_2d_list</span> <span class="o">=</span> <span class="p">[]</span>
+                <span class="n">error_msg</span> <span class="o">=</span> <span class="s2">&quot;&quot;</span>
+                <span class="c1"># separate data into data1d and data2d list</span>
+                <span class="k">for</span> <span class="n">data</span> <span class="ow">in</span> <span class="n">data_list</span><span class="p">:</span>
+                    <span class="k">if</span> <span class="n">data</span> <span class="ow">is</span> <span class="ow">not</span> <span class="bp">None</span><span class="p">:</span>
+                        <span class="k">if</span> <span class="nb">issubclass</span><span class="p">(</span><span class="n">data</span><span class="o">.</span><span class="n">__class__</span><span class="p">,</span> <span class="n">Data1D</span><span class="p">):</span>
+                            <span class="n">data_1d_list</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">data</span><span class="p">)</span>
+                        <span class="k">else</span><span class="p">:</span>
+                            <span class="n">error_msg</span> <span class="o">+=</span> <span class="s2">&quot; </span><span class="si">%s</span><span class="s2">  type </span><span class="si">%s</span><span class="s2"> </span><span class="se">\n</span><span class="s2">&quot;</span> <span class="o">%</span> <span class="p">(</span><span class="nb">str</span><span class="p">(</span><span class="n">data</span><span class="o">.</span><span class="n">name</span><span class="p">),</span>
+                                                              <span class="nb">str</span><span class="p">(</span><span class="n">data</span><span class="o">.</span><span class="n">__class__</span><span class="o">.</span><span class="n">__name__</span><span class="p">))</span>
+                            <span class="n">data_2d_list</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">data</span><span class="p">)</span>
+                <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">data_2d_list</span><span class="p">)</span> <span class="o">&gt;</span> <span class="mi">0</span><span class="p">:</span>
+                    <span class="n">msg</span> <span class="o">=</span> <span class="s2">&quot;Invariant does not support the following data types:</span><span class="se">\n</span><span class="s2">&quot;</span>
+                    <span class="n">msg</span> <span class="o">+=</span> <span class="n">error_msg</span>
+                <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">data_1d_list</span><span class="p">)</span> <span class="o">==</span> <span class="mi">0</span><span class="p">:</span>
+                    <span class="n">wx</span><span class="o">.</span><span class="n">PostEvent</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">parent</span><span class="p">,</span> <span class="n">StatusEvent</span><span class="p">(</span><span class="n">status</span><span class="o">=</span><span class="n">msg</span><span class="p">,</span> <span class="n">info</span><span class="o">=</span><span class="s1">&#39;error&#39;</span><span class="p">))</span>
+                    <span class="k">return</span>
+                <span class="n">msg</span> <span class="o">+=</span> <span class="s2">&quot;Invariant panel does not allow multiple data!</span><span class="se">\n</span><span class="s2">&quot;</span>
+                <span class="n">msg</span> <span class="o">+=</span> <span class="s2">&quot;Please select one.</span><span class="se">\n</span><span class="s2">&quot;</span>
+                <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">data_list</span><span class="p">)</span> <span class="o">&gt;</span> <span class="mi">1</span><span class="p">:</span>
+                    <span class="kn">from</span> <span class="nn">invariant_widgets</span> <span class="kn">import</span> <span class="n">DataDialog</span>
+                    <span class="n">dlg</span> <span class="o">=</span> <span class="n">DataDialog</span><span class="p">(</span><span class="n">data_list</span><span class="o">=</span><span class="n">data_1d_list</span><span class="p">,</span> <span class="n">text</span><span class="o">=</span><span class="n">msg</span><span class="p">)</span>
+                    <span class="k">if</span> <span class="n">dlg</span><span class="o">.</span><span class="n">ShowModal</span><span class="p">()</span> <span class="o">==</span> <span class="n">wx</span><span class="o">.</span><span class="n">ID_OK</span><span class="p">:</span>
+                        <span class="n">data</span> <span class="o">=</span> <span class="n">dlg</span><span class="o">.</span><span class="n">get_data</span><span class="p">()</span>
+                    <span class="k">else</span><span class="p">:</span>
+                        <span class="n">data</span> <span class="o">=</span> <span class="bp">None</span>
+                    <span class="n">dlg</span><span class="o">.</span><span class="n">Destroy</span><span class="p">()</span>
+
+            <span class="k">if</span> <span class="n">data</span> <span class="ow">is</span> <span class="bp">None</span><span class="p">:</span>
+                <span class="n">msg</span> <span class="o">+=</span> <span class="s2">&quot;invariant receives no data. </span><span class="se">\n</span><span class="s2">&quot;</span>
+                <span class="n">wx</span><span class="o">.</span><span class="n">PostEvent</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">parent</span><span class="p">,</span> <span class="n">StatusEvent</span><span class="p">(</span><span class="n">status</span><span class="o">=</span><span class="n">msg</span><span class="p">,</span> <span class="n">info</span><span class="o">=</span><span class="s1">&#39;error&#39;</span><span class="p">))</span>
+                <span class="k">return</span>
+            <span class="k">if</span> <span class="ow">not</span> <span class="nb">issubclass</span><span class="p">(</span><span class="n">data</span><span class="o">.</span><span class="n">__class__</span><span class="p">,</span> <span class="n">Data1D</span><span class="p">):</span>
+                <span class="n">msg</span> <span class="o">+=</span> <span class="s2">&quot;invariant cannot be computed for data of &quot;</span>
+                <span class="n">msg</span> <span class="o">+=</span> <span class="s2">&quot;type </span><span class="si">%s</span><span class="se">\n</span><span class="s2">&quot;</span> <span class="o">%</span> <span class="p">(</span><span class="n">data</span><span class="o">.</span><span class="n">__class__</span><span class="o">.</span><span class="n">__name__</span><span class="p">)</span>
+                <span class="n">wx</span><span class="o">.</span><span class="n">PostEvent</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">parent</span><span class="p">,</span> <span class="n">StatusEvent</span><span class="p">(</span><span class="n">status</span><span class="o">=</span><span class="n">msg</span><span class="p">,</span> <span class="n">info</span><span class="o">=</span><span class="s1">&#39;error&#39;</span><span class="p">))</span>
+                <span class="k">return</span>
+            <span class="k">else</span><span class="p">:</span>
+                <span class="n">wx</span><span class="o">.</span><span class="n">PostEvent</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">parent</span><span class="p">,</span> <span class="n">NewPlotEvent</span><span class="p">(</span><span class="n">plot</span><span class="o">=</span><span class="n">data</span><span class="p">,</span> <span class="n">title</span><span class="o">=</span><span class="n">data</span><span class="o">.</span><span class="n">title</span><span class="p">))</span>
+                <span class="k">try</span><span class="p">:</span>
+                    <span class="bp">self</span><span class="o">.</span><span class="n">compute_helper</span><span class="p">(</span><span class="n">data</span><span class="p">)</span>
+                <span class="k">except</span><span class="p">:</span>
+                    <span class="n">msg</span> <span class="o">=</span> <span class="s2">&quot;Invariant Set_data: &quot;</span> <span class="o">+</span> <span class="nb">str</span><span class="p">(</span><span class="n">sys</span><span class="o">.</span><span class="n">exc_value</span><span class="p">)</span>
+                    <span class="n">wx</span><span class="o">.</span><span class="n">PostEvent</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">parent</span><span class="p">,</span> <span class="n">StatusEvent</span><span class="p">(</span><span class="n">status</span><span class="o">=</span><span class="n">msg</span><span class="p">,</span> <span class="n">info</span><span class="o">=</span><span class="s2">&quot;error&quot;</span><span class="p">))</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">msg</span> <span class="o">=</span> <span class="s2">&quot;invariant cannot be computed for data of &quot;</span>
+            <span class="n">msg</span> <span class="o">+=</span> <span class="s2">&quot;type </span><span class="si">%s</span><span class="s2">&quot;</span> <span class="o">%</span> <span class="p">(</span><span class="n">data</span><span class="o">.</span><span class="n">__class__</span><span class="o">.</span><span class="n">__name__</span><span class="p">)</span>
+            <span class="n">wx</span><span class="o">.</span><span class="n">PostEvent</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">parent</span><span class="p">,</span> <span class="n">StatusEvent</span><span class="p">(</span><span class="n">status</span><span class="o">=</span><span class="n">msg</span><span class="p">,</span> <span class="n">info</span><span class="o">=</span><span class="s1">&#39;error&#39;</span><span class="p">))</span></div>
+
+<div class="viewcode-block" id="Plugin.delete_data"><a class="viewcode-back" href="../../../../../dev/api/sas.sasgui.perspectives.invariant.html#sas.sasgui.perspectives.invariant.invariant.Plugin.delete_data">[docs]</a>    <span class="k">def</span> <span class="nf">delete_data</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">data_id</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">__data</span> <span class="ow">is</span> <span class="bp">None</span><span class="p">:</span>
+            <span class="k">return</span>
+        <span class="k">for</span> <span class="nb">id</span> <span class="ow">in</span> <span class="n">data_id</span><span class="p">:</span>
+            <span class="k">if</span> <span class="nb">id</span> <span class="o">==</span> <span class="bp">self</span><span class="o">.</span><span class="n">__data</span><span class="o">.</span><span class="n">id</span><span class="p">:</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">clear_panel</span><span class="p">()</span></div>
+
+<div class="viewcode-block" id="Plugin.clear_panel"><a class="viewcode-back" href="../../../../../dev/api/sas.sasgui.perspectives.invariant.html#sas.sasgui.perspectives.invariant.invariant.Plugin.clear_panel">[docs]</a>    <span class="k">def</span> <span class="nf">clear_panel</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">invariant_panel</span><span class="o">.</span><span class="n">clear_panel</span><span class="p">()</span></div>
+
+<div class="viewcode-block" id="Plugin.compute_helper"><a class="viewcode-back" href="../../../../../dev/api/sas.sasgui.perspectives.invariant.html#sas.sasgui.perspectives.invariant.invariant.Plugin.compute_helper">[docs]</a>    <span class="k">def</span> <span class="nf">compute_helper</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">data</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">if</span> <span class="n">data</span> <span class="ow">is</span> <span class="bp">None</span><span class="p">:</span>
+            <span class="k">return</span>
+        <span class="c1"># set current data if not it&#39;s a state data</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="bp">self</span><span class="o">.</span><span class="n">invariant_panel</span><span class="o">.</span><span class="n">is_state_data</span><span class="p">:</span>
+            <span class="c1"># Store reference to data</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">__data</span> <span class="o">=</span> <span class="n">data</span>
+            <span class="c1"># Set the data set to be user for invariant calculation</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">invariant_panel</span><span class="o">.</span><span class="n">set_data</span><span class="p">(</span><span class="n">data</span><span class="o">=</span><span class="n">data</span><span class="p">)</span></div>
+
+<div class="viewcode-block" id="Plugin.save_file"><a class="viewcode-back" href="../../../../../dev/api/sas.sasgui.perspectives.invariant.html#sas.sasgui.perspectives.invariant.invariant.Plugin.save_file">[docs]</a>    <span class="k">def</span> <span class="nf">save_file</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">filepath</span><span class="p">,</span> <span class="n">state</span><span class="o">=</span><span class="bp">None</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Save data in provided state object.</span>
+
+<span class="sd">        :param filepath: path of file to write to</span>
+<span class="sd">        :param state: invariant state</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="c1"># Write the state to file</span>
+        <span class="c1"># First, check that the data is of the right type</span>
+        <span class="n">current_plottable</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">__data</span>
+
+        <span class="k">if</span> <span class="nb">issubclass</span><span class="p">(</span><span class="n">current_plottable</span><span class="o">.</span><span class="n">__class__</span><span class="p">,</span> <span class="n">Data1D</span><span class="p">):</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">state_reader</span><span class="o">.</span><span class="n">write</span><span class="p">(</span><span class="n">filepath</span><span class="p">,</span> <span class="n">current_plottable</span><span class="p">,</span> <span class="n">state</span><span class="p">)</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">msg</span> <span class="o">=</span> <span class="s2">&quot;invariant.save_file: the data being saved is&quot;</span>
+            <span class="n">msg</span> <span class="o">+=</span> <span class="s2">&quot; not a sas.sascalc.dataloader.data_info.Data1D object&quot;</span>
+            <span class="k">raise</span> <span class="ne">RuntimeError</span><span class="p">,</span> <span class="n">msg</span></div>
+
+<div class="viewcode-block" id="Plugin.set_state"><a class="viewcode-back" href="../../../../../dev/api/sas.sasgui.perspectives.invariant.html#sas.sasgui.perspectives.invariant.invariant.Plugin.set_state">[docs]</a>    <span class="k">def</span> <span class="nf">set_state</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">state</span><span class="o">=</span><span class="bp">None</span><span class="p">,</span> <span class="n">datainfo</span><span class="o">=</span><span class="bp">None</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Call-back method for the state reader.</span>
+<span class="sd">        This method is called when a .inv/.svs file is loaded.</span>
+
+<span class="sd">        :param state: State object</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">temp_state</span> <span class="o">=</span> <span class="bp">None</span>
+        <span class="k">try</span><span class="p">:</span>
+            <span class="k">if</span> <span class="n">datainfo</span><span class="o">.</span><span class="n">__class__</span><span class="o">.</span><span class="n">__name__</span> <span class="o">==</span> <span class="s1">&#39;list&#39;</span><span class="p">:</span>
+                <span class="n">data</span> <span class="o">=</span> <span class="n">datainfo</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
+            <span class="k">else</span><span class="p">:</span>
+                <span class="n">data</span> <span class="o">=</span> <span class="n">datainfo</span>
+            <span class="k">if</span> <span class="n">data</span> <span class="ow">is</span> <span class="bp">None</span><span class="p">:</span>
+                <span class="n">msg</span> <span class="o">=</span> <span class="s2">&quot;invariant.set_state: datainfo parameter cannot&quot;</span>
+                <span class="n">msg</span> <span class="o">+=</span> <span class="s2">&quot; be None in standalone mode&quot;</span>
+                <span class="k">raise</span> <span class="ne">RuntimeError</span><span class="p">,</span> <span class="n">msg</span>
+            <span class="c1"># Make sure the user sees the invariant panel after loading</span>
+            <span class="c1"># self.parent.set_perspective(self.perspective)</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">on_perspective</span><span class="p">(</span><span class="n">event</span><span class="o">=</span><span class="bp">None</span><span class="p">)</span>
+            <span class="n">name</span> <span class="o">=</span> <span class="n">data</span><span class="o">.</span><span class="n">meta_data</span><span class="p">[</span><span class="s1">&#39;invstate&#39;</span><span class="p">]</span><span class="o">.</span><span class="n">file</span>
+            <span class="n">data</span><span class="o">.</span><span class="n">meta_data</span><span class="p">[</span><span class="s1">&#39;invstate&#39;</span><span class="p">]</span><span class="o">.</span><span class="n">file</span> <span class="o">=</span> <span class="n">name</span>
+            <span class="n">data</span><span class="o">.</span><span class="n">name</span> <span class="o">=</span> <span class="n">name</span>
+            <span class="n">data</span><span class="o">.</span><span class="n">filename</span> <span class="o">=</span> <span class="n">name</span>
+
+            <span class="n">data</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">parent</span><span class="o">.</span><span class="n">create_gui_data</span><span class="p">(</span><span class="n">data</span><span class="p">,</span> <span class="bp">None</span><span class="p">)</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">__data</span> <span class="o">=</span> <span class="n">data</span>
+            <span class="n">wx</span><span class="o">.</span><span class="n">PostEvent</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">parent</span><span class="p">,</span> <span class="n">NewPlotEvent</span><span class="p">(</span><span class="n">plot</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">__data</span><span class="p">,</span>
+                                                   <span class="n">reset</span><span class="o">=</span><span class="bp">True</span><span class="p">,</span> <span class="n">title</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">__data</span><span class="o">.</span><span class="n">title</span><span class="p">))</span>
+            <span class="n">data_dict</span> <span class="o">=</span> <span class="p">{</span><span class="bp">self</span><span class="o">.</span><span class="n">__data</span><span class="o">.</span><span class="n">id</span><span class="p">:</span><span class="bp">self</span><span class="o">.</span><span class="n">__data</span><span class="p">}</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">parent</span><span class="o">.</span><span class="n">add_data</span><span class="p">(</span><span class="n">data_list</span><span class="o">=</span><span class="n">data_dict</span><span class="p">)</span>
+            <span class="c1"># set state</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">invariant_panel</span><span class="o">.</span><span class="n">is_state_data</span> <span class="o">=</span> <span class="bp">True</span>
+
+            <span class="c1"># Load the invariant states</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">temp_state</span> <span class="o">=</span> <span class="n">state</span>
+            <span class="c1"># Requires to have self.__data and self.temp_state  first.</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">on_set_state_helper</span><span class="p">(</span><span class="bp">None</span><span class="p">)</span>
+
+        <span class="k">except</span><span class="p">:</span>
+            <span class="n">logging</span><span class="o">.</span><span class="n">error</span><span class="p">(</span><span class="s2">&quot;invariant.set_state: </span><span class="si">%s</span><span class="s2">&quot;</span> <span class="o">%</span> <span class="n">sys</span><span class="o">.</span><span class="n">exc_value</span><span class="p">)</span></div>
+
+<div class="viewcode-block" id="Plugin.on_set_state_helper"><a class="viewcode-back" href="../../../../../dev/api/sas.sasgui.perspectives.invariant.html#sas.sasgui.perspectives.invariant.invariant.Plugin.on_set_state_helper">[docs]</a>    <span class="k">def</span> <span class="nf">on_set_state_helper</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">event</span><span class="o">=</span><span class="bp">None</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Set the state when called by EVT_STATE_UPDATE event from guiframe</span>
+<span class="sd">        after a .inv/.svs file is loaded</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">invariant_panel</span><span class="o">.</span><span class="n">set_state</span><span class="p">(</span><span class="n">state</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">temp_state</span><span class="p">,</span>
+                                       <span class="n">data</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">__data</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">temp_state</span> <span class="o">=</span> <span class="bp">None</span></div>
+
+
+<div class="viewcode-block" id="Plugin.plot_theory"><a class="viewcode-back" href="../../../../../dev/api/sas.sasgui.perspectives.invariant.html#sas.sasgui.perspectives.invariant.invariant.Plugin.plot_theory">[docs]</a>    <span class="k">def</span> <span class="nf">plot_theory</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">data</span><span class="o">=</span><span class="bp">None</span><span class="p">,</span> <span class="n">name</span><span class="o">=</span><span class="bp">None</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Receive a data set and post a NewPlotEvent to parent.</span>
+
+<span class="sd">        :param data: extrapolated data to be plotted</span>
+<span class="sd">        :param name: Data&#39;s name to use for the legend</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="c1"># import copy</span>
+        <span class="k">if</span> <span class="n">data</span> <span class="ow">is</span> <span class="bp">None</span><span class="p">:</span>
+            <span class="nb">id</span> <span class="o">=</span> <span class="nb">str</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">__data</span><span class="o">.</span><span class="n">id</span><span class="p">)</span> <span class="o">+</span> <span class="n">name</span>
+            <span class="n">group_id</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">__data</span><span class="o">.</span><span class="n">group_id</span>
+            <span class="n">wx</span><span class="o">.</span><span class="n">PostEvent</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">parent</span><span class="p">,</span> <span class="n">NewPlotEvent</span><span class="p">(</span><span class="nb">id</span><span class="o">=</span><span class="nb">id</span><span class="p">,</span> <span class="n">group_id</span><span class="o">=</span><span class="n">group_id</span><span class="p">,</span> <span class="n">action</span><span class="o">=</span><span class="s1">&#39;Remove&#39;</span><span class="p">))</span>
+            <span class="k">return</span>
+
+        <span class="n">new_plot</span> <span class="o">=</span> <span class="n">Data1D</span><span class="p">(</span><span class="n">x</span><span class="o">=</span><span class="p">[],</span> <span class="n">y</span><span class="o">=</span><span class="p">[],</span> <span class="n">dy</span><span class="o">=</span><span class="bp">None</span><span class="p">)</span>
+        <span class="n">new_plot</span><span class="o">.</span><span class="n">symbol</span> <span class="o">=</span> <span class="n">GUIFRAME_ID</span><span class="o">.</span><span class="n">CURVE_SYMBOL_NUM</span>
+        <span class="n">scale</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">invariant_panel</span><span class="o">.</span><span class="n">get_scale</span><span class="p">()</span>
+        <span class="n">background</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">invariant_panel</span><span class="o">.</span><span class="n">get_background</span><span class="p">()</span>
+
+        <span class="k">if</span> <span class="n">scale</span> <span class="o">!=</span> <span class="mi">0</span><span class="p">:</span>
+            <span class="c1"># Put back the sacle and bkg for plotting</span>
+            <span class="n">data</span><span class="o">.</span><span class="n">y</span> <span class="o">=</span> <span class="p">(</span><span class="n">data</span><span class="o">.</span><span class="n">y</span> <span class="o">+</span> <span class="n">background</span><span class="p">)</span> <span class="o">/</span> <span class="n">scale</span>
+            <span class="n">new_plot</span> <span class="o">=</span> <span class="n">Data1D</span><span class="p">(</span><span class="n">x</span><span class="o">=</span><span class="n">data</span><span class="o">.</span><span class="n">x</span><span class="p">,</span> <span class="n">y</span><span class="o">=</span><span class="n">data</span><span class="o">.</span><span class="n">y</span><span class="p">,</span> <span class="n">dy</span><span class="o">=</span><span class="bp">None</span><span class="p">)</span>
+            <span class="n">new_plot</span><span class="o">.</span><span class="n">symbol</span> <span class="o">=</span> <span class="n">GUIFRAME_ID</span><span class="o">.</span><span class="n">CURVE_SYMBOL_NUM</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">msg</span> <span class="o">=</span> <span class="s2">&quot;Scale can not be zero.&quot;</span>
+            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">,</span> <span class="n">msg</span>
+        <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">new_plot</span><span class="o">.</span><span class="n">x</span><span class="p">)</span> <span class="o">==</span> <span class="mi">0</span><span class="p">:</span>
+            <span class="k">return</span>
+
+        <span class="n">new_plot</span><span class="o">.</span><span class="n">name</span> <span class="o">=</span> <span class="n">name</span>
+        <span class="n">new_plot</span><span class="o">.</span><span class="n">xaxis</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">__data</span><span class="o">.</span><span class="n">_xaxis</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">__data</span><span class="o">.</span><span class="n">_xunit</span><span class="p">)</span>
+        <span class="n">new_plot</span><span class="o">.</span><span class="n">yaxis</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">__data</span><span class="o">.</span><span class="n">_yaxis</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">__data</span><span class="o">.</span><span class="n">_yunit</span><span class="p">)</span>
+        <span class="n">new_plot</span><span class="o">.</span><span class="n">group_id</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">__data</span><span class="o">.</span><span class="n">group_id</span>
+        <span class="n">new_plot</span><span class="o">.</span><span class="n">id</span> <span class="o">=</span> <span class="nb">str</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">__data</span><span class="o">.</span><span class="n">id</span><span class="p">)</span> <span class="o">+</span> <span class="n">name</span>
+        <span class="n">new_plot</span><span class="o">.</span><span class="n">title</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">__data</span><span class="o">.</span><span class="n">title</span>
+        <span class="c1"># Save theory_data in a state</span>
+        <span class="k">if</span> <span class="n">data</span> <span class="o">!=</span> <span class="bp">None</span><span class="p">:</span>
+            <span class="n">name_head</span> <span class="o">=</span> <span class="n">name</span><span class="o">.</span><span class="n">split</span><span class="p">(</span><span class="s1">&#39;-&#39;</span><span class="p">)</span>
+            <span class="k">if</span> <span class="n">name_head</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="o">==</span> <span class="s1">&#39;Low&#39;</span><span class="p">:</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">invariant_panel</span><span class="o">.</span><span class="n">state</span><span class="o">.</span><span class="n">theory_lowQ</span> <span class="o">=</span> <span class="n">copy</span><span class="o">.</span><span class="n">deepcopy</span><span class="p">(</span><span class="n">new_plot</span><span class="p">)</span>
+            <span class="k">elif</span> <span class="n">name_head</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="o">==</span> <span class="s1">&#39;High&#39;</span><span class="p">:</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">invariant_panel</span><span class="o">.</span><span class="n">state</span><span class="o">.</span><span class="n">theory_highQ</span> <span class="o">=</span> <span class="n">copy</span><span class="o">.</span><span class="n">deepcopy</span><span class="p">(</span><span class="n">new_plot</span><span class="p">)</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">parent</span><span class="o">.</span><span class="n">update_theory</span><span class="p">(</span><span class="n">data_id</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">__data</span><span class="o">.</span><span class="n">id</span><span class="p">,</span> <span class="n">theory</span><span class="o">=</span><span class="n">new_plot</span><span class="p">)</span>
+        <span class="n">wx</span><span class="o">.</span><span class="n">PostEvent</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">parent</span><span class="p">,</span> <span class="n">NewPlotEvent</span><span class="p">(</span><span class="n">plot</span><span class="o">=</span><span class="n">new_plot</span><span class="p">,</span>
+                                               <span class="n">title</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">__data</span><span class="o">.</span><span class="n">title</span><span class="p">))</span></div>
+
+<div class="viewcode-block" id="Plugin.plot_data"><a class="viewcode-back" href="../../../../../dev/api/sas.sasgui.perspectives.invariant.html#sas.sasgui.perspectives.invariant.invariant.Plugin.plot_data">[docs]</a>    <span class="k">def</span> <span class="nf">plot_data</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">scale</span><span class="p">,</span> <span class="n">background</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        replot the current data if the user enters a new scale or background</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">new_plot</span> <span class="o">=</span> <span class="n">scale</span> <span class="o">*</span> <span class="bp">self</span><span class="o">.</span><span class="n">__data</span> <span class="o">-</span> <span class="n">background</span>
+        <span class="n">new_plot</span><span class="o">.</span><span class="n">name</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">__data</span><span class="o">.</span><span class="n">name</span>
+        <span class="n">new_plot</span><span class="o">.</span><span class="n">group_id</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">__data</span><span class="o">.</span><span class="n">group_id</span>
+        <span class="n">new_plot</span><span class="o">.</span><span class="n">id</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">__data</span><span class="o">.</span><span class="n">id</span>
+        <span class="n">new_plot</span><span class="o">.</span><span class="n">title</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">__data</span><span class="o">.</span><span class="n">title</span>
+
+        <span class="c1"># Save data in a state: but seems to never happen</span>
+        <span class="k">if</span> <span class="n">new_plot</span> <span class="o">!=</span> <span class="bp">None</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">invariant_panel</span><span class="o">.</span><span class="n">state</span><span class="o">.</span><span class="n">data</span> <span class="o">=</span> <span class="n">copy</span><span class="o">.</span><span class="n">deepcopy</span><span class="p">(</span><span class="n">new_plot</span><span class="p">)</span>
+        <span class="n">wx</span><span class="o">.</span><span class="n">PostEvent</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">parent</span><span class="p">,</span> <span class="n">NewPlotEvent</span><span class="p">(</span><span class="n">plot</span><span class="o">=</span><span class="n">new_plot</span><span class="p">,</span>
+                                               <span class="n">title</span><span class="o">=</span><span class="n">new_plot</span><span class="o">.</span><span class="n">title</span><span class="p">))</span></div></div>
+
+</pre></div>
+
+          </div>
+        </div>
+      </div>
+      <div class="sphinxsidebar" role="navigation" aria-label="main navigation">
+        <div class="sphinxsidebarwrapper">
+<div id="searchbox" style="display: none" role="search">
+  <h3>Quick search</h3>
+    <form class="search" action="../../../../../search.html" method="get">
+      <input type="text" name="q" />
+      <input type="submit" value="Go" />
+      <input type="hidden" name="check_keywords" value="yes" />
+      <input type="hidden" name="area" value="default" />
+    </form>
+</div>
+<script type="text/javascript">$('#searchbox').show(0);</script>
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="related" role="navigation" aria-label="related navigation">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="../../../../../genindex.html" title="General Index"
+             >index</a></li>
+        <li class="right" >
+          <a href="../../../../../py-modindex.html" title="Python Module Index"
+             >modules</a> |</li>
+        <li class="nav-item nav-item-0"><a href="../../../../../index.html">SasView 4.1.2 documentation</a> &raquo;</li>
+          <li class="nav-item nav-item-1"><a href="../../../../index.html" >Module code</a> &raquo;</li>
+          <li class="nav-item nav-item-2"><a href="../invariant.html" >sas.sasgui.perspectives.invariant</a> &raquo;</li> 
+      </ul>
+    </div>
+    <div class="footer" role="contentinfo">
+        &copy; Copyright 2017, The SasView Project.
+      Created using <a href="http://sphinx-doc.org/">Sphinx</a> 1.4.1.
+    </div>
+  </body>
+</html>

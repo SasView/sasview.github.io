@@ -6,7 +6,7 @@
   <head>
     <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
     
-    <title>sas.sasgui.guiframe.proxy &mdash; SasView 4.1.2 documentation</title>
+    <title>sas.sasgui.guiframe.proxy &mdash; SasView 4.2.0 documentation</title>
     
     <link rel="stylesheet" href="../../../../_static/classic.css" type="text/css" />
     <link rel="stylesheet" href="../../../../_static/pygments.css" type="text/css" />
@@ -14,7 +14,7 @@
     <script type="text/javascript">
       var DOCUMENTATION_OPTIONS = {
         URL_ROOT:    '../../../../',
-        VERSION:     '4.1.2',
+        VERSION:     '4.2.0',
         COLLAPSE_INDEX: false,
         FILE_SUFFIX: '.html',
         HAS_SOURCE:  true
@@ -24,7 +24,7 @@
     <script type="text/javascript" src="../../../../_static/underscore.js"></script>
     <script type="text/javascript" src="../../../../_static/doctools.js"></script>
     <script type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.1/MathJax.js?config=TeX-MML-AM_CHTML"></script>
-    <link rel="top" title="SasView 4.1.2 documentation" href="../../../../index.html" />
+    <link rel="top" title="SasView 4.2.0 documentation" href="../../../../index.html" />
     <link rel="up" title="sas.sasgui.guiframe" href="../guiframe.html" /> 
   </head>
   <body role="document">
@@ -37,9 +37,10 @@
         <li class="right" >
           <a href="../../../../py-modindex.html" title="Python Module Index"
              >modules</a> |</li>
-        <li class="nav-item nav-item-0"><a href="../../../../index.html">SasView 4.1.2 documentation</a> &raquo;</li>
+        <li class="nav-item nav-item-0"><a href="../../../../index.html">SasView 4.2.0 documentation</a> &raquo;</li>
           <li class="nav-item nav-item-1"><a href="../../../index.html" >Module code</a> &raquo;</li>
-          <li class="nav-item nav-item-2"><a href="../guiframe.html" accesskey="U">sas.sasgui.guiframe</a> &raquo;</li> 
+          <li class="nav-item nav-item-2"><a href="../../../sas.html" >sas</a> &raquo;</li>
+          <li class="nav-item nav-item-3"><a href="../guiframe.html" accesskey="U">sas.sasgui.guiframe</a> &raquo;</li> 
       </ul>
     </div>  
 
@@ -51,24 +52,29 @@
   <h1>Source code for sas.sasgui.guiframe.proxy</h1><div class="highlight"><pre>
 <span></span><span class="ch">#!/usr/bin/env python</span>
 <span class="c1"># -*- coding: utf-8 -*-</span>
+<span class="kn">from</span> <span class="nn">__future__</span> <span class="kn">import</span> <span class="n">print_function</span>
+
 <span class="kn">import</span> <span class="nn">urllib2</span>
 <span class="kn">import</span> <span class="nn">sys</span>
 <span class="kn">import</span> <span class="nn">json</span>
 <span class="kn">import</span> <span class="nn">logging</span>
 <span class="kn">import</span> <span class="nn">re</span>
 
+
+<span class="n">logger</span> <span class="o">=</span> <span class="n">logging</span><span class="o">.</span><span class="n">getLogger</span><span class="p">(</span><span class="n">__name__</span><span class="p">)</span>
+
 <span class="sd">&#39;&#39;&#39;</span>
 <span class="sd">HTTP Proxy parser and Connection</span>
 
 <span class="sd">connect() function:</span>
 <span class="sd">    - auto detects proxy in windows, osx</span>
-<span class="sd">    - in ux systems, the http_proxy enviroment variable must be set</span>
+<span class="sd">    - in ux systems, the http_proxy environment variable must be set</span>
 <span class="sd">    - if it fails, try to find the proxy.pac address.</span>
 <span class="sd">      - parses the file, and looks up for all possible proxies</span>
 <span class="sd">&#39;&#39;&#39;</span>
 
 
-<div class="viewcode-block" id="Connection"><a class="viewcode-back" href="../../../../dev/api/sas.sasgui.guiframe.html#sas.sasgui.guiframe.proxy.Connection">[docs]</a><span class="k">class</span> <span class="nc">Connection</span><span class="p">(</span><span class="nb">object</span><span class="p">):</span>
+<div class="viewcode-block" id="Connection"><a class="viewcode-back" href="../../../../dev/sasview-api/sas.sasgui.guiframe.html#sas.sasgui.guiframe.proxy.Connection">[docs]</a><span class="k">class</span> <span class="nc">Connection</span><span class="p">(</span><span class="nb">object</span><span class="p">):</span>
 
     <span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">url</span><span class="p">,</span> <span class="n">timeout</span><span class="p">):</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">url</span> <span class="o">=</span> <span class="n">url</span>
@@ -121,13 +127,13 @@
 <span class="sd">        &#39;&#39;&#39;</span>
         <span class="n">proxy_url_list</span> <span class="o">=</span> <span class="p">[]</span>
         <span class="k">for</span> <span class="n">this_pac_url</span> <span class="ow">in</span> <span class="n">pac_urls_list</span><span class="p">:</span>
-            <span class="n">logging</span><span class="o">.</span><span class="n">debug</span><span class="p">(</span><span class="s1">&#39;Trying pac file (</span><span class="si">%s</span><span class="s1">)...&#39;</span> <span class="o">%</span> <span class="n">this_pac_url</span><span class="p">)</span>
+            <span class="n">logger</span><span class="o">.</span><span class="n">debug</span><span class="p">(</span><span class="s1">&#39;Trying pac file (</span><span class="si">%s</span><span class="s1">)...&#39;</span> <span class="o">%</span> <span class="n">this_pac_url</span><span class="p">)</span>
             <span class="k">try</span><span class="p">:</span>
                 <span class="n">response</span> <span class="o">=</span> <span class="n">urllib2</span><span class="o">.</span><span class="n">urlopen</span><span class="p">(</span>
                     <span class="n">this_pac_url</span><span class="p">,</span> <span class="n">timeout</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">timeout</span><span class="p">)</span>
-                <span class="n">logging</span><span class="o">.</span><span class="n">debug</span><span class="p">(</span><span class="s1">&#39;Succeeded (</span><span class="si">%s</span><span class="s1">)...&#39;</span> <span class="o">%</span> <span class="n">this_pac_url</span><span class="p">)</span>
+                <span class="n">logger</span><span class="o">.</span><span class="n">debug</span><span class="p">(</span><span class="s1">&#39;Succeeded (</span><span class="si">%s</span><span class="s1">)...&#39;</span> <span class="o">%</span> <span class="n">this_pac_url</span><span class="p">)</span>
             <span class="k">except</span> <span class="ne">Exception</span><span class="p">:</span>
-                <span class="n">logging</span><span class="o">.</span><span class="n">debug</span><span class="p">(</span><span class="s1">&#39;Failled (</span><span class="si">%s</span><span class="s1">)...&#39;</span> <span class="o">%</span> <span class="n">this_pac_url</span><span class="p">)</span>
+                <span class="n">logger</span><span class="o">.</span><span class="n">debug</span><span class="p">(</span><span class="s1">&#39;Failled (</span><span class="si">%s</span><span class="s1">)...&#39;</span> <span class="o">%</span> <span class="n">this_pac_url</span><span class="p">)</span>
                 <span class="k">continue</span>
             <span class="n">pacStr</span> <span class="o">=</span> <span class="n">response</span><span class="o">.</span><span class="n">read</span><span class="p">()</span>
             <span class="n">possProxies</span> <span class="o">=</span> <span class="n">re</span><span class="o">.</span><span class="n">findall</span><span class="p">(</span>
@@ -162,7 +168,7 @@
     
    
     
-<div class="viewcode-block" id="Connection.connect"><a class="viewcode-back" href="../../../../dev/api/sas.sasgui.guiframe.html#sas.sasgui.guiframe.proxy.Connection.connect">[docs]</a>    <span class="k">def</span> <span class="nf">connect</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+<div class="viewcode-block" id="Connection.connect"><a class="viewcode-back" href="../../../../dev/sasview-api/sas.sasgui.guiframe.html#sas.sasgui.guiframe.proxy.Connection.connect">[docs]</a>    <span class="k">def</span> <span class="nf">connect</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
         <span class="sd">&#39;&#39;&#39;</span>
 <span class="sd">        Performs the request and gets a response from self.url</span>
 <span class="sd">        @return: response object from urllib2.urlopen</span>
@@ -170,32 +176,32 @@
         <span class="n">req</span> <span class="o">=</span> <span class="n">urllib2</span><span class="o">.</span><span class="n">Request</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">url</span><span class="p">)</span>
         <span class="n">response</span> <span class="o">=</span> <span class="bp">None</span>
         <span class="k">try</span><span class="p">:</span>
-            <span class="n">logging</span><span class="o">.</span><span class="n">debug</span><span class="p">(</span><span class="s2">&quot;Trying Direct connection to </span><span class="si">%s</span><span class="s2">...&quot;</span><span class="o">%</span><span class="bp">self</span><span class="o">.</span><span class="n">url</span><span class="p">)</span>
+            <span class="n">logger</span><span class="o">.</span><span class="n">debug</span><span class="p">(</span><span class="s2">&quot;Trying Direct connection to </span><span class="si">%s</span><span class="s2">...&quot;</span><span class="o">%</span><span class="bp">self</span><span class="o">.</span><span class="n">url</span><span class="p">)</span>
             <span class="n">response</span> <span class="o">=</span> <span class="n">urllib2</span><span class="o">.</span><span class="n">urlopen</span><span class="p">(</span><span class="n">req</span><span class="p">,</span> <span class="n">timeout</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">timeout</span><span class="p">)</span>
         <span class="k">except</span> <span class="ne">Exception</span><span class="p">,</span> <span class="n">e</span><span class="p">:</span>
-            <span class="n">logging</span><span class="o">.</span><span class="n">debug</span><span class="p">(</span><span class="s2">&quot;Failed!&quot;</span><span class="p">)</span>
-            <span class="n">logging</span><span class="o">.</span><span class="n">debug</span><span class="p">(</span><span class="n">e</span><span class="p">)</span>
+            <span class="n">logger</span><span class="o">.</span><span class="n">debug</span><span class="p">(</span><span class="s2">&quot;Failed!&quot;</span><span class="p">)</span>
+            <span class="n">logger</span><span class="o">.</span><span class="n">debug</span><span class="p">(</span><span class="n">e</span><span class="p">)</span>
             <span class="k">try</span><span class="p">:</span>
-                <span class="n">logging</span><span class="o">.</span><span class="n">debug</span><span class="p">(</span><span class="s2">&quot;Trying to use system proxy if it exists...&quot;</span><span class="p">)</span>
+                <span class="n">logger</span><span class="o">.</span><span class="n">debug</span><span class="p">(</span><span class="s2">&quot;Trying to use system proxy if it exists...&quot;</span><span class="p">)</span>
                 <span class="bp">self</span><span class="o">.</span><span class="n">_set_proxy</span><span class="p">()</span>
                 <span class="n">response</span> <span class="o">=</span> <span class="n">urllib2</span><span class="o">.</span><span class="n">urlopen</span><span class="p">(</span><span class="n">req</span><span class="p">,</span> <span class="n">timeout</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">timeout</span><span class="p">)</span>
             <span class="k">except</span> <span class="ne">Exception</span><span class="p">,</span> <span class="n">e</span><span class="p">:</span>
-                <span class="n">logging</span><span class="o">.</span><span class="n">debug</span><span class="p">(</span><span class="s2">&quot;Failed!&quot;</span><span class="p">)</span>
-                <span class="n">logging</span><span class="o">.</span><span class="n">debug</span><span class="p">(</span><span class="n">e</span><span class="p">)</span>
+                <span class="n">logger</span><span class="o">.</span><span class="n">debug</span><span class="p">(</span><span class="s2">&quot;Failed!&quot;</span><span class="p">)</span>
+                <span class="n">logger</span><span class="o">.</span><span class="n">debug</span><span class="p">(</span><span class="n">e</span><span class="p">)</span>
                 <span class="n">pac_urls</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_get_addresses_of_proxy_pac</span><span class="p">()</span>
                 <span class="n">proxy_urls</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_parse_proxy_pac</span><span class="p">(</span><span class="n">pac_urls</span><span class="p">)</span>
                 <span class="k">for</span> <span class="n">proxy</span> <span class="ow">in</span> <span class="n">proxy_urls</span><span class="p">:</span>
                     <span class="k">try</span><span class="p">:</span>
-                        <span class="n">logging</span><span class="o">.</span><span class="n">debug</span><span class="p">(</span><span class="s2">&quot;Trying to use the proxy </span><span class="si">%s</span><span class="s2"> found in proxy.pac configuration&quot;</span><span class="o">%</span><span class="n">proxy</span><span class="p">)</span>
+                        <span class="n">logger</span><span class="o">.</span><span class="n">debug</span><span class="p">(</span><span class="s2">&quot;Trying to use the proxy </span><span class="si">%s</span><span class="s2"> found in proxy.pac configuration&quot;</span><span class="o">%</span><span class="n">proxy</span><span class="p">)</span>
                         <span class="bp">self</span><span class="o">.</span><span class="n">_set_proxy</span><span class="p">(</span><span class="n">proxy</span><span class="p">)</span>
                         <span class="n">response</span> <span class="o">=</span> <span class="n">urllib2</span><span class="o">.</span><span class="n">urlopen</span><span class="p">(</span><span class="n">req</span><span class="p">,</span> <span class="n">timeout</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">timeout</span><span class="p">)</span>
                     <span class="k">except</span> <span class="ne">Exception</span><span class="p">,</span> <span class="n">e</span><span class="p">:</span>
-                        <span class="n">logging</span><span class="o">.</span><span class="n">debug</span><span class="p">(</span><span class="s2">&quot;Failed!&quot;</span><span class="p">)</span>
-                        <span class="n">logging</span><span class="o">.</span><span class="n">debug</span><span class="p">(</span><span class="n">e</span><span class="p">)</span>
+                        <span class="n">logger</span><span class="o">.</span><span class="n">debug</span><span class="p">(</span><span class="s2">&quot;Failed!&quot;</span><span class="p">)</span>
+                        <span class="n">logger</span><span class="o">.</span><span class="n">debug</span><span class="p">(</span><span class="n">e</span><span class="p">)</span>
         <span class="k">if</span> <span class="n">response</span> <span class="ow">is</span> <span class="ow">not</span> <span class="bp">None</span><span class="p">:</span>
-            <span class="n">logging</span><span class="o">.</span><span class="n">debug</span><span class="p">(</span><span class="s2">&quot;The connection to </span><span class="si">%s</span><span class="s2"> was successful.&quot;</span><span class="o">%</span><span class="bp">self</span><span class="o">.</span><span class="n">url</span><span class="p">)</span>
+            <span class="n">logger</span><span class="o">.</span><span class="n">debug</span><span class="p">(</span><span class="s2">&quot;The connection to </span><span class="si">%s</span><span class="s2"> was successful.&quot;</span><span class="o">%</span><span class="bp">self</span><span class="o">.</span><span class="n">url</span><span class="p">)</span>
         <span class="k">else</span><span class="p">:</span>
-            <span class="n">logging</span><span class="o">.</span><span class="n">warning</span><span class="p">(</span><span class="s2">&quot;Connection to </span><span class="si">%s</span><span class="s2"> failed...&quot;</span><span class="o">%</span><span class="bp">self</span><span class="o">.</span><span class="n">url</span><span class="p">)</span>
+            <span class="n">logger</span><span class="o">.</span><span class="n">warning</span><span class="p">(</span><span class="s2">&quot;Connection to </span><span class="si">%s</span><span class="s2"> failed...&quot;</span><span class="o">%</span><span class="bp">self</span><span class="o">.</span><span class="n">url</span><span class="p">)</span>
         <span class="k">return</span> <span class="n">response</span></div></div>
 
 
@@ -204,7 +210,7 @@
     <span class="n">c</span> <span class="o">=</span> <span class="n">Connection</span><span class="p">()</span>
     <span class="n">response</span> <span class="o">=</span> <span class="n">c</span><span class="o">.</span><span class="n">connect</span><span class="p">()</span>
     <span class="k">if</span> <span class="n">response</span> <span class="ow">is</span> <span class="ow">not</span> <span class="bp">None</span><span class="p">:</span>
-        <span class="k">print</span> <span class="mi">50</span> <span class="o">*</span> <span class="s1">&#39;-&#39;</span>
+        <span class="k">print</span><span class="p">(</span><span class="mi">50</span> <span class="o">*</span> <span class="s1">&#39;-&#39;</span><span class="p">)</span>
         <span class="n">content</span> <span class="o">=</span> <span class="n">json</span><span class="o">.</span><span class="n">loads</span><span class="p">(</span><span class="n">response</span><span class="o">.</span><span class="n">read</span><span class="p">()</span><span class="o">.</span><span class="n">strip</span><span class="p">())</span>
         <span class="n">pprint</span><span class="p">(</span><span class="n">content</span><span class="p">)</span>
 </pre></div>
@@ -237,13 +243,14 @@
         <li class="right" >
           <a href="../../../../py-modindex.html" title="Python Module Index"
              >modules</a> |</li>
-        <li class="nav-item nav-item-0"><a href="../../../../index.html">SasView 4.1.2 documentation</a> &raquo;</li>
+        <li class="nav-item nav-item-0"><a href="../../../../index.html">SasView 4.2.0 documentation</a> &raquo;</li>
           <li class="nav-item nav-item-1"><a href="../../../index.html" >Module code</a> &raquo;</li>
-          <li class="nav-item nav-item-2"><a href="../guiframe.html" >sas.sasgui.guiframe</a> &raquo;</li> 
+          <li class="nav-item nav-item-2"><a href="../../../sas.html" >sas</a> &raquo;</li>
+          <li class="nav-item nav-item-3"><a href="../guiframe.html" >sas.sasgui.guiframe</a> &raquo;</li> 
       </ul>
     </div>
     <div class="footer" role="contentinfo">
-        &copy; Copyright 2017, The SasView Project.
+        &copy; Copyright 2018, The SasView Project.
       Created using <a href="http://sphinx-doc.org/">Sphinx</a> 1.4.1.
     </div>
   </body>

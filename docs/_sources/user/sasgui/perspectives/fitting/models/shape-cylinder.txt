@@ -1,0 +1,25 @@
+..
+    Generated from doc/gentoc.py -- DO NOT EDIT --
+
+.. _shape-cylinder:
+
+******************
+Cylinder Functions
+******************
+
+.. toctree::
+
+    /user/models/barbell.rst
+    /user/models/capped_cylinder.rst
+    /user/models/core_shell_bicelle.rst
+    /user/models/core_shell_bicelle_elliptical.rst
+    /user/models/core_shell_bicelle_elliptical_belt_rough.rst
+    /user/models/core_shell_cylinder.rst
+    /user/models/cylinder.rst
+    /user/models/elliptical_cylinder.rst
+    /user/models/flexible_cylinder.rst
+    /user/models/flexible_cylinder_elliptical.rst
+    /user/models/hollow_cylinder.rst
+    /user/models/pearl_necklace.rst
+    /user/models/pringle.rst
+    /user/models/stacked_disks.rst

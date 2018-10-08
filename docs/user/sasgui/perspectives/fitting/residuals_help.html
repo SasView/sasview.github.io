@@ -6,7 +6,7 @@
   <head>
     <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
     
-    <title>Assessing Fit Quality &mdash; SasView 4.1.2 documentation</title>
+    <title>Assessing Fit Quality &mdash; SasView 4.2.0 documentation</title>
     
     <link rel="stylesheet" href="../../../../_static/classic.css" type="text/css" />
     <link rel="stylesheet" href="../../../../_static/pygments.css" type="text/css" />
@@ -14,7 +14,7 @@
     <script type="text/javascript">
       var DOCUMENTATION_OPTIONS = {
         URL_ROOT:    '../../../../',
-        VERSION:     '4.1.2',
+        VERSION:     '4.2.0',
         COLLAPSE_INDEX: false,
         FILE_SUFFIX: '.html',
         HAS_SOURCE:  true
@@ -24,9 +24,9 @@
     <script type="text/javascript" src="../../../../_static/underscore.js"></script>
     <script type="text/javascript" src="../../../../_static/doctools.js"></script>
     <script type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.1/MathJax.js?config=TeX-MML-AM_CHTML"></script>
-    <link rel="top" title="SasView 4.1.2 documentation" href="../../../../index.html" />
+    <link rel="top" title="SasView 4.2.0 documentation" href="../../../../index.html" />
     <link rel="up" title="Fitting Documentation" href="fitting.html" />
-    <link rel="next" title="Polydispersity Distributions" href="pd_help.html" />
+    <link rel="next" title="Polydispersity &amp; Orientational Distributions" href="pd/polydispersity.html" />
     <link rel="prev" title="Fitting" href="fitting_help.html" /> 
   </head>
   <body role="document">
@@ -40,12 +40,12 @@
           <a href="../../../../py-modindex.html" title="Python Module Index"
              >modules</a> |</li>
         <li class="right" >
-          <a href="pd_help.html" title="Polydispersity Distributions"
+          <a href="pd/polydispersity.html" title="Polydispersity &amp; Orientational Distributions"
              accesskey="N">next</a> |</li>
         <li class="right" >
           <a href="fitting_help.html" title="Fitting"
              accesskey="P">previous</a> |</li>
-        <li class="nav-item nav-item-0"><a href="../../../../index.html">SasView 4.1.2 documentation</a> &raquo;</li>
+        <li class="nav-item nav-item-0"><a href="../../../../index.html">SasView 4.2.0 documentation</a> &raquo;</li>
           <li class="nav-item nav-item-1"><a href="../../../user.html" >SasView User Documentation</a> &raquo;</li>
           <li class="nav-item nav-item-2"><a href="../../../analysis.html" >Fitting &amp; Other Analyses</a> &raquo;</li>
           <li class="nav-item nav-item-3"><a href="fitting.html" accesskey="U">Fitting Documentation</a> &raquo;</li> 
@@ -67,38 +67,64 @@ gauge how good an individual fit is, how it compares to a fit of the <em>same mo
 see how closely (or not!) the &#8216;theory&#8217; calculation matches it. But <em>SasView</em>
 also provides two other measures of the quality of a fit:</p>
 <ul class="simple">
-<li>χ <sup>2</sup> (or &#8216;Chi2&#8217;; pronounced &#8216;chi-squared&#8217;)</li>
+<li><span class="math">\(\chi^2\)</span> (or &#8216;Chi2&#8217;; pronounced &#8216;chi-squared&#8217;)</li>
 <li><em>Residuals</em></li>
 </ul>
 <div class="section" id="chi2">
 <h2>Chi2</h2>
-<p>Chi2 is a statistical parameter that quantifies the differences between an observed
-data set and an expected dataset (or &#8216;theory&#8217;).</p>
-<p><em>SasView</em> actually returns this parameter normalized to the number of data points,
-<em>Npts</em> such that</p>
-<blockquote>
-<div><em>Chi2/Npts</em> = { SUM[(<em>Y_i</em> - <em>Y_theory_i</em>)^2 / (<em>Y_error_i</em>)^2] } / <em>Npts</em></div></blockquote>
-<p>This differs slightly from what is sometimes called the &#8216;reduced chi-squared&#8217;
-because it does not take into account the number of fitting parameters (to
-calculate the number of &#8216;degrees of freedom&#8217;), but the &#8216;normalized chi-squared&#8217;
-and the &#8216;reduced chi-squared&#8217; are very close to each other when <em>Npts</em> &gt;&gt; number of
-parameters.</p>
-<p>For a good fit, <em>Chi2/Npts</em> tends to 0.</p>
-<p><em>Chi2/Npts</em> is sometimes referred to as the &#8216;goodness-of-fit&#8217; parameter.</p>
+<p><span class="math">\(\chi^2\)</span> is a statistical parameter that quantifies the differences between
+an observed data set and an expected dataset (or &#8216;theory&#8217;) calculated as</p>
+<div class="math">
+\[\chi^2
+=  \sum[(Y_i - \mathrm{theory}_i)^2 / \mathrm{error}_i^2]\]</div>
+<p>Fitting typically minimizes the value of <span class="math">\(\chi^2\)</span>.  For assessing the quality of
+the model and its &#8220;fit&#8221; however, <em>SasView</em> displays the traditional reduced
+<span class="math">\(\chi^2_R\)</span> which normalizes this parameter by dividing it by the number of
+degrees of freedom (or DOF). The DOF is the number of data points being
+considered, <span class="math">\(N_\mathrm{pts}\)</span>, reduced by the number of free (i.e. fitted)
+parameters, <span class="math">\(N_\mathrm{par}\)</span>. Note that model parameters that are kept fixed do
+<em>not</em> contribute to the DOF (they are not &#8220;free&#8221;). This reduced value is then
+given as</p>
+<div class="math">
+\[\chi^2_R
+=  \sum[(Y_i - \mathrm{theory}_i)^2 / \mathrm{error}_i^2]
+/ [N_\mathrm{pts} - N_\mathrm{par}]\]</div>
+<p>Note that this means the displayed value will vary depending on the number of
+parameters used in the fit. In particular, when doing a calculation without a
+fit (e.g. manually changing a parameter) the DOF will now equal <span class="math">\(N_\mathrm{pts}\)</span>
+and the <span class="math">\(\chi^2_R\)</span> will be the smallest possible for that combination of model,
+data set, and set of parameter values.</p>
+<p>When <span class="math">\(N_\mathrm{pts} \gg N_\mathrm{par}\)</span> as it should for proper fitting, the
+value of the reduced <span class="math">\(\chi^2_R\)</span> will not change very much.</p>
+<p>For a good fit, <span class="math">\(\chi^2_R\)</span> tends to 1.</p>
+<p><span class="math">\(\chi^2_R\)</span> is sometimes referred to as the &#8216;goodness-of-fit&#8217; parameter.</p>
 </div>
 <div class="section" id="residuals">
 <h2>Residuals</h2>
 <p>A residual is the difference between an observed value and an estimate of that
-value, such as a &#8216;theory&#8217; calculation (whereas the difference between an observed
-value and its <em>true</em> value is its error).</p>
-<p><em>SasView</em> calculates &#8216;normalized residuals&#8217;, <em>R_i</em>, for each data point in the
+value, such as a &#8216;theory&#8217; calculation (whereas the difference between an
+observed value and its <em>true</em> value is its error).</p>
+<p><em>SasView</em> calculates &#8216;normalized residuals&#8217;, <span class="math">\(R_i\)</span>, for each data point in the
 fit:</p>
-<blockquote>
-<div><em>R_i</em> = (<em>Y_i</em> - <em>Y_theory_i</em>) / (<em>Y_err_i</em>)</div></blockquote>
-<p>For a good fit, <em>R_i</em> ~ 0.</p>
-<div class="admonition note">
-<p class="first admonition-title">Note</p>
-<p class="last">This help document was last changed by Steve King, 08Jun2015</p>
+<div class="math">
+\[R_i = (Y_i - \mathrm{theory}_i) / \mathrm{error}_i\]</div>
+<p>Think of each normalized residual as the number of standard deviations
+between the measured value and the theory.  For a good fit, 68% of <span class="math">\(R_i\)</span>
+will be within one standard deviation, which will show up in the Residuals
+plot as <span class="math">\(R_i\)</span> values between <span class="math">\(-1\)</span> and <span class="math">\(+1\)</span>.  Almost all the values should
+be between <span class="math">\(-3\)</span> and <span class="math">\(+3\)</span>.</p>
+<p>Residuals values larger than <span class="math">\(\pm 3\)</span> indicate that the model
+is not fit correctly, the wrong model was chosen (e.g., because there is
+more than one phase in your system), or there are problems in
+the data reduction.  Since the goodness of fit is calculated from the
+sum-squared residuals, these extreme values will drive the choice of fit
+parameters.  Any uncertainties calculated for the fitting parameters will
+be meaningless.</p>
+<p><em>Document History</em></p>
+<div class="line-block">
+<div class="line">2015-06-08 Steve King</div>
+<div class="line">2017-09-28 Paul Kienzle</div>
+<div class="line">2018-03-04 Paul Butler</div>
 </div>
 </div>
 </div>
@@ -122,8 +148,8 @@ fit:</p>
   <p class="topless"><a href="fitting_help.html"
                         title="previous chapter">Fitting</a></p>
   <h4>Next topic</h4>
-  <p class="topless"><a href="pd_help.html"
-                        title="next chapter">Polydispersity Distributions</a></p>
+  <p class="topless"><a href="pd/polydispersity.html"
+                        title="next chapter">Polydispersity &amp; Orientational Distributions</a></p>
   <div role="note" aria-label="source link">
     <h3>This Page</h3>
     <ul class="this-page-menu">
@@ -155,19 +181,19 @@ fit:</p>
           <a href="../../../../py-modindex.html" title="Python Module Index"
              >modules</a> |</li>
         <li class="right" >
-          <a href="pd_help.html" title="Polydispersity Distributions"
+          <a href="pd/polydispersity.html" title="Polydispersity &amp; Orientational Distributions"
              >next</a> |</li>
         <li class="right" >
           <a href="fitting_help.html" title="Fitting"
              >previous</a> |</li>
-        <li class="nav-item nav-item-0"><a href="../../../../index.html">SasView 4.1.2 documentation</a> &raquo;</li>
+        <li class="nav-item nav-item-0"><a href="../../../../index.html">SasView 4.2.0 documentation</a> &raquo;</li>
           <li class="nav-item nav-item-1"><a href="../../../user.html" >SasView User Documentation</a> &raquo;</li>
           <li class="nav-item nav-item-2"><a href="../../../analysis.html" >Fitting &amp; Other Analyses</a> &raquo;</li>
           <li class="nav-item nav-item-3"><a href="fitting.html" >Fitting Documentation</a> &raquo;</li> 
       </ul>
     </div>
     <div class="footer" role="contentinfo">
-        &copy; Copyright 2017, The SasView Project.
+        &copy; Copyright 2018, The SasView Project.
       Created using <a href="http://sphinx-doc.org/">Sphinx</a> 1.4.1.
     </div>
   </body>

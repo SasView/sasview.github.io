@@ -18,8 +18,8 @@ sld_core    Cylinder core scattering length density |1e-6Ang^-2|             1
 sld_face    Cylinder face scattering length density |1e-6Ang^-2|             4
 sld_rim     Cylinder rim scattering length density  |1e-6Ang^-2|             4
 sld_solvent Solvent scattering length density       |1e-6Ang^-2|             1
-theta       In plane angle                          degree                  90
-phi         Out of plane angle                      degree                   0
+theta       cylinder axis to beam angle             degree                  90
+phi         rotation about beam                     degree                   0
 =========== ======================================= ============ =============
 
 The returned value is scaled to units of |cm^-1| |sr^-1|, absolute scale.
@@ -41,8 +41,8 @@ factor is normalized by the particle volume.
 
 .. figure:: img/core_shell_bicelle_parameters.png
 
-   Cross section of cylindrical symmetry model used here. Users will have 
-   to decide how to distribute "heads" and "tails" between the rim, face 
+   Cross section of cylindrical symmetry model used here. Users will have
+   to decide how to distribute "heads" and "tails" between the rim, face
    and core regions in order to estimate appropriate starting parameters.
 
 Given the scattering length densities (sld) $\rho_c$, the core sld, $\rho_f$,
@@ -51,8 +51,8 @@ scattering length density variation along the cylinder axis is:
 
 .. math::
 
-    \rho(r) = 
-      \begin{cases} 
+    \rho(r) =
+      \begin{cases}
       &\rho_c \text{ for } 0 \lt r \lt R; -L \lt z\lt L \\[1.5ex]
       &\rho_f \text{ for } 0 \lt r \lt R; -(L+2t) \lt z\lt -L;
       L \lt z\lt (L+2t) \\[1.5ex]
@@ -65,19 +65,26 @@ $\alpha$ is the angle between the $Q$ vector and the cylinder axis, to give:
 .. math::
 
     I(Q,\alpha) = \frac{\text{scale}}{V_t} \cdot
-        F(Q,\alpha)^2.sin(\alpha) + \text{background}
+        F(Q,\alpha)^2 \cdot sin(\alpha) + \text{background}
 
 where
 
 .. math::
+    :nowrap:
 
-        \begin{align}    
-    F(Q,\alpha) = &\bigg[ 
-    (\rho_c - \rho_f) V_c \frac{2J_1(QRsin \alpha)}{QRsin\alpha}\frac{sin(QLcos\alpha/2)}{Q(L/2)cos\alpha} \\
-    &+(\rho_f - \rho_r) V_{c+f} \frac{2J_1(QRsin\alpha)}{QRsin\alpha}\frac{sin(Q(L/2+t_f)cos\alpha)}{Q(L/2+t_f)cos\alpha} \\
-    &+(\rho_r - \rho_s) V_t \frac{2J_1(Q(R+t_r)sin\alpha)}{Q(R+t_r)sin\alpha}\frac{sin(Q(L/2+t_f)cos\alpha)}{Q(L/2+t_f)cos\alpha}
+    \begin{align*}
+    F(Q,\alpha) = &\bigg[
+    (\rho_c - \rho_f) V_c
+     \frac{2J_1(QRsin \alpha)}{QRsin\alpha}
+     \frac{sin(QLcos\alpha/2)}{Q(L/2)cos\alpha} \\
+    &+(\rho_f - \rho_r) V_{c+f}
+     \frac{2J_1(QRsin\alpha)}{QRsin\alpha}
+     \frac{sin(Q(L/2+t_f)cos\alpha)}{Q(L/2+t_f)cos\alpha} \\
+    &+(\rho_r - \rho_s) V_t
+     \frac{2J_1(Q(R+t_r)sin\alpha)}{Q(R+t_r)sin\alpha}
+     \frac{sin(Q(L/2+t_f)cos\alpha)}{Q(L/2+t_f)cos\alpha}
     \bigg]
-    \end{align} 
+    \end{align*}
 
 where $V_t$ is the total volume of the bicelle, $V_c$ the volume of the core,
 $V_{c+f}$ the volume of the core plus the volume of the faces, $R$ is the radius
@@ -87,13 +94,16 @@ the thickness of the rim and $J_1$ the usual first order bessel function.
 The output of the 1D scattering intensity function for randomly oriented
 cylinders is then given by integrating over all possible $\theta$ and $\phi$.
 
-The *theta* and *phi* parameters are not used for the 1D output.
+For oriented bicelles the *theta*, and *phi* orientation parameters will appear
+when fitting 2D data, see the :ref:`cylinder` model for further information.
 Our implementation of the scattering kernel and the 1D scattering intensity
 use the c-library from NIST.
 
-.. figure:: img/cylinder_angle_definition.jpg
+.. figure:: img/cylinder_angle_definition.png
 
-    Definition of the angles for the oriented core shell bicelle tmodel.
+    Definition of the angles for the oriented core shell bicelle model,
+    note that the cylinder axis of the bicelle starts along the beam direction
+    when $\theta  = \phi = 0$.
 
 
 

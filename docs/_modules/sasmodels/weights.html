@@ -1,0 +1,378 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+  "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+    
+    <title>sasmodels.weights &mdash; SasView 4.2.0 documentation</title>
+    
+    <link rel="stylesheet" href="../../_static/classic.css" type="text/css" />
+    <link rel="stylesheet" href="../../_static/pygments.css" type="text/css" />
+    
+    <script type="text/javascript">
+      var DOCUMENTATION_OPTIONS = {
+        URL_ROOT:    '../../',
+        VERSION:     '4.2.0',
+        COLLAPSE_INDEX: false,
+        FILE_SUFFIX: '.html',
+        HAS_SOURCE:  true
+      };
+    </script>
+    <script type="text/javascript" src="../../_static/jquery.js"></script>
+    <script type="text/javascript" src="../../_static/underscore.js"></script>
+    <script type="text/javascript" src="../../_static/doctools.js"></script>
+    <script type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.1/MathJax.js?config=TeX-MML-AM_CHTML"></script>
+    <link rel="top" title="SasView 4.2.0 documentation" href="../../index.html" />
+    <link rel="up" title="sasmodels" href="../sasmodels.html" /> 
+  </head>
+  <body role="document">
+    <div class="related" role="navigation" aria-label="related navigation">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="../../genindex.html" title="General Index"
+             accesskey="I">index</a></li>
+        <li class="right" >
+          <a href="../../py-modindex.html" title="Python Module Index"
+             >modules</a> |</li>
+        <li class="nav-item nav-item-0"><a href="../../index.html">SasView 4.2.0 documentation</a> &raquo;</li>
+          <li class="nav-item nav-item-1"><a href="../index.html" >Module code</a> &raquo;</li>
+          <li class="nav-item nav-item-2"><a href="../sasmodels.html" accesskey="U">sasmodels</a> &raquo;</li> 
+      </ul>
+    </div>  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          <div class="body" role="main">
+            
+  <h1>Source code for sasmodels.weights</h1><div class="highlight"><pre>
+<span></span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">SAS distributions for polydispersity.</span>
+<span class="sd">&quot;&quot;&quot;</span>
+<span class="c1"># TODO: include dispersion docs with the disperser models</span>
+<span class="kn">from</span> <span class="nn">__future__</span> <span class="kn">import</span> <span class="n">division</span><span class="p">,</span> <span class="n">print_function</span>
+
+<span class="kn">from</span> <span class="nn">math</span> <span class="kn">import</span> <span class="n">sqrt</span>  <span class="c1"># type: ignore</span>
+<span class="kn">from</span> <span class="nn">collections</span> <span class="kn">import</span> <span class="n">OrderedDict</span>
+
+<span class="kn">import</span> <span class="nn">numpy</span> <span class="kn">as</span> <span class="nn">np</span>  <span class="c1"># type: ignore</span>
+<span class="kn">from</span> <span class="nn">scipy.special</span> <span class="kn">import</span> <span class="n">gammaln</span>  <span class="c1"># type: ignore</span>
+
+<span class="c1"># TODO: include dispersion docs with the disperser models</span>
+
+<div class="viewcode-block" id="Dispersion"><a class="viewcode-back" href="../../dev/sasmodels-api/sasmodels.html#sasmodels.weights.Dispersion">[docs]</a><span class="k">class</span> <span class="nc">Dispersion</span><span class="p">(</span><span class="nb">object</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Base dispersion object.</span>
+
+<span class="sd">    Subclasses should define *_weights(center, sigma, lb, ub)*</span>
+<span class="sd">    which returns the x points and their corresponding weights.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="nb">type</span> <span class="o">=</span> <span class="s2">&quot;base disperser&quot;</span>
+    <span class="n">default</span> <span class="o">=</span> <span class="nb">dict</span><span class="p">(</span><span class="n">npts</span><span class="o">=</span><span class="mi">35</span><span class="p">,</span> <span class="n">width</span><span class="o">=</span><span class="mi">0</span><span class="p">,</span> <span class="n">nsigmas</span><span class="o">=</span><span class="mi">3</span><span class="p">)</span>
+    <span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">npts</span><span class="o">=</span><span class="bp">None</span><span class="p">,</span> <span class="n">width</span><span class="o">=</span><span class="bp">None</span><span class="p">,</span> <span class="n">nsigmas</span><span class="o">=</span><span class="bp">None</span><span class="p">):</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">npts</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">default</span><span class="p">[</span><span class="s1">&#39;npts&#39;</span><span class="p">]</span> <span class="k">if</span> <span class="n">npts</span> <span class="ow">is</span> <span class="bp">None</span> <span class="k">else</span> <span class="n">npts</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">width</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">default</span><span class="p">[</span><span class="s1">&#39;width&#39;</span><span class="p">]</span> <span class="k">if</span> <span class="n">width</span> <span class="ow">is</span> <span class="bp">None</span> <span class="k">else</span> <span class="n">width</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">nsigmas</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">default</span><span class="p">[</span><span class="s1">&#39;nsigmas&#39;</span><span class="p">]</span> <span class="k">if</span> <span class="n">nsigmas</span> <span class="ow">is</span> <span class="bp">None</span> <span class="k">else</span> <span class="n">nsigmas</span>
+
+<div class="viewcode-block" id="Dispersion.get_pars"><a class="viewcode-back" href="../../dev/sasmodels-api/sasmodels.html#sasmodels.weights.Dispersion.get_pars">[docs]</a>    <span class="k">def</span> <span class="nf">get_pars</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Return the parameters to the disperser as a dictionary.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">pars</span> <span class="o">=</span> <span class="p">{</span><span class="s1">&#39;type&#39;</span><span class="p">:</span> <span class="bp">self</span><span class="o">.</span><span class="n">type</span><span class="p">}</span>
+        <span class="n">pars</span><span class="o">.</span><span class="n">update</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">__dict__</span><span class="p">)</span>
+        <span class="k">return</span> <span class="n">pars</span></div>
+
+    <span class="c1"># pylint: disable=no-self-use</span>
+<div class="viewcode-block" id="Dispersion.set_weights"><a class="viewcode-back" href="../../dev/sasmodels-api/sasmodels.html#sasmodels.weights.Dispersion.set_weights">[docs]</a>    <span class="k">def</span> <span class="nf">set_weights</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">values</span><span class="p">,</span> <span class="n">weights</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Set the weights on the disperser if it is :class:`ArrayDispersion`.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">raise</span> <span class="ne">RuntimeError</span><span class="p">(</span><span class="s2">&quot;set_weights is only available for ArrayDispersion&quot;</span><span class="p">)</span></div>
+
+<div class="viewcode-block" id="Dispersion.get_weights"><a class="viewcode-back" href="../../dev/sasmodels-api/sasmodels.html#sasmodels.weights.Dispersion.get_weights">[docs]</a>    <span class="k">def</span> <span class="nf">get_weights</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">center</span><span class="p">,</span> <span class="n">lb</span><span class="p">,</span> <span class="n">ub</span><span class="p">,</span> <span class="n">relative</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Return the weights for the distribution.</span>
+
+<span class="sd">        *center* is the center of the distribution</span>
+
+<span class="sd">        *lb*, *ub* are the min and max allowed values</span>
+
+<span class="sd">        *relative* is True if the distribution width is proportional to the</span>
+<span class="sd">        center value instead of absolute.  For polydispersity use relative.</span>
+<span class="sd">        For orientation parameters use absolute.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">sigma</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">width</span> <span class="o">*</span> <span class="n">center</span> <span class="k">if</span> <span class="n">relative</span> <span class="k">else</span> <span class="bp">self</span><span class="o">.</span><span class="n">width</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="n">relative</span><span class="p">:</span>
+            <span class="c1"># For orientation, the jitter is relative to 0 not the angle</span>
+            <span class="n">center</span> <span class="o">=</span> <span class="mi">0</span>
+            <span class="k">pass</span>
+        <span class="k">if</span> <span class="n">sigma</span> <span class="o">==</span> <span class="mi">0</span> <span class="ow">or</span> <span class="bp">self</span><span class="o">.</span><span class="n">npts</span> <span class="o">&lt;</span> <span class="mi">2</span><span class="p">:</span>
+            <span class="k">if</span> <span class="n">lb</span> <span class="o">&lt;=</span> <span class="n">center</span> <span class="o">&lt;=</span> <span class="n">ub</span><span class="p">:</span>
+                <span class="k">return</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">([</span><span class="n">center</span><span class="p">],</span> <span class="s1">&#39;d&#39;</span><span class="p">),</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">([</span><span class="mf">1.</span><span class="p">],</span> <span class="s1">&#39;d&#39;</span><span class="p">)</span>
+            <span class="k">else</span><span class="p">:</span>
+                <span class="k">return</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">([],</span> <span class="s1">&#39;d&#39;</span><span class="p">),</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">([],</span> <span class="s1">&#39;d&#39;</span><span class="p">)</span>
+        <span class="n">x</span><span class="p">,</span> <span class="n">px</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_weights</span><span class="p">(</span><span class="n">center</span><span class="p">,</span> <span class="n">sigma</span><span class="p">,</span> <span class="n">lb</span><span class="p">,</span> <span class="n">ub</span><span class="p">)</span>
+        <span class="k">return</span> <span class="n">x</span><span class="p">,</span> <span class="n">px</span></div>
+
+    <span class="k">def</span> <span class="nf">_weights</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">center</span><span class="p">,</span> <span class="n">sigma</span><span class="p">,</span> <span class="n">lb</span><span class="p">,</span> <span class="n">ub</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;actual work of computing the weights&quot;&quot;&quot;</span>
+        <span class="k">raise</span> <span class="ne">NotImplementedError</span>
+
+    <span class="k">def</span> <span class="nf">_linspace</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">center</span><span class="p">,</span> <span class="n">sigma</span><span class="p">,</span> <span class="n">lb</span><span class="p">,</span> <span class="n">ub</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;helper function to provide linear spaced weight points within range&quot;&quot;&quot;</span>
+        <span class="n">npts</span><span class="p">,</span> <span class="n">nsigmas</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">npts</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">nsigmas</span>
+        <span class="n">x</span> <span class="o">=</span> <span class="n">center</span> <span class="o">+</span> <span class="n">np</span><span class="o">.</span><span class="n">linspace</span><span class="p">(</span><span class="o">-</span><span class="n">nsigmas</span><span class="o">*</span><span class="n">sigma</span><span class="p">,</span> <span class="o">+</span><span class="n">nsigmas</span><span class="o">*</span><span class="n">sigma</span><span class="p">,</span> <span class="n">npts</span><span class="p">)</span>
+        <span class="n">x</span> <span class="o">=</span> <span class="n">x</span><span class="p">[(</span><span class="n">x</span> <span class="o">&gt;=</span> <span class="n">lb</span><span class="p">)</span> <span class="o">&amp;</span> <span class="p">(</span><span class="n">x</span> <span class="o">&lt;=</span> <span class="n">ub</span><span class="p">)]</span>
+        <span class="k">return</span> <span class="n">x</span></div>
+
+
+<div class="viewcode-block" id="GaussianDispersion"><a class="viewcode-back" href="../../dev/sasmodels-api/sasmodels.html#sasmodels.weights.GaussianDispersion">[docs]</a><span class="k">class</span> <span class="nc">GaussianDispersion</span><span class="p">(</span><span class="n">Dispersion</span><span class="p">):</span>
+    <span class="sd">r&quot;&quot;&quot;</span>
+<span class="sd">    Gaussian dispersion, with 1-$\sigma$ width.</span>
+
+<span class="sd">    .. math::</span>
+
+<span class="sd">        w = \exp\left(-\tfrac12 (x - c)^2/\sigma^2\right)</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="nb">type</span> <span class="o">=</span> <span class="s2">&quot;gaussian&quot;</span>
+    <span class="n">default</span> <span class="o">=</span> <span class="nb">dict</span><span class="p">(</span><span class="n">npts</span><span class="o">=</span><span class="mi">35</span><span class="p">,</span> <span class="n">width</span><span class="o">=</span><span class="mi">0</span><span class="p">,</span> <span class="n">nsigmas</span><span class="o">=</span><span class="mi">3</span><span class="p">)</span>
+    <span class="k">def</span> <span class="nf">_weights</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">center</span><span class="p">,</span> <span class="n">sigma</span><span class="p">,</span> <span class="n">lb</span><span class="p">,</span> <span class="n">ub</span><span class="p">):</span>
+        <span class="c1"># TODO: sample high probability regions more densely</span>
+        <span class="c1"># i.e., step uniformly in cumulative density rather than x value</span>
+        <span class="c1"># so weight = 1/Npts for all weights, but values are unevenly spaced</span>
+        <span class="n">x</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_linspace</span><span class="p">(</span><span class="n">center</span><span class="p">,</span> <span class="n">sigma</span><span class="p">,</span> <span class="n">lb</span><span class="p">,</span> <span class="n">ub</span><span class="p">)</span>
+        <span class="n">px</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">exp</span><span class="p">((</span><span class="n">x</span><span class="o">-</span><span class="n">center</span><span class="p">)</span><span class="o">**</span><span class="mi">2</span> <span class="o">/</span> <span class="p">(</span><span class="o">-</span><span class="mf">2.0</span> <span class="o">*</span> <span class="n">sigma</span> <span class="o">*</span> <span class="n">sigma</span><span class="p">))</span>
+        <span class="k">return</span> <span class="n">x</span><span class="p">,</span> <span class="n">px</span></div>
+
+<div class="viewcode-block" id="UniformDispersion"><a class="viewcode-back" href="../../dev/sasmodels-api/sasmodels.html#sasmodels.weights.UniformDispersion">[docs]</a><span class="k">class</span> <span class="nc">UniformDispersion</span><span class="p">(</span><span class="n">Dispersion</span><span class="p">):</span>
+    <span class="sd">r&quot;&quot;&quot;</span>
+<span class="sd">    Uniform dispersion, with width $\sigma$.</span>
+
+<span class="sd">    .. math::</span>
+
+<span class="sd">        w = 1</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="nb">type</span> <span class="o">=</span> <span class="s2">&quot;uniform&quot;</span>
+    <span class="n">default</span> <span class="o">=</span> <span class="nb">dict</span><span class="p">(</span><span class="n">npts</span><span class="o">=</span><span class="mi">35</span><span class="p">,</span> <span class="n">width</span><span class="o">=</span><span class="mi">0</span><span class="p">,</span> <span class="n">nsigmas</span><span class="o">=</span><span class="bp">None</span><span class="p">)</span>
+    <span class="k">def</span> <span class="nf">_weights</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">center</span><span class="p">,</span> <span class="n">sigma</span><span class="p">,</span> <span class="n">lb</span><span class="p">,</span> <span class="n">ub</span><span class="p">):</span>
+        <span class="n">x</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">linspace</span><span class="p">(</span><span class="n">center</span><span class="o">-</span><span class="n">sigma</span><span class="p">,</span> <span class="n">center</span><span class="o">+</span><span class="n">sigma</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">npts</span><span class="p">)</span>
+        <span class="n">x</span> <span class="o">=</span> <span class="n">x</span><span class="p">[(</span><span class="n">x</span> <span class="o">&gt;=</span> <span class="n">lb</span><span class="p">)</span> <span class="o">&amp;</span> <span class="p">(</span><span class="n">x</span> <span class="o">&lt;=</span> <span class="n">ub</span><span class="p">)]</span>
+        <span class="k">return</span> <span class="n">x</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">ones_like</span><span class="p">(</span><span class="n">x</span><span class="p">)</span></div>
+
+<div class="viewcode-block" id="RectangleDispersion"><a class="viewcode-back" href="../../dev/sasmodels-api/sasmodels.html#sasmodels.weights.RectangleDispersion">[docs]</a><span class="k">class</span> <span class="nc">RectangleDispersion</span><span class="p">(</span><span class="n">Dispersion</span><span class="p">):</span>
+    <span class="sd">r&quot;&quot;&quot;</span>
+<span class="sd">    Uniform dispersion, with width $\sqrt{3}\sigma$.</span>
+
+<span class="sd">    .. math::</span>
+
+<span class="sd">        w = 1</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="nb">type</span> <span class="o">=</span> <span class="s2">&quot;rectangle&quot;</span>
+    <span class="n">default</span> <span class="o">=</span> <span class="nb">dict</span><span class="p">(</span><span class="n">npts</span><span class="o">=</span><span class="mi">35</span><span class="p">,</span> <span class="n">width</span><span class="o">=</span><span class="mi">0</span><span class="p">,</span> <span class="n">nsigmas</span><span class="o">=</span><span class="mf">1.73205</span><span class="p">)</span>
+    <span class="k">def</span> <span class="nf">_weights</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">center</span><span class="p">,</span> <span class="n">sigma</span><span class="p">,</span> <span class="n">lb</span><span class="p">,</span> <span class="n">ub</span><span class="p">):</span>
+         <span class="n">x</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_linspace</span><span class="p">(</span><span class="n">center</span><span class="p">,</span> <span class="n">sigma</span><span class="p">,</span> <span class="n">lb</span><span class="p">,</span> <span class="n">ub</span><span class="p">)</span>
+         <span class="n">x</span> <span class="o">=</span> <span class="n">x</span><span class="p">[</span><span class="n">np</span><span class="o">.</span><span class="n">fabs</span><span class="p">(</span><span class="n">x</span><span class="o">-</span><span class="n">center</span><span class="p">)</span> <span class="o">&lt;=</span> <span class="n">np</span><span class="o">.</span><span class="n">fabs</span><span class="p">(</span><span class="n">sigma</span><span class="p">)</span><span class="o">*</span><span class="n">sqrt</span><span class="p">(</span><span class="mf">3.0</span><span class="p">)]</span>
+         <span class="k">return</span> <span class="n">x</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">ones_like</span><span class="p">(</span><span class="n">x</span><span class="p">)</span></div>
+
+<div class="viewcode-block" id="LogNormalDispersion"><a class="viewcode-back" href="../../dev/sasmodels-api/sasmodels.html#sasmodels.weights.LogNormalDispersion">[docs]</a><span class="k">class</span> <span class="nc">LogNormalDispersion</span><span class="p">(</span><span class="n">Dispersion</span><span class="p">):</span>
+    <span class="sd">r&quot;&quot;&quot;</span>
+<span class="sd">    log Gaussian dispersion, with 1-$\sigma$ width.</span>
+
+<span class="sd">    .. math::</span>
+
+<span class="sd">        w = \frac{\exp\left(-\tfrac12 (\ln x - c)^2/\sigma^2\right)}{x\sigma}</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="nb">type</span> <span class="o">=</span> <span class="s2">&quot;lognormal&quot;</span>
+    <span class="n">default</span> <span class="o">=</span> <span class="nb">dict</span><span class="p">(</span><span class="n">npts</span><span class="o">=</span><span class="mi">80</span><span class="p">,</span> <span class="n">width</span><span class="o">=</span><span class="mi">0</span><span class="p">,</span> <span class="n">nsigmas</span><span class="o">=</span><span class="mi">8</span><span class="p">)</span>
+    <span class="k">def</span> <span class="nf">_weights</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">center</span><span class="p">,</span> <span class="n">sigma</span><span class="p">,</span> <span class="n">lb</span><span class="p">,</span> <span class="n">ub</span><span class="p">):</span>
+        <span class="n">x</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_linspace</span><span class="p">(</span><span class="n">center</span><span class="p">,</span> <span class="n">sigma</span><span class="p">,</span> <span class="nb">max</span><span class="p">(</span><span class="n">lb</span><span class="p">,</span> <span class="mf">1e-8</span><span class="p">),</span> <span class="nb">max</span><span class="p">(</span><span class="n">ub</span><span class="p">,</span> <span class="mf">1e-8</span><span class="p">))</span>
+        <span class="c1"># sigma in the lognormal function is in ln(R) space, thus needs converting</span>
+        <span class="n">sig</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">fabs</span><span class="p">(</span><span class="n">sigma</span><span class="o">/</span><span class="n">center</span><span class="p">)</span>
+        <span class="n">px</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">exp</span><span class="p">(</span><span class="o">-</span><span class="mf">0.5</span><span class="o">*</span><span class="p">((</span><span class="n">np</span><span class="o">.</span><span class="n">log</span><span class="p">(</span><span class="n">x</span><span class="p">)</span><span class="o">-</span><span class="n">np</span><span class="o">.</span><span class="n">log</span><span class="p">(</span><span class="n">center</span><span class="p">))</span><span class="o">/</span><span class="n">sig</span><span class="p">)</span><span class="o">**</span><span class="mi">2</span><span class="p">)</span><span class="o">/</span><span class="p">(</span><span class="n">x</span><span class="o">*</span><span class="n">sig</span><span class="p">)</span>
+        <span class="k">return</span> <span class="n">x</span><span class="p">,</span> <span class="n">px</span></div>
+
+
+<div class="viewcode-block" id="SchulzDispersion"><a class="viewcode-back" href="../../dev/sasmodels-api/sasmodels.html#sasmodels.weights.SchulzDispersion">[docs]</a><span class="k">class</span> <span class="nc">SchulzDispersion</span><span class="p">(</span><span class="n">Dispersion</span><span class="p">):</span>
+    <span class="sd">r&quot;&quot;&quot;</span>
+<span class="sd">    Schultz dispersion, with 1-$\sigma$ width.</span>
+
+<span class="sd">    .. math::</span>
+
+<span class="sd">        w = \frac{z^z\,R^{z-1}}{e^{Rz}\,c \Gamma(z)}</span>
+
+<span class="sd">    where $c$ is the center of the distribution, $R = x/c$ and $z=(c/\sigma)^2$.</span>
+
+<span class="sd">    This is evaluated using logarithms as</span>
+
+<span class="sd">    .. math::</span>
+
+<span class="sd">        w = \exp\left(z \ln z + (z-1)\ln R - Rz - \ln c - \ln \Gamma(z) \right)</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="nb">type</span> <span class="o">=</span> <span class="s2">&quot;schulz&quot;</span>
+    <span class="n">default</span> <span class="o">=</span> <span class="nb">dict</span><span class="p">(</span><span class="n">npts</span><span class="o">=</span><span class="mi">80</span><span class="p">,</span> <span class="n">width</span><span class="o">=</span><span class="mi">0</span><span class="p">,</span> <span class="n">nsigmas</span><span class="o">=</span><span class="mi">8</span><span class="p">)</span>
+    <span class="k">def</span> <span class="nf">_weights</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">center</span><span class="p">,</span> <span class="n">sigma</span><span class="p">,</span> <span class="n">lb</span><span class="p">,</span> <span class="n">ub</span><span class="p">):</span>
+        <span class="n">x</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_linspace</span><span class="p">(</span><span class="n">center</span><span class="p">,</span> <span class="n">sigma</span><span class="p">,</span> <span class="nb">max</span><span class="p">(</span><span class="n">lb</span><span class="p">,</span> <span class="mf">1e-8</span><span class="p">),</span> <span class="nb">max</span><span class="p">(</span><span class="n">ub</span><span class="p">,</span> <span class="mf">1e-8</span><span class="p">))</span>
+        <span class="n">R</span> <span class="o">=</span> <span class="n">x</span><span class="o">/</span><span class="n">center</span>
+        <span class="n">z</span> <span class="o">=</span> <span class="p">(</span><span class="n">center</span><span class="o">/</span><span class="n">sigma</span><span class="p">)</span><span class="o">**</span><span class="mi">2</span>
+        <span class="n">arg</span> <span class="o">=</span> <span class="n">z</span><span class="o">*</span><span class="n">np</span><span class="o">.</span><span class="n">log</span><span class="p">(</span><span class="n">z</span><span class="p">)</span> <span class="o">+</span> <span class="p">(</span><span class="n">z</span><span class="o">-</span><span class="mi">1</span><span class="p">)</span><span class="o">*</span><span class="n">np</span><span class="o">.</span><span class="n">log</span><span class="p">(</span><span class="n">R</span><span class="p">)</span> <span class="o">-</span> <span class="n">R</span><span class="o">*</span><span class="n">z</span> <span class="o">-</span> <span class="n">np</span><span class="o">.</span><span class="n">log</span><span class="p">(</span><span class="n">center</span><span class="p">)</span> <span class="o">-</span> <span class="n">gammaln</span><span class="p">(</span><span class="n">z</span><span class="p">)</span>
+        <span class="n">px</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">exp</span><span class="p">(</span><span class="n">arg</span><span class="p">)</span>
+        <span class="k">return</span> <span class="n">x</span><span class="p">,</span> <span class="n">px</span></div>
+
+
+<div class="viewcode-block" id="ArrayDispersion"><a class="viewcode-back" href="../../dev/sasmodels-api/sasmodels.html#sasmodels.weights.ArrayDispersion">[docs]</a><span class="k">class</span> <span class="nc">ArrayDispersion</span><span class="p">(</span><span class="n">Dispersion</span><span class="p">):</span>
+    <span class="sd">r&quot;&quot;&quot;</span>
+<span class="sd">    Empirical dispersion curve.</span>
+
+<span class="sd">    Use :meth:`set_weights` to set $w = f(x)$.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="nb">type</span> <span class="o">=</span> <span class="s2">&quot;array&quot;</span>
+    <span class="n">default</span> <span class="o">=</span> <span class="nb">dict</span><span class="p">(</span><span class="n">npts</span><span class="o">=</span><span class="mi">35</span><span class="p">,</span> <span class="n">width</span><span class="o">=</span><span class="mi">0</span><span class="p">,</span> <span class="n">nsigmas</span><span class="o">=</span><span class="mi">1</span><span class="p">)</span>
+    <span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">npts</span><span class="o">=</span><span class="bp">None</span><span class="p">,</span> <span class="n">width</span><span class="o">=</span><span class="bp">None</span><span class="p">,</span> <span class="n">nsigmas</span><span class="o">=</span><span class="bp">None</span><span class="p">):</span>
+        <span class="n">Dispersion</span><span class="o">.</span><span class="n">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">npts</span><span class="p">,</span> <span class="n">width</span><span class="p">,</span> <span class="n">nsigmas</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">values</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">([</span><span class="mf">0.</span><span class="p">],</span> <span class="s1">&#39;d&#39;</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">weights</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">([</span><span class="mf">1.</span><span class="p">],</span> <span class="s1">&#39;d&#39;</span><span class="p">)</span>
+
+<div class="viewcode-block" id="ArrayDispersion.set_weights"><a class="viewcode-back" href="../../dev/sasmodels-api/sasmodels.html#sasmodels.weights.ArrayDispersion.set_weights">[docs]</a>    <span class="k">def</span> <span class="nf">set_weights</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">values</span><span class="p">,</span> <span class="n">weights</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Set the weights for the given x values.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">values</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">ascontiguousarray</span><span class="p">(</span><span class="n">values</span><span class="p">,</span> <span class="s1">&#39;d&#39;</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">weights</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">ascontiguousarray</span><span class="p">(</span><span class="n">weights</span><span class="p">,</span> <span class="s1">&#39;d&#39;</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">npts</span> <span class="o">=</span> <span class="nb">len</span><span class="p">(</span><span class="n">values</span><span class="p">)</span></div>
+
+    <span class="k">def</span> <span class="nf">_weights</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">center</span><span class="p">,</span> <span class="n">sigma</span><span class="p">,</span> <span class="n">lb</span><span class="p">,</span> <span class="n">ub</span><span class="p">):</span>
+        <span class="c1"># TODO: rebin the array dispersion using npts</span>
+        <span class="c1"># TODO: use a distribution that can be recentered and scaled</span>
+        <span class="n">x</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">values</span>
+        <span class="c1">#x = center + self.values*sigma</span>
+        <span class="n">idx</span> <span class="o">=</span> <span class="p">(</span><span class="n">x</span> <span class="o">&gt;=</span> <span class="n">lb</span><span class="p">)</span> <span class="o">&amp;</span> <span class="p">(</span><span class="n">x</span> <span class="o">&lt;=</span> <span class="n">ub</span><span class="p">)</span>
+        <span class="n">x</span> <span class="o">=</span> <span class="n">x</span><span class="p">[</span><span class="n">idx</span><span class="p">]</span>
+        <span class="n">px</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">weights</span><span class="p">[</span><span class="n">idx</span><span class="p">]</span>
+        <span class="k">return</span> <span class="n">x</span><span class="p">,</span> <span class="n">px</span></div>
+
+<div class="viewcode-block" id="BoltzmannDispersion"><a class="viewcode-back" href="../../dev/sasmodels-api/sasmodels.html#sasmodels.weights.BoltzmannDispersion">[docs]</a><span class="k">class</span> <span class="nc">BoltzmannDispersion</span><span class="p">(</span><span class="n">Dispersion</span><span class="p">):</span>
+    <span class="sd">r&quot;&quot;&quot;</span>
+<span class="sd">    Boltzmann dispersion, with $\sigma=k T/E$.</span>
+
+<span class="sd">    .. math::</span>
+
+<span class="sd">        w = \exp\left( -|x - c|/\sigma\right)</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="nb">type</span> <span class="o">=</span> <span class="s2">&quot;boltzmann&quot;</span>
+    <span class="n">default</span> <span class="o">=</span> <span class="nb">dict</span><span class="p">(</span><span class="n">npts</span><span class="o">=</span><span class="mi">35</span><span class="p">,</span> <span class="n">width</span><span class="o">=</span><span class="mi">0</span><span class="p">,</span> <span class="n">nsigmas</span><span class="o">=</span><span class="mi">3</span><span class="p">)</span>
+    <span class="k">def</span> <span class="nf">_weights</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">center</span><span class="p">,</span> <span class="n">sigma</span><span class="p">,</span> <span class="n">lb</span><span class="p">,</span> <span class="n">ub</span><span class="p">):</span>
+        <span class="n">x</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_linspace</span><span class="p">(</span><span class="n">center</span><span class="p">,</span> <span class="n">sigma</span><span class="p">,</span> <span class="n">lb</span><span class="p">,</span> <span class="n">ub</span><span class="p">)</span>
+        <span class="n">px</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">exp</span><span class="p">(</span><span class="o">-</span><span class="n">np</span><span class="o">.</span><span class="n">abs</span><span class="p">(</span><span class="n">x</span><span class="o">-</span><span class="n">center</span><span class="p">)</span> <span class="o">/</span> <span class="n">np</span><span class="o">.</span><span class="n">abs</span><span class="p">(</span><span class="n">sigma</span><span class="p">))</span>
+        <span class="k">return</span> <span class="n">x</span><span class="p">,</span> <span class="n">px</span></div>
+
+<span class="c1"># dispersion name -&gt; disperser lookup table.</span>
+<span class="c1"># Maintain order since this is used by sasview GUI to order the options in</span>
+<span class="c1"># the dispersion type combobox.</span>
+<span class="n">MODELS</span> <span class="o">=</span> <span class="n">OrderedDict</span><span class="p">((</span><span class="n">d</span><span class="o">.</span><span class="n">type</span><span class="p">,</span> <span class="n">d</span><span class="p">)</span> <span class="k">for</span> <span class="n">d</span> <span class="ow">in</span> <span class="p">(</span>
+    <span class="n">RectangleDispersion</span><span class="p">,</span>
+    <span class="n">UniformDispersion</span><span class="p">,</span>
+    <span class="n">ArrayDispersion</span><span class="p">,</span>
+    <span class="n">LogNormalDispersion</span><span class="p">,</span>
+    <span class="n">GaussianDispersion</span><span class="p">,</span>
+    <span class="n">SchulzDispersion</span><span class="p">,</span>
+    <span class="n">BoltzmannDispersion</span>
+<span class="p">))</span>
+
+
+<div class="viewcode-block" id="get_weights"><a class="viewcode-back" href="../../dev/sasmodels-api/sasmodels.html#sasmodels.weights.get_weights">[docs]</a><span class="k">def</span> <span class="nf">get_weights</span><span class="p">(</span><span class="n">disperser</span><span class="p">,</span> <span class="n">n</span><span class="p">,</span> <span class="n">width</span><span class="p">,</span> <span class="n">nsigmas</span><span class="p">,</span> <span class="n">value</span><span class="p">,</span> <span class="n">limits</span><span class="p">,</span> <span class="n">relative</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Return the set of values and weights for a polydisperse parameter.</span>
+
+<span class="sd">    *disperser* is the name of the disperser.</span>
+
+<span class="sd">    *n* is the number of points in the weight vector.</span>
+
+<span class="sd">    *width* is the width of the disperser distribution.</span>
+
+<span class="sd">    *nsigmas* is the number of sigmas to span for the dispersion convolution.</span>
+
+<span class="sd">    *value* is the value of the parameter in the model.</span>
+
+<span class="sd">    *limits* is [lb, ub], the lower and upper bound on the possible values.</span>
+
+<span class="sd">    *relative* is true if *width* is defined in proportion to the value</span>
+<span class="sd">    of the parameter, and false if it is an absolute width.</span>
+
+<span class="sd">    Returns *(value, weight)*, where *value* and *weight* are vectors.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="k">if</span> <span class="n">disperser</span> <span class="o">==</span> <span class="s2">&quot;array&quot;</span><span class="p">:</span>
+        <span class="k">raise</span> <span class="ne">NotImplementedError</span><span class="p">(</span><span class="s2">&quot;Don&#39;t handle arrays through get_weights;&quot;</span>
+                                  <span class="s2">&quot; use values and weights directly&quot;</span><span class="p">)</span>
+    <span class="n">cls</span> <span class="o">=</span> <span class="n">MODELS</span><span class="p">[</span><span class="n">disperser</span><span class="p">]</span>
+    <span class="n">obj</span> <span class="o">=</span> <span class="n">cls</span><span class="p">(</span><span class="n">n</span><span class="p">,</span> <span class="n">width</span><span class="p">,</span> <span class="n">nsigmas</span><span class="p">)</span>
+    <span class="n">v</span><span class="p">,</span> <span class="n">w</span> <span class="o">=</span> <span class="n">obj</span><span class="o">.</span><span class="n">get_weights</span><span class="p">(</span><span class="n">value</span><span class="p">,</span> <span class="n">limits</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span> <span class="n">limits</span><span class="p">[</span><span class="mi">1</span><span class="p">],</span> <span class="n">relative</span><span class="p">)</span>
+    <span class="k">return</span> <span class="n">v</span><span class="p">,</span> <span class="n">w</span><span class="o">/</span><span class="n">np</span><span class="o">.</span><span class="n">sum</span><span class="p">(</span><span class="n">w</span><span class="p">)</span></div>
+
+
+<div class="viewcode-block" id="plot_weights"><a class="viewcode-back" href="../../dev/sasmodels-api/sasmodels.html#sasmodels.weights.plot_weights">[docs]</a><span class="k">def</span> <span class="nf">plot_weights</span><span class="p">(</span><span class="n">model_info</span><span class="p">,</span> <span class="n">mesh</span><span class="p">):</span>
+    <span class="c1"># type: (ModelInfo, List[Tuple[float, np.ndarray, np.ndarray]]) -&gt; None</span>
+    <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Plot the weights returned by :func:`get_weights`.</span>
+
+<span class="sd">    *model_info* defines model parameters, etc.</span>
+
+<span class="sd">    *mesh* is a list of tuples containing (*value*, *dispersity*, *weights*)</span>
+<span class="sd">    for each parameter, where (*dispersity*, *weights*) pairs are the</span>
+<span class="sd">    distributions to be plotted.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="kn">import</span> <span class="nn">pylab</span>
+
+    <span class="k">if</span> <span class="nb">any</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">dispersity</span><span class="p">)</span> <span class="o">&gt;</span> <span class="mi">1</span> <span class="k">for</span> <span class="n">value</span><span class="p">,</span> <span class="n">dispersity</span><span class="p">,</span> <span class="n">weights</span> <span class="ow">in</span> <span class="n">mesh</span><span class="p">):</span>
+        <span class="n">labels</span> <span class="o">=</span> <span class="p">[</span><span class="n">p</span><span class="o">.</span><span class="n">name</span> <span class="k">for</span> <span class="n">p</span> <span class="ow">in</span> <span class="n">model_info</span><span class="o">.</span><span class="n">parameters</span><span class="o">.</span><span class="n">call_parameters</span><span class="p">]</span>
+        <span class="c1">#pylab.interactive(True)</span>
+        <span class="n">pylab</span><span class="o">.</span><span class="n">figure</span><span class="p">()</span>
+        <span class="k">for</span> <span class="p">(</span><span class="n">v</span><span class="p">,</span> <span class="n">x</span><span class="p">,</span> <span class="n">w</span><span class="p">),</span> <span class="n">s</span> <span class="ow">in</span> <span class="nb">zip</span><span class="p">(</span><span class="n">mesh</span><span class="p">,</span> <span class="n">labels</span><span class="p">):</span>
+            <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">x</span><span class="p">)</span> <span class="o">&gt;</span> <span class="mi">1</span><span class="p">:</span>
+                <span class="n">pylab</span><span class="o">.</span><span class="n">plot</span><span class="p">(</span><span class="n">x</span><span class="p">,</span> <span class="n">w</span><span class="p">,</span> <span class="s1">&#39;-o&#39;</span><span class="p">,</span> <span class="n">label</span><span class="o">=</span><span class="n">s</span><span class="p">)</span>
+        <span class="n">pylab</span><span class="o">.</span><span class="n">grid</span><span class="p">(</span><span class="bp">True</span><span class="p">)</span>
+        <span class="n">pylab</span><span class="o">.</span><span class="n">legend</span><span class="p">()</span></div>
+        <span class="c1">#pylab.show()</span>
+</pre></div>
+
+          </div>
+        </div>
+      </div>
+      <div class="sphinxsidebar" role="navigation" aria-label="main navigation">
+        <div class="sphinxsidebarwrapper">
+<div id="searchbox" style="display: none" role="search">
+  <h3>Quick search</h3>
+    <form class="search" action="../../search.html" method="get">
+      <input type="text" name="q" />
+      <input type="submit" value="Go" />
+      <input type="hidden" name="check_keywords" value="yes" />
+      <input type="hidden" name="area" value="default" />
+    </form>
+</div>
+<script type="text/javascript">$('#searchbox').show(0);</script>
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="related" role="navigation" aria-label="related navigation">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="../../genindex.html" title="General Index"
+             >index</a></li>
+        <li class="right" >
+          <a href="../../py-modindex.html" title="Python Module Index"
+             >modules</a> |</li>
+        <li class="nav-item nav-item-0"><a href="../../index.html">SasView 4.2.0 documentation</a> &raquo;</li>
+          <li class="nav-item nav-item-1"><a href="../index.html" >Module code</a> &raquo;</li>
+          <li class="nav-item nav-item-2"><a href="../sasmodels.html" >sasmodels</a> &raquo;</li> 
+      </ul>
+    </div>
+    <div class="footer" role="contentinfo">
+        &copy; Copyright 2018, The SasView Project.
+      Created using <a href="http://sphinx-doc.org/">Sphinx</a> 1.4.1.
+    </div>
+  </body>
+</html>

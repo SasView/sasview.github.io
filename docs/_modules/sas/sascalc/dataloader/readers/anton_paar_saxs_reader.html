@@ -6,7 +6,7 @@
   <head>
     <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
     
-    <title>sas.sascalc.dataloader.readers.anton_paar_saxs_reader &mdash; SasView 4.1.2 documentation</title>
+    <title>sas.sascalc.dataloader.readers.anton_paar_saxs_reader &mdash; SasView 4.2.0 documentation</title>
     
     <link rel="stylesheet" href="../../../../../_static/classic.css" type="text/css" />
     <link rel="stylesheet" href="../../../../../_static/pygments.css" type="text/css" />
@@ -14,7 +14,7 @@
     <script type="text/javascript">
       var DOCUMENTATION_OPTIONS = {
         URL_ROOT:    '../../../../../',
-        VERSION:     '4.1.2',
+        VERSION:     '4.2.0',
         COLLAPSE_INDEX: false,
         FILE_SUFFIX: '.html',
         HAS_SOURCE:  true
@@ -24,8 +24,8 @@
     <script type="text/javascript" src="../../../../../_static/underscore.js"></script>
     <script type="text/javascript" src="../../../../../_static/doctools.js"></script>
     <script type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.1/MathJax.js?config=TeX-MML-AM_CHTML"></script>
-    <link rel="top" title="SasView 4.1.2 documentation" href="../../../../../index.html" />
-    <link rel="up" title="sas.sascalc.dataloader.readers" href="../readers.html" /> 
+    <link rel="top" title="SasView 4.2.0 documentation" href="../../../../../index.html" />
+    <link rel="up" title="sas" href="../../../../sas.html" /> 
   </head>
   <body role="document">
     <div class="related" role="navigation" aria-label="related navigation">
@@ -37,9 +37,9 @@
         <li class="right" >
           <a href="../../../../../py-modindex.html" title="Python Module Index"
              >modules</a> |</li>
-        <li class="nav-item nav-item-0"><a href="../../../../../index.html">SasView 4.1.2 documentation</a> &raquo;</li>
+        <li class="nav-item nav-item-0"><a href="../../../../../index.html">SasView 4.2.0 documentation</a> &raquo;</li>
           <li class="nav-item nav-item-1"><a href="../../../../index.html" >Module code</a> &raquo;</li>
-          <li class="nav-item nav-item-2"><a href="../readers.html" accesskey="U">sas.sascalc.dataloader.readers</a> &raquo;</li> 
+          <li class="nav-item nav-item-2"><a href="../../../../sas.html" accesskey="U">sas</a> &raquo;</li> 
       </ul>
     </div>  
 
@@ -59,19 +59,13 @@
 <span class="kn">import</span> <span class="nn">sys</span>
 
 <span class="kn">from</span> <span class="nn">sas.sascalc.dataloader.readers.xml_reader</span> <span class="kn">import</span> <span class="n">XMLreader</span>
-<span class="kn">from</span> <span class="nn">sas.sascalc.dataloader.data_info</span> <span class="kn">import</span> <span class="n">plottable_1D</span><span class="p">,</span> <span class="n">Data1D</span><span class="p">,</span> <span class="n">Sample</span><span class="p">,</span> <span class="n">Source</span>
+<span class="kn">from</span> <span class="nn">sas.sascalc.dataloader.data_info</span> <span class="kn">import</span> <span class="n">plottable_1D</span><span class="p">,</span> <span class="n">Data1D</span><span class="p">,</span> <span class="n">DataInfo</span><span class="p">,</span> <span class="n">Sample</span><span class="p">,</span> <span class="n">Source</span>
 <span class="kn">from</span> <span class="nn">sas.sascalc.dataloader.data_info</span> <span class="kn">import</span> <span class="n">Process</span><span class="p">,</span> <span class="n">Aperture</span><span class="p">,</span> <span class="n">Collimation</span><span class="p">,</span> <span class="n">TransmissionSpectrum</span><span class="p">,</span> <span class="n">Detector</span>
+<span class="kn">from</span> <span class="nn">sas.sascalc.dataloader.loader_exceptions</span> <span class="kn">import</span> <span class="n">FileContentsException</span><span class="p">,</span> <span class="n">DataReaderException</span>
 
-
-<div class="viewcode-block" id="Reader"><a class="viewcode-back" href="../../../../../dev/api/sas.sascalc.dataloader.readers.html#sas.sascalc.dataloader.readers.anton_paar_saxs_reader.Reader">[docs]</a><span class="k">class</span> <span class="nc">Reader</span><span class="p">(</span><span class="n">XMLreader</span><span class="p">):</span>
+<div class="viewcode-block" id="Reader"><a class="viewcode-back" href="../../../../../dev/sasview-api/sas.sascalc.dataloader.readers.html#sas.sascalc.dataloader.readers.anton_paar_saxs_reader.Reader">[docs]</a><span class="k">class</span> <span class="nc">Reader</span><span class="p">(</span><span class="n">XMLreader</span><span class="p">):</span>
     <span class="sd">&quot;&quot;&quot;</span>
-<span class="sd">    A class for reading in CanSAS v2.0 data files. The existing iteration opens Mantid generated HDF5 formatted files</span>
-<span class="sd">    with file extension .h5/.H5. Any number of data sets may be present within the file and any dimensionality of data</span>
-<span class="sd">    may be used. Currently 1D and 2D SAS data sets are supported, but future implementations will include 1D and 2D</span>
-<span class="sd">    SESANS data. This class assumes a single data set for each sasentry.</span>
-
-<span class="sd">    :Dependencies:</span>
-<span class="sd">        The CanSAS HDF5 reader requires h5py v2.5.0 or later.</span>
+<span class="sd">    A class for reading in Anton Paar .pdh files</span>
 <span class="sd">    &quot;&quot;&quot;</span>
 
     <span class="c1">## Logged warnings or messages</span>
@@ -80,8 +74,6 @@
     <span class="n">errors</span> <span class="o">=</span> <span class="bp">None</span>
     <span class="c1">## Raw file contents to be processed</span>
     <span class="n">raw_data</span> <span class="o">=</span> <span class="bp">None</span>
-    <span class="c1">## Data set being modified</span>
-    <span class="n">current_dataset</span> <span class="o">=</span> <span class="bp">None</span>
     <span class="c1">## For recursion and saving purposes, remember parent objects</span>
     <span class="n">parent_list</span> <span class="o">=</span> <span class="bp">None</span>
     <span class="c1">## Data type name</span>
@@ -92,12 +84,10 @@
     <span class="n">ext</span> <span class="o">=</span> <span class="p">[</span><span class="s1">&#39;.pdh&#39;</span><span class="p">,</span> <span class="s1">&#39;.PDH&#39;</span><span class="p">]</span>
     <span class="c1">## Flag to bypass extension check</span>
     <span class="n">allow_all</span> <span class="o">=</span> <span class="bp">False</span>
-    <span class="c1">## List of files to return</span>
-    <span class="n">output</span> <span class="o">=</span> <span class="bp">None</span>
 
-<div class="viewcode-block" id="Reader.reset_state"><a class="viewcode-back" href="../../../../../dev/api/sas.sascalc.dataloader.readers.html#sas.sascalc.dataloader.readers.anton_paar_saxs_reader.Reader.reset_state">[docs]</a>    <span class="k">def</span> <span class="nf">reset_state</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">current_dataset</span> <span class="o">=</span> <span class="n">Data1D</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">empty</span><span class="p">(</span><span class="mi">0</span><span class="p">),</span> <span class="n">np</span><span class="o">.</span><span class="n">empty</span><span class="p">(</span><span class="mi">0</span><span class="p">),</span>
-                                            <span class="n">np</span><span class="o">.</span><span class="n">empty</span><span class="p">(</span><span class="mi">0</span><span class="p">),</span> <span class="n">np</span><span class="o">.</span><span class="n">empty</span><span class="p">(</span><span class="mi">0</span><span class="p">))</span>
+<div class="viewcode-block" id="Reader.reset_state"><a class="viewcode-back" href="../../../../../dev/sasview-api/sas.sascalc.dataloader.readers.html#sas.sascalc.dataloader.readers.anton_paar_saxs_reader.Reader.reset_state">[docs]</a>    <span class="k">def</span> <span class="nf">reset_state</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">current_dataset</span> <span class="o">=</span> <span class="n">plottable_1D</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">empty</span><span class="p">(</span><span class="mi">0</span><span class="p">),</span> <span class="n">np</span><span class="o">.</span><span class="n">empty</span><span class="p">(</span><span class="mi">0</span><span class="p">),</span> <span class="n">np</span><span class="o">.</span><span class="n">empty</span><span class="p">(</span><span class="mi">0</span><span class="p">),</span> <span class="n">np</span><span class="o">.</span><span class="n">empty</span><span class="p">(</span><span class="mi">0</span><span class="p">))</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">current_datainfo</span> <span class="o">=</span> <span class="n">DataInfo</span><span class="p">()</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">datasets</span> <span class="o">=</span> <span class="p">[]</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">raw_data</span> <span class="o">=</span> <span class="bp">None</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">errors</span> <span class="o">=</span> <span class="nb">set</span><span class="p">()</span>
@@ -113,7 +103,7 @@
         <span class="bp">self</span><span class="o">.</span><span class="n">upper</span> <span class="o">=</span> <span class="mi">5</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">lower</span> <span class="o">=</span> <span class="mi">5</span></div>
 
-<div class="viewcode-block" id="Reader.read"><a class="viewcode-back" href="../../../../../dev/api/sas.sascalc.dataloader.readers.html#sas.sascalc.dataloader.readers.anton_paar_saxs_reader.Reader.read">[docs]</a>    <span class="k">def</span> <span class="nf">read</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">filename</span><span class="p">):</span>
+<div class="viewcode-block" id="Reader.get_file_contents"><a class="viewcode-back" href="../../../../../dev/sasview-api/sas.sascalc.dataloader.readers.html#sas.sascalc.dataloader.readers.anton_paar_saxs_reader.Reader.get_file_contents">[docs]</a>    <span class="k">def</span> <span class="nf">get_file_contents</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
         <span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">            This is the general read method that all SasView data_loaders must have.</span>
 
@@ -123,65 +113,72 @@
 
         <span class="c1">## Reinitialize the class when loading a new data file to reset all class variables</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">reset_state</span><span class="p">()</span>
-        <span class="c1">## Check that the file exists</span>
-        <span class="k">if</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">isfile</span><span class="p">(</span><span class="n">filename</span><span class="p">):</span>
-            <span class="n">basename</span> <span class="o">=</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">basename</span><span class="p">(</span><span class="n">filename</span><span class="p">)</span>
-            <span class="n">_</span><span class="p">,</span> <span class="n">extension</span> <span class="o">=</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">splitext</span><span class="p">(</span><span class="n">basename</span><span class="p">)</span>
-            <span class="c1"># If the file type is not allowed, return empty list</span>
-            <span class="k">if</span> <span class="n">extension</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">ext</span> <span class="ow">or</span> <span class="bp">self</span><span class="o">.</span><span class="n">allow_all</span><span class="p">:</span>
-                <span class="c1">## Load the data file</span>
-                <span class="n">input_f</span> <span class="o">=</span> <span class="nb">open</span><span class="p">(</span><span class="n">filename</span><span class="p">,</span> <span class="s1">&#39;r&#39;</span><span class="p">)</span>
-                <span class="n">buff</span> <span class="o">=</span> <span class="n">input_f</span><span class="o">.</span><span class="n">read</span><span class="p">()</span>
-                <span class="bp">self</span><span class="o">.</span><span class="n">raw_data</span> <span class="o">=</span> <span class="n">buff</span><span class="o">.</span><span class="n">splitlines</span><span class="p">()</span>
-                <span class="bp">self</span><span class="o">.</span><span class="n">read_data</span><span class="p">()</span>
-        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">output</span></div>
+        <span class="n">buff</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">readall</span><span class="p">()</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">raw_data</span> <span class="o">=</span> <span class="n">buff</span><span class="o">.</span><span class="n">splitlines</span><span class="p">()</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">read_data</span><span class="p">()</span></div>
 
-<div class="viewcode-block" id="Reader.read_data"><a class="viewcode-back" href="../../../../../dev/api/sas.sascalc.dataloader.readers.html#sas.sascalc.dataloader.readers.anton_paar_saxs_reader.Reader.read_data">[docs]</a>    <span class="k">def</span> <span class="nf">read_data</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+<div class="viewcode-block" id="Reader.read_data"><a class="viewcode-back" href="../../../../../dev/sasview-api/sas.sascalc.dataloader.readers.html#sas.sascalc.dataloader.readers.anton_paar_saxs_reader.Reader.read_data">[docs]</a>    <span class="k">def</span> <span class="nf">read_data</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="n">correctly_loaded</span> <span class="o">=</span> <span class="bp">True</span>
+        <span class="n">error_message</span> <span class="o">=</span> <span class="s2">&quot;&quot;</span>
+
         <span class="n">q_unit</span> <span class="o">=</span> <span class="s2">&quot;1/nm&quot;</span>
         <span class="n">i_unit</span> <span class="o">=</span> <span class="s2">&quot;1/um^2&quot;</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">current_dataset</span><span class="o">.</span><span class="n">title</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">raw_data</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">current_dataset</span><span class="o">.</span><span class="n">meta_data</span><span class="p">[</span><span class="s2">&quot;Keywords&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">raw_data</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span>
-        <span class="n">line3</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">raw_data</span><span class="p">[</span><span class="mi">2</span><span class="p">]</span><span class="o">.</span><span class="n">split</span><span class="p">()</span>
-        <span class="n">line4</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">raw_data</span><span class="p">[</span><span class="mi">3</span><span class="p">]</span><span class="o">.</span><span class="n">split</span><span class="p">()</span>
-        <span class="n">line5</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">raw_data</span><span class="p">[</span><span class="mi">4</span><span class="p">]</span><span class="o">.</span><span class="n">split</span><span class="p">()</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">data_points</span> <span class="o">=</span> <span class="nb">int</span><span class="p">(</span><span class="n">line3</span><span class="p">[</span><span class="mi">0</span><span class="p">])</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">lower</span> <span class="o">=</span> <span class="mi">5</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">upper</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">lower</span> <span class="o">+</span> <span class="bp">self</span><span class="o">.</span><span class="n">data_points</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">source</span><span class="o">.</span><span class="n">radiation</span> <span class="o">=</span> <span class="s1">&#39;x-ray&#39;</span>
-        <span class="n">normal</span> <span class="o">=</span> <span class="nb">float</span><span class="p">(</span><span class="n">line4</span><span class="p">[</span><span class="mi">3</span><span class="p">])</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">current_dataset</span><span class="o">.</span><span class="n">source</span><span class="o">.</span><span class="n">radiation</span> <span class="o">=</span> <span class="s2">&quot;x-ray&quot;</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">current_dataset</span><span class="o">.</span><span class="n">source</span><span class="o">.</span><span class="n">name</span> <span class="o">=</span> <span class="s2">&quot;Anton Paar SAXSess Instrument&quot;</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">current_dataset</span><span class="o">.</span><span class="n">source</span><span class="o">.</span><span class="n">wavelength</span> <span class="o">=</span> <span class="nb">float</span><span class="p">(</span><span class="n">line4</span><span class="p">[</span><span class="mi">4</span><span class="p">])</span>
-        <span class="n">xvals</span> <span class="o">=</span> <span class="p">[]</span>
-        <span class="n">yvals</span> <span class="o">=</span> <span class="p">[]</span>
-        <span class="n">dyvals</span> <span class="o">=</span> <span class="p">[]</span>
-        <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">lower</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">upper</span><span class="p">):</span>
-            <span class="n">index</span> <span class="o">=</span> <span class="n">i</span> <span class="o">-</span> <span class="bp">self</span><span class="o">.</span><span class="n">lower</span>
-            <span class="n">data</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">raw_data</span><span class="p">[</span><span class="n">i</span><span class="p">]</span><span class="o">.</span><span class="n">split</span><span class="p">()</span>
-            <span class="n">xvals</span><span class="o">.</span><span class="n">insert</span><span class="p">(</span><span class="n">index</span><span class="p">,</span> <span class="n">normal</span> <span class="o">*</span> <span class="nb">float</span><span class="p">(</span><span class="n">data</span><span class="p">[</span><span class="mi">0</span><span class="p">]))</span>
-            <span class="n">yvals</span><span class="o">.</span><span class="n">insert</span><span class="p">(</span><span class="n">index</span><span class="p">,</span> <span class="n">normal</span> <span class="o">*</span> <span class="nb">float</span><span class="p">(</span><span class="n">data</span><span class="p">[</span><span class="mi">1</span><span class="p">]))</span>
-            <span class="n">dyvals</span><span class="o">.</span><span class="n">insert</span><span class="p">(</span><span class="n">index</span><span class="p">,</span> <span class="n">normal</span> <span class="o">*</span> <span class="nb">float</span><span class="p">(</span><span class="n">data</span><span class="p">[</span><span class="mi">2</span><span class="p">]))</span>
+        <span class="k">try</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">current_datainfo</span><span class="o">.</span><span class="n">title</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">raw_data</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">current_datainfo</span><span class="o">.</span><span class="n">meta_data</span><span class="p">[</span><span class="s2">&quot;Keywords&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">raw_data</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span>
+            <span class="n">line3</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">raw_data</span><span class="p">[</span><span class="mi">2</span><span class="p">]</span><span class="o">.</span><span class="n">split</span><span class="p">()</span>
+            <span class="n">line4</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">raw_data</span><span class="p">[</span><span class="mi">3</span><span class="p">]</span><span class="o">.</span><span class="n">split</span><span class="p">()</span>
+            <span class="n">line5</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">raw_data</span><span class="p">[</span><span class="mi">4</span><span class="p">]</span><span class="o">.</span><span class="n">split</span><span class="p">()</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">data_points</span> <span class="o">=</span> <span class="nb">int</span><span class="p">(</span><span class="n">line3</span><span class="p">[</span><span class="mi">0</span><span class="p">])</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">lower</span> <span class="o">=</span> <span class="mi">5</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">upper</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">lower</span> <span class="o">+</span> <span class="bp">self</span><span class="o">.</span><span class="n">data_points</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">source</span><span class="o">.</span><span class="n">radiation</span> <span class="o">=</span> <span class="s1">&#39;x-ray&#39;</span>
+            <span class="n">normal</span> <span class="o">=</span> <span class="nb">float</span><span class="p">(</span><span class="n">line4</span><span class="p">[</span><span class="mi">3</span><span class="p">])</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">current_datainfo</span><span class="o">.</span><span class="n">source</span><span class="o">.</span><span class="n">radiation</span> <span class="o">=</span> <span class="s2">&quot;x-ray&quot;</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">current_datainfo</span><span class="o">.</span><span class="n">source</span><span class="o">.</span><span class="n">name</span> <span class="o">=</span> <span class="s2">&quot;Anton Paar SAXSess Instrument&quot;</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">current_datainfo</span><span class="o">.</span><span class="n">source</span><span class="o">.</span><span class="n">wavelength</span> <span class="o">=</span> <span class="nb">float</span><span class="p">(</span><span class="n">line4</span><span class="p">[</span><span class="mi">4</span><span class="p">])</span>
+            <span class="n">xvals</span> <span class="o">=</span> <span class="p">[]</span>
+            <span class="n">yvals</span> <span class="o">=</span> <span class="p">[]</span>
+            <span class="n">dyvals</span> <span class="o">=</span> <span class="p">[]</span>
+            <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">lower</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">upper</span><span class="p">):</span>
+                <span class="n">index</span> <span class="o">=</span> <span class="n">i</span> <span class="o">-</span> <span class="bp">self</span><span class="o">.</span><span class="n">lower</span>
+                <span class="n">data</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">raw_data</span><span class="p">[</span><span class="n">i</span><span class="p">]</span><span class="o">.</span><span class="n">split</span><span class="p">()</span>
+                <span class="n">xvals</span><span class="o">.</span><span class="n">insert</span><span class="p">(</span><span class="n">index</span><span class="p">,</span> <span class="n">normal</span> <span class="o">*</span> <span class="nb">float</span><span class="p">(</span><span class="n">data</span><span class="p">[</span><span class="mi">0</span><span class="p">]))</span>
+                <span class="n">yvals</span><span class="o">.</span><span class="n">insert</span><span class="p">(</span><span class="n">index</span><span class="p">,</span> <span class="n">normal</span> <span class="o">*</span> <span class="nb">float</span><span class="p">(</span><span class="n">data</span><span class="p">[</span><span class="mi">1</span><span class="p">]))</span>
+                <span class="n">dyvals</span><span class="o">.</span><span class="n">insert</span><span class="p">(</span><span class="n">index</span><span class="p">,</span> <span class="n">normal</span> <span class="o">*</span> <span class="nb">float</span><span class="p">(</span><span class="n">data</span><span class="p">[</span><span class="mi">2</span><span class="p">]))</span>
+        <span class="k">except</span> <span class="ne">Exception</span> <span class="k">as</span> <span class="n">e</span><span class="p">:</span>
+            <span class="n">error_message</span> <span class="o">=</span> <span class="s2">&quot;Couldn&#39;t load {}.</span><span class="se">\n</span><span class="s2">&quot;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">f_open</span><span class="o">.</span><span class="n">name</span><span class="p">)</span>
+            <span class="n">error_message</span> <span class="o">+=</span> <span class="n">e</span><span class="o">.</span><span class="n">message</span>
+            <span class="k">raise</span> <span class="n">FileContentsException</span><span class="p">(</span><span class="n">error_message</span><span class="p">)</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">current_dataset</span><span class="o">.</span><span class="n">x</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">current_dataset</span><span class="o">.</span><span class="n">x</span><span class="p">,</span> <span class="n">xvals</span><span class="p">)</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">current_dataset</span><span class="o">.</span><span class="n">y</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">current_dataset</span><span class="o">.</span><span class="n">y</span><span class="p">,</span> <span class="n">yvals</span><span class="p">)</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">current_dataset</span><span class="o">.</span><span class="n">dy</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">current_dataset</span><span class="o">.</span><span class="n">dy</span><span class="p">,</span> <span class="n">dyvals</span><span class="p">)</span>
         <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">data_points</span> <span class="o">!=</span> <span class="bp">self</span><span class="o">.</span><span class="n">current_dataset</span><span class="o">.</span><span class="n">x</span><span class="o">.</span><span class="n">size</span><span class="p">:</span>
-            <span class="bp">self</span><span class="o">.</span><span class="n">errors</span><span class="o">.</span><span class="n">add</span><span class="p">(</span><span class="s2">&quot;Not all data was loaded properly.&quot;</span><span class="p">)</span>
-        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">current_dataset</span><span class="o">.</span><span class="n">dx</span><span class="o">.</span><span class="n">size</span> <span class="o">!=</span> <span class="bp">self</span><span class="o">.</span><span class="n">current_dataset</span><span class="o">.</span><span class="n">x</span><span class="o">.</span><span class="n">size</span><span class="p">:</span>
-            <span class="n">dxvals</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">zeros</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">current_dataset</span><span class="o">.</span><span class="n">x</span><span class="o">.</span><span class="n">size</span><span class="p">)</span>
-            <span class="bp">self</span><span class="o">.</span><span class="n">current_dataset</span><span class="o">.</span><span class="n">dx</span> <span class="o">=</span> <span class="n">dxvals</span>
+            <span class="n">error_message</span> <span class="o">+=</span> <span class="s2">&quot;Not all data points could be loaded.</span><span class="se">\n</span><span class="s2">&quot;</span>
+            <span class="n">correctly_loaded</span> <span class="o">=</span> <span class="bp">False</span>
         <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">current_dataset</span><span class="o">.</span><span class="n">x</span><span class="o">.</span><span class="n">size</span> <span class="o">!=</span> <span class="bp">self</span><span class="o">.</span><span class="n">current_dataset</span><span class="o">.</span><span class="n">y</span><span class="o">.</span><span class="n">size</span><span class="p">:</span>
-            <span class="bp">self</span><span class="o">.</span><span class="n">errors</span><span class="o">.</span><span class="n">add</span><span class="p">(</span><span class="s2">&quot;The x and y data sets are not the same size.&quot;</span><span class="p">)</span>
+            <span class="n">error_message</span> <span class="o">+=</span> <span class="s2">&quot;The x and y data sets are not the same size.</span><span class="se">\n</span><span class="s2">&quot;</span>
+            <span class="n">correctly_loaded</span> <span class="o">=</span> <span class="bp">False</span>
         <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">current_dataset</span><span class="o">.</span><span class="n">y</span><span class="o">.</span><span class="n">size</span> <span class="o">!=</span> <span class="bp">self</span><span class="o">.</span><span class="n">current_dataset</span><span class="o">.</span><span class="n">dy</span><span class="o">.</span><span class="n">size</span><span class="p">:</span>
-            <span class="bp">self</span><span class="o">.</span><span class="n">errors</span><span class="o">.</span><span class="n">add</span><span class="p">(</span><span class="s2">&quot;The y and dy datasets are not the same size.&quot;</span><span class="p">)</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">current_dataset</span><span class="o">.</span><span class="n">errors</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">errors</span>
+            <span class="n">error_message</span> <span class="o">+=</span> <span class="s2">&quot;The y and dy datasets are not the same size.</span><span class="se">\n</span><span class="s2">&quot;</span>
+            <span class="n">correctly_loaded</span> <span class="o">=</span> <span class="bp">False</span>
+
         <span class="bp">self</span><span class="o">.</span><span class="n">current_dataset</span><span class="o">.</span><span class="n">xaxis</span><span class="p">(</span><span class="s2">&quot;Q&quot;</span><span class="p">,</span> <span class="n">q_unit</span><span class="p">)</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">current_dataset</span><span class="o">.</span><span class="n">yaxis</span><span class="p">(</span><span class="s2">&quot;Intensity&quot;</span><span class="p">,</span> <span class="n">i_unit</span><span class="p">)</span>
         <span class="n">xml_intermediate</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">raw_data</span><span class="p">[</span><span class="bp">self</span><span class="o">.</span><span class="n">upper</span><span class="p">:]</span>
         <span class="n">xml</span> <span class="o">=</span> <span class="s1">&#39;&#39;</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">xml_intermediate</span><span class="p">)</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">set_xml_string</span><span class="p">(</span><span class="n">xml</span><span class="p">)</span>
-        <span class="n">dom</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">xmlroot</span><span class="o">.</span><span class="n">xpath</span><span class="p">(</span><span class="s1">&#39;/fileinfo&#39;</span><span class="p">)</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">_parse_child</span><span class="p">(</span><span class="n">dom</span><span class="p">)</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">output</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">current_dataset</span><span class="p">)</span></div>
+        <span class="k">try</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">set_xml_string</span><span class="p">(</span><span class="n">xml</span><span class="p">)</span>
+            <span class="n">dom</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">xmlroot</span><span class="o">.</span><span class="n">xpath</span><span class="p">(</span><span class="s1">&#39;/fileinfo&#39;</span><span class="p">)</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_parse_child</span><span class="p">(</span><span class="n">dom</span><span class="p">)</span>
+        <span class="k">except</span> <span class="ne">Exception</span> <span class="k">as</span> <span class="n">e</span><span class="p">:</span>
+            <span class="c1"># Data loaded but XML metadata has an error</span>
+            <span class="n">error_message</span> <span class="o">+=</span> <span class="s2">&quot;Data points have been loaded but there was an &quot;</span>
+            <span class="n">error_message</span> <span class="o">+=</span> <span class="s2">&quot;error reading XML metadata: &quot;</span> <span class="o">+</span> <span class="n">e</span><span class="o">.</span><span class="n">message</span>
+            <span class="n">correctly_loaded</span> <span class="o">=</span> <span class="bp">False</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">send_to_output</span><span class="p">()</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="n">correctly_loaded</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="n">DataReaderException</span><span class="p">(</span><span class="n">error_message</span><span class="p">)</span></div>
 
     <span class="k">def</span> <span class="nf">_parse_child</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">dom</span><span class="p">,</span> <span class="n">parent</span><span class="o">=</span><span class="s1">&#39;&#39;</span><span class="p">):</span>
         <span class="sd">&quot;&quot;&quot;</span>
@@ -196,22 +193,22 @@
             <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">node</span><span class="o">.</span><span class="n">getchildren</span><span class="p">())</span> <span class="o">&gt;</span> <span class="mi">1</span><span class="p">:</span>
                 <span class="bp">self</span><span class="o">.</span><span class="n">_parse_child</span><span class="p">(</span><span class="n">node</span><span class="p">,</span> <span class="n">key</span><span class="p">)</span>
                 <span class="k">if</span> <span class="n">key</span> <span class="o">==</span> <span class="s2">&quot;SampleDetector&quot;</span><span class="p">:</span>
-                    <span class="bp">self</span><span class="o">.</span><span class="n">current_dataset</span><span class="o">.</span><span class="n">detector</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">detector</span><span class="p">)</span>
+                    <span class="bp">self</span><span class="o">.</span><span class="n">current_datainfo</span><span class="o">.</span><span class="n">detector</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">detector</span><span class="p">)</span>
                     <span class="bp">self</span><span class="o">.</span><span class="n">detector</span> <span class="o">=</span> <span class="n">Detector</span><span class="p">()</span>
             <span class="k">else</span><span class="p">:</span>
                 <span class="k">if</span> <span class="n">key</span> <span class="o">==</span> <span class="s2">&quot;value&quot;</span><span class="p">:</span>
                     <span class="k">if</span> <span class="n">parent</span> <span class="o">==</span> <span class="s2">&quot;Wavelength&quot;</span><span class="p">:</span>
-                        <span class="bp">self</span><span class="o">.</span><span class="n">current_dataset</span><span class="o">.</span><span class="n">source</span><span class="o">.</span><span class="n">wavelength</span> <span class="o">=</span> <span class="n">value</span>
+                        <span class="bp">self</span><span class="o">.</span><span class="n">current_datainfo</span><span class="o">.</span><span class="n">source</span><span class="o">.</span><span class="n">wavelength</span> <span class="o">=</span> <span class="n">value</span>
                     <span class="k">elif</span> <span class="n">parent</span> <span class="o">==</span> <span class="s2">&quot;SampleDetector&quot;</span><span class="p">:</span>
                         <span class="bp">self</span><span class="o">.</span><span class="n">detector</span><span class="o">.</span><span class="n">distance</span> <span class="o">=</span> <span class="n">value</span>
                     <span class="k">elif</span> <span class="n">parent</span> <span class="o">==</span> <span class="s2">&quot;Temperature&quot;</span><span class="p">:</span>
-                        <span class="bp">self</span><span class="o">.</span><span class="n">current_dataset</span><span class="o">.</span><span class="n">sample</span><span class="o">.</span><span class="n">temperature</span> <span class="o">=</span> <span class="n">value</span>
+                        <span class="bp">self</span><span class="o">.</span><span class="n">current_datainfo</span><span class="o">.</span><span class="n">sample</span><span class="o">.</span><span class="n">temperature</span> <span class="o">=</span> <span class="n">value</span>
                     <span class="k">elif</span> <span class="n">parent</span> <span class="o">==</span> <span class="s2">&quot;CounterSlitLength&quot;</span><span class="p">:</span>
                         <span class="bp">self</span><span class="o">.</span><span class="n">detector</span><span class="o">.</span><span class="n">slit_length</span> <span class="o">=</span> <span class="n">value</span>
                 <span class="k">elif</span> <span class="n">key</span> <span class="o">==</span> <span class="s2">&quot;unit&quot;</span><span class="p">:</span>
                     <span class="n">value</span> <span class="o">=</span> <span class="n">value</span><span class="o">.</span><span class="n">replace</span><span class="p">(</span><span class="s2">&quot;_&quot;</span><span class="p">,</span> <span class="s2">&quot;&quot;</span><span class="p">)</span>
                     <span class="k">if</span> <span class="n">parent</span> <span class="o">==</span> <span class="s2">&quot;Wavelength&quot;</span><span class="p">:</span>
-                        <span class="bp">self</span><span class="o">.</span><span class="n">current_dataset</span><span class="o">.</span><span class="n">source</span><span class="o">.</span><span class="n">wavelength_unit</span> <span class="o">=</span> <span class="n">value</span>
+                        <span class="bp">self</span><span class="o">.</span><span class="n">current_datainfo</span><span class="o">.</span><span class="n">source</span><span class="o">.</span><span class="n">wavelength_unit</span> <span class="o">=</span> <span class="n">value</span>
                     <span class="k">elif</span> <span class="n">parent</span> <span class="o">==</span> <span class="s2">&quot;SampleDetector&quot;</span><span class="p">:</span>
                         <span class="bp">self</span><span class="o">.</span><span class="n">detector</span><span class="o">.</span><span class="n">distance_unit</span> <span class="o">=</span> <span class="n">value</span>
                     <span class="k">elif</span> <span class="n">parent</span> <span class="o">==</span> <span class="s2">&quot;X&quot;</span><span class="p">:</span>
@@ -219,7 +216,7 @@
                     <span class="k">elif</span> <span class="n">parent</span> <span class="o">==</span> <span class="s2">&quot;Y&quot;</span><span class="p">:</span>
                         <span class="bp">self</span><span class="o">.</span><span class="n">current_dataset</span><span class="o">.</span><span class="n">yaxis</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">current_dataset</span><span class="o">.</span><span class="n">_yaxis</span><span class="p">,</span> <span class="n">value</span><span class="p">)</span>
                     <span class="k">elif</span> <span class="n">parent</span> <span class="o">==</span> <span class="s2">&quot;Temperature&quot;</span><span class="p">:</span>
-                        <span class="bp">self</span><span class="o">.</span><span class="n">current_dataset</span><span class="o">.</span><span class="n">sample</span><span class="o">.</span><span class="n">temperature_unit</span> <span class="o">=</span> <span class="n">value</span>
+                        <span class="bp">self</span><span class="o">.</span><span class="n">current_datainfo</span><span class="o">.</span><span class="n">sample</span><span class="o">.</span><span class="n">temperature_unit</span> <span class="o">=</span> <span class="n">value</span>
                     <span class="k">elif</span> <span class="n">parent</span> <span class="o">==</span> <span class="s2">&quot;CounterSlitLength&quot;</span><span class="p">:</span>
                         <span class="bp">self</span><span class="o">.</span><span class="n">detector</span><span class="o">.</span><span class="n">slit_length_unit</span> <span class="o">=</span> <span class="n">value</span>
                 <span class="k">elif</span> <span class="n">key</span> <span class="o">==</span> <span class="s2">&quot;quantity&quot;</span><span class="p">:</span>
@@ -257,13 +254,13 @@
         <li class="right" >
           <a href="../../../../../py-modindex.html" title="Python Module Index"
              >modules</a> |</li>
-        <li class="nav-item nav-item-0"><a href="../../../../../index.html">SasView 4.1.2 documentation</a> &raquo;</li>
+        <li class="nav-item nav-item-0"><a href="../../../../../index.html">SasView 4.2.0 documentation</a> &raquo;</li>
           <li class="nav-item nav-item-1"><a href="../../../../index.html" >Module code</a> &raquo;</li>
-          <li class="nav-item nav-item-2"><a href="../readers.html" >sas.sascalc.dataloader.readers</a> &raquo;</li> 
+          <li class="nav-item nav-item-2"><a href="../../../../sas.html" >sas</a> &raquo;</li> 
       </ul>
     </div>
     <div class="footer" role="contentinfo">
-        &copy; Copyright 2017, The SasView Project.
+        &copy; Copyright 2018, The SasView Project.
       Created using <a href="http://sphinx-doc.org/">Sphinx</a> 1.4.1.
     </div>
   </body>

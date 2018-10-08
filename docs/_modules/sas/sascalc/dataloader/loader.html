@@ -6,7 +6,7 @@
   <head>
     <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
     
-    <title>sas.sascalc.dataloader.loader &mdash; SasView 4.1.2 documentation</title>
+    <title>sas.sascalc.dataloader.loader &mdash; SasView 4.2.0 documentation</title>
     
     <link rel="stylesheet" href="../../../../_static/classic.css" type="text/css" />
     <link rel="stylesheet" href="../../../../_static/pygments.css" type="text/css" />
@@ -14,7 +14,7 @@
     <script type="text/javascript">
       var DOCUMENTATION_OPTIONS = {
         URL_ROOT:    '../../../../',
-        VERSION:     '4.1.2',
+        VERSION:     '4.2.0',
         COLLAPSE_INDEX: false,
         FILE_SUFFIX: '.html',
         HAS_SOURCE:  true
@@ -24,8 +24,8 @@
     <script type="text/javascript" src="../../../../_static/underscore.js"></script>
     <script type="text/javascript" src="../../../../_static/doctools.js"></script>
     <script type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.1/MathJax.js?config=TeX-MML-AM_CHTML"></script>
-    <link rel="top" title="SasView 4.1.2 documentation" href="../../../../index.html" />
-    <link rel="up" title="Module code" href="../../../index.html" /> 
+    <link rel="top" title="SasView 4.2.0 documentation" href="../../../../index.html" />
+    <link rel="up" title="sas" href="../../../sas.html" /> 
   </head>
   <body role="document">
     <div class="related" role="navigation" aria-label="related navigation">
@@ -37,8 +37,9 @@
         <li class="right" >
           <a href="../../../../py-modindex.html" title="Python Module Index"
              >modules</a> |</li>
-        <li class="nav-item nav-item-0"><a href="../../../../index.html">SasView 4.1.2 documentation</a> &raquo;</li>
-          <li class="nav-item nav-item-1"><a href="../../../index.html" accesskey="U">Module code</a> &raquo;</li> 
+        <li class="nav-item nav-item-0"><a href="../../../../index.html">SasView 4.2.0 documentation</a> &raquo;</li>
+          <li class="nav-item nav-item-1"><a href="../../../index.html" >Module code</a> &raquo;</li>
+          <li class="nav-item nav-item-2"><a href="../../../sas.html" accesskey="U">sas</a> &raquo;</li> 
       </ul>
     </div>  
 
@@ -50,7 +51,7 @@
   <h1>Source code for sas.sascalc.dataloader.loader</h1><div class="highlight"><pre>
 <span></span><span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">    File handler to support different file extensions.</span>
-<span class="sd">    Uses reflectometry&#39;s registry utility.</span>
+<span class="sd">    Uses reflectometer registry utility.</span>
 
 <span class="sd">    The default readers are found in the &#39;readers&#39; sub-module</span>
 <span class="sd">    and registered by default at initialization time.</span>
@@ -63,11 +64,11 @@
 <span class="sd">    look for new readers/writers.</span>
 <span class="sd">&quot;&quot;&quot;</span>
 <span class="c1">#####################################################################</span>
-<span class="c1">#This software was developed by the University of Tennessee as part of the</span>
-<span class="c1">#Distributed Data Analysis of Neutron Scattering Experiments (DANSE)</span>
-<span class="c1">#project funded by the US National Science Foundation.</span>
-<span class="c1">#See the license text in license.txt</span>
-<span class="c1">#copyright 2008, University of Tennessee</span>
+<span class="c1"># This software was developed by the University of Tennessee as part of the</span>
+<span class="c1"># Distributed Data Analysis of Neutron Scattering Experiments (DANSE)</span>
+<span class="c1"># project funded by the US National Science Foundation.</span>
+<span class="c1"># See the license text in license.txt</span>
+<span class="c1"># copyright 2008, University of Tennessee</span>
 <span class="c1">######################################################################</span>
 
 <span class="kn">import</span> <span class="nn">os</span>
@@ -75,34 +76,41 @@
 <span class="kn">import</span> <span class="nn">logging</span>
 <span class="kn">import</span> <span class="nn">time</span>
 <span class="kn">from</span> <span class="nn">zipfile</span> <span class="kn">import</span> <span class="n">ZipFile</span>
-<span class="kn">from</span> <span class="nn">sas.sascalc.data_util.registry</span> <span class="kn">import</span> <span class="n">ExtensionRegistry</span>
-<span class="c1"># Default readers are defined in the readers sub-module</span>
-<span class="kn">import</span> <span class="nn">readers</span>
-<span class="kn">from</span> <span class="nn">readers</span> <span class="kn">import</span> <span class="n">ascii_reader</span>
-<span class="kn">from</span> <span class="nn">readers</span> <span class="kn">import</span> <span class="n">cansas_reader</span>
 
-<div class="viewcode-block" id="Registry"><a class="viewcode-back" href="../../../../dev/api/sas.sascalc.dataloader.html#sas.sascalc.dataloader.loader.Registry">[docs]</a><span class="k">class</span> <span class="nc">Registry</span><span class="p">(</span><span class="n">ExtensionRegistry</span><span class="p">):</span>
+<span class="kn">from</span> <span class="nn">sas.sascalc.data_util.registry</span> <span class="kn">import</span> <span class="n">ExtensionRegistry</span>
+
+<span class="c1"># Default readers are defined in the readers sub-module</span>
+<span class="kn">from</span> <span class="nn">.</span> <span class="kn">import</span> <span class="n">readers</span>
+<span class="kn">from</span> <span class="nn">.loader_exceptions</span> <span class="kn">import</span> <span class="n">NoKnownLoaderException</span><span class="p">,</span> <span class="n">FileContentsException</span><span class="p">,</span>\
+    <span class="n">DefaultReaderException</span>
+<span class="kn">from</span> <span class="nn">.readers</span> <span class="kn">import</span> <span class="n">ascii_reader</span>
+<span class="kn">from</span> <span class="nn">.readers</span> <span class="kn">import</span> <span class="n">cansas_reader</span>
+<span class="kn">from</span> <span class="nn">.readers</span> <span class="kn">import</span> <span class="n">cansas_reader_HDF5</span>
+
+<span class="n">logger</span> <span class="o">=</span> <span class="n">logging</span><span class="o">.</span><span class="n">getLogger</span><span class="p">(</span><span class="n">__name__</span><span class="p">)</span>
+
+
+<div class="viewcode-block" id="Registry"><a class="viewcode-back" href="../../../../dev/sasview-api/sas.sascalc.dataloader.html#sas.sascalc.dataloader.loader.Registry">[docs]</a><span class="k">class</span> <span class="nc">Registry</span><span class="p">(</span><span class="n">ExtensionRegistry</span><span class="p">):</span>
     <span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">    Registry class for file format extensions.</span>
 <span class="sd">    Readers and writers are supported.</span>
 <span class="sd">    &quot;&quot;&quot;</span>
-
     <span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
         <span class="nb">super</span><span class="p">(</span><span class="n">Registry</span><span class="p">,</span> <span class="bp">self</span><span class="p">)</span><span class="o">.</span><span class="n">__init__</span><span class="p">()</span>
 
-        <span class="c1">## Writers</span>
+        <span class="c1"># Writers</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">writers</span> <span class="o">=</span> <span class="p">{}</span>
 
-        <span class="c1">## List of wildcards</span>
+        <span class="c1"># List of wildcards</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">wildcards</span> <span class="o">=</span> <span class="p">[</span><span class="s1">&#39;All (*.*)|*.*&#39;</span><span class="p">]</span>
 
-        <span class="c1">## Creation time, for testing</span>
+        <span class="c1"># Creation time, for testing</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">_created</span> <span class="o">=</span> <span class="n">time</span><span class="o">.</span><span class="n">time</span><span class="p">()</span>
 
         <span class="c1"># Register default readers</span>
         <span class="n">readers</span><span class="o">.</span><span class="n">read_associations</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span>
 
-<div class="viewcode-block" id="Registry.load"><a class="viewcode-back" href="../../../../dev/api/sas.sascalc.dataloader.html#sas.sascalc.dataloader.loader.Registry.load">[docs]</a>    <span class="k">def</span> <span class="nf">load</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">path</span><span class="p">,</span> <span class="n">format</span><span class="o">=</span><span class="bp">None</span><span class="p">):</span>
+<div class="viewcode-block" id="Registry.load"><a class="viewcode-back" href="../../../../dev/sasview-api/sas.sascalc.dataloader.html#sas.sascalc.dataloader.loader.Registry.load">[docs]</a>    <span class="k">def</span> <span class="nf">load</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">path</span><span class="p">,</span> <span class="n">format</span><span class="o">=</span><span class="bp">None</span><span class="p">):</span>
         <span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">        Call the loader for the file type of path.</span>
 
@@ -110,22 +118,70 @@
 <span class="sd">        :param format: explicit extension, to force the use</span>
 <span class="sd">            of a particular reader</span>
 
-<span class="sd">        Defaults to the ascii (multi-column) reader</span>
-<span class="sd">        if no reader was registered for the file&#39;s</span>
-<span class="sd">        extension.</span>
+<span class="sd">        Defaults to the ascii (multi-column), cansas XML, and cansas NeXuS</span>
+<span class="sd">        readers if no reader was registered for the file&#39;s extension.</span>
 <span class="sd">        &quot;&quot;&quot;</span>
+        <span class="c1"># Gets set to a string if the file has an associated reader that fails</span>
+        <span class="n">msg_from_reader</span> <span class="o">=</span> <span class="bp">None</span>
         <span class="k">try</span><span class="p">:</span>
             <span class="k">return</span> <span class="nb">super</span><span class="p">(</span><span class="n">Registry</span><span class="p">,</span> <span class="bp">self</span><span class="p">)</span><span class="o">.</span><span class="n">load</span><span class="p">(</span><span class="n">path</span><span class="p">,</span> <span class="n">format</span><span class="o">=</span><span class="n">format</span><span class="p">)</span>
-        <span class="k">except</span><span class="p">:</span>
-            <span class="k">try</span><span class="p">:</span>
-                <span class="c1"># No reader was found. Default to the ascii reader.</span>
-                <span class="n">ascii_loader</span> <span class="o">=</span> <span class="n">ascii_reader</span><span class="o">.</span><span class="n">Reader</span><span class="p">()</span>
-                <span class="k">return</span> <span class="n">ascii_loader</span><span class="o">.</span><span class="n">read</span><span class="p">(</span><span class="n">path</span><span class="p">)</span>
-            <span class="k">except</span><span class="p">:</span>
-                <span class="n">cansas_loader</span> <span class="o">=</span> <span class="n">cansas_reader</span><span class="o">.</span><span class="n">Reader</span><span class="p">()</span>
-                <span class="k">return</span> <span class="n">cansas_loader</span><span class="o">.</span><span class="n">read</span><span class="p">(</span><span class="n">path</span><span class="p">)</span></div>
+        <span class="c1">#except Exception: raise  # for debugging, don&#39;t use fallback loader</span>
+        <span class="k">except</span> <span class="n">NoKnownLoaderException</span> <span class="k">as</span> <span class="n">nkl_e</span><span class="p">:</span>
+            <span class="k">pass</span>  <span class="c1"># Try the ASCII reader</span>
+        <span class="k">except</span> <span class="n">FileContentsException</span> <span class="k">as</span> <span class="n">fc_exc</span><span class="p">:</span>
+            <span class="c1"># File has an associated reader but it failed.</span>
+            <span class="c1"># Save the error message to display later, but try the 3 default loaders</span>
+            <span class="n">msg_from_reader</span> <span class="o">=</span> <span class="n">fc_exc</span><span class="o">.</span><span class="n">message</span>
+        <span class="k">except</span> <span class="ne">Exception</span><span class="p">:</span>
+            <span class="k">pass</span>
 
-<div class="viewcode-block" id="Registry.find_plugins"><a class="viewcode-back" href="../../../../dev/api/sas.sascalc.dataloader.html#sas.sascalc.dataloader.loader.Registry.find_plugins">[docs]</a>    <span class="k">def</span> <span class="nf">find_plugins</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="nb">dir</span><span class="p">):</span>
+        <span class="c1"># File has no associated reader, or the associated reader failed.</span>
+        <span class="c1"># Try the ASCII reader</span>
+        <span class="k">try</span><span class="p">:</span>
+            <span class="n">ascii_loader</span> <span class="o">=</span> <span class="n">ascii_reader</span><span class="o">.</span><span class="n">Reader</span><span class="p">()</span>
+            <span class="k">return</span> <span class="n">ascii_loader</span><span class="o">.</span><span class="n">read</span><span class="p">(</span><span class="n">path</span><span class="p">)</span>
+        <span class="k">except</span> <span class="n">NoKnownLoaderException</span><span class="p">:</span>
+            <span class="k">pass</span>  <span class="c1"># Try the Cansas XML reader</span>
+        <span class="k">except</span> <span class="n">DefaultReaderException</span><span class="p">:</span>
+            <span class="k">pass</span>  <span class="c1"># Loader specific error to try the cansas XML reader</span>
+        <span class="k">except</span> <span class="n">FileContentsException</span> <span class="k">as</span> <span class="n">e</span><span class="p">:</span>
+            <span class="k">if</span> <span class="n">msg_from_reader</span> <span class="ow">is</span> <span class="bp">None</span><span class="p">:</span>
+                <span class="k">raise</span> <span class="ne">RuntimeError</span><span class="p">(</span><span class="n">e</span><span class="o">.</span><span class="n">message</span><span class="p">)</span>
+
+        <span class="c1"># ASCII reader failed - try CanSAS xML reader</span>
+        <span class="k">try</span><span class="p">:</span>
+            <span class="n">cansas_loader</span> <span class="o">=</span> <span class="n">cansas_reader</span><span class="o">.</span><span class="n">Reader</span><span class="p">()</span>
+            <span class="k">return</span> <span class="n">cansas_loader</span><span class="o">.</span><span class="n">read</span><span class="p">(</span><span class="n">path</span><span class="p">)</span>
+        <span class="k">except</span> <span class="n">NoKnownLoaderException</span><span class="p">:</span>
+            <span class="k">pass</span>  <span class="c1"># Try the NXcanSAS reader</span>
+        <span class="k">except</span> <span class="n">DefaultReaderException</span><span class="p">:</span>
+            <span class="k">pass</span>  <span class="c1"># Loader specific error to try the NXcanSAS reader</span>
+        <span class="k">except</span> <span class="n">FileContentsException</span> <span class="k">as</span> <span class="n">e</span><span class="p">:</span>
+            <span class="k">if</span> <span class="n">msg_from_reader</span> <span class="ow">is</span> <span class="bp">None</span><span class="p">:</span>
+                <span class="k">raise</span> <span class="ne">RuntimeError</span><span class="p">(</span><span class="n">e</span><span class="o">.</span><span class="n">message</span><span class="p">)</span>
+        <span class="k">except</span> <span class="ne">Exception</span><span class="p">:</span>
+            <span class="k">pass</span>
+
+        <span class="c1"># CanSAS XML reader failed - try NXcanSAS reader</span>
+        <span class="k">try</span><span class="p">:</span>
+            <span class="n">cansas_nexus_loader</span> <span class="o">=</span> <span class="n">cansas_reader_HDF5</span><span class="o">.</span><span class="n">Reader</span><span class="p">()</span>
+            <span class="k">return</span> <span class="n">cansas_nexus_loader</span><span class="o">.</span><span class="n">read</span><span class="p">(</span><span class="n">path</span><span class="p">)</span>
+        <span class="k">except</span> <span class="n">DefaultReaderException</span> <span class="k">as</span> <span class="n">e</span><span class="p">:</span>
+            <span class="n">logging</span><span class="o">.</span><span class="n">error</span><span class="p">(</span><span class="s2">&quot;No default loader can load the data&quot;</span><span class="p">)</span>
+            <span class="c1"># No known reader available. Give up and throw an error</span>
+            <span class="k">if</span> <span class="n">msg_from_reader</span> <span class="ow">is</span> <span class="bp">None</span><span class="p">:</span>
+                <span class="n">msg</span> <span class="o">=</span> <span class="s2">&quot;</span><span class="se">\n</span><span class="s2">Unknown data format: {}.</span><span class="se">\n</span><span class="s2">The file is not a &quot;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">path</span><span class="p">)</span>
+                <span class="n">msg</span> <span class="o">+=</span> <span class="s2">&quot;known format that can be loaded by SasView.</span><span class="se">\n</span><span class="s2">&quot;</span>
+                <span class="k">raise</span> <span class="n">NoKnownLoaderException</span><span class="p">(</span><span class="n">msg</span><span class="p">)</span>
+            <span class="k">else</span><span class="p">:</span>
+                <span class="c1"># Associated reader and default readers all failed.</span>
+                <span class="c1"># Show error message from associated reader</span>
+                <span class="k">raise</span> <span class="ne">RuntimeError</span><span class="p">(</span><span class="n">msg_from_reader</span><span class="p">)</span>
+        <span class="k">except</span> <span class="n">FileContentsException</span> <span class="k">as</span> <span class="n">e</span><span class="p">:</span>
+            <span class="n">err_msg</span> <span class="o">=</span> <span class="n">msg_from_reader</span> <span class="k">if</span> <span class="n">msg_from_reader</span> <span class="ow">is</span> <span class="ow">not</span> <span class="bp">None</span> <span class="k">else</span> <span class="n">e</span><span class="o">.</span><span class="n">message</span>
+            <span class="k">raise</span> <span class="ne">RuntimeError</span><span class="p">(</span><span class="n">err_msg</span><span class="p">)</span></div>
+
+<div class="viewcode-block" id="Registry.find_plugins"><a class="viewcode-back" href="../../../../dev/sasview-api/sas.sascalc.dataloader.html#sas.sascalc.dataloader.loader.Registry.find_plugins">[docs]</a>    <span class="k">def</span> <span class="nf">find_plugins</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="nb">dir</span><span class="p">):</span>
         <span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">        Find readers in a given directory. This method</span>
 <span class="sd">        can be used to inspect user plug-in directories to</span>
@@ -148,7 +204,7 @@
         <span class="k">if</span> <span class="ow">not</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">isdir</span><span class="p">(</span><span class="nb">dir</span><span class="p">):</span>
             <span class="n">msg</span> <span class="o">=</span> <span class="s2">&quot;DataLoader couldn&#39;t locate DataLoader plugin folder.&quot;</span>
             <span class="n">msg</span> <span class="o">+=</span> <span class="s2">&quot;&quot;&quot; &quot;</span><span class="si">%s</span><span class="s2">&quot; does not exist&quot;&quot;&quot;</span> <span class="o">%</span> <span class="nb">dir</span>
-            <span class="n">logging</span><span class="o">.</span><span class="n">warning</span><span class="p">(</span><span class="n">msg</span><span class="p">)</span>
+            <span class="n">logger</span><span class="o">.</span><span class="n">warning</span><span class="p">(</span><span class="n">msg</span><span class="p">)</span>
             <span class="k">return</span> <span class="n">readers_found</span>
 
         <span class="k">for</span> <span class="n">item</span> <span class="ow">in</span> <span class="n">os</span><span class="o">.</span><span class="n">listdir</span><span class="p">(</span><span class="nb">dir</span><span class="p">):</span>
@@ -166,7 +222,7 @@
                     <span class="k">except</span><span class="p">:</span>
                         <span class="n">msg</span> <span class="o">=</span> <span class="s2">&quot;Loader: Error importing &quot;</span>
                         <span class="n">msg</span> <span class="o">+=</span> <span class="s2">&quot;</span><span class="si">%s</span><span class="se">\n</span><span class="s2">  </span><span class="si">%s</span><span class="s2">&quot;</span> <span class="o">%</span> <span class="p">(</span><span class="n">item</span><span class="p">,</span> <span class="n">sys</span><span class="o">.</span><span class="n">exc_value</span><span class="p">)</span>
-                        <span class="n">logging</span><span class="o">.</span><span class="n">error</span><span class="p">(</span><span class="n">msg</span><span class="p">)</span>
+                        <span class="n">logger</span><span class="o">.</span><span class="n">error</span><span class="p">(</span><span class="n">msg</span><span class="p">)</span>
 
                 <span class="c1"># Process zip files</span>
                 <span class="k">elif</span> <span class="n">item</span><span class="o">.</span><span class="n">endswith</span><span class="p">(</span><span class="s1">&#39;.zip&#39;</span><span class="p">):</span>
@@ -188,16 +244,16 @@
                             <span class="k">except</span><span class="p">:</span>
                                 <span class="n">msg</span> <span class="o">=</span> <span class="s2">&quot;Loader: Error importing&quot;</span>
                                 <span class="n">msg</span> <span class="o">+=</span> <span class="s2">&quot; </span><span class="si">%s</span><span class="se">\n</span><span class="s2">  </span><span class="si">%s</span><span class="s2">&quot;</span> <span class="o">%</span> <span class="p">(</span><span class="n">mfile</span><span class="p">,</span> <span class="n">sys</span><span class="o">.</span><span class="n">exc_value</span><span class="p">)</span>
-                                <span class="n">logging</span><span class="o">.</span><span class="n">error</span><span class="p">(</span><span class="n">msg</span><span class="p">)</span>
+                                <span class="n">logger</span><span class="o">.</span><span class="n">error</span><span class="p">(</span><span class="n">msg</span><span class="p">)</span>
 
                     <span class="k">except</span><span class="p">:</span>
                         <span class="n">msg</span> <span class="o">=</span> <span class="s2">&quot;Loader: Error importing &quot;</span>
                         <span class="n">msg</span> <span class="o">+=</span> <span class="s2">&quot; </span><span class="si">%s</span><span class="se">\n</span><span class="s2">  </span><span class="si">%s</span><span class="s2">&quot;</span> <span class="o">%</span> <span class="p">(</span><span class="n">item</span><span class="p">,</span> <span class="n">sys</span><span class="o">.</span><span class="n">exc_value</span><span class="p">)</span>
-                        <span class="n">logging</span><span class="o">.</span><span class="n">error</span><span class="p">(</span><span class="n">msg</span><span class="p">)</span>
+                        <span class="n">logger</span><span class="o">.</span><span class="n">error</span><span class="p">(</span><span class="n">msg</span><span class="p">)</span>
 
         <span class="k">return</span> <span class="n">readers_found</span></div>
 
-<div class="viewcode-block" id="Registry.associate_file_type"><a class="viewcode-back" href="../../../../dev/api/sas.sascalc.dataloader.html#sas.sascalc.dataloader.loader.Registry.associate_file_type">[docs]</a>    <span class="k">def</span> <span class="nf">associate_file_type</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">ext</span><span class="p">,</span> <span class="n">module</span><span class="p">):</span>
+<div class="viewcode-block" id="Registry.associate_file_type"><a class="viewcode-back" href="../../../../dev/sasview-api/sas.sascalc.dataloader.html#sas.sascalc.dataloader.loader.Registry.associate_file_type">[docs]</a>    <span class="k">def</span> <span class="nf">associate_file_type</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">ext</span><span class="p">,</span> <span class="n">module</span><span class="p">):</span>
         <span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">        Look into a module to find whether it contains a</span>
 <span class="sd">        Reader class. If so, APPEND it to readers and (potentially)</span>
@@ -239,10 +295,10 @@
             <span class="k">except</span><span class="p">:</span>
                 <span class="n">msg</span> <span class="o">=</span> <span class="s2">&quot;Loader: Error accessing&quot;</span>
                 <span class="n">msg</span> <span class="o">+=</span> <span class="s2">&quot; Reader in </span><span class="si">%s</span><span class="se">\n</span><span class="s2">  </span><span class="si">%s</span><span class="s2">&quot;</span> <span class="o">%</span> <span class="p">(</span><span class="n">module</span><span class="o">.</span><span class="n">__name__</span><span class="p">,</span> <span class="n">sys</span><span class="o">.</span><span class="n">exc_value</span><span class="p">)</span>
-                <span class="n">logging</span><span class="o">.</span><span class="n">error</span><span class="p">(</span><span class="n">msg</span><span class="p">)</span>
+                <span class="n">logger</span><span class="o">.</span><span class="n">error</span><span class="p">(</span><span class="n">msg</span><span class="p">)</span>
         <span class="k">return</span> <span class="n">reader_found</span></div>
 
-<div class="viewcode-block" id="Registry.associate_file_reader"><a class="viewcode-back" href="../../../../dev/api/sas.sascalc.dataloader.html#sas.sascalc.dataloader.loader.Registry.associate_file_reader">[docs]</a>    <span class="k">def</span> <span class="nf">associate_file_reader</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">ext</span><span class="p">,</span> <span class="n">loader</span><span class="p">):</span>
+<div class="viewcode-block" id="Registry.associate_file_reader"><a class="viewcode-back" href="../../../../dev/sasview-api/sas.sascalc.dataloader.html#sas.sascalc.dataloader.loader.Registry.associate_file_reader">[docs]</a>    <span class="k">def</span> <span class="nf">associate_file_reader</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">ext</span><span class="p">,</span> <span class="n">loader</span><span class="p">):</span>
         <span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">        Append a reader object to readers</span>
 
@@ -272,7 +328,7 @@
         <span class="k">except</span><span class="p">:</span>
             <span class="n">msg</span> <span class="o">=</span> <span class="s2">&quot;Loader: Error accessing Reader &quot;</span>
             <span class="n">msg</span> <span class="o">+=</span> <span class="s2">&quot;in </span><span class="si">%s</span><span class="se">\n</span><span class="s2">  </span><span class="si">%s</span><span class="s2">&quot;</span> <span class="o">%</span> <span class="p">(</span><span class="n">loader</span><span class="o">.</span><span class="n">__name__</span><span class="p">,</span> <span class="n">sys</span><span class="o">.</span><span class="n">exc_value</span><span class="p">)</span>
-            <span class="n">logging</span><span class="o">.</span><span class="n">error</span><span class="p">(</span><span class="n">msg</span><span class="p">)</span>
+            <span class="n">logger</span><span class="o">.</span><span class="n">error</span><span class="p">(</span><span class="n">msg</span><span class="p">)</span>
         <span class="k">return</span> <span class="n">reader_found</span></div>
 
     <span class="k">def</span> <span class="nf">_identify_plugin</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">module</span><span class="p">):</span>
@@ -317,10 +373,10 @@
             <span class="k">except</span><span class="p">:</span>
                 <span class="n">msg</span> <span class="o">=</span> <span class="s2">&quot;Loader: Error accessing Reader&quot;</span>
                 <span class="n">msg</span> <span class="o">+=</span> <span class="s2">&quot; in </span><span class="si">%s</span><span class="se">\n</span><span class="s2">  </span><span class="si">%s</span><span class="s2">&quot;</span> <span class="o">%</span> <span class="p">(</span><span class="n">module</span><span class="o">.</span><span class="n">__name__</span><span class="p">,</span> <span class="n">sys</span><span class="o">.</span><span class="n">exc_value</span><span class="p">)</span>
-                <span class="n">logging</span><span class="o">.</span><span class="n">error</span><span class="p">(</span><span class="n">msg</span><span class="p">)</span>
+                <span class="n">logger</span><span class="o">.</span><span class="n">error</span><span class="p">(</span><span class="n">msg</span><span class="p">)</span>
         <span class="k">return</span> <span class="n">reader_found</span>
 
-<div class="viewcode-block" id="Registry.lookup_writers"><a class="viewcode-back" href="../../../../dev/api/sas.sascalc.dataloader.html#sas.sascalc.dataloader.loader.Registry.lookup_writers">[docs]</a>    <span class="k">def</span> <span class="nf">lookup_writers</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">path</span><span class="p">):</span>
+<div class="viewcode-block" id="Registry.lookup_writers"><a class="viewcode-back" href="../../../../dev/sasview-api/sas.sascalc.dataloader.html#sas.sascalc.dataloader.loader.Registry.lookup_writers">[docs]</a>    <span class="k">def</span> <span class="nf">lookup_writers</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">path</span><span class="p">):</span>
         <span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">        :return: the loader associated with the file type of path.</span>
 <span class="sd">        :Raises ValueError: if file type is not known.</span>
@@ -328,7 +384,7 @@
         <span class="c1"># Find matching extensions</span>
         <span class="n">extlist</span> <span class="o">=</span> <span class="p">[</span><span class="n">ext</span> <span class="k">for</span> <span class="n">ext</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">extensions</span><span class="p">()</span> <span class="k">if</span> <span class="n">path</span><span class="o">.</span><span class="n">endswith</span><span class="p">(</span><span class="n">ext</span><span class="p">)]</span>
         <span class="c1"># Sort matching extensions by decreasing order of length</span>
-        <span class="n">extlist</span><span class="o">.</span><span class="n">sort</span><span class="p">(</span><span class="k">lambda</span> <span class="n">a</span><span class="p">,</span> <span class="n">b</span><span class="p">:</span> <span class="nb">len</span><span class="p">(</span><span class="n">a</span><span class="p">)</span> <span class="o">&lt;</span> <span class="nb">len</span><span class="p">(</span><span class="n">b</span><span class="p">))</span>
+        <span class="n">extlist</span><span class="o">.</span><span class="n">sort</span><span class="p">(</span><span class="n">key</span><span class="o">=</span><span class="nb">len</span><span class="p">)</span>
         <span class="c1"># Combine loaders for matching extensions into one big list</span>
         <span class="n">writers</span> <span class="o">=</span> <span class="p">[]</span>
         <span class="k">for</span> <span class="n">L</span> <span class="ow">in</span> <span class="p">[</span><span class="bp">self</span><span class="o">.</span><span class="n">writers</span><span class="p">[</span><span class="n">ext</span><span class="p">]</span> <span class="k">for</span> <span class="n">ext</span> <span class="ow">in</span> <span class="n">extlist</span><span class="p">]:</span>
@@ -342,11 +398,11 @@
             <span class="n">writers</span> <span class="o">=</span> <span class="n">L</span>
         <span class="c1"># Raise an error if there are no matching extensions</span>
         <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">writers</span><span class="p">)</span> <span class="o">==</span> <span class="mi">0</span><span class="p">:</span>
-            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">,</span> <span class="s2">&quot;Unknown file type for &quot;</span> <span class="o">+</span> <span class="n">path</span>
+            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s2">&quot;Unknown file type for &quot;</span> <span class="o">+</span> <span class="n">path</span><span class="p">)</span>
         <span class="c1"># All done</span>
         <span class="k">return</span> <span class="n">writers</span></div>
 
-<div class="viewcode-block" id="Registry.save"><a class="viewcode-back" href="../../../../dev/api/sas.sascalc.dataloader.html#sas.sascalc.dataloader.loader.Registry.save">[docs]</a>    <span class="k">def</span> <span class="nf">save</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">path</span><span class="p">,</span> <span class="n">data</span><span class="p">,</span> <span class="n">format</span><span class="o">=</span><span class="bp">None</span><span class="p">):</span>
+<div class="viewcode-block" id="Registry.save"><a class="viewcode-back" href="../../../../dev/sasview-api/sas.sascalc.dataloader.html#sas.sascalc.dataloader.loader.Registry.save">[docs]</a>    <span class="k">def</span> <span class="nf">save</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">path</span><span class="p">,</span> <span class="n">data</span><span class="p">,</span> <span class="n">format</span><span class="o">=</span><span class="bp">None</span><span class="p">):</span>
         <span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">        Call the writer for the file type of path.</span>
 
@@ -361,20 +417,20 @@
         <span class="k">for</span> <span class="n">fn</span> <span class="ow">in</span> <span class="n">writers</span><span class="p">:</span>
             <span class="k">try</span><span class="p">:</span>
                 <span class="k">return</span> <span class="n">fn</span><span class="p">(</span><span class="n">path</span><span class="p">,</span> <span class="n">data</span><span class="p">)</span>
-            <span class="k">except</span><span class="p">:</span>
+            <span class="k">except</span> <span class="ne">Exception</span><span class="p">:</span>
                 <span class="k">pass</span>  <span class="c1"># give other loaders a chance to succeed</span>
         <span class="c1"># If we get here it is because all loaders failed</span>
         <span class="k">raise</span>  <span class="c1"># reraises last exception</span></div></div>
 
 
-<div class="viewcode-block" id="Loader"><a class="viewcode-back" href="../../../../dev/api/sas.sascalc.dataloader.html#sas.sascalc.dataloader.loader.Loader">[docs]</a><span class="k">class</span> <span class="nc">Loader</span><span class="p">(</span><span class="nb">object</span><span class="p">):</span>
+<div class="viewcode-block" id="Loader"><a class="viewcode-back" href="../../../../dev/sasview-api/sas.sascalc.dataloader.html#sas.sascalc.dataloader.loader.Loader">[docs]</a><span class="k">class</span> <span class="nc">Loader</span><span class="p">(</span><span class="nb">object</span><span class="p">):</span>
     <span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">    Utility class to use the Registry as a singleton.</span>
 <span class="sd">    &quot;&quot;&quot;</span>
     <span class="c1">## Registry instance</span>
     <span class="n">__registry</span> <span class="o">=</span> <span class="n">Registry</span><span class="p">()</span>
 
-<div class="viewcode-block" id="Loader.associate_file_type"><a class="viewcode-back" href="../../../../dev/api/sas.sascalc.dataloader.html#sas.sascalc.dataloader.loader.Loader.associate_file_type">[docs]</a>    <span class="k">def</span> <span class="nf">associate_file_type</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">ext</span><span class="p">,</span> <span class="n">module</span><span class="p">):</span>
+<div class="viewcode-block" id="Loader.associate_file_type"><a class="viewcode-back" href="../../../../dev/sasview-api/sas.sascalc.dataloader.html#sas.sascalc.dataloader.loader.Loader.associate_file_type">[docs]</a>    <span class="k">def</span> <span class="nf">associate_file_type</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">ext</span><span class="p">,</span> <span class="n">module</span><span class="p">):</span>
         <span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">        Look into a module to find whether it contains a</span>
 <span class="sd">        Reader class. If so, append it to readers and (potentially)</span>
@@ -385,7 +441,7 @@
 <span class="sd">        &quot;&quot;&quot;</span>
         <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">__registry</span><span class="o">.</span><span class="n">associate_file_type</span><span class="p">(</span><span class="n">ext</span><span class="p">,</span> <span class="n">module</span><span class="p">)</span></div>
 
-<div class="viewcode-block" id="Loader.associate_file_reader"><a class="viewcode-back" href="../../../../dev/api/sas.sascalc.dataloader.html#sas.sascalc.dataloader.loader.Loader.associate_file_reader">[docs]</a>    <span class="k">def</span> <span class="nf">associate_file_reader</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">ext</span><span class="p">,</span> <span class="n">loader</span><span class="p">):</span>
+<div class="viewcode-block" id="Loader.associate_file_reader"><a class="viewcode-back" href="../../../../dev/sasview-api/sas.sascalc.dataloader.html#sas.sascalc.dataloader.loader.Loader.associate_file_reader">[docs]</a>    <span class="k">def</span> <span class="nf">associate_file_reader</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">ext</span><span class="p">,</span> <span class="n">loader</span><span class="p">):</span>
         <span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">        Append a reader object to readers</span>
 
@@ -394,7 +450,7 @@
 <span class="sd">        &quot;&quot;&quot;</span>
         <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">__registry</span><span class="o">.</span><span class="n">associate_file_reader</span><span class="p">(</span><span class="n">ext</span><span class="p">,</span> <span class="n">loader</span><span class="p">)</span></div>
 
-<div class="viewcode-block" id="Loader.load"><a class="viewcode-back" href="../../../../dev/api/sas.sascalc.dataloader.html#sas.sascalc.dataloader.loader.Loader.load">[docs]</a>    <span class="k">def</span> <span class="nf">load</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="nb">file</span><span class="p">,</span> <span class="n">format</span><span class="o">=</span><span class="bp">None</span><span class="p">):</span>
+<div class="viewcode-block" id="Loader.load"><a class="viewcode-back" href="../../../../dev/sasview-api/sas.sascalc.dataloader.html#sas.sascalc.dataloader.loader.Loader.load">[docs]</a>    <span class="k">def</span> <span class="nf">load</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="nb">file</span><span class="p">,</span> <span class="n">format</span><span class="o">=</span><span class="bp">None</span><span class="p">):</span>
         <span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">        Load a file</span>
 
@@ -404,7 +460,7 @@
 <span class="sd">        &quot;&quot;&quot;</span>
         <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">__registry</span><span class="o">.</span><span class="n">load</span><span class="p">(</span><span class="nb">file</span><span class="p">,</span> <span class="n">format</span><span class="p">)</span></div>
 
-<div class="viewcode-block" id="Loader.save"><a class="viewcode-back" href="../../../../dev/api/sas.sascalc.dataloader.html#sas.sascalc.dataloader.loader.Loader.save">[docs]</a>    <span class="k">def</span> <span class="nf">save</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="nb">file</span><span class="p">,</span> <span class="n">data</span><span class="p">,</span> <span class="n">format</span><span class="p">):</span>
+<div class="viewcode-block" id="Loader.save"><a class="viewcode-back" href="../../../../dev/sasview-api/sas.sascalc.dataloader.html#sas.sascalc.dataloader.loader.Loader.save">[docs]</a>    <span class="k">def</span> <span class="nf">save</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="nb">file</span><span class="p">,</span> <span class="n">data</span><span class="p">,</span> <span class="n">format</span><span class="p">):</span>
         <span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">        Save a DataInfo object to file</span>
 <span class="sd">        :param file: file name (path)</span>
@@ -420,7 +476,7 @@
 <span class="sd">        &quot;&quot;&quot;</span>
         <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">__registry</span><span class="o">.</span><span class="n">_created</span>
 
-<div class="viewcode-block" id="Loader.find_plugins"><a class="viewcode-back" href="../../../../dev/api/sas.sascalc.dataloader.html#sas.sascalc.dataloader.loader.Loader.find_plugins">[docs]</a>    <span class="k">def</span> <span class="nf">find_plugins</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">directory</span><span class="p">):</span>
+<div class="viewcode-block" id="Loader.find_plugins"><a class="viewcode-back" href="../../../../dev/sasview-api/sas.sascalc.dataloader.html#sas.sascalc.dataloader.loader.Loader.find_plugins">[docs]</a>    <span class="k">def</span> <span class="nf">find_plugins</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">directory</span><span class="p">):</span>
         <span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">        Find plugins in a given directory</span>
 
@@ -428,7 +484,7 @@
 <span class="sd">        &quot;&quot;&quot;</span>
         <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">__registry</span><span class="o">.</span><span class="n">find_plugins</span><span class="p">(</span><span class="n">directory</span><span class="p">)</span></div>
 
-<div class="viewcode-block" id="Loader.get_wildcards"><a class="viewcode-back" href="../../../../dev/api/sas.sascalc.dataloader.html#sas.sascalc.dataloader.loader.Loader.get_wildcards">[docs]</a>    <span class="k">def</span> <span class="nf">get_wildcards</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+<div class="viewcode-block" id="Loader.get_wildcards"><a class="viewcode-back" href="../../../../dev/sasview-api/sas.sascalc.dataloader.html#sas.sascalc.dataloader.loader.Loader.get_wildcards">[docs]</a>    <span class="k">def</span> <span class="nf">get_wildcards</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
         <span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">        Return the list of wildcards</span>
 <span class="sd">        &quot;&quot;&quot;</span>
@@ -463,12 +519,13 @@
         <li class="right" >
           <a href="../../../../py-modindex.html" title="Python Module Index"
              >modules</a> |</li>
-        <li class="nav-item nav-item-0"><a href="../../../../index.html">SasView 4.1.2 documentation</a> &raquo;</li>
-          <li class="nav-item nav-item-1"><a href="../../../index.html" >Module code</a> &raquo;</li> 
+        <li class="nav-item nav-item-0"><a href="../../../../index.html">SasView 4.2.0 documentation</a> &raquo;</li>
+          <li class="nav-item nav-item-1"><a href="../../../index.html" >Module code</a> &raquo;</li>
+          <li class="nav-item nav-item-2"><a href="../../../sas.html" >sas</a> &raquo;</li> 
       </ul>
     </div>
     <div class="footer" role="contentinfo">
-        &copy; Copyright 2017, The SasView Project.
+        &copy; Copyright 2018, The SasView Project.
       Created using <a href="http://sphinx-doc.org/">Sphinx</a> 1.4.1.
     </div>
   </body>

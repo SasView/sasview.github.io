@@ -1,0 +1,513 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+  "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+    
+    <title>sasmodels.kerneldll &mdash; SasView 4.2.0 documentation</title>
+    
+    <link rel="stylesheet" href="../../_static/classic.css" type="text/css" />
+    <link rel="stylesheet" href="../../_static/pygments.css" type="text/css" />
+    
+    <script type="text/javascript">
+      var DOCUMENTATION_OPTIONS = {
+        URL_ROOT:    '../../',
+        VERSION:     '4.2.0',
+        COLLAPSE_INDEX: false,
+        FILE_SUFFIX: '.html',
+        HAS_SOURCE:  true
+      };
+    </script>
+    <script type="text/javascript" src="../../_static/jquery.js"></script>
+    <script type="text/javascript" src="../../_static/underscore.js"></script>
+    <script type="text/javascript" src="../../_static/doctools.js"></script>
+    <script type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.1/MathJax.js?config=TeX-MML-AM_CHTML"></script>
+    <link rel="top" title="SasView 4.2.0 documentation" href="../../index.html" />
+    <link rel="up" title="sasmodels" href="../sasmodels.html" /> 
+  </head>
+  <body role="document">
+    <div class="related" role="navigation" aria-label="related navigation">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="../../genindex.html" title="General Index"
+             accesskey="I">index</a></li>
+        <li class="right" >
+          <a href="../../py-modindex.html" title="Python Module Index"
+             >modules</a> |</li>
+        <li class="nav-item nav-item-0"><a href="../../index.html">SasView 4.2.0 documentation</a> &raquo;</li>
+          <li class="nav-item nav-item-1"><a href="../index.html" >Module code</a> &raquo;</li>
+          <li class="nav-item nav-item-2"><a href="../sasmodels.html" accesskey="U">sasmodels</a> &raquo;</li> 
+      </ul>
+    </div>  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          <div class="body" role="main">
+            
+  <h1>Source code for sasmodels.kerneldll</h1><div class="highlight"><pre>
+<span></span><span class="sd">r&quot;&quot;&quot;</span>
+<span class="sd">DLL driver for C kernels</span>
+
+<span class="sd">If the environment variable *SAS_OPENMP* is set, then sasmodels</span>
+<span class="sd">will attempt to compile with OpenMP flags so that the model can use all</span>
+<span class="sd">available kernels.  This may or may not be available on your compiler</span>
+<span class="sd">toolchain.  Depending on operating system and environment.</span>
+
+<span class="sd">Windows does not have provide a compiler with the operating system.</span>
+<span class="sd">Instead, we assume that TinyCC is installed and available.  This can</span>
+<span class="sd">be done with a simple pip command if it is not already available::</span>
+
+<span class="sd">    pip install tinycc</span>
+
+<span class="sd">If Microsoft Visual C++ is available (because VCINSTALLDIR is</span>
+<span class="sd">defined in the environment), then that will be used instead.</span>
+<span class="sd">Microsoft Visual C++ for Python is available from Microsoft:</span>
+
+<span class="sd">    `&lt;http://www.microsoft.com/en-us/download/details.aspx?id=44266&gt;`_</span>
+
+<span class="sd">If neither compiler is available, sasmodels will check for *MinGW*,</span>
+<span class="sd">the GNU compiler toolchain. This available in packages such as Anaconda</span>
+<span class="sd">and PythonXY, or available stand alone. This toolchain has had</span>
+<span class="sd">difficulties on some systems, and may or may not work for you.</span>
+
+<span class="sd">You can control which compiler to use by setting SAS_COMPILER in the</span>
+<span class="sd">environment:</span>
+
+<span class="sd">  - tinycc (Windows): use the TinyCC compiler shipped with SasView</span>
+<span class="sd">  - msvc (Windows): use the Microsoft Visual C++ compiler</span>
+<span class="sd">  - mingw (Windows): use the MinGW GNU cc compiler</span>
+<span class="sd">  - unix (Linux): use the system cc compiler.</span>
+<span class="sd">  - unix (Mac): use the clang compiler. You will need XCode installed, and</span>
+<span class="sd">    the XCode command line tools. Mac comes with OpenCL drivers, so generally</span>
+<span class="sd">    this will not be needed.</span>
+
+<span class="sd">Both *msvc* and *mingw* require that the compiler is available on your path.</span>
+<span class="sd">For *msvc*, this can done by running vcvarsall.bat in a windows terminal.</span>
+<span class="sd">Install locations are system dependent, such as:</span>
+
+<span class="sd">    C:\Program Files (x86)\Common Files\Microsoft\Visual</span>
+<span class="sd">    C++ for Python\9.0\vcvarsall.bat</span>
+
+<span class="sd">or maybe</span>
+
+<span class="sd">    C:\Users\yourname\AppData\Local\Programs\Common\Microsoft\Visual</span>
+<span class="sd">    C++ for Python\9.0\vcvarsall.bat</span>
+
+<span class="sd">OpenMP for *msvc* requires the Microsoft vcomp90.dll library, which doesn&#39;t</span>
+<span class="sd">seem to be included with the compiler, nor does there appear to be a public</span>
+<span class="sd">download location.  There may be one on your machine already in a location</span>
+<span class="sd">such as:</span>
+
+<span class="sd">    C:\Windows\winsxs\x86_microsoft.vc90.openmp*\vcomp90.dll</span>
+
+<span class="sd">If you copy this to somewhere on your path, such as the python directory or</span>
+<span class="sd">the install directory for this application, then OpenMP should be supported.</span>
+
+<span class="sd">For full control of the compiler, define a function</span>
+<span class="sd">*compile_command(source,output)* which takes the name of the source file</span>
+<span class="sd">and the name of the output file and returns a compile command that can be</span>
+<span class="sd">evaluated in the shell.  For even more control, replace the entire</span>
+<span class="sd">*compile(source,output)* function.</span>
+
+<span class="sd">The global attribute *ALLOW_SINGLE_PRECISION_DLLS* should be set to *False* if</span>
+<span class="sd">you wish to prevent single precision floating point evaluation for the compiled</span>
+<span class="sd">models, otherwise set it defaults to *True*.</span>
+<span class="sd">&quot;&quot;&quot;</span>
+<span class="kn">from</span> <span class="nn">__future__</span> <span class="kn">import</span> <span class="n">print_function</span>
+
+<span class="kn">import</span> <span class="nn">sys</span>
+<span class="kn">import</span> <span class="nn">os</span>
+<span class="kn">from</span> <span class="nn">os.path</span> <span class="kn">import</span> <span class="n">join</span> <span class="k">as</span> <span class="n">joinpath</span><span class="p">,</span> <span class="n">splitext</span>
+<span class="kn">import</span> <span class="nn">subprocess</span>
+<span class="kn">import</span> <span class="nn">tempfile</span>
+<span class="kn">import</span> <span class="nn">ctypes</span> <span class="kn">as</span> <span class="nn">ct</span>  <span class="c1"># type: ignore</span>
+<span class="kn">import</span> <span class="nn">_ctypes</span> <span class="kn">as</span> <span class="nn">_ct</span>
+<span class="kn">import</span> <span class="nn">logging</span>
+
+<span class="kn">import</span> <span class="nn">numpy</span> <span class="kn">as</span> <span class="nn">np</span>  <span class="c1"># type: ignore</span>
+
+<span class="k">try</span><span class="p">:</span>
+    <span class="kn">import</span> <span class="nn">tinycc</span>
+<span class="k">except</span> <span class="ne">ImportError</span><span class="p">:</span>
+    <span class="n">tinycc</span> <span class="o">=</span> <span class="bp">None</span>
+
+<span class="kn">from</span> <span class="nn">.</span> <span class="kn">import</span> <span class="n">generate</span>
+<span class="kn">from</span> <span class="nn">.kernel</span> <span class="kn">import</span> <span class="n">KernelModel</span><span class="p">,</span> <span class="n">Kernel</span>
+<span class="kn">from</span> <span class="nn">.kernelpy</span> <span class="kn">import</span> <span class="n">PyInput</span>
+<span class="kn">from</span> <span class="nn">.exception</span> <span class="kn">import</span> <span class="n">annotate_exception</span>
+<span class="kn">from</span> <span class="nn">.generate</span> <span class="kn">import</span> <span class="n">F16</span><span class="p">,</span> <span class="n">F32</span><span class="p">,</span> <span class="n">F64</span>
+
+<span class="c1"># pylint: disable=unused-import</span>
+<span class="k">try</span><span class="p">:</span>
+    <span class="kn">from</span> <span class="nn">typing</span> <span class="kn">import</span> <span class="n">Tuple</span><span class="p">,</span> <span class="n">Callable</span><span class="p">,</span> <span class="n">Any</span>
+    <span class="kn">from</span> <span class="nn">.modelinfo</span> <span class="kn">import</span> <span class="n">ModelInfo</span>
+    <span class="kn">from</span> <span class="nn">.details</span> <span class="kn">import</span> <span class="n">CallDetails</span>
+<span class="k">except</span> <span class="ne">ImportError</span><span class="p">:</span>
+    <span class="k">pass</span>
+<span class="c1"># pylint: enable=unused-import</span>
+
+<span class="k">if</span> <span class="s2">&quot;SAS_DLL_PATH&quot;</span> <span class="ow">in</span> <span class="n">os</span><span class="o">.</span><span class="n">environ</span><span class="p">:</span>
+    <span class="n">SAS_DLL_PATH</span> <span class="o">=</span> <span class="n">os</span><span class="o">.</span><span class="n">environ</span><span class="p">[</span><span class="s2">&quot;SAS_DLL_PATH&quot;</span><span class="p">]</span>
+<span class="k">else</span><span class="p">:</span>
+    <span class="c1"># Assume the default location of module DLLs is in .sasmodels/compiled_models.</span>
+    <span class="n">SAS_DLL_PATH</span> <span class="o">=</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">expanduser</span><span class="p">(</span><span class="s2">&quot;~&quot;</span><span class="p">),</span> <span class="s2">&quot;.sasmodels&quot;</span><span class="p">,</span> <span class="s2">&quot;compiled_models&quot;</span><span class="p">)</span>
+
+<span class="k">if</span> <span class="s2">&quot;SAS_COMPILER&quot;</span> <span class="ow">in</span> <span class="n">os</span><span class="o">.</span><span class="n">environ</span><span class="p">:</span>
+    <span class="n">COMPILER</span> <span class="o">=</span> <span class="n">os</span><span class="o">.</span><span class="n">environ</span><span class="p">[</span><span class="s2">&quot;SAS_COMPILER&quot;</span><span class="p">]</span>
+<span class="k">elif</span> <span class="n">os</span><span class="o">.</span><span class="n">name</span> <span class="o">==</span> <span class="s1">&#39;nt&#39;</span><span class="p">:</span>
+    <span class="k">if</span> <span class="n">tinycc</span> <span class="ow">is</span> <span class="ow">not</span> <span class="bp">None</span><span class="p">:</span>
+        <span class="n">COMPILER</span> <span class="o">=</span> <span class="s2">&quot;tinycc&quot;</span>
+    <span class="k">elif</span> <span class="s2">&quot;VCINSTALLDIR&quot;</span> <span class="ow">in</span> <span class="n">os</span><span class="o">.</span><span class="n">environ</span><span class="p">:</span>
+        <span class="c1"># If vcvarsall.bat has been called, then VCINSTALLDIR is in the environment</span>
+        <span class="c1"># and we can use the MSVC compiler.  Otherwise, if tinycc is available</span>
+        <span class="c1"># the use it.  Otherwise, hope that mingw is available.</span>
+        <span class="n">COMPILER</span> <span class="o">=</span> <span class="s2">&quot;msvc&quot;</span>
+    <span class="k">else</span><span class="p">:</span>
+        <span class="n">COMPILER</span> <span class="o">=</span> <span class="s2">&quot;mingw&quot;</span>
+<span class="k">else</span><span class="p">:</span>
+    <span class="n">COMPILER</span> <span class="o">=</span> <span class="s2">&quot;unix&quot;</span>
+
+<span class="n">ARCH</span> <span class="o">=</span> <span class="s2">&quot;&quot;</span> <span class="k">if</span> <span class="n">ct</span><span class="o">.</span><span class="n">sizeof</span><span class="p">(</span><span class="n">ct</span><span class="o">.</span><span class="n">c_void_p</span><span class="p">)</span> <span class="o">&gt;</span> <span class="mi">4</span> <span class="k">else</span> <span class="s2">&quot;x86&quot;</span>  <span class="c1"># 4 byte pointers on x86</span>
+<span class="k">if</span> <span class="n">COMPILER</span> <span class="o">==</span> <span class="s2">&quot;unix&quot;</span><span class="p">:</span>
+    <span class="c1"># Generic unix compile</span>
+    <span class="c1"># On mac users will need the X code command line tools installed</span>
+    <span class="c1">#COMPILE = &quot;gcc-mp-4.7 -shared -fPIC -std=c99 -fopenmp -O2 -Wall %s -o %s -lm -lgomp&quot;</span>
+    <span class="n">CC</span> <span class="o">=</span> <span class="s2">&quot;cc -shared -fPIC -std=c99 -O2 -Wall&quot;</span><span class="o">.</span><span class="n">split</span><span class="p">()</span>
+    <span class="c1"># add openmp support if not running on a mac</span>
+    <span class="k">if</span> <span class="n">sys</span><span class="o">.</span><span class="n">platform</span> <span class="o">!=</span> <span class="s2">&quot;darwin&quot;</span><span class="p">:</span>
+        <span class="c1"># OpenMP seems to be broken on gcc 5.4.0 (ubuntu 16.04.9)</span>
+        <span class="c1"># Shut it off for all unix until we can investigate.</span>
+        <span class="c1">#CC.append(&quot;-fopenmp&quot;)</span>
+        <span class="k">pass</span>
+    <span class="k">def</span> <span class="nf">compile_command</span><span class="p">(</span><span class="n">source</span><span class="p">,</span> <span class="n">output</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;unix compiler command&quot;&quot;&quot;</span>
+        <span class="k">return</span> <span class="n">CC</span> <span class="o">+</span> <span class="p">[</span><span class="n">source</span><span class="p">,</span> <span class="s2">&quot;-o&quot;</span><span class="p">,</span> <span class="n">output</span><span class="p">,</span> <span class="s2">&quot;-lm&quot;</span><span class="p">]</span>
+<span class="k">elif</span> <span class="n">COMPILER</span> <span class="o">==</span> <span class="s2">&quot;msvc&quot;</span><span class="p">:</span>
+    <span class="c1"># Call vcvarsall.bat before compiling to set path, headers, libs, etc.</span>
+    <span class="c1"># MSVC compiler is available, so use it.  OpenMP requires a copy of</span>
+    <span class="c1"># vcomp90.dll on the path.  One may be found here:</span>
+    <span class="c1">#       C:/Windows/winsxs/x86_microsoft.vc90.openmp*/vcomp90.dll</span>
+    <span class="c1"># Copy this to the python directory and uncomment the OpenMP COMPILE</span>
+    <span class="c1"># TODO: remove intermediate OBJ file created in the directory</span>
+    <span class="c1"># TODO: maybe don&#39;t use randomized name for the c file</span>
+    <span class="c1"># TODO: maybe ask distutils to find MSVC</span>
+    <span class="n">CC</span> <span class="o">=</span> <span class="s2">&quot;cl /nologo /Ox /MD /W3 /GS- /DNDEBUG&quot;</span><span class="o">.</span><span class="n">split</span><span class="p">()</span>
+    <span class="k">if</span> <span class="s2">&quot;SAS_OPENMP&quot;</span> <span class="ow">in</span> <span class="n">os</span><span class="o">.</span><span class="n">environ</span><span class="p">:</span>
+        <span class="n">CC</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="s2">&quot;/openmp&quot;</span><span class="p">)</span>
+    <span class="n">LN</span> <span class="o">=</span> <span class="s2">&quot;/link /DLL /INCREMENTAL:NO /MANIFEST&quot;</span><span class="o">.</span><span class="n">split</span><span class="p">()</span>
+    <span class="k">def</span> <span class="nf">compile_command</span><span class="p">(</span><span class="n">source</span><span class="p">,</span> <span class="n">output</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;MSVC compiler command&quot;&quot;&quot;</span>
+        <span class="k">return</span> <span class="n">CC</span> <span class="o">+</span> <span class="p">[</span><span class="s2">&quot;/Tp</span><span class="si">%s</span><span class="s2">&quot;</span><span class="o">%</span><span class="n">source</span><span class="p">]</span> <span class="o">+</span> <span class="n">LN</span> <span class="o">+</span> <span class="p">[</span><span class="s2">&quot;/OUT:</span><span class="si">%s</span><span class="s2">&quot;</span><span class="o">%</span><span class="n">output</span><span class="p">]</span>
+<span class="k">elif</span> <span class="n">COMPILER</span> <span class="o">==</span> <span class="s2">&quot;tinycc&quot;</span><span class="p">:</span>
+    <span class="c1"># TinyCC compiler.</span>
+    <span class="n">CC</span> <span class="o">=</span> <span class="p">[</span><span class="n">tinycc</span><span class="o">.</span><span class="n">TCC</span><span class="p">]</span> <span class="o">+</span> <span class="s2">&quot;-shared -rdynamic -Wall&quot;</span><span class="o">.</span><span class="n">split</span><span class="p">()</span>
+    <span class="k">def</span> <span class="nf">compile_command</span><span class="p">(</span><span class="n">source</span><span class="p">,</span> <span class="n">output</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;tinycc compiler command&quot;&quot;&quot;</span>
+        <span class="k">return</span> <span class="n">CC</span> <span class="o">+</span> <span class="p">[</span><span class="n">source</span><span class="p">,</span> <span class="s2">&quot;-o&quot;</span><span class="p">,</span> <span class="n">output</span><span class="p">]</span>
+<span class="k">elif</span> <span class="n">COMPILER</span> <span class="o">==</span> <span class="s2">&quot;mingw&quot;</span><span class="p">:</span>
+    <span class="c1"># MinGW compiler.</span>
+    <span class="n">CC</span> <span class="o">=</span> <span class="s2">&quot;gcc -shared -std=c99 -O2 -Wall&quot;</span><span class="o">.</span><span class="n">split</span><span class="p">()</span>
+    <span class="k">if</span> <span class="s2">&quot;SAS_OPENMP&quot;</span> <span class="ow">in</span> <span class="n">os</span><span class="o">.</span><span class="n">environ</span><span class="p">:</span>
+        <span class="n">CC</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="s2">&quot;-fopenmp&quot;</span><span class="p">)</span>
+<div class="viewcode-block" id="compile_command"><a class="viewcode-back" href="../../dev/sasmodels-api/sasmodels.html#sasmodels.kerneldll.compile_command">[docs]</a>    <span class="k">def</span> <span class="nf">compile_command</span><span class="p">(</span><span class="n">source</span><span class="p">,</span> <span class="n">output</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;mingw compiler command&quot;&quot;&quot;</span>
+        <span class="k">return</span> <span class="n">CC</span> <span class="o">+</span> <span class="p">[</span><span class="n">source</span><span class="p">,</span> <span class="s2">&quot;-o&quot;</span><span class="p">,</span> <span class="n">output</span><span class="p">,</span> <span class="s2">&quot;-lm&quot;</span><span class="p">]</span></div>
+
+<span class="n">ALLOW_SINGLE_PRECISION_DLLS</span> <span class="o">=</span> <span class="bp">True</span>
+
+<div class="viewcode-block" id="compile"><a class="viewcode-back" href="../../dev/sasmodels-api/sasmodels.html#sasmodels.kerneldll.compile">[docs]</a><span class="k">def</span> <span class="nf">compile</span><span class="p">(</span><span class="n">source</span><span class="p">,</span> <span class="n">output</span><span class="p">):</span>
+    <span class="c1"># type: (str, str) -&gt; None</span>
+    <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Compile *source* producing *output*.</span>
+
+<span class="sd">    Raises RuntimeError if the compile failed or the output wasn&#39;t produced.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">command</span> <span class="o">=</span> <span class="n">compile_command</span><span class="p">(</span><span class="n">source</span><span class="o">=</span><span class="n">source</span><span class="p">,</span> <span class="n">output</span><span class="o">=</span><span class="n">output</span><span class="p">)</span>
+    <span class="n">command_str</span> <span class="o">=</span> <span class="s2">&quot; &quot;</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="s1">&#39;&quot;</span><span class="si">%s</span><span class="s1">&quot;&#39;</span><span class="o">%</span><span class="n">p</span> <span class="k">if</span> <span class="s1">&#39; &#39;</span> <span class="ow">in</span> <span class="n">p</span> <span class="k">else</span> <span class="n">p</span> <span class="k">for</span> <span class="n">p</span> <span class="ow">in</span> <span class="n">command</span><span class="p">)</span>
+    <span class="n">logging</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="n">command_str</span><span class="p">)</span>
+    <span class="k">try</span><span class="p">:</span>
+        <span class="c1"># need shell=True on windows to keep console box from popping up</span>
+        <span class="n">shell</span> <span class="o">=</span> <span class="p">(</span><span class="n">os</span><span class="o">.</span><span class="n">name</span> <span class="o">==</span> <span class="s1">&#39;nt&#39;</span><span class="p">)</span>
+        <span class="n">subprocess</span><span class="o">.</span><span class="n">check_output</span><span class="p">(</span><span class="n">command</span><span class="p">,</span> <span class="n">shell</span><span class="o">=</span><span class="n">shell</span><span class="p">,</span> <span class="n">stderr</span><span class="o">=</span><span class="n">subprocess</span><span class="o">.</span><span class="n">STDOUT</span><span class="p">)</span>
+    <span class="k">except</span> <span class="n">subprocess</span><span class="o">.</span><span class="n">CalledProcessError</span> <span class="k">as</span> <span class="n">exc</span><span class="p">:</span>
+        <span class="k">raise</span> <span class="ne">RuntimeError</span><span class="p">(</span><span class="s2">&quot;compile failed.</span><span class="se">\n</span><span class="si">%s</span><span class="se">\n</span><span class="si">%s</span><span class="s2">&quot;</span><span class="o">%</span><span class="p">(</span><span class="n">command_str</span><span class="p">,</span> <span class="n">exc</span><span class="o">.</span><span class="n">output</span><span class="p">))</span>
+    <span class="k">if</span> <span class="ow">not</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">exists</span><span class="p">(</span><span class="n">output</span><span class="p">):</span>
+        <span class="k">raise</span> <span class="ne">RuntimeError</span><span class="p">(</span><span class="s2">&quot;compile failed.  File is in </span><span class="si">%r</span><span class="s2">&quot;</span><span class="o">%</span><span class="n">source</span><span class="p">)</span></div>
+
+<div class="viewcode-block" id="dll_name"><a class="viewcode-back" href="../../dev/sasmodels-api/sasmodels.html#sasmodels.kerneldll.dll_name">[docs]</a><span class="k">def</span> <span class="nf">dll_name</span><span class="p">(</span><span class="n">model_info</span><span class="p">,</span> <span class="n">dtype</span><span class="p">):</span>
+    <span class="c1"># type: (ModelInfo, np.dtype) -&gt;  str</span>
+    <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Name of the dll containing the model.  This is the base file name without</span>
+<span class="sd">    any path or extension, with a form such as &#39;sas_sphere32&#39;.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">bits</span> <span class="o">=</span> <span class="mi">8</span><span class="o">*</span><span class="n">dtype</span><span class="o">.</span><span class="n">itemsize</span>
+    <span class="n">basename</span> <span class="o">=</span> <span class="s2">&quot;sas</span><span class="si">%d</span><span class="s2">_</span><span class="si">%s</span><span class="s2">&quot;</span><span class="o">%</span><span class="p">(</span><span class="n">bits</span><span class="p">,</span> <span class="n">model_info</span><span class="o">.</span><span class="n">id</span><span class="p">)</span>
+    <span class="n">basename</span> <span class="o">+=</span> <span class="n">ARCH</span> <span class="o">+</span> <span class="s2">&quot;.so&quot;</span>
+
+    <span class="c1"># Hack to find precompiled dlls</span>
+    <span class="n">path</span> <span class="o">=</span> <span class="n">joinpath</span><span class="p">(</span><span class="n">generate</span><span class="o">.</span><span class="n">DATA_PATH</span><span class="p">,</span> <span class="s1">&#39;..&#39;</span><span class="p">,</span> <span class="s1">&#39;compiled_models&#39;</span><span class="p">,</span> <span class="n">basename</span><span class="p">)</span>
+    <span class="k">if</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">exists</span><span class="p">(</span><span class="n">path</span><span class="p">):</span>
+        <span class="k">return</span> <span class="n">path</span>
+
+    <span class="k">return</span> <span class="n">joinpath</span><span class="p">(</span><span class="n">SAS_DLL_PATH</span><span class="p">,</span> <span class="n">basename</span><span class="p">)</span></div>
+
+
+<div class="viewcode-block" id="dll_path"><a class="viewcode-back" href="../../dev/sasmodels-api/sasmodels.html#sasmodels.kerneldll.dll_path">[docs]</a><span class="k">def</span> <span class="nf">dll_path</span><span class="p">(</span><span class="n">model_info</span><span class="p">,</span> <span class="n">dtype</span><span class="p">):</span>
+    <span class="c1"># type: (ModelInfo, np.dtype) -&gt; str</span>
+    <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Complete path to the dll for the model.  Note that the dll may not</span>
+<span class="sd">    exist yet if it hasn&#39;t been compiled.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="k">return</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">SAS_DLL_PATH</span><span class="p">,</span> <span class="n">dll_name</span><span class="p">(</span><span class="n">model_info</span><span class="p">,</span> <span class="n">dtype</span><span class="p">))</span></div>
+
+
+<div class="viewcode-block" id="make_dll"><a class="viewcode-back" href="../../dev/sasmodels-api/sasmodels.html#sasmodels.kerneldll.make_dll">[docs]</a><span class="k">def</span> <span class="nf">make_dll</span><span class="p">(</span><span class="n">source</span><span class="p">,</span> <span class="n">model_info</span><span class="p">,</span> <span class="n">dtype</span><span class="o">=</span><span class="n">F64</span><span class="p">):</span>
+    <span class="c1"># type: (str, ModelInfo, np.dtype) -&gt; str</span>
+    <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Returns the path to the compiled model defined by *kernel_module*.</span>
+
+<span class="sd">    If the model has not been compiled, or if the source file(s) are newer</span>
+<span class="sd">    than the dll, then *make_dll* will compile the model before returning.</span>
+<span class="sd">    This routine does not load the resulting dll.</span>
+
+<span class="sd">    *dtype* is a numpy floating point precision specifier indicating whether</span>
+<span class="sd">    the model should be single, double or long double precision.  The default</span>
+<span class="sd">    is double precision, *np.dtype(&#39;d&#39;)*.</span>
+
+<span class="sd">    Set *sasmodels.ALLOW_SINGLE_PRECISION_DLLS* to False if single precision</span>
+<span class="sd">    models are not allowed as DLLs.</span>
+
+<span class="sd">    Set *sasmodels.kerneldll.SAS_DLL_PATH* to the compiled dll output path.</span>
+<span class="sd">    Alternatively, set the environment variable *SAS_DLL_PATH*.</span>
+<span class="sd">    The default is in ~/.sasmodels/compiled_models.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="k">if</span> <span class="n">dtype</span> <span class="o">==</span> <span class="n">F16</span><span class="p">:</span>
+        <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s2">&quot;16 bit floats not supported&quot;</span><span class="p">)</span>
+    <span class="k">if</span> <span class="n">dtype</span> <span class="o">==</span> <span class="n">F32</span> <span class="ow">and</span> <span class="ow">not</span> <span class="n">ALLOW_SINGLE_PRECISION_DLLS</span><span class="p">:</span>
+        <span class="n">dtype</span> <span class="o">=</span> <span class="n">F64</span>  <span class="c1"># Force 64-bit dll</span>
+    <span class="c1"># Note: dtype may be F128 for long double precision</span>
+
+    <span class="n">dll</span> <span class="o">=</span> <span class="n">dll_path</span><span class="p">(</span><span class="n">model_info</span><span class="p">,</span> <span class="n">dtype</span><span class="p">)</span>
+
+    <span class="k">if</span> <span class="ow">not</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">exists</span><span class="p">(</span><span class="n">dll</span><span class="p">):</span>
+        <span class="n">need_recompile</span> <span class="o">=</span> <span class="bp">True</span>
+    <span class="k">else</span><span class="p">:</span>
+        <span class="n">dll_time</span> <span class="o">=</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">getmtime</span><span class="p">(</span><span class="n">dll</span><span class="p">)</span>
+        <span class="n">newest_source</span> <span class="o">=</span> <span class="n">generate</span><span class="o">.</span><span class="n">dll_timestamp</span><span class="p">(</span><span class="n">model_info</span><span class="p">)</span>
+        <span class="n">need_recompile</span> <span class="o">=</span> <span class="n">dll_time</span> <span class="o">&lt;</span> <span class="n">newest_source</span>
+    <span class="k">if</span> <span class="n">need_recompile</span><span class="p">:</span>
+        <span class="c1"># Make sure the DLL path exists</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">exists</span><span class="p">(</span><span class="n">SAS_DLL_PATH</span><span class="p">):</span>
+            <span class="n">os</span><span class="o">.</span><span class="n">makedirs</span><span class="p">(</span><span class="n">SAS_DLL_PATH</span><span class="p">)</span>
+        <span class="n">basename</span> <span class="o">=</span> <span class="n">splitext</span><span class="p">(</span><span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">basename</span><span class="p">(</span><span class="n">dll</span><span class="p">))[</span><span class="mi">0</span><span class="p">]</span> <span class="o">+</span> <span class="s2">&quot;_&quot;</span>
+        <span class="n">system_fd</span><span class="p">,</span> <span class="n">filename</span> <span class="o">=</span> <span class="n">tempfile</span><span class="o">.</span><span class="n">mkstemp</span><span class="p">(</span><span class="n">suffix</span><span class="o">=</span><span class="s2">&quot;.c&quot;</span><span class="p">,</span> <span class="n">prefix</span><span class="o">=</span><span class="n">basename</span><span class="p">)</span>
+        <span class="n">source</span> <span class="o">=</span> <span class="n">generate</span><span class="o">.</span><span class="n">convert_type</span><span class="p">(</span><span class="n">source</span><span class="p">,</span> <span class="n">dtype</span><span class="p">)</span>
+        <span class="k">with</span> <span class="n">os</span><span class="o">.</span><span class="n">fdopen</span><span class="p">(</span><span class="n">system_fd</span><span class="p">,</span> <span class="s2">&quot;w&quot;</span><span class="p">)</span> <span class="k">as</span> <span class="n">file_handle</span><span class="p">:</span>
+            <span class="n">file_handle</span><span class="o">.</span><span class="n">write</span><span class="p">(</span><span class="n">source</span><span class="p">)</span>
+        <span class="nb">compile</span><span class="p">(</span><span class="n">source</span><span class="o">=</span><span class="n">filename</span><span class="p">,</span> <span class="n">output</span><span class="o">=</span><span class="n">dll</span><span class="p">)</span>
+        <span class="c1"># comment the following to keep the generated c file</span>
+        <span class="c1"># Note: if there is a syntax error then compile raises an error</span>
+        <span class="c1"># and the source file will not be deleted.</span>
+        <span class="n">os</span><span class="o">.</span><span class="n">unlink</span><span class="p">(</span><span class="n">filename</span><span class="p">)</span>
+        <span class="c1">#print(&quot;saving compiled file in %r&quot;%filename)</span>
+    <span class="k">return</span> <span class="n">dll</span></div>
+
+
+<div class="viewcode-block" id="load_dll"><a class="viewcode-back" href="../../dev/sasmodels-api/sasmodels.html#sasmodels.kerneldll.load_dll">[docs]</a><span class="k">def</span> <span class="nf">load_dll</span><span class="p">(</span><span class="n">source</span><span class="p">,</span> <span class="n">model_info</span><span class="p">,</span> <span class="n">dtype</span><span class="o">=</span><span class="n">F64</span><span class="p">):</span>
+    <span class="c1"># type: (str, ModelInfo, np.dtype) -&gt; &quot;DllModel&quot;</span>
+    <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Create and load a dll corresponding to the source, info pair returned</span>
+<span class="sd">    from :func:`sasmodels.generate.make` compiled for the target precision.</span>
+
+<span class="sd">    See :func:`make_dll` for details on controlling the dll path and the</span>
+<span class="sd">    allowed floating point precision.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">filename</span> <span class="o">=</span> <span class="n">make_dll</span><span class="p">(</span><span class="n">source</span><span class="p">,</span> <span class="n">model_info</span><span class="p">,</span> <span class="n">dtype</span><span class="o">=</span><span class="n">dtype</span><span class="p">)</span>
+    <span class="k">return</span> <span class="n">DllModel</span><span class="p">(</span><span class="n">filename</span><span class="p">,</span> <span class="n">model_info</span><span class="p">,</span> <span class="n">dtype</span><span class="o">=</span><span class="n">dtype</span><span class="p">)</span></div>
+
+
+<div class="viewcode-block" id="DllModel"><a class="viewcode-back" href="../../dev/sasmodels-api/sasmodels.html#sasmodels.kerneldll.DllModel">[docs]</a><span class="k">class</span> <span class="nc">DllModel</span><span class="p">(</span><span class="n">KernelModel</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    ctypes wrapper for a single model.</span>
+
+<span class="sd">    *source* and *model_info* are the model source and interface as returned</span>
+<span class="sd">    from :func:`gen.make`.</span>
+
+<span class="sd">    *dtype* is the desired model precision.  Any numpy dtype for single</span>
+<span class="sd">    or double precision floats will do, such as &#39;f&#39;, &#39;float32&#39; or &#39;single&#39;</span>
+<span class="sd">    for single and &#39;d&#39;, &#39;float64&#39; or &#39;double&#39; for double.  Double precision</span>
+<span class="sd">    is an optional extension which may not be available on all devices.</span>
+
+<span class="sd">    Call :meth:`release` when done with the kernel.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">dllpath</span><span class="p">,</span> <span class="n">model_info</span><span class="p">,</span> <span class="n">dtype</span><span class="o">=</span><span class="n">generate</span><span class="o">.</span><span class="n">F32</span><span class="p">):</span>
+        <span class="c1"># type: (str, ModelInfo, np.dtype) -&gt; None</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">info</span> <span class="o">=</span> <span class="n">model_info</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">dllpath</span> <span class="o">=</span> <span class="n">dllpath</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_dll</span> <span class="o">=</span> <span class="bp">None</span>  <span class="c1"># type: ct.CDLL</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_kernels</span> <span class="o">=</span> <span class="bp">None</span> <span class="c1"># type: List[Callable, Callable]</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">dtype</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">dtype</span><span class="p">(</span><span class="n">dtype</span><span class="p">)</span>
+
+    <span class="k">def</span> <span class="nf">_load_dll</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="c1"># type: () -&gt; None</span>
+        <span class="k">try</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_dll</span> <span class="o">=</span> <span class="n">ct</span><span class="o">.</span><span class="n">CDLL</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">dllpath</span><span class="p">)</span>
+        <span class="k">except</span><span class="p">:</span>
+            <span class="n">annotate_exception</span><span class="p">(</span><span class="s2">&quot;while loading &quot;</span><span class="o">+</span><span class="bp">self</span><span class="o">.</span><span class="n">dllpath</span><span class="p">)</span>
+            <span class="k">raise</span>
+
+        <span class="n">float_type</span> <span class="o">=</span> <span class="p">(</span><span class="n">ct</span><span class="o">.</span><span class="n">c_float</span> <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">dtype</span> <span class="o">==</span> <span class="n">generate</span><span class="o">.</span><span class="n">F32</span>
+                      <span class="k">else</span> <span class="n">ct</span><span class="o">.</span><span class="n">c_double</span> <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">dtype</span> <span class="o">==</span> <span class="n">generate</span><span class="o">.</span><span class="n">F64</span>
+                      <span class="k">else</span> <span class="n">ct</span><span class="o">.</span><span class="n">c_longdouble</span><span class="p">)</span>
+
+        <span class="c1"># int, int, int, int*, double*, double*, double*, double*, double</span>
+        <span class="n">argtypes</span> <span class="o">=</span> <span class="p">[</span><span class="n">ct</span><span class="o">.</span><span class="n">c_int32</span><span class="p">]</span><span class="o">*</span><span class="mi">3</span> <span class="o">+</span> <span class="p">[</span><span class="n">ct</span><span class="o">.</span><span class="n">c_void_p</span><span class="p">]</span><span class="o">*</span><span class="mi">4</span> <span class="o">+</span> <span class="p">[</span><span class="n">float_type</span><span class="p">]</span>
+        <span class="n">names</span> <span class="o">=</span> <span class="p">[</span><span class="n">generate</span><span class="o">.</span><span class="n">kernel_name</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">info</span><span class="p">,</span> <span class="n">variant</span><span class="p">)</span>
+                 <span class="k">for</span> <span class="n">variant</span> <span class="ow">in</span> <span class="p">(</span><span class="s2">&quot;Iq&quot;</span><span class="p">,</span> <span class="s2">&quot;Iqxy&quot;</span><span class="p">,</span> <span class="s2">&quot;Imagnetic&quot;</span><span class="p">)]</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_kernels</span> <span class="o">=</span> <span class="p">[</span><span class="bp">self</span><span class="o">.</span><span class="n">_dll</span><span class="p">[</span><span class="n">name</span><span class="p">]</span> <span class="k">for</span> <span class="n">name</span> <span class="ow">in</span> <span class="n">names</span><span class="p">]</span>
+        <span class="k">for</span> <span class="n">k</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">_kernels</span><span class="p">:</span>
+            <span class="n">k</span><span class="o">.</span><span class="n">argtypes</span> <span class="o">=</span> <span class="n">argtypes</span>
+
+    <span class="k">def</span> <span class="nf">__getstate__</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="c1"># type: () -&gt; Tuple[ModelInfo, str]</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">info</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">dllpath</span>
+
+    <span class="k">def</span> <span class="nf">__setstate__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">state</span><span class="p">):</span>
+        <span class="c1"># type: (Tuple[ModelInfo, str]) -&gt; None</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">info</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">dllpath</span> <span class="o">=</span> <span class="n">state</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_dll</span> <span class="o">=</span> <span class="bp">None</span>
+
+<div class="viewcode-block" id="DllModel.make_kernel"><a class="viewcode-back" href="../../dev/sasmodels-api/sasmodels.html#sasmodels.kerneldll.DllModel.make_kernel">[docs]</a>    <span class="k">def</span> <span class="nf">make_kernel</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">q_vectors</span><span class="p">):</span>
+        <span class="c1"># type: (List[np.ndarray]) -&gt; DllKernel</span>
+        <span class="n">q_input</span> <span class="o">=</span> <span class="n">PyInput</span><span class="p">(</span><span class="n">q_vectors</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">dtype</span><span class="p">)</span>
+        <span class="c1"># Note: pickle not supported for DllKernel</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">_dll</span> <span class="ow">is</span> <span class="bp">None</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_load_dll</span><span class="p">()</span>
+        <span class="n">is_2d</span> <span class="o">=</span> <span class="nb">len</span><span class="p">(</span><span class="n">q_vectors</span><span class="p">)</span> <span class="o">==</span> <span class="mi">2</span>
+        <span class="n">kernel</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_kernels</span><span class="p">[</span><span class="mi">1</span><span class="p">:</span><span class="mi">3</span><span class="p">]</span> <span class="k">if</span> <span class="n">is_2d</span> <span class="k">else</span> <span class="p">[</span><span class="bp">self</span><span class="o">.</span><span class="n">_kernels</span><span class="p">[</span><span class="mi">0</span><span class="p">]]</span><span class="o">*</span><span class="mi">2</span>
+        <span class="k">return</span> <span class="n">DllKernel</span><span class="p">(</span><span class="n">kernel</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">info</span><span class="p">,</span> <span class="n">q_input</span><span class="p">)</span></div>
+
+<div class="viewcode-block" id="DllModel.release"><a class="viewcode-back" href="../../dev/sasmodels-api/sasmodels.html#sasmodels.kerneldll.DllModel.release">[docs]</a>    <span class="k">def</span> <span class="nf">release</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="c1"># type: () -&gt; None</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Release any resources associated with the model.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">dll_handle</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_dll</span><span class="o">.</span><span class="n">_handle</span>
+        <span class="k">if</span> <span class="n">os</span><span class="o">.</span><span class="n">name</span> <span class="o">==</span> <span class="s1">&#39;nt&#39;</span><span class="p">:</span>
+            <span class="n">ct</span><span class="o">.</span><span class="n">windll</span><span class="o">.</span><span class="n">kernel32</span><span class="o">.</span><span class="n">FreeLibrary</span><span class="p">(</span><span class="n">dll_handle</span><span class="p">)</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">_ct</span><span class="o">.</span><span class="n">dlclose</span><span class="p">(</span><span class="n">dll_handle</span><span class="p">)</span>
+        <span class="k">del</span> <span class="bp">self</span><span class="o">.</span><span class="n">_dll</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_dll</span> <span class="o">=</span> <span class="bp">None</span></div></div>
+
+<div class="viewcode-block" id="DllKernel"><a class="viewcode-back" href="../../dev/sasmodels-api/sasmodels.html#sasmodels.kerneldll.DllKernel">[docs]</a><span class="k">class</span> <span class="nc">DllKernel</span><span class="p">(</span><span class="n">Kernel</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Callable SAS kernel.</span>
+
+<span class="sd">    *kernel* is the c function to call.</span>
+
+<span class="sd">    *model_info* is the module information</span>
+
+<span class="sd">    *q_input* is the DllInput q vectors at which the kernel should be</span>
+<span class="sd">    evaluated.</span>
+
+<span class="sd">    The resulting call method takes the *pars*, a list of values for</span>
+<span class="sd">    the fixed parameters to the kernel, and *pd_pars*, a list of (value, weight)</span>
+<span class="sd">    vectors for the polydisperse parameters.  *cutoff* determines the</span>
+<span class="sd">    integration limits: any points with combined weight less than *cutoff*</span>
+<span class="sd">    will not be calculated.</span>
+
+<span class="sd">    Call :meth:`release` when done with the kernel instance.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">kernel</span><span class="p">,</span> <span class="n">model_info</span><span class="p">,</span> <span class="n">q_input</span><span class="p">):</span>
+        <span class="c1"># type: (Callable[[], np.ndarray], ModelInfo, PyInput) -&gt; None</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">kernel</span> <span class="o">=</span> <span class="n">kernel</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">info</span> <span class="o">=</span> <span class="n">model_info</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">q_input</span> <span class="o">=</span> <span class="n">q_input</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">dtype</span> <span class="o">=</span> <span class="n">q_input</span><span class="o">.</span><span class="n">dtype</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">dim</span> <span class="o">=</span> <span class="s1">&#39;2d&#39;</span> <span class="k">if</span> <span class="n">q_input</span><span class="o">.</span><span class="n">is_2d</span> <span class="k">else</span> <span class="s1">&#39;1d&#39;</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">result</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">empty</span><span class="p">(</span><span class="n">q_input</span><span class="o">.</span><span class="n">nq</span><span class="o">+</span><span class="mi">1</span><span class="p">,</span> <span class="n">q_input</span><span class="o">.</span><span class="n">dtype</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">real</span> <span class="o">=</span> <span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">float32</span> <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">q_input</span><span class="o">.</span><span class="n">dtype</span> <span class="o">==</span> <span class="n">generate</span><span class="o">.</span><span class="n">F32</span>
+                     <span class="k">else</span> <span class="n">np</span><span class="o">.</span><span class="n">float64</span> <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">q_input</span><span class="o">.</span><span class="n">dtype</span> <span class="o">==</span> <span class="n">generate</span><span class="o">.</span><span class="n">F64</span>
+                     <span class="k">else</span> <span class="n">np</span><span class="o">.</span><span class="n">float128</span><span class="p">)</span>
+
+    <span class="k">def</span> <span class="nf">__call__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">call_details</span><span class="p">,</span> <span class="n">values</span><span class="p">,</span> <span class="n">cutoff</span><span class="p">,</span> <span class="n">magnetic</span><span class="p">):</span>
+        <span class="c1"># type: (CallDetails, np.ndarray, np.ndarray, float, bool) -&gt; np.ndarray</span>
+
+        <span class="n">kernel</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">kernel</span><span class="p">[</span><span class="mi">1</span> <span class="k">if</span> <span class="n">magnetic</span> <span class="k">else</span> <span class="mi">0</span><span class="p">]</span>
+        <span class="n">args</span> <span class="o">=</span> <span class="p">[</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">q_input</span><span class="o">.</span><span class="n">nq</span><span class="p">,</span> <span class="c1"># nq</span>
+            <span class="bp">None</span><span class="p">,</span> <span class="c1"># pd_start</span>
+            <span class="bp">None</span><span class="p">,</span> <span class="c1"># pd_stop pd_stride[MAX_PD]</span>
+            <span class="n">call_details</span><span class="o">.</span><span class="n">buffer</span><span class="o">.</span><span class="n">ctypes</span><span class="o">.</span><span class="n">data</span><span class="p">,</span> <span class="c1"># problem</span>
+            <span class="n">values</span><span class="o">.</span><span class="n">ctypes</span><span class="o">.</span><span class="n">data</span><span class="p">,</span>  <span class="c1">#pars</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">q_input</span><span class="o">.</span><span class="n">q</span><span class="o">.</span><span class="n">ctypes</span><span class="o">.</span><span class="n">data</span><span class="p">,</span> <span class="c1">#q</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">result</span><span class="o">.</span><span class="n">ctypes</span><span class="o">.</span><span class="n">data</span><span class="p">,</span>   <span class="c1"># results</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">real</span><span class="p">(</span><span class="n">cutoff</span><span class="p">),</span> <span class="c1"># cutoff</span>
+        <span class="p">]</span>
+        <span class="c1">#print(&quot;Calling DLL&quot;)</span>
+        <span class="c1">#call_details.show(values)</span>
+        <span class="n">step</span> <span class="o">=</span> <span class="mi">100</span>
+        <span class="k">for</span> <span class="n">start</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="n">call_details</span><span class="o">.</span><span class="n">num_eval</span><span class="p">,</span> <span class="n">step</span><span class="p">):</span>
+            <span class="n">stop</span> <span class="o">=</span> <span class="nb">min</span><span class="p">(</span><span class="n">start</span> <span class="o">+</span> <span class="n">step</span><span class="p">,</span> <span class="n">call_details</span><span class="o">.</span><span class="n">num_eval</span><span class="p">)</span>
+            <span class="n">args</span><span class="p">[</span><span class="mi">1</span><span class="p">:</span><span class="mi">3</span><span class="p">]</span> <span class="o">=</span> <span class="p">[</span><span class="n">start</span><span class="p">,</span> <span class="n">stop</span><span class="p">]</span>
+            <span class="n">kernel</span><span class="p">(</span><span class="o">*</span><span class="n">args</span><span class="p">)</span> <span class="c1"># type: ignore</span>
+
+        <span class="c1">#print(&quot;returned&quot;,self.q_input.q, self.result)</span>
+        <span class="n">pd_norm</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">result</span><span class="p">[</span><span class="bp">self</span><span class="o">.</span><span class="n">q_input</span><span class="o">.</span><span class="n">nq</span><span class="p">]</span>
+        <span class="n">scale</span> <span class="o">=</span> <span class="n">values</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="o">/</span><span class="p">(</span><span class="n">pd_norm</span> <span class="k">if</span> <span class="n">pd_norm</span> <span class="o">!=</span> <span class="mf">0.0</span> <span class="k">else</span> <span class="mf">1.0</span><span class="p">)</span>
+        <span class="n">background</span> <span class="o">=</span> <span class="n">values</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span>
+        <span class="c1">#print(&quot;scale&quot;,scale,background)</span>
+        <span class="k">return</span> <span class="n">scale</span><span class="o">*</span><span class="bp">self</span><span class="o">.</span><span class="n">result</span><span class="p">[:</span><span class="bp">self</span><span class="o">.</span><span class="n">q_input</span><span class="o">.</span><span class="n">nq</span><span class="p">]</span> <span class="o">+</span> <span class="n">background</span>
+
+<div class="viewcode-block" id="DllKernel.release"><a class="viewcode-back" href="../../dev/sasmodels-api/sasmodels.html#sasmodels.kerneldll.DllKernel.release">[docs]</a>    <span class="k">def</span> <span class="nf">release</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="c1"># type: () -&gt; None</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Release any resources associated with the kernel.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">q_input</span><span class="o">.</span><span class="n">release</span><span class="p">()</span></div></div>
+</pre></div>
+
+          </div>
+        </div>
+      </div>
+      <div class="sphinxsidebar" role="navigation" aria-label="main navigation">
+        <div class="sphinxsidebarwrapper">
+<div id="searchbox" style="display: none" role="search">
+  <h3>Quick search</h3>
+    <form class="search" action="../../search.html" method="get">
+      <input type="text" name="q" />
+      <input type="submit" value="Go" />
+      <input type="hidden" name="check_keywords" value="yes" />
+      <input type="hidden" name="area" value="default" />
+    </form>
+</div>
+<script type="text/javascript">$('#searchbox').show(0);</script>
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="related" role="navigation" aria-label="related navigation">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="../../genindex.html" title="General Index"
+             >index</a></li>
+        <li class="right" >
+          <a href="../../py-modindex.html" title="Python Module Index"
+             >modules</a> |</li>
+        <li class="nav-item nav-item-0"><a href="../../index.html">SasView 4.2.0 documentation</a> &raquo;</li>
+          <li class="nav-item nav-item-1"><a href="../index.html" >Module code</a> &raquo;</li>
+          <li class="nav-item nav-item-2"><a href="../sasmodels.html" >sasmodels</a> &raquo;</li> 
+      </ul>
+    </div>
+    <div class="footer" role="contentinfo">
+        &copy; Copyright 2018, The SasView Project.
+      Created using <a href="http://sphinx-doc.org/">Sphinx</a> 1.4.1.
+    </div>
+  </body>
+</html>

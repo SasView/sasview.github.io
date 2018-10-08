@@ -6,7 +6,7 @@
   <head>
     <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
     
-    <title>sas.sasgui.guiframe.documentation_window &mdash; SasView 4.1.2 documentation</title>
+    <title>sas.sasgui.guiframe.documentation_window &mdash; SasView 4.2.0 documentation</title>
     
     <link rel="stylesheet" href="../../../../_static/classic.css" type="text/css" />
     <link rel="stylesheet" href="../../../../_static/pygments.css" type="text/css" />
@@ -14,7 +14,7 @@
     <script type="text/javascript">
       var DOCUMENTATION_OPTIONS = {
         URL_ROOT:    '../../../../',
-        VERSION:     '4.1.2',
+        VERSION:     '4.2.0',
         COLLAPSE_INDEX: false,
         FILE_SUFFIX: '.html',
         HAS_SOURCE:  true
@@ -24,7 +24,7 @@
     <script type="text/javascript" src="../../../../_static/underscore.js"></script>
     <script type="text/javascript" src="../../../../_static/doctools.js"></script>
     <script type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.1/MathJax.js?config=TeX-MML-AM_CHTML"></script>
-    <link rel="top" title="SasView 4.1.2 documentation" href="../../../../index.html" />
+    <link rel="top" title="SasView 4.2.0 documentation" href="../../../../index.html" />
     <link rel="up" title="sas.sasgui.guiframe" href="../guiframe.html" /> 
   </head>
   <body role="document">
@@ -37,9 +37,10 @@
         <li class="right" >
           <a href="../../../../py-modindex.html" title="Python Module Index"
              >modules</a> |</li>
-        <li class="nav-item nav-item-0"><a href="../../../../index.html">SasView 4.1.2 documentation</a> &raquo;</li>
+        <li class="nav-item nav-item-0"><a href="../../../../index.html">SasView 4.2.0 documentation</a> &raquo;</li>
           <li class="nav-item nav-item-1"><a href="../../../index.html" >Module code</a> &raquo;</li>
-          <li class="nav-item nav-item-2"><a href="../guiframe.html" accesskey="U">sas.sasgui.guiframe</a> &raquo;</li> 
+          <li class="nav-item nav-item-2"><a href="../../../sas.html" >sas</a> &raquo;</li>
+          <li class="nav-item nav-item-3"><a href="../guiframe.html" accesskey="U">sas.sasgui.guiframe</a> &raquo;</li> 
       </ul>
     </div>  
 
@@ -66,23 +67,50 @@
 <span class="sd">&quot;&quot;&quot;</span>
 <span class="kn">import</span> <span class="nn">os</span>
 <span class="kn">import</span> <span class="nn">logging</span>
-<span class="kn">import</span> <span class="nn">wx</span>
 <span class="kn">import</span> <span class="nn">webbrowser</span>
 <span class="kn">import</span> <span class="nn">urllib</span>
 <span class="kn">import</span> <span class="nn">sys</span>
 
-<span class="n">SPHINX_DOC_ENV</span> <span class="o">=</span> <span class="s2">&quot;SASVIEW_DOC_PATH&quot;</span>
-<span class="n">WX_SUPPORTS_HTML2</span> <span class="o">=</span> <span class="bp">True</span>
+<span class="kn">import</span> <span class="nn">wx</span>
 <span class="k">try</span><span class="p">:</span>
     <span class="kn">import</span> <span class="nn">wx.html2</span> <span class="kn">as</span> <span class="nn">html</span>
-<span class="k">except</span><span class="p">:</span>
+    <span class="n">WX_SUPPORTS_HTML2</span> <span class="o">=</span> <span class="bp">True</span>
+<span class="k">except</span> <span class="ne">ImportError</span><span class="p">:</span>
     <span class="n">WX_SUPPORTS_HTML2</span> <span class="o">=</span> <span class="bp">False</span>
 
+<span class="kn">from</span> <span class="nn">sas</span> <span class="kn">import</span> <span class="n">get_app_dir</span>
 
-<span class="kn">from</span> <span class="nn">gui_manager</span> <span class="kn">import</span> <span class="n">get_app_dir</span>
+<span class="c1"># Don&#39;t use wx html renderer on windows.</span>
+<span class="k">if</span> <span class="n">os</span><span class="o">.</span><span class="n">name</span> <span class="o">==</span> <span class="s1">&#39;nt&#39;</span><span class="p">:</span>
+    <span class="n">WX_SUPPORTS_HTML2</span> <span class="o">=</span> <span class="bp">False</span>
 
+<span class="n">logger</span> <span class="o">=</span> <span class="n">logging</span><span class="o">.</span><span class="n">getLogger</span><span class="p">(</span><span class="n">__name__</span><span class="p">)</span>
 
-<div class="viewcode-block" id="DocumentationWindow"><a class="viewcode-back" href="../../../../dev/api/sas.sasgui.guiframe.html#sas.sasgui.guiframe.documentation_window.DocumentationWindow">[docs]</a><span class="k">class</span> <span class="nc">DocumentationWindow</span><span class="p">(</span><span class="n">wx</span><span class="o">.</span><span class="n">Frame</span><span class="p">):</span>
+<span class="n">SPHINX_DOC_ENV</span> <span class="o">=</span> <span class="s2">&quot;SASVIEW_DOC_PATH&quot;</span>
+
+<span class="n">THREAD_STARTED</span> <span class="o">=</span> <span class="bp">False</span>
+<div class="viewcode-block" id="start_documentation_server"><a class="viewcode-back" href="../../../../dev/sasview-api/sas.sasgui.guiframe.html#sas.sasgui.guiframe.documentation_window.start_documentation_server">[docs]</a><span class="k">def</span> <span class="nf">start_documentation_server</span><span class="p">(</span><span class="n">doc_root</span><span class="p">,</span> <span class="n">port</span><span class="p">):</span>
+    <span class="kn">import</span> <span class="nn">thread</span>
+    <span class="k">global</span> <span class="n">THREAD_STARTED</span>
+    <span class="k">if</span> <span class="ow">not</span> <span class="n">THREAD_STARTED</span><span class="p">:</span>
+        <span class="n">thread</span><span class="o">.</span><span class="n">start_new_thread</span><span class="p">(</span><span class="n">_documentation_server</span><span class="p">,</span> <span class="p">(</span><span class="n">doc_root</span><span class="p">,</span> <span class="n">port</span><span class="p">))</span>
+        <span class="n">THREAD_STARTED</span> <span class="o">=</span> <span class="bp">True</span></div>
+
+<span class="k">def</span> <span class="nf">_documentation_server</span><span class="p">(</span><span class="n">doc_root</span><span class="p">,</span> <span class="n">port</span><span class="p">):</span>
+    <span class="kn">from</span> <span class="nn">SimpleHTTPServer</span> <span class="kn">import</span> <span class="n">SimpleHTTPRequestHandler</span>
+    <span class="kn">from</span> <span class="nn">SocketServer</span> <span class="kn">import</span> <span class="n">TCPServer</span>
+
+    <span class="n">os</span><span class="o">.</span><span class="n">chdir</span><span class="p">(</span><span class="n">doc_root</span><span class="p">)</span>
+    <span class="n">httpd</span> <span class="o">=</span> <span class="n">TCPServer</span><span class="p">((</span><span class="s2">&quot;127.0.0.1&quot;</span><span class="p">,</span> <span class="n">port</span><span class="p">),</span> <span class="n">SimpleHTTPRequestHandler</span><span class="p">,</span> <span class="n">bind_and_activate</span><span class="o">=</span><span class="bp">False</span><span class="p">)</span>
+    <span class="n">httpd</span><span class="o">.</span><span class="n">allow_reuse_address</span> <span class="o">=</span> <span class="bp">True</span>
+    <span class="k">try</span><span class="p">:</span>
+        <span class="n">httpd</span><span class="o">.</span><span class="n">server_bind</span><span class="p">()</span>
+        <span class="n">httpd</span><span class="o">.</span><span class="n">server_activate</span><span class="p">()</span>
+        <span class="n">httpd</span><span class="o">.</span><span class="n">serve_forever</span><span class="p">()</span>
+    <span class="k">finally</span><span class="p">:</span>
+        <span class="n">httpd</span><span class="o">.</span><span class="n">server_close</span><span class="p">()</span>
+
+<div class="viewcode-block" id="DocumentationWindow"><a class="viewcode-back" href="../../../../dev/sasview-api/sas.sasgui.guiframe.html#sas.sasgui.guiframe.documentation_window.DocumentationWindow">[docs]</a><span class="k">class</span> <span class="nc">DocumentationWindow</span><span class="p">(</span><span class="n">wx</span><span class="o">.</span><span class="n">Frame</span><span class="p">):</span>
     <span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">    DocumentationWindow inherits from wx.Frame and provides a centralized</span>
 <span class="sd">    coherent framework for all help documentation.  Help files must be html</span>
@@ -118,34 +146,43 @@
         <span class="c1">#and /// for PC.</span>
         <span class="c1">#Note added June 21, 2015     PDB</span>
         <span class="n">file_path</span> <span class="o">=</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">docs_path</span><span class="p">,</span> <span class="n">path</span><span class="p">)</span>
-        <span class="n">url</span> <span class="o">=</span> <span class="s2">&quot;file:///&quot;</span> <span class="o">+</span> <span class="n">urllib</span><span class="o">.</span><span class="n">quote</span><span class="p">(</span><span class="n">file_path</span><span class="p">,</span> <span class="s1">r&#39;/\:&#39;</span><span class="p">)</span><span class="o">+</span> <span class="n">url_instruction</span>
-
-        <span class="k">if</span> <span class="ow">not</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">exists</span><span class="p">(</span><span class="n">file_path</span><span class="p">):</span>
-            <span class="n">logging</span><span class="o">.</span><span class="n">error</span><span class="p">(</span><span class="s2">&quot;Could not find Sphinx documentation at </span><span class="si">%s</span><span class="s2"> </span><span class="se">\</span>
-<span class="s2">            -- has it been built?&quot;</span><span class="p">,</span> <span class="n">file_path</span><span class="p">)</span>
-        <span class="c1">#Commenting following 5 lines, so default browser is forced</span>
-        <span class="c1">#This is due to CDN mathjax discontinuation of service, intenal help</span>
-        <span class="c1">#browser should be back with qt version</span>
-        <span class="c1">#Note added by Wojtek Potrzebowski, July 4th 2017</span>
-        <span class="c1"># elif WX_SUPPORTS_HTML2:</span>
-        <span class="c1">#     # Complete HTML/CSS support!</span>
-        <span class="c1">#     self.view = html.WebView.New(self)</span>
-        <span class="c1">#     self.view.LoadURL(url)</span>
-        <span class="c1">#     self.Show()</span>
+        <span class="k">if</span> <span class="n">path</span><span class="o">.</span><span class="n">startswith</span><span class="p">(</span><span class="s1">&#39;http&#39;</span><span class="p">):</span>
+            <span class="n">url</span> <span class="o">=</span> <span class="n">path</span>
+        <span class="k">elif</span> <span class="ow">not</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">exists</span><span class="p">(</span><span class="n">file_path</span><span class="p">):</span>
+            <span class="n">url</span> <span class="o">=</span> <span class="s2">&quot;index.html&quot;</span>
+            <span class="n">logger</span><span class="o">.</span><span class="n">error</span><span class="p">(</span><span class="s2">&quot;Could not find Sphinx documentation at </span><span class="si">%s</span><span class="s2"> -- has it been built?&quot;</span><span class="p">,</span>
+                         <span class="n">file_path</span><span class="p">)</span>
+        <span class="k">elif</span> <span class="bp">False</span><span class="p">:</span>
+            <span class="n">start_documentation_server</span><span class="p">(</span><span class="n">docs_path</span><span class="p">,</span> <span class="n">port</span><span class="o">=</span><span class="mi">7999</span><span class="p">)</span>
+            <span class="n">url</span> <span class="o">=</span> <span class="s2">&quot;http://127.0.0.1:7999/&quot;</span> <span class="o">+</span> <span class="n">path</span><span class="o">.</span><span class="n">replace</span><span class="p">(</span><span class="s1">&#39;</span><span class="se">\\</span><span class="s1">&#39;</span><span class="p">,</span> <span class="s1">&#39;/&#39;</span><span class="p">)</span> <span class="o">+</span> <span class="n">url_instruction</span>
         <span class="k">else</span><span class="p">:</span>
-            <span class="n">logging</span><span class="o">.</span><span class="n">error</span><span class="p">(</span><span class="s2">&quot;No html2 support, popping up a web browser&quot;</span><span class="p">)</span>
+            <span class="n">url</span> <span class="o">=</span> <span class="s2">&quot;file:///&quot;</span> <span class="o">+</span> <span class="n">urllib</span><span class="o">.</span><span class="n">quote</span><span class="p">(</span><span class="n">file_path</span><span class="p">,</span> <span class="s1">r&#39;/\:&#39;</span><span class="p">)</span><span class="o">+</span> <span class="n">url_instruction</span>
+
+        <span class="c1">#logger.info(&quot;showing url &quot; + url)</span>
+        <span class="k">if</span> <span class="n">WX_SUPPORTS_HTML2</span><span class="p">:</span>
+            <span class="c1"># Complete HTML/CSS support!</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">view</span> <span class="o">=</span> <span class="n">html</span><span class="o">.</span><span class="n">WebView</span><span class="o">.</span><span class="n">New</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">view</span><span class="o">.</span><span class="n">LoadURL</span><span class="p">(</span><span class="n">url</span><span class="p">)</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">Bind</span><span class="p">(</span><span class="n">html</span><span class="o">.</span><span class="n">EVT_WEBVIEW_ERROR</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">OnError</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">view</span><span class="p">)</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">Show</span><span class="p">()</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">logger</span><span class="o">.</span><span class="n">error</span><span class="p">(</span><span class="s2">&quot;No html2 support, popping up a web browser&quot;</span><span class="p">)</span>
             <span class="c1">#For cases that do not build against current version dependency</span>
             <span class="c1"># Wx 3.0 we provide a webbrowser call - this is particularly for</span>
             <span class="c1">#Red hat used at SNS for which Wx 3.0 is not available.  This</span>
             <span class="c1">#does not deal with issue of math in docs of course.</span>
-            <span class="n">webbrowser</span><span class="o">.</span><span class="n">open_new_tab</span><span class="p">(</span><span class="n">url</span><span class="p">)</span></div>
+            <span class="n">webbrowser</span><span class="o">.</span><span class="n">open_new_tab</span><span class="p">(</span><span class="n">url</span><span class="p">)</span>
 
-<div class="viewcode-block" id="main"><a class="viewcode-back" href="../../../../dev/api/sas.sasgui.guiframe.html#sas.sasgui.guiframe.documentation_window.main">[docs]</a><span class="k">def</span> <span class="nf">main</span><span class="p">():</span>
+<div class="viewcode-block" id="DocumentationWindow.OnError"><a class="viewcode-back" href="../../../../dev/sasview-api/sas.sasgui.guiframe.html#sas.sasgui.guiframe.documentation_window.DocumentationWindow.OnError">[docs]</a>    <span class="k">def</span> <span class="nf">OnError</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">evt</span><span class="p">):</span>
+        <span class="n">logger</span><span class="o">.</span><span class="n">error</span><span class="p">(</span><span class="s2">&quot;</span><span class="si">%d</span><span class="s2">: </span><span class="si">%s</span><span class="s2">&quot;</span><span class="p">,</span> <span class="n">evt</span><span class="o">.</span><span class="n">GetInt</span><span class="p">(),</span> <span class="n">evt</span><span class="o">.</span><span class="n">GetString</span><span class="p">())</span></div></div>
+
+<div class="viewcode-block" id="main"><a class="viewcode-back" href="../../../../dev/sasview-api/sas.sasgui.guiframe.html#sas.sasgui.guiframe.documentation_window.main">[docs]</a><span class="k">def</span> <span class="nf">main</span><span class="p">():</span>
     <span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">    main loop function if running alone for testing.</span>
 <span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">url</span> <span class="o">=</span> <span class="s2">&quot;index.html&quot;</span> <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">sys</span><span class="o">.</span><span class="n">argv</span><span class="p">)</span> <span class="o">&lt;=</span> <span class="mi">1</span> <span class="k">else</span> <span class="n">sys</span><span class="o">.</span><span class="n">argv</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span>
     <span class="n">app</span> <span class="o">=</span> <span class="n">wx</span><span class="o">.</span><span class="n">App</span><span class="p">()</span>
-    <span class="n">DocumentationWindow</span><span class="p">(</span><span class="bp">None</span><span class="p">,</span> <span class="o">-</span><span class="mi">1</span><span class="p">,</span> <span class="s2">&quot;index.html&quot;</span><span class="p">,</span> <span class="s2">&quot;&quot;</span><span class="p">,</span> <span class="s2">&quot;Documentation&quot;</span><span class="p">,)</span>
+    <span class="n">DocumentationWindow</span><span class="p">(</span><span class="bp">None</span><span class="p">,</span> <span class="o">-</span><span class="mi">1</span><span class="p">,</span> <span class="n">url</span><span class="p">,</span> <span class="s2">&quot;&quot;</span><span class="p">,</span> <span class="s2">&quot;Documentation&quot;</span><span class="p">,)</span>
     <span class="n">app</span><span class="o">.</span><span class="n">MainLoop</span><span class="p">()</span></div>
 
 <span class="k">if</span> <span class="n">__name__</span> <span class="o">==</span> <span class="s1">&#39;__main__&#39;</span><span class="p">:</span>
@@ -180,13 +217,14 @@
         <li class="right" >
           <a href="../../../../py-modindex.html" title="Python Module Index"
              >modules</a> |</li>
-        <li class="nav-item nav-item-0"><a href="../../../../index.html">SasView 4.1.2 documentation</a> &raquo;</li>
+        <li class="nav-item nav-item-0"><a href="../../../../index.html">SasView 4.2.0 documentation</a> &raquo;</li>
           <li class="nav-item nav-item-1"><a href="../../../index.html" >Module code</a> &raquo;</li>
-          <li class="nav-item nav-item-2"><a href="../guiframe.html" >sas.sasgui.guiframe</a> &raquo;</li> 
+          <li class="nav-item nav-item-2"><a href="../../../sas.html" >sas</a> &raquo;</li>
+          <li class="nav-item nav-item-3"><a href="../guiframe.html" >sas.sasgui.guiframe</a> &raquo;</li> 
       </ul>
     </div>
     <div class="footer" role="contentinfo">
-        &copy; Copyright 2017, The SasView Project.
+        &copy; Copyright 2018, The SasView Project.
       Created using <a href="http://sphinx-doc.org/">Sphinx</a> 1.4.1.
     </div>
   </body>

@@ -1,0 +1,332 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+  "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+    
+    <title>Scripting Interface &mdash; SasView 4.2.0 documentation</title>
+    
+    <link rel="stylesheet" href="../../../../_static/classic.css" type="text/css" />
+    <link rel="stylesheet" href="../../../../_static/pygments.css" type="text/css" />
+    
+    <script type="text/javascript">
+      var DOCUMENTATION_OPTIONS = {
+        URL_ROOT:    '../../../../',
+        VERSION:     '4.2.0',
+        COLLAPSE_INDEX: false,
+        FILE_SUFFIX: '.html',
+        HAS_SOURCE:  true
+      };
+    </script>
+    <script type="text/javascript" src="../../../../_static/jquery.js"></script>
+    <script type="text/javascript" src="../../../../_static/underscore.js"></script>
+    <script type="text/javascript" src="../../../../_static/doctools.js"></script>
+    <script type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.1/MathJax.js?config=TeX-MML-AM_CHTML"></script>
+    <link rel="top" title="SasView 4.2.0 documentation" href="../../../../index.html" />
+    <link rel="up" title="Fitting Documentation" href="fitting.html" />
+    <link rel="next" title="References" href="refs.html" />
+    <link rel="prev" title="GPU Setup" href="gpu_setup.html" /> 
+  </head>
+  <body role="document">
+    <div class="related" role="navigation" aria-label="related navigation">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="../../../../genindex.html" title="General Index"
+             accesskey="I">index</a></li>
+        <li class="right" >
+          <a href="../../../../py-modindex.html" title="Python Module Index"
+             >modules</a> |</li>
+        <li class="right" >
+          <a href="refs.html" title="References"
+             accesskey="N">next</a> |</li>
+        <li class="right" >
+          <a href="gpu_setup.html" title="GPU Setup"
+             accesskey="P">previous</a> |</li>
+        <li class="nav-item nav-item-0"><a href="../../../../index.html">SasView 4.2.0 documentation</a> &raquo;</li>
+          <li class="nav-item nav-item-1"><a href="../../../user.html" >SasView User Documentation</a> &raquo;</li>
+          <li class="nav-item nav-item-2"><a href="../../../analysis.html" >Fitting &amp; Other Analyses</a> &raquo;</li>
+          <li class="nav-item nav-item-3"><a href="fitting.html" accesskey="U">Fitting Documentation</a> &raquo;</li> 
+      </ul>
+    </div>  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          <div class="body" role="main">
+            
+  <div class="section" id="scripting-interface">
+<span id="id1"></span><h1>Scripting Interface</h1>
+<p>Need some basic details here of how to load models and data via script, evaluate
+them at given parameter values and run bumps fits.</p>
+<p>The key functions are <a class="reference internal" href="../../../../dev/sasmodels-api/sasmodels.html#sasmodels.core.load_model" title="sasmodels.core.load_model"><code class="xref py py-func docutils literal"><span class="pre">sasmodels.core.load_model()</span></code></a> for loading the
+model definition and compiling the kernel and
+<a class="reference internal" href="../../../../dev/sasmodels-api/sasmodels.html#sasmodels.data.load_data" title="sasmodels.data.load_data"><code class="xref py py-func docutils literal"><span class="pre">sasmodels.data.load_data()</span></code></a> for calling sasview to load the data.</p>
+<div class="section" id="preparing-data">
+<h2>Preparing data</h2>
+<p>Usually you will load data via the sasview loader, with the
+<a class="reference internal" href="../../../../dev/sasmodels-api/sasmodels.html#sasmodels.data.load_data" title="sasmodels.data.load_data"><code class="xref py py-func docutils literal"><span class="pre">sasmodels.data.load_data()</span></code></a> function.  For example:</p>
+<div class="highlight-default"><div class="highlight"><pre><span></span><span class="kn">from</span> <span class="nn">sasmodels.data</span> <span class="k">import</span> <span class="n">load_data</span>
+<span class="n">data</span> <span class="o">=</span> <span class="n">load_data</span><span class="p">(</span><span class="s2">&quot;sasmodels/example/093191_201.dat&quot;</span><span class="p">)</span>
+</pre></div>
+</div>
+<p>You may want to apply a data mask, such a beam stop, and trim high <span class="math">\(q\)</span>:</p>
+<div class="highlight-default"><div class="highlight"><pre><span></span><span class="kn">from</span> <span class="nn">sasmodels.data</span> <span class="k">import</span> <span class="n">set_beam_stop</span>
+<span class="n">set_beam_stop</span><span class="p">(</span><span class="n">data</span><span class="p">,</span> <span class="n">qmin</span><span class="p">,</span> <span class="n">qmax</span><span class="p">)</span>
+</pre></div>
+</div>
+<p>The <a class="reference internal" href="../../../../dev/sasmodels-api/sasmodels.html#sasmodels.data.set_beam_stop" title="sasmodels.data.set_beam_stop"><code class="xref py py-func docutils literal"><span class="pre">sasmodels.data.set_beam_stop()</span></code></a> method simply sets the <em>mask</em>
+attribute for the data.</p>
+<p>The data defines the resolution function and the q values to evaluate, so
+even if you simulating experiments prior to making measurements, you still
+need a data object for reference. Use <a class="reference internal" href="../../../../dev/sasmodels-api/sasmodels.html#sasmodels.data.empty_data1D" title="sasmodels.data.empty_data1D"><code class="xref py py-func docutils literal"><span class="pre">sasmodels.data.empty_data1D()</span></code></a>
+or <a class="reference internal" href="../../../../dev/sasmodels-api/sasmodels.html#sasmodels.data.empty_data2D" title="sasmodels.data.empty_data2D"><code class="xref py py-func docutils literal"><span class="pre">sasmodels.data.empty_data2D()</span></code></a> to create a container with a
+given <span class="math">\(q\)</span> and <span class="math">\(\Delta q/q\)</span>.  For example:</p>
+<div class="highlight-default"><div class="highlight"><pre><span></span><span class="kn">import</span> <span class="nn">numpy</span> <span class="k">as</span> <span class="nn">np</span>
+<span class="kn">from</span> <span class="nn">sasmodels.data</span> <span class="k">import</span> <span class="n">empty_data1D</span>
+
+<span class="c1"># 120 points logarithmically spaced from 0.005 to 0.2, with dq/q = 5%</span>
+<span class="n">q</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">logspace</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">log10</span><span class="p">(</span><span class="mi">5</span><span class="n">e</span><span class="o">-</span><span class="mi">3</span><span class="p">),</span> <span class="n">np</span><span class="o">.</span><span class="n">log10</span><span class="p">(</span><span class="mi">2</span><span class="n">e</span><span class="o">-</span><span class="mi">1</span><span class="p">),</span> <span class="mi">120</span><span class="p">)</span>
+<span class="n">data</span> <span class="o">=</span> <span class="n">empty_data1D</span><span class="p">(</span><span class="n">q</span><span class="p">,</span> <span class="n">resolution</span><span class="o">=</span><span class="mf">0.05</span><span class="p">)</span>
+</pre></div>
+</div>
+<p>To use a more realistic model of resolution, or to load data from a file
+format not understood by SasView, you can use <a class="reference internal" href="../../../../dev/sasmodels-api/sasmodels.html#sasmodels.data.Data1D" title="sasmodels.data.Data1D"><code class="xref py py-class docutils literal"><span class="pre">sasmodels.data.Data1D</span></code></a>
+or <a class="reference internal" href="../../../../dev/sasmodels-api/sasmodels.html#sasmodels.data.Data2D" title="sasmodels.data.Data2D"><code class="xref py py-class docutils literal"><span class="pre">sasmodels.data.Data2D</span></code></a> directly.  The 1D data uses
+<em>x</em>, <em>y</em>, <em>dx</em> and <em>dy</em> for <span class="math">\(x = q\)</span> and <span class="math">\(y = I(q)\)</span>, and 2D data uses
+<em>x</em>, <em>y</em>, <em>z</em>, <em>dx</em>, <em>dy</em>, <em>dz</em> for <span class="math">\(x, y = qx, qy\)</span> and <span class="math">\(z = I(qx, qy)\)</span>.
+[Note: internally, the Data2D object uses SasView conventions,
+<em>qx_data</em>, <em>qy_data</em>, <em>data</em>, <em>dqx_data</em>, <em>dqy_data</em>, and <em>err_data</em>.]</p>
+<p>For USANS data, use 1D data, but set <em>dxl</em> and <em>dxw</em> attributes to
+indicate slit resolution:</p>
+<div class="highlight-default"><div class="highlight"><pre><span></span><span class="n">data</span><span class="o">.</span><span class="n">dxl</span> <span class="o">=</span> <span class="mf">0.117</span>
+</pre></div>
+</div>
+<p>See <a class="reference internal" href="../../../../dev/sasmodels-api/sasmodels.html#sasmodels.resolution.slit_resolution" title="sasmodels.resolution.slit_resolution"><code class="xref py py-func docutils literal"><span class="pre">sasmodels.resolution.slit_resolution()</span></code></a> for details.</p>
+<p>SESANS data is more complicated; if your SESANS format is not supported by
+SasView you need to define a number of attributes beyond <em>x</em>, <em>y</em>.  For
+example:</p>
+<div class="highlight-default"><div class="highlight"><pre><span></span><span class="n">SElength</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">linspace</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="mi">2400</span><span class="p">,</span> <span class="mi">61</span><span class="p">)</span> <span class="c1"># [A]</span>
+<span class="n">data</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">ones_like</span><span class="p">(</span><span class="n">SElength</span><span class="p">)</span>
+<span class="n">err_data</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">ones_like</span><span class="p">(</span><span class="n">SElength</span><span class="p">)</span><span class="o">*</span><span class="mf">0.03</span>
+
+<span class="k">class</span> <span class="nc">Source</span><span class="p">:</span>
+    <span class="n">wavelength</span> <span class="o">=</span> <span class="mi">6</span> <span class="c1"># [A]</span>
+    <span class="n">wavelength_unit</span> <span class="o">=</span> <span class="s2">&quot;A&quot;</span>
+<span class="k">class</span> <span class="nc">Sample</span><span class="p">:</span>
+    <span class="n">zacceptance</span> <span class="o">=</span> <span class="mf">0.1</span> <span class="c1"># [A^-1]</span>
+    <span class="n">thickness</span> <span class="o">=</span> <span class="mf">0.2</span> <span class="c1"># [cm]</span>
+
+<span class="k">class</span> <span class="nc">SESANSData1D</span><span class="p">:</span>
+    <span class="c1">#q_zmax = 0.23 # [A^-1]</span>
+    <span class="n">lam</span> <span class="o">=</span> <span class="mf">0.2</span> <span class="c1"># [nm]</span>
+    <span class="n">x</span> <span class="o">=</span> <span class="n">SElength</span>
+    <span class="n">y</span> <span class="o">=</span> <span class="n">data</span>
+    <span class="n">dy</span> <span class="o">=</span> <span class="n">err_data</span>
+    <span class="n">sample</span> <span class="o">=</span> <span class="n">Sample</span><span class="p">()</span>
+<span class="n">data</span> <span class="o">=</span> <span class="n">SESANSData1D</span><span class="p">()</span>
+
+<span class="n">x</span><span class="p">,</span> <span class="n">y</span> <span class="o">=</span> <span class="o">...</span> <span class="c1"># create or load sesans</span>
+<span class="n">data</span> <span class="o">=</span> <span class="n">smd</span><span class="o">.</span><span class="n">Data</span>
+</pre></div>
+</div>
+<p>The <em>data</em> module defines various data plotters as well.</p>
+</div>
+<div class="section" id="using-sasmodels-directly">
+<h2>Using sasmodels directly</h2>
+<p>Once you have a computational kernel and a data object, you can evaluate
+the model for various parameters using
+<a class="reference internal" href="../../../../dev/sasmodels-api/sasmodels.html#sasmodels.direct_model.DirectModel" title="sasmodels.direct_model.DirectModel"><code class="xref py py-class docutils literal"><span class="pre">sasmodels.direct_model.DirectModel</span></code></a>.  The resulting object <em>f</em>
+will be callable as <em>f(par=value, ...)</em>, returning the <span class="math">\(I(q)\)</span> for the <span class="math">\(q\)</span>
+values in the data.  For example:</p>
+<div class="highlight-default"><div class="highlight"><pre><span></span><span class="kn">import</span> <span class="nn">numpy</span> <span class="k">as</span> <span class="nn">np</span>
+<span class="kn">from</span> <span class="nn">sasmodels.data</span> <span class="k">import</span> <span class="n">empty_data1D</span>
+<span class="kn">from</span> <span class="nn">sasmodels.core</span> <span class="k">import</span> <span class="n">load_model</span>
+<span class="kn">from</span> <span class="nn">sasmodels.direct_model</span> <span class="k">import</span> <span class="n">DirectModel</span>
+
+<span class="c1"># 120 points logarithmically spaced from 0.005 to 0.2, with dq/q = 5%</span>
+<span class="n">q</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">logspace</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">log10</span><span class="p">(</span><span class="mi">5</span><span class="n">e</span><span class="o">-</span><span class="mi">3</span><span class="p">),</span> <span class="n">np</span><span class="o">.</span><span class="n">log10</span><span class="p">(</span><span class="mi">2</span><span class="n">e</span><span class="o">-</span><span class="mi">1</span><span class="p">),</span> <span class="mi">120</span><span class="p">)</span>
+<span class="n">data</span> <span class="o">=</span> <span class="n">empty_data1D</span><span class="p">(</span><span class="n">q</span><span class="p">,</span> <span class="n">resolution</span><span class="o">=</span><span class="mf">0.05</span><span class="p">)</span>
+<span class="n">kernel</span> <span class="o">=</span> <span class="n">load_model</span><span class="p">(</span><span class="s2">&quot;ellipsoid)</span>
+<span class="n">f</span> <span class="o">=</span> <span class="n">DirectModel</span><span class="p">(</span><span class="n">data</span><span class="p">,</span> <span class="n">kernel</span><span class="p">)</span>
+<span class="n">Iq</span> <span class="o">=</span> <span class="n">f</span><span class="p">(</span><span class="n">radius_polar</span><span class="o">=</span><span class="mi">100</span><span class="p">)</span>
+</pre></div>
+</div>
+<p>Polydispersity information is set with special parameter names:</p>
+<blockquote>
+<div><ul class="simple">
+<li><em>par_pd</em> for polydispersity width, <span class="math">\(\Delta p/p\)</span>,</li>
+<li><em>par_pd_n</em> for the number of points in the distribution,</li>
+<li><em>par_pd_type</em> for the distribution type (as a string), and</li>
+<li><em>par_pd_nsigmas</em> for the limits of the distribution.</li>
+</ul>
+</div></blockquote>
+</div>
+<div class="section" id="using-sasmodels-through-the-bumps-optimizer">
+<h2>Using sasmodels through the bumps optimizer</h2>
+<p>Like DirectModel, you can wrap data and a kernel in a <em>bumps</em> model with
+class:<cite>sasmodels.bumps_model.Model</cite> and create an
+class:<cite>sasmodels.bumps_model.Experiment</cite> that you can fit with the <em>bumps</em>
+interface. Here is an example from the <em>example</em> directory such as
+<em>example/model.py</em>:</p>
+<div class="highlight-default"><div class="highlight"><pre><span></span><span class="kn">import</span> <span class="nn">sys</span>
+<span class="kn">from</span> <span class="nn">bumps.names</span> <span class="k">import</span> <span class="o">*</span>
+<span class="kn">from</span> <span class="nn">sasmodels.core</span> <span class="k">import</span> <span class="n">load_model</span>
+<span class="kn">from</span> <span class="nn">sasmodels.bumps_model</span> <span class="k">import</span> <span class="n">Model</span><span class="p">,</span> <span class="n">Experiment</span>
+<span class="kn">from</span> <span class="nn">sasmodels.data</span> <span class="k">import</span> <span class="n">load_data</span><span class="p">,</span> <span class="n">set_beam_stop</span><span class="p">,</span> <span class="n">set_top</span>
+
+<span class="sd">&quot;&quot;&quot; IMPORT THE DATA USED &quot;&quot;&quot;</span>
+<span class="n">radial_data</span> <span class="o">=</span> <span class="n">load_data</span><span class="p">(</span><span class="s1">&#39;DEC07267.DAT&#39;</span><span class="p">)</span>
+<span class="n">set_beam_stop</span><span class="p">(</span><span class="n">radial_data</span><span class="p">,</span> <span class="mf">0.00669</span><span class="p">,</span> <span class="n">outer</span><span class="o">=</span><span class="mf">0.025</span><span class="p">)</span>
+<span class="n">set_top</span><span class="p">(</span><span class="n">radial_data</span><span class="p">,</span> <span class="o">-.</span><span class="mi">0185</span><span class="p">)</span>
+
+<span class="n">kernel</span> <span class="o">=</span> <span class="n">load_model</span><span class="p">(</span><span class="s2">&quot;ellipsoid&quot;</span><span class="p">)</span>
+
+<span class="n">model</span> <span class="o">=</span> <span class="n">Model</span><span class="p">(</span><span class="n">kernel</span><span class="p">,</span>
+    <span class="n">scale</span><span class="o">=</span><span class="mf">0.08</span><span class="p">,</span>
+    <span class="n">radius_polar</span><span class="o">=</span><span class="mi">15</span><span class="p">,</span> <span class="n">radius_equatorial</span><span class="o">=</span><span class="mi">800</span><span class="p">,</span>
+    <span class="n">sld</span><span class="o">=.</span><span class="mi">291</span><span class="p">,</span> <span class="n">sld_solvent</span><span class="o">=</span><span class="mf">7.105</span><span class="p">,</span>
+    <span class="n">background</span><span class="o">=</span><span class="mi">0</span><span class="p">,</span>
+    <span class="n">theta</span><span class="o">=</span><span class="mi">90</span><span class="p">,</span> <span class="n">phi</span><span class="o">=</span><span class="mi">0</span><span class="p">,</span>
+    <span class="n">theta_pd</span><span class="o">=</span><span class="mi">15</span><span class="p">,</span> <span class="n">theta_pd_n</span><span class="o">=</span><span class="mi">40</span><span class="p">,</span> <span class="n">theta_pd_nsigma</span><span class="o">=</span><span class="mi">3</span><span class="p">,</span>
+    <span class="n">radius_polar_pd</span><span class="o">=</span><span class="mf">0.222296</span><span class="p">,</span> <span class="n">radius_polar_pd_n</span><span class="o">=</span><span class="mi">1</span><span class="p">,</span> <span class="n">radius_polar_pd_nsigma</span><span class="o">=</span><span class="mi">0</span><span class="p">,</span>
+    <span class="n">radius_equatorial_pd</span><span class="o">=.</span><span class="mi">000128</span><span class="p">,</span> <span class="n">radius_equatorial_pd_n</span><span class="o">=</span><span class="mi">1</span><span class="p">,</span> <span class="n">radius_equatorial_pd_nsigma</span><span class="o">=</span><span class="mi">0</span><span class="p">,</span>
+    <span class="n">phi_pd</span><span class="o">=</span><span class="mi">0</span><span class="p">,</span> <span class="n">phi_pd_n</span><span class="o">=</span><span class="mi">20</span><span class="p">,</span> <span class="n">phi_pd_nsigma</span><span class="o">=</span><span class="mi">3</span><span class="p">,</span>
+    <span class="p">)</span>
+
+<span class="c1"># SET THE FITTING PARAMETERS</span>
+<span class="n">model</span><span class="o">.</span><span class="n">radius_polar</span><span class="o">.</span><span class="n">range</span><span class="p">(</span><span class="mi">15</span><span class="p">,</span> <span class="mi">1000</span><span class="p">)</span>
+<span class="n">model</span><span class="o">.</span><span class="n">radius_equatorial</span><span class="o">.</span><span class="n">range</span><span class="p">(</span><span class="mi">15</span><span class="p">,</span> <span class="mi">1000</span><span class="p">)</span>
+<span class="n">model</span><span class="o">.</span><span class="n">theta_pd</span><span class="o">.</span><span class="n">range</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="mi">360</span><span class="p">)</span>
+<span class="n">model</span><span class="o">.</span><span class="n">background</span><span class="o">.</span><span class="n">range</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span><span class="mi">1000</span><span class="p">)</span>
+<span class="n">model</span><span class="o">.</span><span class="n">scale</span><span class="o">.</span><span class="n">range</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="mi">10</span><span class="p">)</span>
+
+<span class="c1">#cutoff = 0     # no cutoff on polydisperisity loops</span>
+<span class="c1">#cutoff = 1e-5  # default cutoff</span>
+<span class="n">cutoff</span> <span class="o">=</span> <span class="mi">1</span><span class="n">e</span><span class="o">-</span><span class="mi">3</span>  <span class="c1"># low precision cutoff</span>
+<span class="n">M</span> <span class="o">=</span> <span class="n">Experiment</span><span class="p">(</span><span class="n">data</span><span class="o">=</span><span class="n">radial_data</span><span class="p">,</span> <span class="n">model</span><span class="o">=</span><span class="n">model</span><span class="p">,</span> <span class="n">cutoff</span><span class="o">=</span><span class="n">cutoff</span><span class="p">)</span>
+<span class="n">problem</span> <span class="o">=</span> <span class="n">FitProblem</span><span class="p">(</span><span class="n">M</span><span class="p">)</span>
+</pre></div>
+</div>
+<p>Assume that bumps has been installed and the bumps command is available.
+Maybe need to set the path to sasmodels/sasview
+using <em>PYTHONPATH=path/to/sasmodels:path/to/sasview/src</em>.
+To run the model use the <em>bumps</em> program:</p>
+<div class="highlight-default"><div class="highlight"><pre><span></span>$ bumps example/model.py --preview
+</pre></div>
+</div>
+<p>Note that bumps and sasmodels are included as part of the SasView
+distribution.  On windows, bumps can be called from the cmd prompt
+as follows:</p>
+<div class="highlight-default"><div class="highlight"><pre><span></span><span class="n">SasViewCom</span> <span class="n">bumps</span><span class="o">.</span><span class="n">cli</span> <span class="n">example</span><span class="o">/</span><span class="n">model</span><span class="o">.</span><span class="n">py</span> <span class="o">--</span><span class="n">preview</span>
+</pre></div>
+</div>
+</div>
+<div class="section" id="calling-the-computation-kernel">
+<h2>Calling the computation kernel</h2>
+<p>Getting a simple function that you can call on a set of q values and return
+a result is not so simple.  Since the time critical use case (fitting) involves
+calling the function over and over with identical <span class="math">\(q\)</span> values, we chose to
+optimize the call by only transfering the <span class="math">\(q\)</span> values to the GPU once at the
+start of the fit.  We do this by creating a <a class="reference internal" href="../../../../dev/sasmodels-api/sasmodels.html#sasmodels.kernel.Kernel" title="sasmodels.kernel.Kernel"><code class="xref py py-class docutils literal"><span class="pre">sasmodels.kernel.Kernel</span></code></a>
+object from the <a class="reference internal" href="../../../../dev/sasmodels-api/sasmodels.html#sasmodels.kernel.KernelModel" title="sasmodels.kernel.KernelModel"><code class="xref py py-class docutils literal"><span class="pre">sasmodels.kernel.KernelModel</span></code></a> returned from
+<a class="reference internal" href="../../../../dev/sasmodels-api/sasmodels.html#sasmodels.core.load_model" title="sasmodels.core.load_model"><code class="xref py py-func docutils literal"><span class="pre">sasmodels.core.load_model()</span></code></a> using the
+<a class="reference internal" href="../../../../dev/sasmodels-api/sasmodels.html#sasmodels.kernel.KernelModel.make_kernel" title="sasmodels.kernel.KernelModel.make_kernel"><code class="xref py py-meth docutils literal"><span class="pre">sasmodels.kernel.KernelModel.make_kernel()</span></code></a> method.  What it actual
+does depends on whether it is running as a DLL, as OpenCL or as a pure
+python kernel.  Once the kernel is in hand, we can then marshal a set of
+parameters into a <a class="reference internal" href="../../../../dev/sasmodels-api/sasmodels.html#sasmodels.details.CallDetails" title="sasmodels.details.CallDetails"><code class="xref py py-class docutils literal"><span class="pre">sasmodels.details.CallDetails</span></code></a> object and ship it to
+the kernel using the <code class="xref py py-func docutils literal"><span class="pre">sansmodels.direct_model.call_kernel()</span></code> function.  An
+example should help, <em>example/cylinder_eval.py</em>:</p>
+<div class="highlight-default"><div class="highlight"><pre><span></span><span class="kn">from</span> <span class="nn">numpy</span> <span class="k">import</span> <span class="n">logspace</span>
+<span class="kn">from</span> <span class="nn">matplotlib</span> <span class="k">import</span> <span class="n">pyplot</span> <span class="k">as</span> <span class="n">plt</span>
+<span class="kn">from</span> <span class="nn">sasmodels.core</span> <span class="k">import</span> <span class="n">load_model</span>
+<span class="kn">from</span> <span class="nn">sasmodels.direct_model</span> <span class="k">import</span> <span class="n">call_kernel</span>
+
+<span class="n">model</span> <span class="o">=</span> <span class="n">load_model</span><span class="p">(</span><span class="s1">&#39;cylinder&#39;</span><span class="p">)</span>
+<span class="n">q</span> <span class="o">=</span> <span class="n">logspace</span><span class="p">(</span><span class="o">-</span><span class="mi">3</span><span class="p">,</span> <span class="o">-</span><span class="mi">1</span><span class="p">,</span> <span class="mi">200</span><span class="p">)</span>
+<span class="n">kernel</span> <span class="o">=</span> <span class="n">model</span><span class="o">.</span><span class="n">make_kernel</span><span class="p">([</span><span class="n">q</span><span class="p">])</span>
+<span class="n">Iq</span> <span class="o">=</span> <span class="n">call_kernel</span><span class="p">(</span><span class="n">kernel</span><span class="p">,</span> <span class="nb">dict</span><span class="p">(</span><span class="n">radius</span><span class="o">=</span><span class="mf">200.</span><span class="p">))</span>
+<span class="n">plt</span><span class="o">.</span><span class="n">loglog</span><span class="p">(</span><span class="n">q</span><span class="p">,</span> <span class="n">Iq</span><span class="p">)</span>
+<span class="n">plt</span><span class="o">.</span><span class="n">show</span><span class="p">()</span>
+</pre></div>
+</div>
+<p>On windows, this can be called from the cmd prompt using sasview as:</p>
+<div class="highlight-default"><div class="highlight"><pre><span></span><span class="n">SasViewCom</span> <span class="n">example</span><span class="o">/</span><span class="n">cylinder_eval</span><span class="o">.</span><span class="n">py</span>
+</pre></div>
+</div>
+</div>
+</div>
+
+
+          </div>
+        </div>
+      </div>
+      <div class="sphinxsidebar" role="navigation" aria-label="main navigation">
+        <div class="sphinxsidebarwrapper">
+  <h3><a href="../../../../index.html">Table Of Contents</a></h3>
+  <ul>
+<li><a class="reference internal" href="#">Scripting Interface</a><ul>
+<li><a class="reference internal" href="#preparing-data">Preparing data</a></li>
+<li><a class="reference internal" href="#using-sasmodels-directly">Using sasmodels directly</a></li>
+<li><a class="reference internal" href="#using-sasmodels-through-the-bumps-optimizer">Using sasmodels through the bumps optimizer</a></li>
+<li><a class="reference internal" href="#calling-the-computation-kernel">Calling the computation kernel</a></li>
+</ul>
+</li>
+</ul>
+
+  <h4>Previous topic</h4>
+  <p class="topless"><a href="gpu_setup.html"
+                        title="previous chapter">GPU Setup</a></p>
+  <h4>Next topic</h4>
+  <p class="topless"><a href="refs.html"
+                        title="next chapter">References</a></p>
+  <div role="note" aria-label="source link">
+    <h3>This Page</h3>
+    <ul class="this-page-menu">
+      <li><a href="../../../../_sources/user/sasgui/perspectives/fitting/scripting.txt"
+            rel="nofollow">Show Source</a></li>
+    </ul>
+   </div>
+<div id="searchbox" style="display: none" role="search">
+  <h3>Quick search</h3>
+    <form class="search" action="../../../../search.html" method="get">
+      <input type="text" name="q" />
+      <input type="submit" value="Go" />
+      <input type="hidden" name="check_keywords" value="yes" />
+      <input type="hidden" name="area" value="default" />
+    </form>
+</div>
+<script type="text/javascript">$('#searchbox').show(0);</script>
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="related" role="navigation" aria-label="related navigation">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="../../../../genindex.html" title="General Index"
+             >index</a></li>
+        <li class="right" >
+          <a href="../../../../py-modindex.html" title="Python Module Index"
+             >modules</a> |</li>
+        <li class="right" >
+          <a href="refs.html" title="References"
+             >next</a> |</li>
+        <li class="right" >
+          <a href="gpu_setup.html" title="GPU Setup"
+             >previous</a> |</li>
+        <li class="nav-item nav-item-0"><a href="../../../../index.html">SasView 4.2.0 documentation</a> &raquo;</li>
+          <li class="nav-item nav-item-1"><a href="../../../user.html" >SasView User Documentation</a> &raquo;</li>
+          <li class="nav-item nav-item-2"><a href="../../../analysis.html" >Fitting &amp; Other Analyses</a> &raquo;</li>
+          <li class="nav-item nav-item-3"><a href="fitting.html" >Fitting Documentation</a> &raquo;</li> 
+      </ul>
+    </div>
+    <div class="footer" role="contentinfo">
+        &copy; Copyright 2018, The SasView Project.
+      Created using <a href="http://sphinx-doc.org/">Sphinx</a> 1.4.1.
+    </div>
+  </body>
+</html>

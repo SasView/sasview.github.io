@@ -6,7 +6,7 @@
   <head>
     <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
     
-    <title>sas.sascalc.dataloader.readers.ascii_reader &mdash; SasView 4.1.2 documentation</title>
+    <title>sas.sascalc.dataloader.readers.ascii_reader &mdash; SasView 4.2.0 documentation</title>
     
     <link rel="stylesheet" href="../../../../../_static/classic.css" type="text/css" />
     <link rel="stylesheet" href="../../../../../_static/pygments.css" type="text/css" />
@@ -14,7 +14,7 @@
     <script type="text/javascript">
       var DOCUMENTATION_OPTIONS = {
         URL_ROOT:    '../../../../../',
-        VERSION:     '4.1.2',
+        VERSION:     '4.2.0',
         COLLAPSE_INDEX: false,
         FILE_SUFFIX: '.html',
         HAS_SOURCE:  true
@@ -24,8 +24,8 @@
     <script type="text/javascript" src="../../../../../_static/underscore.js"></script>
     <script type="text/javascript" src="../../../../../_static/doctools.js"></script>
     <script type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.1/MathJax.js?config=TeX-MML-AM_CHTML"></script>
-    <link rel="top" title="SasView 4.1.2 documentation" href="../../../../../index.html" />
-    <link rel="up" title="sas.sascalc.dataloader.readers" href="../readers.html" /> 
+    <link rel="top" title="SasView 4.2.0 documentation" href="../../../../../index.html" />
+    <link rel="up" title="sas" href="../../../../sas.html" /> 
   </head>
   <body role="document">
     <div class="related" role="navigation" aria-label="related navigation">
@@ -37,9 +37,9 @@
         <li class="right" >
           <a href="../../../../../py-modindex.html" title="Python Module Index"
              >modules</a> |</li>
-        <li class="nav-item nav-item-0"><a href="../../../../../index.html">SasView 4.1.2 documentation</a> &raquo;</li>
+        <li class="nav-item nav-item-0"><a href="../../../../../index.html">SasView 4.2.0 documentation</a> &raquo;</li>
           <li class="nav-item nav-item-1"><a href="../../../../index.html" >Module code</a> &raquo;</li>
-          <li class="nav-item nav-item-2"><a href="../readers.html" accesskey="U">sas.sascalc.dataloader.readers</a> &raquo;</li> 
+          <li class="nav-item nav-item-2"><a href="../../../../sas.html" accesskey="U">sas</a> &raquo;</li> 
       </ul>
     </div>  
 
@@ -50,250 +50,169 @@
             
   <h1>Source code for sas.sascalc.dataloader.readers.ascii_reader</h1><div class="highlight"><pre>
 <span></span><span class="sd">&quot;&quot;&quot;</span>
-<span class="sd">    ASCII reader</span>
+<span class="sd">    Generic multi-column ASCII data reader</span>
 <span class="sd">&quot;&quot;&quot;</span>
 <span class="c1">############################################################################</span>
-<span class="c1">#This software was developed by the University of Tennessee as part of the</span>
-<span class="c1">#Distributed Data Analysis of Neutron Scattering Experiments (DANSE)</span>
-<span class="c1">#project funded by the US National Science Foundation. </span>
-<span class="c1">#If you use DANSE applications to do scientific research that leads to</span>
-<span class="c1">#publication, we ask that you acknowledge the use of the software with the</span>
-<span class="c1">#following sentence:</span>
-<span class="c1">#This work benefited from DANSE software developed under NSF award DMR-0520547.</span>
-<span class="c1">#copyright 2008, University of Tennessee</span>
+<span class="c1"># This software was developed by the University of Tennessee as part of the</span>
+<span class="c1"># Distributed Data Analysis of Neutron Scattering Experiments (DANSE)</span>
+<span class="c1"># project funded by the US National Science Foundation.</span>
+<span class="c1"># If you use DANSE applications to do scientific research that leads to</span>
+<span class="c1"># publication, we ask that you acknowledge the use of the software with the</span>
+<span class="c1"># following sentence:</span>
+<span class="c1"># This work benefited from DANSE software developed under NSF award DMR-0520547.</span>
+<span class="c1"># copyright 2008, University of Tennessee</span>
 <span class="c1">#############################################################################</span>
 
+<span class="kn">import</span> <span class="nn">logging</span>
+<span class="kn">from</span> <span class="nn">sas.sascalc.dataloader.file_reader_base_class</span> <span class="kn">import</span> <span class="n">FileReader</span>
+<span class="kn">from</span> <span class="nn">sas.sascalc.dataloader.data_info</span> <span class="kn">import</span> <span class="n">DataInfo</span><span class="p">,</span> <span class="n">plottable_1D</span>
+<span class="kn">from</span> <span class="nn">sas.sascalc.dataloader.loader_exceptions</span> <span class="kn">import</span> <span class="n">FileContentsException</span><span class="p">,</span>\
+    <span class="n">DefaultReaderException</span>
 
-<span class="kn">import</span> <span class="nn">numpy</span>
-<span class="kn">import</span> <span class="nn">os</span>
-<span class="kn">from</span> <span class="nn">sas.sascalc.dataloader.data_info</span> <span class="kn">import</span> <span class="n">Data1D</span>
-
-<span class="c1"># Check whether we have a converter available</span>
-<span class="n">has_converter</span> <span class="o">=</span> <span class="bp">True</span>
-<span class="k">try</span><span class="p">:</span>
-    <span class="kn">from</span> <span class="nn">sas.sascalc.data_util.nxsunit</span> <span class="kn">import</span> <span class="n">Converter</span>
-<span class="k">except</span><span class="p">:</span>
-    <span class="n">has_converter</span> <span class="o">=</span> <span class="bp">False</span>
-<span class="n">_ZERO</span> <span class="o">=</span> <span class="mf">1e-16</span>
+<span class="n">logger</span> <span class="o">=</span> <span class="n">logging</span><span class="o">.</span><span class="n">getLogger</span><span class="p">(</span><span class="n">__name__</span><span class="p">)</span>
 
 
-<div class="viewcode-block" id="Reader"><a class="viewcode-back" href="../../../../../dev/api/sas.sascalc.dataloader.readers.html#sas.sascalc.dataloader.readers.ascii_reader.Reader">[docs]</a><span class="k">class</span> <span class="nc">Reader</span><span class="p">:</span>
+<div class="viewcode-block" id="Reader"><a class="viewcode-back" href="../../../../../dev/sasview-api/sas.sascalc.dataloader.readers.html#sas.sascalc.dataloader.readers.ascii_reader.Reader">[docs]</a><span class="k">class</span> <span class="nc">Reader</span><span class="p">(</span><span class="n">FileReader</span><span class="p">):</span>
     <span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">    Class to load ascii files (2, 3 or 4 columns).</span>
 <span class="sd">    &quot;&quot;&quot;</span>
-    <span class="c1">## File type</span>
+    <span class="c1"># File type</span>
     <span class="n">type_name</span> <span class="o">=</span> <span class="s2">&quot;ASCII&quot;</span>
-
-    <span class="c1">## Wildcards</span>
+    <span class="c1"># Wildcards</span>
     <span class="nb">type</span> <span class="o">=</span> <span class="p">[</span><span class="s2">&quot;ASCII files (*.txt)|*.txt&quot;</span><span class="p">,</span>
             <span class="s2">&quot;ASCII files (*.dat)|*.dat&quot;</span><span class="p">,</span>
             <span class="s2">&quot;ASCII files (*.abs)|*.abs&quot;</span><span class="p">,</span>
             <span class="s2">&quot;CSV files (*.csv)|*.csv&quot;</span><span class="p">]</span>
-    <span class="c1">## List of allowed extensions</span>
-    <span class="n">ext</span> <span class="o">=</span> <span class="p">[</span><span class="s1">&#39;.txt&#39;</span><span class="p">,</span> <span class="s1">&#39;.TXT&#39;</span><span class="p">,</span> <span class="s1">&#39;.dat&#39;</span><span class="p">,</span> <span class="s1">&#39;.DAT&#39;</span><span class="p">,</span> <span class="s1">&#39;.abs&#39;</span><span class="p">,</span> <span class="s1">&#39;.ABS&#39;</span><span class="p">,</span> <span class="s1">&#39;csv&#39;</span><span class="p">,</span> <span class="s1">&#39;CSV&#39;</span><span class="p">]</span>
-
-    <span class="c1">## Flag to bypass extension check</span>
+    <span class="c1"># List of allowed extensions</span>
+    <span class="n">ext</span> <span class="o">=</span> <span class="p">[</span><span class="s1">&#39;.txt&#39;</span><span class="p">,</span> <span class="s1">&#39;.dat&#39;</span><span class="p">,</span> <span class="s1">&#39;.abs&#39;</span><span class="p">,</span> <span class="s1">&#39;.csv&#39;</span><span class="p">]</span>
+    <span class="c1"># Flag to bypass extension check</span>
     <span class="n">allow_all</span> <span class="o">=</span> <span class="bp">True</span>
+    <span class="c1"># data unless that is the only data</span>
+    <span class="n">min_data_pts</span> <span class="o">=</span> <span class="mi">5</span>
 
-<div class="viewcode-block" id="Reader.read"><a class="viewcode-back" href="../../../../../dev/api/sas.sascalc.dataloader.readers.html#sas.sascalc.dataloader.readers.ascii_reader.Reader.read">[docs]</a>    <span class="k">def</span> <span class="nf">read</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">path</span><span class="p">):</span>
+<div class="viewcode-block" id="Reader.get_file_contents"><a class="viewcode-back" href="../../../../../dev/sasview-api/sas.sascalc.dataloader.readers.html#sas.sascalc.dataloader.readers.ascii_reader.Reader.get_file_contents">[docs]</a>    <span class="k">def</span> <span class="nf">get_file_contents</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
         <span class="sd">&quot;&quot;&quot;</span>
-<span class="sd">        Load data file</span>
-
-<span class="sd">        :param path: file path</span>
-<span class="sd">        :return: Data1D object, or None</span>
-
-<span class="sd">        :raise RuntimeError: when the file can&#39;t be opened</span>
-<span class="sd">        :raise ValueError: when the length of the data vectors are inconsistent</span>
+<span class="sd">        Get the contents of the file</span>
 <span class="sd">        &quot;&quot;&quot;</span>
-        <span class="k">if</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">isfile</span><span class="p">(</span><span class="n">path</span><span class="p">):</span>
-            <span class="n">basename</span> <span class="o">=</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">basename</span><span class="p">(</span><span class="n">path</span><span class="p">)</span>
-            <span class="n">_</span><span class="p">,</span> <span class="n">extension</span> <span class="o">=</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">splitext</span><span class="p">(</span><span class="n">basename</span><span class="p">)</span>
-            <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">allow_all</span> <span class="ow">or</span> <span class="n">extension</span><span class="o">.</span><span class="n">lower</span><span class="p">()</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">ext</span><span class="p">:</span>
-                <span class="k">try</span><span class="p">:</span>
-                    <span class="c1"># Read in binary mode since GRASP frequently has no-ascii</span>
-                    <span class="c1"># characters that breaks the open operation</span>
-                    <span class="n">input_f</span> <span class="o">=</span> <span class="nb">open</span><span class="p">(</span><span class="n">path</span><span class="p">,</span><span class="s1">&#39;rb&#39;</span><span class="p">)</span>
-                <span class="k">except</span><span class="p">:</span>
-                    <span class="k">raise</span>  <span class="ne">RuntimeError</span><span class="p">,</span> <span class="s2">&quot;ascii_reader: cannot open </span><span class="si">%s</span><span class="s2">&quot;</span> <span class="o">%</span> <span class="n">path</span>
-                <span class="n">buff</span> <span class="o">=</span> <span class="n">input_f</span><span class="o">.</span><span class="n">read</span><span class="p">()</span>
-                <span class="n">lines</span> <span class="o">=</span> <span class="n">buff</span><span class="o">.</span><span class="n">splitlines</span><span class="p">()</span>
 
-                <span class="c1"># Arrays for data storage</span>
-                <span class="n">tx</span> <span class="o">=</span> <span class="n">numpy</span><span class="o">.</span><span class="n">zeros</span><span class="p">(</span><span class="mi">0</span><span class="p">)</span>
-                <span class="n">ty</span> <span class="o">=</span> <span class="n">numpy</span><span class="o">.</span><span class="n">zeros</span><span class="p">(</span><span class="mi">0</span><span class="p">)</span>
-                <span class="n">tdy</span> <span class="o">=</span> <span class="n">numpy</span><span class="o">.</span><span class="n">zeros</span><span class="p">(</span><span class="mi">0</span><span class="p">)</span>
-                <span class="n">tdx</span> <span class="o">=</span> <span class="n">numpy</span><span class="o">.</span><span class="n">zeros</span><span class="p">(</span><span class="mi">0</span><span class="p">)</span>
+        <span class="n">buff</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">readall</span><span class="p">()</span>
+        <span class="n">filepath</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">f_open</span><span class="o">.</span><span class="n">name</span>
+        <span class="n">lines</span> <span class="o">=</span> <span class="n">buff</span><span class="o">.</span><span class="n">splitlines</span><span class="p">()</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">output</span> <span class="o">=</span> <span class="p">[]</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">current_datainfo</span> <span class="o">=</span> <span class="n">DataInfo</span><span class="p">()</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">current_datainfo</span><span class="o">.</span><span class="n">filename</span> <span class="o">=</span> <span class="n">filepath</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">reset_data_list</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">lines</span><span class="p">))</span>
 
-                <span class="c1"># The first good line of data will define whether</span>
-                <span class="c1"># we have 2-column or 3-column ascii</span>
+        <span class="c1"># The first good line of data will define whether</span>
+        <span class="c1"># we have 2-column or 3-column ascii</span>
+        <span class="n">has_error_dx</span> <span class="o">=</span> <span class="bp">None</span>
+        <span class="n">has_error_dy</span> <span class="o">=</span> <span class="bp">None</span>
+
+        <span class="c1"># Initialize counters for data lines and header lines.</span>
+        <span class="n">is_data</span> <span class="o">=</span> <span class="bp">False</span>
+        <span class="c1"># More than &quot;5&quot; lines of data is considered as actual</span>
+        <span class="c1"># To count # of current data candidate lines</span>
+        <span class="n">candidate_lines</span> <span class="o">=</span> <span class="mi">0</span>
+        <span class="c1"># To count total # of previous data candidate lines</span>
+        <span class="n">candidate_lines_previous</span> <span class="o">=</span> <span class="mi">0</span>
+        <span class="c1"># Current line number</span>
+        <span class="n">line_no</span> <span class="o">=</span> <span class="mi">0</span>
+        <span class="c1"># minimum required number of columns of data</span>
+        <span class="n">lentoks</span> <span class="o">=</span> <span class="mi">2</span>
+        <span class="k">for</span> <span class="n">line</span> <span class="ow">in</span> <span class="n">lines</span><span class="p">:</span>
+            <span class="n">toks</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">splitline</span><span class="p">(</span><span class="n">line</span><span class="o">.</span><span class="n">strip</span><span class="p">())</span>
+            <span class="c1"># To remember the number of columns in the current line of data</span>
+            <span class="n">new_lentoks</span> <span class="o">=</span> <span class="nb">len</span><span class="p">(</span><span class="n">toks</span><span class="p">)</span>
+            <span class="k">try</span><span class="p">:</span>
+                <span class="k">if</span> <span class="n">new_lentoks</span> <span class="o">==</span> <span class="mi">0</span><span class="p">:</span>
+                    <span class="c1"># If the line is blank, skip and continue on</span>
+                    <span class="c1"># In case of breaks within data sets.</span>
+                    <span class="k">continue</span>
+                <span class="k">elif</span> <span class="n">new_lentoks</span> <span class="o">!=</span> <span class="n">lentoks</span> <span class="ow">and</span> <span class="n">is_data</span><span class="p">:</span>
+                    <span class="c1"># If a footer is found, break the loop and save the data</span>
+                    <span class="k">break</span>
+                <span class="k">elif</span> <span class="n">new_lentoks</span> <span class="o">!=</span> <span class="n">lentoks</span> <span class="ow">and</span> <span class="ow">not</span> <span class="n">is_data</span><span class="p">:</span>
+                    <span class="c1"># If header lines are numerical</span>
+                    <span class="n">candidate_lines</span> <span class="o">=</span> <span class="mi">0</span>
+                    <span class="bp">self</span><span class="o">.</span><span class="n">reset_data_list</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">lines</span><span class="p">)</span> <span class="o">-</span> <span class="n">line_no</span><span class="p">)</span>
+
+                <span class="bp">self</span><span class="o">.</span><span class="n">current_dataset</span><span class="o">.</span><span class="n">x</span><span class="p">[</span><span class="n">candidate_lines</span><span class="p">]</span> <span class="o">=</span> <span class="nb">float</span><span class="p">(</span><span class="n">toks</span><span class="p">[</span><span class="mi">0</span><span class="p">])</span>
+
+                <span class="k">if</span> <span class="n">new_lentoks</span> <span class="o">&gt;</span> <span class="mi">1</span><span class="p">:</span>
+                    <span class="bp">self</span><span class="o">.</span><span class="n">current_dataset</span><span class="o">.</span><span class="n">y</span><span class="p">[</span><span class="n">candidate_lines</span><span class="p">]</span> <span class="o">=</span> <span class="nb">float</span><span class="p">(</span><span class="n">toks</span><span class="p">[</span><span class="mi">1</span><span class="p">])</span>
+
+                <span class="c1"># If a 3rd row is present, consider it dy</span>
+                <span class="k">if</span> <span class="n">new_lentoks</span> <span class="o">&gt;</span> <span class="mi">2</span><span class="p">:</span>
+                    <span class="bp">self</span><span class="o">.</span><span class="n">current_dataset</span><span class="o">.</span><span class="n">dy</span><span class="p">[</span><span class="n">candidate_lines</span><span class="p">]</span> <span class="o">=</span> \
+                        <span class="nb">float</span><span class="p">(</span><span class="n">toks</span><span class="p">[</span><span class="mi">2</span><span class="p">])</span>
+                    <span class="n">has_error_dy</span> <span class="o">=</span> <span class="bp">True</span>
+
+                <span class="c1"># If a 4th row is present, consider it dx</span>
+                <span class="k">if</span> <span class="n">new_lentoks</span> <span class="o">&gt;</span> <span class="mi">3</span><span class="p">:</span>
+                    <span class="bp">self</span><span class="o">.</span><span class="n">current_dataset</span><span class="o">.</span><span class="n">dx</span><span class="p">[</span><span class="n">candidate_lines</span><span class="p">]</span> <span class="o">=</span> \
+                        <span class="nb">float</span><span class="p">(</span><span class="n">toks</span><span class="p">[</span><span class="mi">3</span><span class="p">])</span>
+                    <span class="n">has_error_dx</span> <span class="o">=</span> <span class="bp">True</span>
+
+                <span class="n">candidate_lines</span> <span class="o">+=</span> <span class="mi">1</span>
+                <span class="c1"># If 5 or more lines, this is considering the set data</span>
+                <span class="k">if</span> <span class="n">candidate_lines</span> <span class="o">&gt;=</span> <span class="bp">self</span><span class="o">.</span><span class="n">min_data_pts</span><span class="p">:</span>
+                    <span class="n">is_data</span> <span class="o">=</span> <span class="bp">True</span>
+
+                <span class="k">if</span> <span class="n">is_data</span> <span class="ow">and</span> <span class="n">new_lentoks</span> <span class="o">&gt;=</span> <span class="mi">8</span><span class="p">:</span>
+                    <span class="n">msg</span> <span class="o">=</span> <span class="s2">&quot;This data looks like 2D ASCII data. Use the file &quot;</span>
+                    <span class="n">msg</span> <span class="o">+=</span> <span class="s2">&quot;converter tool to convert it to NXcanSAS.&quot;</span>
+                    <span class="k">raise</span> <span class="n">FileContentsException</span><span class="p">(</span><span class="n">msg</span><span class="p">)</span>
+
+                <span class="c1"># To remember the # of columns on the current line</span>
+                <span class="c1"># for the next line of data</span>
+                <span class="n">lentoks</span> <span class="o">=</span> <span class="n">new_lentoks</span>
+                <span class="n">line_no</span> <span class="o">+=</span> <span class="mi">1</span>
+            <span class="k">except</span> <span class="ne">ValueError</span><span class="p">:</span>
+                <span class="c1"># ValueError is raised when non numeric strings conv. to float</span>
+                <span class="c1"># It is data and meet non - number, then stop reading</span>
+                <span class="k">if</span> <span class="n">is_data</span><span class="p">:</span>
+                    <span class="k">break</span>
+                <span class="c1"># Delete the previously stored lines of data candidates if</span>
+                <span class="c1"># the list is not data</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">reset_data_list</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">lines</span><span class="p">)</span> <span class="o">-</span> <span class="n">line_no</span><span class="p">)</span>
+                <span class="n">lentoks</span> <span class="o">=</span> <span class="mi">2</span>
                 <span class="n">has_error_dx</span> <span class="o">=</span> <span class="bp">None</span>
                 <span class="n">has_error_dy</span> <span class="o">=</span> <span class="bp">None</span>
-
-                <span class="c1">#Initialize counters for data lines and header lines.</span>
-                <span class="n">is_data</span> <span class="o">=</span> <span class="bp">False</span>
-                <span class="c1"># More than &quot;5&quot; lines of data is considered as actual</span>
-                <span class="c1"># data unless that is the only data</span>
-                <span class="n">min_data_pts</span> <span class="o">=</span> <span class="mi">5</span>
-                <span class="c1"># To count # of current data candidate lines</span>
+                <span class="c1"># Reset # of lines of data candidates</span>
                 <span class="n">candidate_lines</span> <span class="o">=</span> <span class="mi">0</span>
-                <span class="c1"># To count total # of previous data candidate lines</span>
-                <span class="n">candidate_lines_previous</span> <span class="o">=</span> <span class="mi">0</span>
-                <span class="c1">#minimum required number of columns of data</span>
-                <span class="n">lentoks</span> <span class="o">=</span> <span class="mi">2</span>
-                <span class="k">for</span> <span class="n">line</span> <span class="ow">in</span> <span class="n">lines</span><span class="p">:</span>
-                    <span class="n">toks</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">splitline</span><span class="p">(</span><span class="n">line</span><span class="p">)</span>
-                    <span class="c1"># To remember the # of columns in the current line of data</span>
-                    <span class="n">new_lentoks</span> <span class="o">=</span> <span class="nb">len</span><span class="p">(</span><span class="n">toks</span><span class="p">)</span>
-                    <span class="k">try</span><span class="p">:</span>
-                        <span class="k">if</span> <span class="n">new_lentoks</span> <span class="o">==</span> <span class="mi">1</span> <span class="ow">and</span> <span class="ow">not</span> <span class="n">is_data</span><span class="p">:</span>
-                            <span class="c1">## If only one item in list, no longer data</span>
-                            <span class="k">raise</span> <span class="ne">ValueError</span>
-                        <span class="k">elif</span> <span class="n">new_lentoks</span> <span class="o">==</span> <span class="mi">0</span><span class="p">:</span>
-                            <span class="c1">## If the line is blank, skip and continue on</span>
-                            <span class="c1">## In case of breaks within data sets.</span>
-                            <span class="k">continue</span>
-                        <span class="k">elif</span> <span class="n">new_lentoks</span> <span class="o">!=</span> <span class="n">lentoks</span> <span class="ow">and</span> <span class="n">is_data</span><span class="p">:</span>
-                            <span class="c1">## If a footer is found, break the loop and save the data</span>
-                            <span class="k">break</span>
-                        <span class="k">elif</span> <span class="n">new_lentoks</span> <span class="o">!=</span> <span class="n">lentoks</span> <span class="ow">and</span> <span class="ow">not</span> <span class="n">is_data</span><span class="p">:</span>
-                            <span class="c1">## If header lines are numerical</span>
-                            <span class="n">candidate_lines</span> <span class="o">=</span> <span class="mi">0</span>
-                            <span class="n">candidate_lines_previous</span> <span class="o">=</span> <span class="mi">0</span>
 
-                        <span class="c1">#Make sure that all columns are numbers.</span>
-                        <span class="k">for</span> <span class="n">colnum</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">toks</span><span class="p">)):</span>
-                            <span class="c1"># Any non-floating point values throw ValueError</span>
-                            <span class="nb">float</span><span class="p">(</span><span class="n">toks</span><span class="p">[</span><span class="n">colnum</span><span class="p">])</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="n">is_data</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">set_all_to_none</span><span class="p">()</span>
+            <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">extension</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">ext</span><span class="p">:</span>
+                <span class="n">msg</span> <span class="o">=</span> <span class="s2">&quot;ASCII Reader error: Fewer than five Q data points found &quot;</span>
+                <span class="n">msg</span> <span class="o">+=</span> <span class="s2">&quot;in {}.&quot;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">filepath</span><span class="p">)</span>
+                <span class="k">raise</span> <span class="n">FileContentsException</span><span class="p">(</span><span class="n">msg</span><span class="p">)</span>
+            <span class="k">else</span><span class="p">:</span>
+                <span class="n">msg</span> <span class="o">=</span> <span class="s2">&quot;ASCII Reader could not load the file {}&quot;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">filepath</span><span class="p">)</span>
+                <span class="k">raise</span> <span class="n">DefaultReaderException</span><span class="p">(</span><span class="n">msg</span><span class="p">)</span>
+        <span class="c1"># Sanity check</span>
+        <span class="k">if</span> <span class="n">has_error_dy</span> <span class="ow">and</span> <span class="ow">not</span> <span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">current_dataset</span><span class="o">.</span><span class="n">y</span><span class="p">)</span> <span class="o">==</span> \
+                <span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">current_dataset</span><span class="o">.</span><span class="n">dy</span><span class="p">):</span>
+            <span class="n">msg</span> <span class="o">=</span> <span class="s2">&quot;ASCII Reader error: Number of I and dI data points are&quot;</span>
+            <span class="n">msg</span> <span class="o">+=</span> <span class="s2">&quot; different in {}.&quot;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">filepath</span><span class="p">)</span>
+            <span class="c1"># TODO: Add error to self.current_datainfo.errors instead?</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">set_all_to_none</span><span class="p">()</span>
+            <span class="k">raise</span> <span class="n">FileContentsException</span><span class="p">(</span><span class="n">msg</span><span class="p">)</span>
+        <span class="k">if</span> <span class="n">has_error_dx</span> <span class="ow">and</span> <span class="ow">not</span> <span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">current_dataset</span><span class="o">.</span><span class="n">x</span><span class="p">)</span> <span class="o">==</span> \
+                <span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">current_dataset</span><span class="o">.</span><span class="n">dx</span><span class="p">):</span>
+            <span class="n">msg</span> <span class="o">=</span> <span class="s2">&quot;ASCII Reader error: Number of Q and dQ data points are&quot;</span>
+            <span class="n">msg</span> <span class="o">+=</span> <span class="s2">&quot; different in {}.&quot;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">filepath</span><span class="p">)</span>
+            <span class="c1"># TODO: Add error to self.current_datainfo.errors instead?</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">set_all_to_none</span><span class="p">()</span>
+            <span class="k">raise</span> <span class="n">FileContentsException</span><span class="p">(</span><span class="n">msg</span><span class="p">)</span>
 
-                        <span class="n">candidate_lines</span> <span class="o">+=</span> <span class="mi">1</span>
-                        <span class="n">_x</span> <span class="o">=</span> <span class="nb">float</span><span class="p">(</span><span class="n">toks</span><span class="p">[</span><span class="mi">0</span><span class="p">])</span>
-                        <span class="n">_y</span> <span class="o">=</span> <span class="nb">float</span><span class="p">(</span><span class="n">toks</span><span class="p">[</span><span class="mi">1</span><span class="p">])</span>
-                        <span class="n">_dx</span> <span class="o">=</span> <span class="bp">None</span>
-                        <span class="n">_dy</span> <span class="o">=</span> <span class="bp">None</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">remove_empty_q_values</span><span class="p">()</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">current_dataset</span><span class="o">.</span><span class="n">xaxis</span><span class="p">(</span><span class="s2">&quot;</span><span class="se">\\</span><span class="s2">rm{Q}&quot;</span><span class="p">,</span> <span class="s1">&#39;A^{-1}&#39;</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">current_dataset</span><span class="o">.</span><span class="n">yaxis</span><span class="p">(</span><span class="s2">&quot;</span><span class="se">\\</span><span class="s2">rm{Intensity}&quot;</span><span class="p">,</span> <span class="s2">&quot;cm^{-1}&quot;</span><span class="p">)</span>
 
-                        <span class="c1">#If 5 or more lines, this is considering the set data</span>
-                        <span class="k">if</span> <span class="n">candidate_lines</span> <span class="o">&gt;=</span> <span class="n">min_data_pts</span><span class="p">:</span>
-                            <span class="n">is_data</span> <span class="o">=</span> <span class="bp">True</span>
-
-                        <span class="c1"># If a 3rd row is present, consider it dy</span>
-                        <span class="k">if</span> <span class="n">new_lentoks</span> <span class="o">&gt;</span> <span class="mi">2</span><span class="p">:</span>
-                            <span class="n">_dy</span> <span class="o">=</span> <span class="nb">float</span><span class="p">(</span><span class="n">toks</span><span class="p">[</span><span class="mi">2</span><span class="p">])</span>
-                        <span class="n">has_error_dy</span> <span class="o">=</span> <span class="bp">False</span> <span class="k">if</span> <span class="n">_dy</span> <span class="o">==</span> <span class="bp">None</span> <span class="k">else</span> <span class="bp">True</span>
-
-                        <span class="c1"># If a 4th row is present, consider it dx</span>
-                        <span class="k">if</span> <span class="n">new_lentoks</span> <span class="o">&gt;</span> <span class="mi">3</span><span class="p">:</span>
-                            <span class="n">_dx</span> <span class="o">=</span> <span class="nb">float</span><span class="p">(</span><span class="n">toks</span><span class="p">[</span><span class="mi">3</span><span class="p">])</span>
-                        <span class="n">has_error_dx</span> <span class="o">=</span> <span class="bp">False</span> <span class="k">if</span> <span class="n">_dx</span> <span class="o">==</span> <span class="bp">None</span> <span class="k">else</span> <span class="bp">True</span>
-
-                        <span class="c1"># Delete the previously stored lines of data candidates if</span>
-                        <span class="c1"># the list is not data</span>
-                        <span class="k">if</span> <span class="n">candidate_lines</span> <span class="o">==</span> <span class="mi">1</span> <span class="ow">and</span> <span class="o">-</span><span class="mi">1</span> <span class="o">&lt;</span> <span class="n">candidate_lines_previous</span> <span class="o">&lt;</span> <span class="n">min_data_pts</span> <span class="ow">and</span> \
-                            <span class="n">is_data</span> <span class="o">==</span> <span class="bp">False</span><span class="p">:</span>
-                            <span class="k">try</span><span class="p">:</span>
-                                <span class="n">tx</span> <span class="o">=</span> <span class="n">numpy</span><span class="o">.</span><span class="n">zeros</span><span class="p">(</span><span class="mi">0</span><span class="p">)</span>
-                                <span class="n">ty</span> <span class="o">=</span> <span class="n">numpy</span><span class="o">.</span><span class="n">zeros</span><span class="p">(</span><span class="mi">0</span><span class="p">)</span>
-                                <span class="n">tdy</span> <span class="o">=</span> <span class="n">numpy</span><span class="o">.</span><span class="n">zeros</span><span class="p">(</span><span class="mi">0</span><span class="p">)</span>
-                                <span class="n">tdx</span> <span class="o">=</span> <span class="n">numpy</span><span class="o">.</span><span class="n">zeros</span><span class="p">(</span><span class="mi">0</span><span class="p">)</span>
-                            <span class="k">except</span><span class="p">:</span>
-                                <span class="k">pass</span>
-
-                        <span class="k">if</span> <span class="n">has_error_dy</span> <span class="o">==</span> <span class="bp">True</span><span class="p">:</span>
-                            <span class="n">tdy</span> <span class="o">=</span> <span class="n">numpy</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">tdy</span><span class="p">,</span> <span class="n">_dy</span><span class="p">)</span>
-                        <span class="k">if</span> <span class="n">has_error_dx</span> <span class="o">==</span> <span class="bp">True</span><span class="p">:</span>
-                            <span class="n">tdx</span> <span class="o">=</span> <span class="n">numpy</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">tdx</span><span class="p">,</span> <span class="n">_dx</span><span class="p">)</span>
-                        <span class="n">tx</span> <span class="o">=</span> <span class="n">numpy</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">tx</span><span class="p">,</span> <span class="n">_x</span><span class="p">)</span>
-                        <span class="n">ty</span> <span class="o">=</span> <span class="n">numpy</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">ty</span><span class="p">,</span> <span class="n">_y</span><span class="p">)</span>
-
-                        <span class="c1">#To remember the # of columns on the current line</span>
-                        <span class="c1"># for the next line of data</span>
-                        <span class="n">lentoks</span> <span class="o">=</span> <span class="n">new_lentoks</span>
-                        <span class="n">candidate_lines_previous</span> <span class="o">=</span> <span class="n">candidate_lines</span>
-                    <span class="k">except</span> <span class="ne">ValueError</span><span class="p">:</span>
-                        <span class="c1"># It is data and meet non - number, then stop reading</span>
-                        <span class="k">if</span> <span class="n">is_data</span> <span class="o">==</span> <span class="bp">True</span><span class="p">:</span>
-                            <span class="k">break</span>
-                        <span class="n">lentoks</span> <span class="o">=</span> <span class="mi">2</span>
-                        <span class="n">has_error_dx</span> <span class="o">=</span> <span class="bp">None</span>
-                        <span class="n">has_error_dy</span> <span class="o">=</span> <span class="bp">None</span>
-                        <span class="c1">#Reset # of lines of data candidates</span>
-                        <span class="n">candidate_lines</span> <span class="o">=</span> <span class="mi">0</span>
-                    <span class="k">except</span><span class="p">:</span>
-                        <span class="k">pass</span>
-
-                <span class="n">input_f</span><span class="o">.</span><span class="n">close</span><span class="p">()</span>
-                <span class="k">if</span> <span class="ow">not</span> <span class="n">is_data</span><span class="p">:</span>
-                    <span class="n">msg</span> <span class="o">=</span> <span class="s2">&quot;ascii_reader: x has no data&quot;</span>
-                    <span class="k">raise</span> <span class="ne">RuntimeError</span><span class="p">,</span> <span class="n">msg</span>
-                <span class="c1"># Sanity check</span>
-                <span class="k">if</span> <span class="n">has_error_dy</span> <span class="o">==</span> <span class="bp">True</span> <span class="ow">and</span> <span class="ow">not</span> <span class="nb">len</span><span class="p">(</span><span class="n">ty</span><span class="p">)</span> <span class="o">==</span> <span class="nb">len</span><span class="p">(</span><span class="n">tdy</span><span class="p">):</span>
-                    <span class="n">msg</span> <span class="o">=</span> <span class="s2">&quot;ascii_reader: y and dy have different length&quot;</span>
-                    <span class="k">raise</span> <span class="ne">RuntimeError</span><span class="p">,</span> <span class="n">msg</span>
-                <span class="k">if</span> <span class="n">has_error_dx</span> <span class="o">==</span> <span class="bp">True</span> <span class="ow">and</span> <span class="ow">not</span> <span class="nb">len</span><span class="p">(</span><span class="n">tx</span><span class="p">)</span> <span class="o">==</span> <span class="nb">len</span><span class="p">(</span><span class="n">tdx</span><span class="p">):</span>
-                    <span class="n">msg</span> <span class="o">=</span> <span class="s2">&quot;ascii_reader: y and dy have different length&quot;</span>
-                    <span class="k">raise</span> <span class="ne">RuntimeError</span><span class="p">,</span> <span class="n">msg</span>
-                <span class="c1"># If the data length is zero, consider this as</span>
-                <span class="c1"># though we were not able to read the file.</span>
-                <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">tx</span><span class="p">)</span> <span class="o">==</span> <span class="mi">0</span><span class="p">:</span>
-                    <span class="k">raise</span> <span class="ne">RuntimeError</span><span class="p">,</span> <span class="s2">&quot;ascii_reader: could not load file&quot;</span>
-
-                <span class="c1">#Let&#39;s re-order the data to make cal.</span>
-                <span class="c1"># curve look better some cases</span>
-                <span class="n">ind</span> <span class="o">=</span> <span class="n">numpy</span><span class="o">.</span><span class="n">lexsort</span><span class="p">((</span><span class="n">ty</span><span class="p">,</span> <span class="n">tx</span><span class="p">))</span>
-                <span class="n">x</span> <span class="o">=</span> <span class="n">numpy</span><span class="o">.</span><span class="n">zeros</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">tx</span><span class="p">))</span>
-                <span class="n">y</span> <span class="o">=</span> <span class="n">numpy</span><span class="o">.</span><span class="n">zeros</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">ty</span><span class="p">))</span>
-                <span class="n">dy</span> <span class="o">=</span> <span class="n">numpy</span><span class="o">.</span><span class="n">zeros</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">tdy</span><span class="p">))</span>
-                <span class="n">dx</span> <span class="o">=</span> <span class="n">numpy</span><span class="o">.</span><span class="n">zeros</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">tdx</span><span class="p">))</span>
-                <span class="n">output</span> <span class="o">=</span> <span class="n">Data1D</span><span class="p">(</span><span class="n">x</span><span class="p">,</span> <span class="n">y</span><span class="p">,</span> <span class="n">dy</span><span class="o">=</span><span class="n">dy</span><span class="p">,</span> <span class="n">dx</span><span class="o">=</span><span class="n">dx</span><span class="p">)</span>
-                <span class="bp">self</span><span class="o">.</span><span class="n">filename</span> <span class="o">=</span> <span class="n">output</span><span class="o">.</span><span class="n">filename</span> <span class="o">=</span> <span class="n">basename</span>
-
-                <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="n">ind</span><span class="p">:</span>
-                    <span class="n">x</span><span class="p">[</span><span class="n">i</span><span class="p">]</span> <span class="o">=</span> <span class="n">tx</span><span class="p">[</span><span class="n">ind</span><span class="p">[</span><span class="n">i</span><span class="p">]]</span>
-                    <span class="n">y</span><span class="p">[</span><span class="n">i</span><span class="p">]</span> <span class="o">=</span> <span class="n">ty</span><span class="p">[</span><span class="n">ind</span><span class="p">[</span><span class="n">i</span><span class="p">]]</span>
-                    <span class="k">if</span> <span class="n">has_error_dy</span> <span class="o">==</span> <span class="bp">True</span><span class="p">:</span>
-                        <span class="n">dy</span><span class="p">[</span><span class="n">i</span><span class="p">]</span> <span class="o">=</span> <span class="n">tdy</span><span class="p">[</span><span class="n">ind</span><span class="p">[</span><span class="n">i</span><span class="p">]]</span>
-                    <span class="k">if</span> <span class="n">has_error_dx</span> <span class="o">==</span> <span class="bp">True</span><span class="p">:</span>
-                        <span class="n">dx</span><span class="p">[</span><span class="n">i</span><span class="p">]</span> <span class="o">=</span> <span class="n">tdx</span><span class="p">[</span><span class="n">ind</span><span class="p">[</span><span class="n">i</span><span class="p">]]</span>
-                <span class="c1"># Zeros in dx, dy</span>
-                <span class="k">if</span> <span class="n">has_error_dx</span><span class="p">:</span>
-                    <span class="n">dx</span><span class="p">[</span><span class="n">dx</span> <span class="o">==</span> <span class="mi">0</span><span class="p">]</span> <span class="o">=</span> <span class="n">_ZERO</span>
-                <span class="k">if</span> <span class="n">has_error_dy</span><span class="p">:</span>
-                    <span class="n">dy</span><span class="p">[</span><span class="n">dy</span> <span class="o">==</span> <span class="mi">0</span><span class="p">]</span> <span class="o">=</span> <span class="n">_ZERO</span>
-                <span class="c1">#Data</span>
-                <span class="n">output</span><span class="o">.</span><span class="n">x</span> <span class="o">=</span> <span class="n">x</span><span class="p">[</span><span class="n">x</span> <span class="o">!=</span> <span class="mi">0</span><span class="p">]</span>
-                <span class="n">output</span><span class="o">.</span><span class="n">y</span> <span class="o">=</span> <span class="n">y</span><span class="p">[</span><span class="n">x</span> <span class="o">!=</span> <span class="mi">0</span><span class="p">]</span>
-                <span class="n">output</span><span class="o">.</span><span class="n">dy</span> <span class="o">=</span> <span class="n">dy</span><span class="p">[</span><span class="n">x</span> <span class="o">!=</span> <span class="mi">0</span><span class="p">]</span> <span class="k">if</span> <span class="n">has_error_dy</span> <span class="o">==</span> <span class="bp">True</span>\
-                    <span class="k">else</span> <span class="n">numpy</span><span class="o">.</span><span class="n">zeros</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">output</span><span class="o">.</span><span class="n">y</span><span class="p">))</span>
-                <span class="n">output</span><span class="o">.</span><span class="n">dx</span> <span class="o">=</span> <span class="n">dx</span><span class="p">[</span><span class="n">x</span> <span class="o">!=</span> <span class="mi">0</span><span class="p">]</span> <span class="k">if</span> <span class="n">has_error_dx</span> <span class="o">==</span> <span class="bp">True</span>\
-                    <span class="k">else</span> <span class="n">numpy</span><span class="o">.</span><span class="n">zeros</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">output</span><span class="o">.</span><span class="n">x</span><span class="p">))</span>
-
-                <span class="n">output</span><span class="o">.</span><span class="n">xaxis</span><span class="p">(</span><span class="s2">&quot;</span><span class="se">\\</span><span class="s2">rm{Q}&quot;</span><span class="p">,</span> <span class="s1">&#39;A^{-1}&#39;</span><span class="p">)</span>
-                <span class="n">output</span><span class="o">.</span><span class="n">yaxis</span><span class="p">(</span><span class="s2">&quot;</span><span class="se">\\</span><span class="s2">rm{Intensity}&quot;</span><span class="p">,</span> <span class="s2">&quot;cm^{-1}&quot;</span><span class="p">)</span>
-
-                <span class="c1"># Store loading process information</span>
-                <span class="n">output</span><span class="o">.</span><span class="n">meta_data</span><span class="p">[</span><span class="s1">&#39;loader&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">type_name</span>
-                <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">output</span><span class="o">.</span><span class="n">x</span><span class="p">)</span> <span class="o">&lt;</span> <span class="mi">1</span><span class="p">:</span>
-                    <span class="k">raise</span> <span class="ne">RuntimeError</span><span class="p">,</span> <span class="s2">&quot;</span><span class="si">%s</span><span class="s2"> is empty&quot;</span> <span class="o">%</span> <span class="n">path</span>
-                <span class="k">return</span> <span class="n">output</span>
-
-        <span class="k">else</span><span class="p">:</span>
-            <span class="k">raise</span> <span class="ne">RuntimeError</span><span class="p">,</span> <span class="s2">&quot;</span><span class="si">%s</span><span class="s2"> is not a file&quot;</span> <span class="o">%</span> <span class="n">path</span>
-        <span class="k">return</span> <span class="bp">None</span></div>
-
-<div class="viewcode-block" id="Reader.splitline"><a class="viewcode-back" href="../../../../../dev/api/sas.sascalc.dataloader.readers.html#sas.sascalc.dataloader.readers.ascii_reader.Reader.splitline">[docs]</a>    <span class="k">def</span> <span class="nf">splitline</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">line</span><span class="p">):</span>
-        <span class="sd">&quot;&quot;&quot;</span>
-<span class="sd">        Splits a line into pieces based on common delimeters</span>
-<span class="sd">        :param line: A single line of text</span>
-<span class="sd">        :return: list of values</span>
-<span class="sd">        &quot;&quot;&quot;</span>
-        <span class="c1"># Initial try for CSV (split on ,)</span>
-        <span class="n">toks</span> <span class="o">=</span> <span class="n">line</span><span class="o">.</span><span class="n">split</span><span class="p">(</span><span class="s1">&#39;,&#39;</span><span class="p">)</span>
-        <span class="c1"># Now try SCSV (split on ;)</span>
-        <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">toks</span><span class="p">)</span> <span class="o">&lt;</span> <span class="mi">2</span><span class="p">:</span>
-            <span class="n">toks</span> <span class="o">=</span> <span class="n">line</span><span class="o">.</span><span class="n">split</span><span class="p">(</span><span class="s1">&#39;;&#39;</span><span class="p">)</span>
-        <span class="c1"># Now go for whitespace</span>
-        <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">toks</span><span class="p">)</span> <span class="o">&lt;</span> <span class="mi">2</span><span class="p">:</span>
-            <span class="n">toks</span> <span class="o">=</span> <span class="n">line</span><span class="o">.</span><span class="n">split</span><span class="p">()</span>
-        <span class="k">return</span> <span class="n">toks</span></div></div>
+        <span class="c1"># Store loading process information</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">current_datainfo</span><span class="o">.</span><span class="n">meta_data</span><span class="p">[</span><span class="s1">&#39;loader&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">type_name</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">send_to_output</span><span class="p">()</span></div></div>
 </pre></div>
 
           </div>
@@ -324,13 +243,13 @@
         <li class="right" >
           <a href="../../../../../py-modindex.html" title="Python Module Index"
              >modules</a> |</li>
-        <li class="nav-item nav-item-0"><a href="../../../../../index.html">SasView 4.1.2 documentation</a> &raquo;</li>
+        <li class="nav-item nav-item-0"><a href="../../../../../index.html">SasView 4.2.0 documentation</a> &raquo;</li>
           <li class="nav-item nav-item-1"><a href="../../../../index.html" >Module code</a> &raquo;</li>
-          <li class="nav-item nav-item-2"><a href="../readers.html" >sas.sascalc.dataloader.readers</a> &raquo;</li> 
+          <li class="nav-item nav-item-2"><a href="../../../../sas.html" >sas</a> &raquo;</li> 
       </ul>
     </div>
     <div class="footer" role="contentinfo">
-        &copy; Copyright 2017, The SasView Project.
+        &copy; Copyright 2018, The SasView Project.
       Created using <a href="http://sphinx-doc.org/">Sphinx</a> 1.4.1.
     </div>
   </body>

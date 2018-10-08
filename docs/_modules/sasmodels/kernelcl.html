@@ -1,0 +1,710 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+  "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+    
+    <title>sasmodels.kernelcl &mdash; SasView 4.2.0 documentation</title>
+    
+    <link rel="stylesheet" href="../../_static/classic.css" type="text/css" />
+    <link rel="stylesheet" href="../../_static/pygments.css" type="text/css" />
+    
+    <script type="text/javascript">
+      var DOCUMENTATION_OPTIONS = {
+        URL_ROOT:    '../../',
+        VERSION:     '4.2.0',
+        COLLAPSE_INDEX: false,
+        FILE_SUFFIX: '.html',
+        HAS_SOURCE:  true
+      };
+    </script>
+    <script type="text/javascript" src="../../_static/jquery.js"></script>
+    <script type="text/javascript" src="../../_static/underscore.js"></script>
+    <script type="text/javascript" src="../../_static/doctools.js"></script>
+    <script type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.1/MathJax.js?config=TeX-MML-AM_CHTML"></script>
+    <link rel="top" title="SasView 4.2.0 documentation" href="../../index.html" />
+    <link rel="up" title="sasmodels" href="../sasmodels.html" /> 
+  </head>
+  <body role="document">
+    <div class="related" role="navigation" aria-label="related navigation">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="../../genindex.html" title="General Index"
+             accesskey="I">index</a></li>
+        <li class="right" >
+          <a href="../../py-modindex.html" title="Python Module Index"
+             >modules</a> |</li>
+        <li class="nav-item nav-item-0"><a href="../../index.html">SasView 4.2.0 documentation</a> &raquo;</li>
+          <li class="nav-item nav-item-1"><a href="../index.html" >Module code</a> &raquo;</li>
+          <li class="nav-item nav-item-2"><a href="../sasmodels.html" accesskey="U">sasmodels</a> &raquo;</li> 
+      </ul>
+    </div>  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          <div class="body" role="main">
+            
+  <h1>Source code for sasmodels.kernelcl</h1><div class="highlight"><pre>
+<span></span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">GPU driver for C kernels</span>
+
+<span class="sd">There should be a single GPU environment running on the system.  This</span>
+<span class="sd">environment is constructed on the first call to :func:`env`, and the</span>
+<span class="sd">same environment is returned on each call.</span>
+
+<span class="sd">After retrieving the environment, the next step is to create the kernel.</span>
+<span class="sd">This is done with a call to :meth:`GpuEnvironment.make_kernel`, which</span>
+<span class="sd">returns the type of data used by the kernel.</span>
+
+<span class="sd">Next a :class:`GpuData` object should be created with the correct kind</span>
+<span class="sd">of data.  This data object can be used by multiple kernels, for example,</span>
+<span class="sd">if the target model is a weighted sum of multiple kernels.  The data</span>
+<span class="sd">should include any extra evaluation points required to compute the proper</span>
+<span class="sd">data smearing.  This need not match the square grid for 2D data if there</span>
+<span class="sd">is an index saying which q points are active.</span>
+
+<span class="sd">Together the GpuData, the program, and a device form a :class:`GpuKernel`.</span>
+<span class="sd">This kernel is used during fitting, receiving new sets of parameters and</span>
+<span class="sd">evaluating them.  The output value is stored in an output buffer on the</span>
+<span class="sd">devices, where it can be combined with other structure factors and form</span>
+<span class="sd">factors and have instrumental resolution effects applied.</span>
+
+<span class="sd">In order to use OpenCL for your models, you will need OpenCL drivers for</span>
+<span class="sd">your machine.  These should be available from your graphics card vendor.</span>
+<span class="sd">Intel provides OpenCL drivers for CPUs as well as their integrated HD</span>
+<span class="sd">graphics chipsets.  AMD also provides drivers for Intel CPUs, but as of</span>
+<span class="sd">this writing the performance is lacking compared to the Intel drivers.</span>
+<span class="sd">NVidia combines drivers for CUDA and OpenCL in one package.  The result</span>
+<span class="sd">is a bit messy if you have multiple drivers installed.  You can see which</span>
+<span class="sd">drivers are available by starting python and running:</span>
+
+<span class="sd">    import pyopencl as cl</span>
+<span class="sd">    cl.create_some_context(interactive=True)</span>
+
+<span class="sd">Once you have done that, it will show the available drivers which you</span>
+<span class="sd">can select.  It will then tell you that you can use these drivers</span>
+<span class="sd">automatically by setting the SAS_OPENCL environment variable, which is</span>
+<span class="sd">PYOPENCL_CTX equivalent but not conflicting with other pyopnecl programs.</span>
+
+<span class="sd">Some graphics cards have multiple devices on the same card.  You cannot</span>
+<span class="sd">yet use both of them concurrently to evaluate models, but you can run</span>
+<span class="sd">the program twice using a different device for each session.</span>
+
+<span class="sd">OpenCL kernels are compiled when needed by the device driver.  Some</span>
+<span class="sd">drivers produce compiler output even when there is no error.  You</span>
+<span class="sd">can see the output by setting PYOPENCL_COMPILER_OUTPUT=1.  It should be</span>
+<span class="sd">harmless, albeit annoying.</span>
+<span class="sd">&quot;&quot;&quot;</span>
+<span class="kn">from</span> <span class="nn">__future__</span> <span class="kn">import</span> <span class="n">print_function</span>
+
+<span class="kn">import</span> <span class="nn">os</span>
+<span class="kn">import</span> <span class="nn">warnings</span>
+<span class="kn">import</span> <span class="nn">logging</span>
+<span class="kn">import</span> <span class="nn">time</span>
+
+<span class="kn">import</span> <span class="nn">numpy</span> <span class="kn">as</span> <span class="nn">np</span>  <span class="c1"># type: ignore</span>
+
+
+<span class="c1"># Attempt to setup opencl. This may fail if the opencl package is not</span>
+<span class="c1"># installed or if it is installed but there are no devices available.</span>
+<span class="k">try</span><span class="p">:</span>
+    <span class="kn">import</span> <span class="nn">pyopencl</span> <span class="kn">as</span> <span class="nn">cl</span>  <span class="c1"># type: ignore</span>
+    <span class="kn">from</span> <span class="nn">pyopencl</span> <span class="kn">import</span> <span class="n">mem_flags</span> <span class="k">as</span> <span class="n">mf</span>
+    <span class="kn">from</span> <span class="nn">pyopencl.characterize</span> <span class="kn">import</span> <span class="n">get_fast_inaccurate_build_options</span>
+    <span class="c1"># Ask OpenCL for the default context so that we know that one exists</span>
+    <span class="n">cl</span><span class="o">.</span><span class="n">create_some_context</span><span class="p">(</span><span class="n">interactive</span><span class="o">=</span><span class="bp">False</span><span class="p">)</span>
+    <span class="n">HAVE_OPENCL</span> <span class="o">=</span> <span class="bp">True</span>
+    <span class="n">OPENCL_ERROR</span> <span class="o">=</span> <span class="s2">&quot;&quot;</span>
+<span class="k">except</span> <span class="ne">Exception</span> <span class="k">as</span> <span class="n">exc</span><span class="p">:</span>
+    <span class="n">HAVE_OPENCL</span> <span class="o">=</span> <span class="bp">False</span>
+    <span class="n">OPENCL_ERROR</span> <span class="o">=</span> <span class="nb">str</span><span class="p">(</span><span class="n">exc</span><span class="p">)</span>
+
+<span class="kn">from</span> <span class="nn">.</span> <span class="kn">import</span> <span class="n">generate</span>
+<span class="kn">from</span> <span class="nn">.kernel</span> <span class="kn">import</span> <span class="n">KernelModel</span><span class="p">,</span> <span class="n">Kernel</span>
+
+<span class="c1"># pylint: disable=unused-import</span>
+<span class="k">try</span><span class="p">:</span>
+    <span class="kn">from</span> <span class="nn">typing</span> <span class="kn">import</span> <span class="n">Tuple</span><span class="p">,</span> <span class="n">Callable</span><span class="p">,</span> <span class="n">Any</span>
+    <span class="kn">from</span> <span class="nn">.modelinfo</span> <span class="kn">import</span> <span class="n">ModelInfo</span>
+    <span class="kn">from</span> <span class="nn">.details</span> <span class="kn">import</span> <span class="n">CallDetails</span>
+<span class="k">except</span> <span class="ne">ImportError</span><span class="p">:</span>
+    <span class="k">pass</span>
+<span class="c1"># pylint: enable=unused-import</span>
+
+<span class="c1"># CRUFT: pyopencl &lt; 2017.1  (as of June 2016 needs quotes around include path)</span>
+<div class="viewcode-block" id="quote_path"><a class="viewcode-back" href="../../dev/sasmodels-api/sasmodels.html#sasmodels.kernelcl.quote_path">[docs]</a><span class="k">def</span> <span class="nf">quote_path</span><span class="p">(</span><span class="n">v</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Quote the path if it is not already quoted.</span>
+
+<span class="sd">    If v starts with &#39;-&#39;, then assume that it is a -I option or similar</span>
+<span class="sd">    and do not quote it.  This is fragile:  -Ipath with space needs to</span>
+<span class="sd">    be quoted.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="k">return</span> <span class="s1">&#39;&quot;&#39;</span><span class="o">+</span><span class="n">v</span><span class="o">+</span><span class="s1">&#39;&quot;&#39;</span> <span class="k">if</span> <span class="n">v</span> <span class="ow">and</span> <span class="s1">&#39; &#39;</span> <span class="ow">in</span> <span class="n">v</span> <span class="ow">and</span> <span class="ow">not</span> <span class="n">v</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="ow">in</span> <span class="s2">&quot;</span><span class="se">\&quot;</span><span class="s2">&#39;-&quot;</span> <span class="k">else</span> <span class="n">v</span></div>
+
+<div class="viewcode-block" id="fix_pyopencl_include"><a class="viewcode-back" href="../../dev/sasmodels-api/sasmodels.html#sasmodels.kernelcl.fix_pyopencl_include">[docs]</a><span class="k">def</span> <span class="nf">fix_pyopencl_include</span><span class="p">():</span>
+    <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Monkey patch pyopencl to allow spaces in include file path.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="kn">import</span> <span class="nn">pyopencl</span> <span class="kn">as</span> <span class="nn">cl</span>
+    <span class="k">if</span> <span class="nb">hasattr</span><span class="p">(</span><span class="n">cl</span><span class="p">,</span> <span class="s1">&#39;_DEFAULT_INCLUDE_OPTIONS&#39;</span><span class="p">):</span>
+        <span class="n">cl</span><span class="o">.</span><span class="n">_DEFAULT_INCLUDE_OPTIONS</span> <span class="o">=</span> <span class="p">[</span><span class="n">quote_path</span><span class="p">(</span><span class="n">v</span><span class="p">)</span> <span class="k">for</span> <span class="n">v</span> <span class="ow">in</span> <span class="n">cl</span><span class="o">.</span><span class="n">_DEFAULT_INCLUDE_OPTIONS</span><span class="p">]</span></div>
+
+<span class="k">if</span> <span class="n">HAVE_OPENCL</span><span class="p">:</span>
+    <span class="n">fix_pyopencl_include</span><span class="p">()</span>
+
+<span class="c1"># The max loops number is limited by the amount of local memory available</span>
+<span class="c1"># on the device.  You don&#39;t want to make this value too big because it will</span>
+<span class="c1"># waste resources, nor too small because it may interfere with users trying</span>
+<span class="c1"># to do their polydispersity calculations.  A value of 1024 should be much</span>
+<span class="c1"># larger than necessary given that cost grows as npts^k where k is the number</span>
+<span class="c1"># of polydisperse parameters.</span>
+<span class="n">MAX_LOOPS</span> <span class="o">=</span> <span class="mi">2048</span>
+
+
+<span class="c1"># Pragmas for enable OpenCL features.  Be sure to protect them so that they</span>
+<span class="c1"># still compile even if OpenCL is not present.</span>
+<span class="n">_F16_PRAGMA</span> <span class="o">=</span> <span class="s2">&quot;&quot;&quot;</span><span class="se">\</span>
+<span class="s2">#if defined(__OPENCL_VERSION__) // &amp;&amp; !defined(cl_khr_fp16)</span>
+<span class="s2">#  pragma OPENCL EXTENSION cl_khr_fp16: enable</span>
+<span class="s2">#endif</span>
+<span class="s2">&quot;&quot;&quot;</span>
+
+<span class="n">_F64_PRAGMA</span> <span class="o">=</span> <span class="s2">&quot;&quot;&quot;</span><span class="se">\</span>
+<span class="s2">#if defined(__OPENCL_VERSION__) // &amp;&amp; !defined(cl_khr_fp64)</span>
+<span class="s2">#  pragma OPENCL EXTENSION cl_khr_fp64: enable</span>
+<span class="s2">#endif</span>
+<span class="s2">&quot;&quot;&quot;</span>
+
+<div class="viewcode-block" id="use_opencl"><a class="viewcode-back" href="../../dev/sasmodels-api/sasmodels.html#sasmodels.kernelcl.use_opencl">[docs]</a><span class="k">def</span> <span class="nf">use_opencl</span><span class="p">():</span>
+    <span class="k">return</span> <span class="n">HAVE_OPENCL</span> <span class="ow">and</span> <span class="n">os</span><span class="o">.</span><span class="n">environ</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;SAS_OPENCL&quot;</span><span class="p">,</span> <span class="s2">&quot;&quot;</span><span class="p">)</span><span class="o">.</span><span class="n">lower</span><span class="p">()</span> <span class="o">!=</span> <span class="s2">&quot;none&quot;</span></div>
+
+<span class="n">ENV</span> <span class="o">=</span> <span class="bp">None</span>
+<div class="viewcode-block" id="reset_environment"><a class="viewcode-back" href="../../dev/sasmodels-api/sasmodels.html#sasmodels.kernelcl.reset_environment">[docs]</a><span class="k">def</span> <span class="nf">reset_environment</span><span class="p">():</span>
+    <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Call to create a new OpenCL context, such as after a change to SAS_OPENCL.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="k">global</span> <span class="n">ENV</span>
+    <span class="n">ENV</span> <span class="o">=</span> <span class="n">GpuEnvironment</span><span class="p">()</span> <span class="k">if</span> <span class="n">use_opencl</span><span class="p">()</span> <span class="k">else</span> <span class="bp">None</span></div>
+
+<div class="viewcode-block" id="environment"><a class="viewcode-back" href="../../dev/sasmodels-api/sasmodels.html#sasmodels.kernelcl.environment">[docs]</a><span class="k">def</span> <span class="nf">environment</span><span class="p">():</span>
+    <span class="c1"># type: () -&gt; &quot;GpuEnvironment&quot;</span>
+    <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Returns a singleton :class:`GpuEnvironment`.</span>
+
+<span class="sd">    This provides an OpenCL context and one queue per device.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="k">if</span> <span class="n">ENV</span> <span class="ow">is</span> <span class="bp">None</span><span class="p">:</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="n">HAVE_OPENCL</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="ne">RuntimeError</span><span class="p">(</span><span class="s2">&quot;OpenCL startup failed with ***&quot;</span>
+                               <span class="o">+</span> <span class="n">OPENCL_ERROR</span> <span class="o">+</span> <span class="s2">&quot;***; using C compiler instead&quot;</span><span class="p">)</span>
+        <span class="n">reset_environment</span><span class="p">()</span>
+        <span class="k">if</span> <span class="n">ENV</span> <span class="ow">is</span> <span class="bp">None</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="ne">RuntimeError</span><span class="p">(</span><span class="s2">&quot;SAS_OPENCL=None in environment&quot;</span><span class="p">)</span>
+    <span class="k">return</span> <span class="n">ENV</span></div>
+
+<div class="viewcode-block" id="has_type"><a class="viewcode-back" href="../../dev/sasmodels-api/sasmodels.html#sasmodels.kernelcl.has_type">[docs]</a><span class="k">def</span> <span class="nf">has_type</span><span class="p">(</span><span class="n">device</span><span class="p">,</span> <span class="n">dtype</span><span class="p">):</span>
+    <span class="c1"># type: (cl.Device, np.dtype) -&gt; bool</span>
+    <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Return true if device supports the requested precision.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="k">if</span> <span class="n">dtype</span> <span class="o">==</span> <span class="n">generate</span><span class="o">.</span><span class="n">F32</span><span class="p">:</span>
+        <span class="k">return</span> <span class="bp">True</span>
+    <span class="k">elif</span> <span class="n">dtype</span> <span class="o">==</span> <span class="n">generate</span><span class="o">.</span><span class="n">F64</span><span class="p">:</span>
+        <span class="k">return</span> <span class="s2">&quot;cl_khr_fp64&quot;</span> <span class="ow">in</span> <span class="n">device</span><span class="o">.</span><span class="n">extensions</span>
+    <span class="k">elif</span> <span class="n">dtype</span> <span class="o">==</span> <span class="n">generate</span><span class="o">.</span><span class="n">F16</span><span class="p">:</span>
+        <span class="k">return</span> <span class="s2">&quot;cl_khr_fp16&quot;</span> <span class="ow">in</span> <span class="n">device</span><span class="o">.</span><span class="n">extensions</span>
+    <span class="k">else</span><span class="p">:</span>
+        <span class="k">return</span> <span class="bp">False</span></div>
+
+<div class="viewcode-block" id="get_warp"><a class="viewcode-back" href="../../dev/sasmodels-api/sasmodels.html#sasmodels.kernelcl.get_warp">[docs]</a><span class="k">def</span> <span class="nf">get_warp</span><span class="p">(</span><span class="n">kernel</span><span class="p">,</span> <span class="n">queue</span><span class="p">):</span>
+    <span class="c1"># type: (cl.Kernel, cl.CommandQueue) -&gt; int</span>
+    <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Return the size of an execution batch for *kernel* running on *queue*.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="k">return</span> <span class="n">kernel</span><span class="o">.</span><span class="n">get_work_group_info</span><span class="p">(</span>
+        <span class="n">cl</span><span class="o">.</span><span class="n">kernel_work_group_info</span><span class="o">.</span><span class="n">PREFERRED_WORK_GROUP_SIZE_MULTIPLE</span><span class="p">,</span>
+        <span class="n">queue</span><span class="o">.</span><span class="n">device</span><span class="p">)</span></div>
+
+<span class="k">def</span> <span class="nf">_stretch_input</span><span class="p">(</span><span class="n">vector</span><span class="p">,</span> <span class="n">dtype</span><span class="p">,</span> <span class="n">extra</span><span class="o">=</span><span class="mf">1e-3</span><span class="p">,</span> <span class="n">boundary</span><span class="o">=</span><span class="mi">32</span><span class="p">):</span>
+    <span class="c1"># type: (np.ndarray, np.dtype, float, int) -&gt; np.ndarray</span>
+    <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Stretch an input vector to the correct boundary.</span>
+
+<span class="sd">    Performance on the kernels can drop by a factor of two or more if the</span>
+<span class="sd">    number of values to compute does not fall on a nice power of two</span>
+<span class="sd">    boundary.   The trailing additional vector elements are given a</span>
+<span class="sd">    value of *extra*, and so f(*extra*) will be computed for each of</span>
+<span class="sd">    them.  The returned array will thus be a subset of the computed array.</span>
+
+<span class="sd">    *boundary* should be a power of 2 which is at least 32 for good</span>
+<span class="sd">    performance on current platforms (as of Jan 2015).  It should</span>
+<span class="sd">    probably be the max of get_warp(kernel,queue) and</span>
+<span class="sd">    device.min_data_type_align_size//4.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">remainder</span> <span class="o">=</span> <span class="n">vector</span><span class="o">.</span><span class="n">size</span> <span class="o">%</span> <span class="n">boundary</span>
+    <span class="k">if</span> <span class="n">remainder</span> <span class="o">!=</span> <span class="mi">0</span><span class="p">:</span>
+        <span class="n">size</span> <span class="o">=</span> <span class="n">vector</span><span class="o">.</span><span class="n">size</span> <span class="o">+</span> <span class="p">(</span><span class="n">boundary</span> <span class="o">-</span> <span class="n">remainder</span><span class="p">)</span>
+        <span class="n">vector</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">hstack</span><span class="p">((</span><span class="n">vector</span><span class="p">,</span> <span class="p">[</span><span class="n">extra</span><span class="p">]</span> <span class="o">*</span> <span class="p">(</span><span class="n">size</span> <span class="o">-</span> <span class="n">vector</span><span class="o">.</span><span class="n">size</span><span class="p">)))</span>
+    <span class="k">return</span> <span class="n">np</span><span class="o">.</span><span class="n">ascontiguousarray</span><span class="p">(</span><span class="n">vector</span><span class="p">,</span> <span class="n">dtype</span><span class="o">=</span><span class="n">dtype</span><span class="p">)</span>
+
+
+<div class="viewcode-block" id="compile_model"><a class="viewcode-back" href="../../dev/sasmodels-api/sasmodels.html#sasmodels.kernelcl.compile_model">[docs]</a><span class="k">def</span> <span class="nf">compile_model</span><span class="p">(</span><span class="n">context</span><span class="p">,</span> <span class="n">source</span><span class="p">,</span> <span class="n">dtype</span><span class="p">,</span> <span class="n">fast</span><span class="o">=</span><span class="bp">False</span><span class="p">):</span>
+    <span class="c1"># type: (cl.Context, str, np.dtype, bool) -&gt; cl.Program</span>
+    <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Build a model to run on the gpu.</span>
+
+<span class="sd">    Returns the compiled program and its type.</span>
+
+<span class="sd">    Raises an error if the desired precision is not available.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">dtype</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">dtype</span><span class="p">(</span><span class="n">dtype</span><span class="p">)</span>
+    <span class="k">if</span> <span class="ow">not</span> <span class="nb">all</span><span class="p">(</span><span class="n">has_type</span><span class="p">(</span><span class="n">d</span><span class="p">,</span> <span class="n">dtype</span><span class="p">)</span> <span class="k">for</span> <span class="n">d</span> <span class="ow">in</span> <span class="n">context</span><span class="o">.</span><span class="n">devices</span><span class="p">):</span>
+        <span class="k">raise</span> <span class="ne">RuntimeError</span><span class="p">(</span><span class="s2">&quot;</span><span class="si">%s</span><span class="s2"> not supported for devices&quot;</span><span class="o">%</span><span class="n">dtype</span><span class="p">)</span>
+
+    <span class="n">source_list</span> <span class="o">=</span> <span class="p">[</span><span class="n">generate</span><span class="o">.</span><span class="n">convert_type</span><span class="p">(</span><span class="n">source</span><span class="p">,</span> <span class="n">dtype</span><span class="p">)]</span>
+
+    <span class="k">if</span> <span class="n">dtype</span> <span class="o">==</span> <span class="n">generate</span><span class="o">.</span><span class="n">F16</span><span class="p">:</span>
+        <span class="n">source_list</span><span class="o">.</span><span class="n">insert</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="n">_F16_PRAGMA</span><span class="p">)</span>
+    <span class="k">elif</span> <span class="n">dtype</span> <span class="o">==</span> <span class="n">generate</span><span class="o">.</span><span class="n">F64</span><span class="p">:</span>
+        <span class="n">source_list</span><span class="o">.</span><span class="n">insert</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="n">_F64_PRAGMA</span><span class="p">)</span>
+
+    <span class="c1"># Note: USE_SINCOS makes the intel cpu slower under opencl</span>
+    <span class="k">if</span> <span class="n">context</span><span class="o">.</span><span class="n">devices</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">type</span> <span class="o">==</span> <span class="n">cl</span><span class="o">.</span><span class="n">device_type</span><span class="o">.</span><span class="n">GPU</span><span class="p">:</span>
+        <span class="n">source_list</span><span class="o">.</span><span class="n">insert</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="s2">&quot;#define USE_SINCOS</span><span class="se">\n</span><span class="s2">&quot;</span><span class="p">)</span>
+    <span class="n">options</span> <span class="o">=</span> <span class="p">(</span><span class="n">get_fast_inaccurate_build_options</span><span class="p">(</span><span class="n">context</span><span class="o">.</span><span class="n">devices</span><span class="p">[</span><span class="mi">0</span><span class="p">])</span>
+               <span class="k">if</span> <span class="n">fast</span> <span class="k">else</span> <span class="p">[])</span>
+    <span class="n">source</span> <span class="o">=</span> <span class="s2">&quot;</span><span class="se">\n</span><span class="s2">&quot;</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">source_list</span><span class="p">)</span>
+    <span class="n">program</span> <span class="o">=</span> <span class="n">cl</span><span class="o">.</span><span class="n">Program</span><span class="p">(</span><span class="n">context</span><span class="p">,</span> <span class="n">source</span><span class="p">)</span><span class="o">.</span><span class="n">build</span><span class="p">(</span><span class="n">options</span><span class="o">=</span><span class="n">options</span><span class="p">)</span>
+    <span class="c1">#print(&quot;done with &quot;+program)</span>
+    <span class="k">return</span> <span class="n">program</span></div>
+
+
+<span class="c1"># for now, this returns one device in the context</span>
+<span class="c1"># TODO: create a context that contains all devices on all platforms</span>
+<div class="viewcode-block" id="GpuEnvironment"><a class="viewcode-back" href="../../dev/sasmodels-api/sasmodels.html#sasmodels.kernelcl.GpuEnvironment">[docs]</a><span class="k">class</span> <span class="nc">GpuEnvironment</span><span class="p">(</span><span class="nb">object</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    GPU context, with possibly many devices, and one queue per device.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="c1"># type: () -&gt; None</span>
+        <span class="c1"># find gpu context</span>
+        <span class="c1">#self.context = cl.create_some_context()</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">context</span> <span class="o">=</span> <span class="bp">None</span>
+        <span class="k">if</span> <span class="s1">&#39;SAS_OPENCL&#39;</span> <span class="ow">in</span> <span class="n">os</span><span class="o">.</span><span class="n">environ</span><span class="p">:</span>
+            <span class="c1">#Setting PYOPENCL_CTX as a SAS_OPENCL to create cl context</span>
+            <span class="n">os</span><span class="o">.</span><span class="n">environ</span><span class="p">[</span><span class="s2">&quot;PYOPENCL_CTX&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">os</span><span class="o">.</span><span class="n">environ</span><span class="p">[</span><span class="s2">&quot;SAS_OPENCL&quot;</span><span class="p">]</span>
+        <span class="k">if</span> <span class="s1">&#39;PYOPENCL_CTX&#39;</span> <span class="ow">in</span> <span class="n">os</span><span class="o">.</span><span class="n">environ</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_create_some_context</span><span class="p">()</span>
+
+        <span class="k">if</span> <span class="ow">not</span> <span class="bp">self</span><span class="o">.</span><span class="n">context</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">context</span> <span class="o">=</span> <span class="n">_get_default_context</span><span class="p">()</span>
+
+        <span class="c1"># Byte boundary for data alignment</span>
+        <span class="c1">#self.data_boundary = max(d.min_data_type_align_size</span>
+        <span class="c1">#                         for d in self.context.devices)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">queues</span> <span class="o">=</span> <span class="p">[</span><span class="n">cl</span><span class="o">.</span><span class="n">CommandQueue</span><span class="p">(</span><span class="n">context</span><span class="p">,</span> <span class="n">context</span><span class="o">.</span><span class="n">devices</span><span class="p">[</span><span class="mi">0</span><span class="p">])</span>
+                       <span class="k">for</span> <span class="n">context</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">context</span><span class="p">]</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">compiled</span> <span class="o">=</span> <span class="p">{}</span>
+
+<div class="viewcode-block" id="GpuEnvironment.has_type"><a class="viewcode-back" href="../../dev/sasmodels-api/sasmodels.html#sasmodels.kernelcl.GpuEnvironment.has_type">[docs]</a>    <span class="k">def</span> <span class="nf">has_type</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">dtype</span><span class="p">):</span>
+        <span class="c1"># type: (np.dtype) -&gt; bool</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Return True if all devices support a given type.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">return</span> <span class="nb">any</span><span class="p">(</span><span class="n">has_type</span><span class="p">(</span><span class="n">d</span><span class="p">,</span> <span class="n">dtype</span><span class="p">)</span>
+                   <span class="k">for</span> <span class="n">context</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">context</span>
+                   <span class="k">for</span> <span class="n">d</span> <span class="ow">in</span> <span class="n">context</span><span class="o">.</span><span class="n">devices</span><span class="p">)</span></div>
+
+<div class="viewcode-block" id="GpuEnvironment.get_queue"><a class="viewcode-back" href="../../dev/sasmodels-api/sasmodels.html#sasmodels.kernelcl.GpuEnvironment.get_queue">[docs]</a>    <span class="k">def</span> <span class="nf">get_queue</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">dtype</span><span class="p">):</span>
+        <span class="c1"># type: (np.dtype) -&gt; cl.CommandQueue</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Return a command queue for the kernels of type dtype.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">for</span> <span class="n">context</span><span class="p">,</span> <span class="n">queue</span> <span class="ow">in</span> <span class="nb">zip</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">context</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">queues</span><span class="p">):</span>
+            <span class="k">if</span> <span class="nb">all</span><span class="p">(</span><span class="n">has_type</span><span class="p">(</span><span class="n">d</span><span class="p">,</span> <span class="n">dtype</span><span class="p">)</span> <span class="k">for</span> <span class="n">d</span> <span class="ow">in</span> <span class="n">context</span><span class="o">.</span><span class="n">devices</span><span class="p">):</span>
+                <span class="k">return</span> <span class="n">queue</span></div>
+
+<div class="viewcode-block" id="GpuEnvironment.get_context"><a class="viewcode-back" href="../../dev/sasmodels-api/sasmodels.html#sasmodels.kernelcl.GpuEnvironment.get_context">[docs]</a>    <span class="k">def</span> <span class="nf">get_context</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">dtype</span><span class="p">):</span>
+        <span class="c1"># type: (np.dtype) -&gt; cl.Context</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Return a OpenCL context for the kernels of type dtype.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">for</span> <span class="n">context</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">context</span><span class="p">:</span>
+            <span class="k">if</span> <span class="nb">all</span><span class="p">(</span><span class="n">has_type</span><span class="p">(</span><span class="n">d</span><span class="p">,</span> <span class="n">dtype</span><span class="p">)</span> <span class="k">for</span> <span class="n">d</span> <span class="ow">in</span> <span class="n">context</span><span class="o">.</span><span class="n">devices</span><span class="p">):</span>
+                <span class="k">return</span> <span class="n">context</span></div>
+
+    <span class="k">def</span> <span class="nf">_create_some_context</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="c1"># type: () -&gt; cl.Context</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Protected call to cl.create_some_context without interactivity.  Use</span>
+<span class="sd">        this if SAS_OPENCL is set in the environment.  Sets the *context*</span>
+<span class="sd">        attribute.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">try</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">context</span> <span class="o">=</span> <span class="p">[</span><span class="n">cl</span><span class="o">.</span><span class="n">create_some_context</span><span class="p">(</span><span class="n">interactive</span><span class="o">=</span><span class="bp">False</span><span class="p">)]</span>
+        <span class="k">except</span> <span class="ne">Exception</span> <span class="k">as</span> <span class="n">exc</span><span class="p">:</span>
+            <span class="n">warnings</span><span class="o">.</span><span class="n">warn</span><span class="p">(</span><span class="nb">str</span><span class="p">(</span><span class="n">exc</span><span class="p">))</span>
+            <span class="n">warnings</span><span class="o">.</span><span class="n">warn</span><span class="p">(</span><span class="s2">&quot;pyopencl.create_some_context() failed&quot;</span><span class="p">)</span>
+            <span class="n">warnings</span><span class="o">.</span><span class="n">warn</span><span class="p">(</span><span class="s2">&quot;the environment variable &#39;SAS_OPENCL&#39; might not be set correctly&quot;</span><span class="p">)</span>
+
+<div class="viewcode-block" id="GpuEnvironment.compile_program"><a class="viewcode-back" href="../../dev/sasmodels-api/sasmodels.html#sasmodels.kernelcl.GpuEnvironment.compile_program">[docs]</a>    <span class="k">def</span> <span class="nf">compile_program</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">name</span><span class="p">,</span> <span class="n">source</span><span class="p">,</span> <span class="n">dtype</span><span class="p">,</span> <span class="n">fast</span><span class="p">,</span> <span class="n">timestamp</span><span class="p">):</span>
+        <span class="c1"># type: (str, str, np.dtype, bool, float) -&gt; cl.Program</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Compile the program for the device in the given context.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="c1"># Note: PyOpenCL caches based on md5 hash of source, options and device</span>
+        <span class="c1"># so we don&#39;t really need to cache things for ourselves.  I&#39;ll do so</span>
+        <span class="c1"># anyway just to save some data munging time.</span>
+        <span class="n">tag</span> <span class="o">=</span> <span class="n">generate</span><span class="o">.</span><span class="n">tag_source</span><span class="p">(</span><span class="n">source</span><span class="p">)</span>
+        <span class="n">key</span> <span class="o">=</span> <span class="s2">&quot;</span><span class="si">%s</span><span class="s2">-</span><span class="si">%s</span><span class="s2">-</span><span class="si">%s%s</span><span class="s2">&quot;</span><span class="o">%</span><span class="p">(</span><span class="n">name</span><span class="p">,</span> <span class="n">dtype</span><span class="p">,</span> <span class="n">tag</span><span class="p">,</span> <span class="p">(</span><span class="s2">&quot;-fast&quot;</span> <span class="k">if</span> <span class="n">fast</span> <span class="k">else</span> <span class="s2">&quot;&quot;</span><span class="p">))</span>
+        <span class="c1"># Check timestamp on program</span>
+        <span class="n">program</span><span class="p">,</span> <span class="n">program_timestamp</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">compiled</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="n">key</span><span class="p">,</span> <span class="p">(</span><span class="bp">None</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">inf</span><span class="p">))</span>
+        <span class="k">if</span> <span class="n">program_timestamp</span> <span class="o">&lt;</span> <span class="n">timestamp</span><span class="p">:</span>
+            <span class="k">del</span> <span class="bp">self</span><span class="o">.</span><span class="n">compiled</span><span class="p">[</span><span class="n">key</span><span class="p">]</span>
+        <span class="k">if</span> <span class="n">key</span> <span class="ow">not</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">compiled</span><span class="p">:</span>
+            <span class="n">context</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">get_context</span><span class="p">(</span><span class="n">dtype</span><span class="p">)</span>
+            <span class="n">logging</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="s2">&quot;building </span><span class="si">%s</span><span class="s2"> for OpenCL </span><span class="si">%s</span><span class="s2">&quot;</span><span class="p">,</span> <span class="n">key</span><span class="p">,</span>
+                         <span class="n">context</span><span class="o">.</span><span class="n">devices</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">name</span><span class="o">.</span><span class="n">strip</span><span class="p">())</span>
+            <span class="n">program</span> <span class="o">=</span> <span class="n">compile_model</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">get_context</span><span class="p">(</span><span class="n">dtype</span><span class="p">),</span>
+                                    <span class="nb">str</span><span class="p">(</span><span class="n">source</span><span class="p">),</span> <span class="n">dtype</span><span class="p">,</span> <span class="n">fast</span><span class="p">)</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">compiled</span><span class="p">[</span><span class="n">key</span><span class="p">]</span> <span class="o">=</span> <span class="p">(</span><span class="n">program</span><span class="p">,</span> <span class="n">timestamp</span><span class="p">)</span>
+        <span class="k">return</span> <span class="n">program</span></div></div>
+
+<span class="k">def</span> <span class="nf">_get_default_context</span><span class="p">():</span>
+    <span class="c1"># type: () -&gt; List[cl.Context]</span>
+    <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Get an OpenCL context, preferring GPU over CPU, and preferring Intel</span>
+<span class="sd">    drivers over AMD drivers.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="c1"># Note: on mobile devices there is automatic clock scaling if either the</span>
+    <span class="c1"># CPU or the GPU is underutilized; probably doesn&#39;t affect us, but we if</span>
+    <span class="c1"># it did, it would mean that putting a busy loop on the CPU while the GPU</span>
+    <span class="c1"># is running may increase throughput.</span>
+    <span class="c1">#</span>
+    <span class="c1"># Macbook pro, base install:</span>
+    <span class="c1">#     {&#39;Apple&#39;: [Intel CPU, NVIDIA GPU]}</span>
+    <span class="c1"># Macbook pro, base install:</span>
+    <span class="c1">#     {&#39;Apple&#39;: [Intel CPU, Intel GPU]}</span>
+    <span class="c1"># 2 x nvidia 295 with Intel and NVIDIA opencl drivers installed</span>
+    <span class="c1">#     {&#39;Intel&#39;: [CPU], &#39;NVIDIA&#39;: [GPU, GPU, GPU, GPU]}</span>
+    <span class="n">gpu</span><span class="p">,</span> <span class="n">cpu</span> <span class="o">=</span> <span class="bp">None</span><span class="p">,</span> <span class="bp">None</span>
+    <span class="k">for</span> <span class="n">platform</span> <span class="ow">in</span> <span class="n">cl</span><span class="o">.</span><span class="n">get_platforms</span><span class="p">():</span>
+        <span class="c1"># AMD provides a much weaker CPU driver than Intel/Apple, so avoid it.</span>
+        <span class="c1"># If someone has bothered to install the AMD/NVIDIA drivers, prefer</span>
+        <span class="c1"># them over the integrated graphics driver that may have been supplied</span>
+        <span class="c1"># with the CPU chipset.</span>
+        <span class="n">preferred_cpu</span> <span class="o">=</span> <span class="p">(</span><span class="n">platform</span><span class="o">.</span><span class="n">vendor</span><span class="o">.</span><span class="n">startswith</span><span class="p">(</span><span class="s1">&#39;Intel&#39;</span><span class="p">)</span>
+                         <span class="ow">or</span> <span class="n">platform</span><span class="o">.</span><span class="n">vendor</span><span class="o">.</span><span class="n">startswith</span><span class="p">(</span><span class="s1">&#39;Apple&#39;</span><span class="p">))</span>
+        <span class="n">preferred_gpu</span> <span class="o">=</span> <span class="p">(</span><span class="n">platform</span><span class="o">.</span><span class="n">vendor</span><span class="o">.</span><span class="n">startswith</span><span class="p">(</span><span class="s1">&#39;Advanced&#39;</span><span class="p">)</span>
+                         <span class="ow">or</span> <span class="n">platform</span><span class="o">.</span><span class="n">vendor</span><span class="o">.</span><span class="n">startswith</span><span class="p">(</span><span class="s1">&#39;NVIDIA&#39;</span><span class="p">))</span>
+        <span class="k">for</span> <span class="n">device</span> <span class="ow">in</span> <span class="n">platform</span><span class="o">.</span><span class="n">get_devices</span><span class="p">():</span>
+            <span class="k">if</span> <span class="n">device</span><span class="o">.</span><span class="n">type</span> <span class="o">==</span> <span class="n">cl</span><span class="o">.</span><span class="n">device_type</span><span class="o">.</span><span class="n">GPU</span><span class="p">:</span>
+                <span class="c1"># If the existing type is not GPU then it will be CUSTOM</span>
+                <span class="c1"># or ACCELERATOR so don&#39;t override it.</span>
+                <span class="k">if</span> <span class="n">gpu</span> <span class="ow">is</span> <span class="bp">None</span> <span class="ow">or</span> <span class="p">(</span><span class="n">preferred_gpu</span> <span class="ow">and</span> <span class="n">gpu</span><span class="o">.</span><span class="n">type</span> <span class="o">==</span> <span class="n">cl</span><span class="o">.</span><span class="n">device_type</span><span class="o">.</span><span class="n">GPU</span><span class="p">):</span>
+                    <span class="n">gpu</span> <span class="o">=</span> <span class="n">device</span>
+            <span class="k">elif</span> <span class="n">device</span><span class="o">.</span><span class="n">type</span> <span class="o">==</span> <span class="n">cl</span><span class="o">.</span><span class="n">device_type</span><span class="o">.</span><span class="n">CPU</span><span class="p">:</span>
+                <span class="k">if</span> <span class="n">cpu</span> <span class="ow">is</span> <span class="bp">None</span> <span class="ow">or</span> <span class="n">preferred_cpu</span><span class="p">:</span>
+                    <span class="n">cpu</span> <span class="o">=</span> <span class="n">device</span>
+            <span class="k">else</span><span class="p">:</span>
+                <span class="c1"># System has cl.device_type.ACCELERATOR or cl.device_type.CUSTOM</span>
+                <span class="c1"># Intel Phi for example registers as an accelerator</span>
+                <span class="c1"># Since the user installed a custom device on their system</span>
+                <span class="c1"># and went through the pain of sorting out OpenCL drivers for</span>
+                <span class="c1"># it, lets assume they really do want to use it as their</span>
+                <span class="c1"># primary compute device.</span>
+                <span class="n">gpu</span> <span class="o">=</span> <span class="n">device</span>
+
+    <span class="c1"># order the devices by gpu then by cpu; when searching for an available</span>
+    <span class="c1"># device by data type they will be checked in this order, which means</span>
+    <span class="c1"># that if the gpu supports double then the cpu will never be used (though</span>
+    <span class="c1"># we may make it possible to explicitly request the cpu at some point).</span>
+    <span class="n">devices</span> <span class="o">=</span> <span class="p">[]</span>
+    <span class="k">if</span> <span class="n">gpu</span> <span class="ow">is</span> <span class="ow">not</span> <span class="bp">None</span><span class="p">:</span>
+        <span class="n">devices</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">gpu</span><span class="p">)</span>
+    <span class="k">if</span> <span class="n">cpu</span> <span class="ow">is</span> <span class="ow">not</span> <span class="bp">None</span><span class="p">:</span>
+        <span class="n">devices</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">cpu</span><span class="p">)</span>
+    <span class="k">return</span> <span class="p">[</span><span class="n">cl</span><span class="o">.</span><span class="n">Context</span><span class="p">([</span><span class="n">d</span><span class="p">])</span> <span class="k">for</span> <span class="n">d</span> <span class="ow">in</span> <span class="n">devices</span><span class="p">]</span>
+
+
+<div class="viewcode-block" id="GpuModel"><a class="viewcode-back" href="../../dev/sasmodels-api/sasmodels.html#sasmodels.kernelcl.GpuModel">[docs]</a><span class="k">class</span> <span class="nc">GpuModel</span><span class="p">(</span><span class="n">KernelModel</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    GPU wrapper for a single model.</span>
+
+<span class="sd">    *source* and *model_info* are the model source and interface as returned</span>
+<span class="sd">    from :func:`generate.make_source` and :func:`generate.make_model_info`.</span>
+
+<span class="sd">    *dtype* is the desired model precision.  Any numpy dtype for single</span>
+<span class="sd">    or double precision floats will do, such as &#39;f&#39;, &#39;float32&#39; or &#39;single&#39;</span>
+<span class="sd">    for single and &#39;d&#39;, &#39;float64&#39; or &#39;double&#39; for double.  Double precision</span>
+<span class="sd">    is an optional extension which may not be available on all devices.</span>
+<span class="sd">    Half precision (&#39;float16&#39;,&#39;half&#39;) may be available on some devices.</span>
+<span class="sd">    Fast precision (&#39;fast&#39;) is a loose version of single precision, indicating</span>
+<span class="sd">    that the compiler is allowed to take shortcuts.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">source</span><span class="p">,</span> <span class="n">model_info</span><span class="p">,</span> <span class="n">dtype</span><span class="o">=</span><span class="n">generate</span><span class="o">.</span><span class="n">F32</span><span class="p">,</span> <span class="n">fast</span><span class="o">=</span><span class="bp">False</span><span class="p">):</span>
+        <span class="c1"># type: (Dict[str,str], ModelInfo, np.dtype, bool) -&gt; None</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">info</span> <span class="o">=</span> <span class="n">model_info</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">source</span> <span class="o">=</span> <span class="n">source</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">dtype</span> <span class="o">=</span> <span class="n">dtype</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">fast</span> <span class="o">=</span> <span class="n">fast</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">program</span> <span class="o">=</span> <span class="bp">None</span> <span class="c1"># delay program creation</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_kernels</span> <span class="o">=</span> <span class="bp">None</span>
+
+    <span class="k">def</span> <span class="nf">__getstate__</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="c1"># type: () -&gt; Tuple[ModelInfo, str, np.dtype, bool]</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">info</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">source</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">dtype</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">fast</span>
+
+    <span class="k">def</span> <span class="nf">__setstate__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">state</span><span class="p">):</span>
+        <span class="c1"># type: (Tuple[ModelInfo, str, np.dtype, bool]) -&gt; None</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">info</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">source</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">dtype</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">fast</span> <span class="o">=</span> <span class="n">state</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">program</span> <span class="o">=</span> <span class="bp">None</span>
+
+<div class="viewcode-block" id="GpuModel.make_kernel"><a class="viewcode-back" href="../../dev/sasmodels-api/sasmodels.html#sasmodels.kernelcl.GpuModel.make_kernel">[docs]</a>    <span class="k">def</span> <span class="nf">make_kernel</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">q_vectors</span><span class="p">):</span>
+        <span class="c1"># type: (List[np.ndarray]) -&gt; &quot;GpuKernel&quot;</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">program</span> <span class="ow">is</span> <span class="bp">None</span><span class="p">:</span>
+            <span class="n">compile_program</span> <span class="o">=</span> <span class="n">environment</span><span class="p">()</span><span class="o">.</span><span class="n">compile_program</span>
+            <span class="n">timestamp</span> <span class="o">=</span> <span class="n">generate</span><span class="o">.</span><span class="n">ocl_timestamp</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">info</span><span class="p">)</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">program</span> <span class="o">=</span> <span class="n">compile_program</span><span class="p">(</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">info</span><span class="o">.</span><span class="n">name</span><span class="p">,</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">source</span><span class="p">[</span><span class="s1">&#39;opencl&#39;</span><span class="p">],</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">dtype</span><span class="p">,</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">fast</span><span class="p">,</span>
+                <span class="n">timestamp</span><span class="p">)</span>
+            <span class="n">variants</span> <span class="o">=</span> <span class="p">[</span><span class="s1">&#39;Iq&#39;</span><span class="p">,</span> <span class="s1">&#39;Iqxy&#39;</span><span class="p">,</span> <span class="s1">&#39;Imagnetic&#39;</span><span class="p">]</span>
+            <span class="n">names</span> <span class="o">=</span> <span class="p">[</span><span class="n">generate</span><span class="o">.</span><span class="n">kernel_name</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">info</span><span class="p">,</span> <span class="n">k</span><span class="p">)</span> <span class="k">for</span> <span class="n">k</span> <span class="ow">in</span> <span class="n">variants</span><span class="p">]</span>
+            <span class="n">kernels</span> <span class="o">=</span> <span class="p">[</span><span class="nb">getattr</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">program</span><span class="p">,</span> <span class="n">k</span><span class="p">)</span> <span class="k">for</span> <span class="n">k</span> <span class="ow">in</span> <span class="n">names</span><span class="p">]</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_kernels</span> <span class="o">=</span> <span class="nb">dict</span><span class="p">((</span><span class="n">k</span><span class="p">,</span> <span class="n">v</span><span class="p">)</span> <span class="k">for</span> <span class="n">k</span><span class="p">,</span> <span class="n">v</span> <span class="ow">in</span> <span class="nb">zip</span><span class="p">(</span><span class="n">variants</span><span class="p">,</span> <span class="n">kernels</span><span class="p">))</span>
+        <span class="n">is_2d</span> <span class="o">=</span> <span class="nb">len</span><span class="p">(</span><span class="n">q_vectors</span><span class="p">)</span> <span class="o">==</span> <span class="mi">2</span>
+        <span class="k">if</span> <span class="n">is_2d</span><span class="p">:</span>
+            <span class="n">kernel</span> <span class="o">=</span> <span class="p">[</span><span class="bp">self</span><span class="o">.</span><span class="n">_kernels</span><span class="p">[</span><span class="s1">&#39;Iqxy&#39;</span><span class="p">],</span> <span class="bp">self</span><span class="o">.</span><span class="n">_kernels</span><span class="p">[</span><span class="s1">&#39;Imagnetic&#39;</span><span class="p">]]</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">kernel</span> <span class="o">=</span> <span class="p">[</span><span class="bp">self</span><span class="o">.</span><span class="n">_kernels</span><span class="p">[</span><span class="s1">&#39;Iq&#39;</span><span class="p">]]</span><span class="o">*</span><span class="mi">2</span>
+        <span class="k">return</span> <span class="n">GpuKernel</span><span class="p">(</span><span class="n">kernel</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">dtype</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">info</span><span class="p">,</span> <span class="n">q_vectors</span><span class="p">)</span></div>
+
+<div class="viewcode-block" id="GpuModel.release"><a class="viewcode-back" href="../../dev/sasmodels-api/sasmodels.html#sasmodels.kernelcl.GpuModel.release">[docs]</a>    <span class="k">def</span> <span class="nf">release</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="c1"># type: () -&gt; None</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Free the resources associated with the model.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">program</span> <span class="ow">is</span> <span class="ow">not</span> <span class="bp">None</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">program</span> <span class="o">=</span> <span class="bp">None</span></div>
+
+    <span class="k">def</span> <span class="nf">__del__</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="c1"># type: () -&gt; None</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">release</span><span class="p">()</span></div>
+
+<span class="c1"># TODO: check that we don&#39;t need a destructor for buffers which go out of scope</span>
+<div class="viewcode-block" id="GpuInput"><a class="viewcode-back" href="../../dev/sasmodels-api/sasmodels.html#sasmodels.kernelcl.GpuInput">[docs]</a><span class="k">class</span> <span class="nc">GpuInput</span><span class="p">(</span><span class="nb">object</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Make q data available to the gpu.</span>
+
+<span class="sd">    *q_vectors* is a list of q vectors, which will be *[q]* for 1-D data,</span>
+<span class="sd">    and *[qx, qy]* for 2-D data.  Internally, the vectors will be reallocated</span>
+<span class="sd">    to get the best performance on OpenCL, which may involve shifting and</span>
+<span class="sd">    stretching the array to better match the memory architecture.  Additional</span>
+<span class="sd">    points will be evaluated with *q=1e-3*.</span>
+
+<span class="sd">    *dtype* is the data type for the q vectors. The data type should be</span>
+<span class="sd">    set to match that of the kernel, which is an attribute of</span>
+<span class="sd">    :class:`GpuProgram`.  Note that not all kernels support double</span>
+<span class="sd">    precision, so even if the program was created for double precision,</span>
+<span class="sd">    the *GpuProgram.dtype* may be single precision.</span>
+
+<span class="sd">    Call :meth:`release` when complete.  Even if not called directly, the</span>
+<span class="sd">    buffer will be released when the data object is freed.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">q_vectors</span><span class="p">,</span> <span class="n">dtype</span><span class="o">=</span><span class="n">generate</span><span class="o">.</span><span class="n">F32</span><span class="p">):</span>
+        <span class="c1"># type: (List[np.ndarray], np.dtype) -&gt; None</span>
+        <span class="c1"># TODO: do we ever need double precision q?</span>
+        <span class="n">env</span> <span class="o">=</span> <span class="n">environment</span><span class="p">()</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">nq</span> <span class="o">=</span> <span class="n">q_vectors</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">size</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">dtype</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">dtype</span><span class="p">(</span><span class="n">dtype</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">is_2d</span> <span class="o">=</span> <span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">q_vectors</span><span class="p">)</span> <span class="o">==</span> <span class="mi">2</span><span class="p">)</span>
+        <span class="c1"># TODO: stretch input based on get_warp()</span>
+        <span class="c1"># not doing it now since warp depends on kernel, which is not known</span>
+        <span class="c1"># at this point, so instead using 32, which is good on the set of</span>
+        <span class="c1"># architectures tested so far.</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">is_2d</span><span class="p">:</span>
+            <span class="c1"># Note: 16 rather than 15 because result is 1 longer than input.</span>
+            <span class="n">width</span> <span class="o">=</span> <span class="p">((</span><span class="bp">self</span><span class="o">.</span><span class="n">nq</span><span class="o">+</span><span class="mi">16</span><span class="p">)</span><span class="o">//</span><span class="mi">16</span><span class="p">)</span><span class="o">*</span><span class="mi">16</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">q</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">empty</span><span class="p">((</span><span class="n">width</span><span class="p">,</span> <span class="mi">2</span><span class="p">),</span> <span class="n">dtype</span><span class="o">=</span><span class="n">dtype</span><span class="p">)</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">q</span><span class="p">[:</span><span class="bp">self</span><span class="o">.</span><span class="n">nq</span><span class="p">,</span> <span class="mi">0</span><span class="p">]</span> <span class="o">=</span> <span class="n">q_vectors</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">q</span><span class="p">[:</span><span class="bp">self</span><span class="o">.</span><span class="n">nq</span><span class="p">,</span> <span class="mi">1</span><span class="p">]</span> <span class="o">=</span> <span class="n">q_vectors</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="c1"># Note: 32 rather than 31 because result is 1 longer than input.</span>
+            <span class="n">width</span> <span class="o">=</span> <span class="p">((</span><span class="bp">self</span><span class="o">.</span><span class="n">nq</span><span class="o">+</span><span class="mi">32</span><span class="p">)</span><span class="o">//</span><span class="mi">32</span><span class="p">)</span><span class="o">*</span><span class="mi">32</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">q</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">empty</span><span class="p">(</span><span class="n">width</span><span class="p">,</span> <span class="n">dtype</span><span class="o">=</span><span class="n">dtype</span><span class="p">)</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">q</span><span class="p">[:</span><span class="bp">self</span><span class="o">.</span><span class="n">nq</span><span class="p">]</span> <span class="o">=</span> <span class="n">q_vectors</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">global_size</span> <span class="o">=</span> <span class="p">[</span><span class="bp">self</span><span class="o">.</span><span class="n">q</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">0</span><span class="p">]]</span>
+        <span class="n">context</span> <span class="o">=</span> <span class="n">env</span><span class="o">.</span><span class="n">get_context</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">dtype</span><span class="p">)</span>
+        <span class="c1">#print(&quot;creating inputs of size&quot;, self.global_size)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">q_b</span> <span class="o">=</span> <span class="n">cl</span><span class="o">.</span><span class="n">Buffer</span><span class="p">(</span><span class="n">context</span><span class="p">,</span> <span class="n">mf</span><span class="o">.</span><span class="n">READ_ONLY</span> <span class="o">|</span> <span class="n">mf</span><span class="o">.</span><span class="n">COPY_HOST_PTR</span><span class="p">,</span>
+                             <span class="n">hostbuf</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">q</span><span class="p">)</span>
+
+<div class="viewcode-block" id="GpuInput.release"><a class="viewcode-back" href="../../dev/sasmodels-api/sasmodels.html#sasmodels.kernelcl.GpuInput.release">[docs]</a>    <span class="k">def</span> <span class="nf">release</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="c1"># type: () -&gt; None</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Free the memory.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">q_b</span> <span class="ow">is</span> <span class="ow">not</span> <span class="bp">None</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">q_b</span><span class="o">.</span><span class="n">release</span><span class="p">()</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">q_b</span> <span class="o">=</span> <span class="bp">None</span></div>
+
+    <span class="k">def</span> <span class="nf">__del__</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="c1"># type: () -&gt; None</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">release</span><span class="p">()</span></div>
+
+<div class="viewcode-block" id="GpuKernel"><a class="viewcode-back" href="../../dev/sasmodels-api/sasmodels.html#sasmodels.kernelcl.GpuKernel">[docs]</a><span class="k">class</span> <span class="nc">GpuKernel</span><span class="p">(</span><span class="n">Kernel</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Callable SAS kernel.</span>
+
+<span class="sd">    *kernel* is the GpuKernel object to call</span>
+
+<span class="sd">    *model_info* is the module information</span>
+
+<span class="sd">    *q_vectors* is the q vectors at which the kernel should be evaluated</span>
+
+<span class="sd">    *dtype* is the kernel precision</span>
+
+<span class="sd">    The resulting call method takes the *pars*, a list of values for</span>
+<span class="sd">    the fixed parameters to the kernel, and *pd_pars*, a list of (value,weight)</span>
+<span class="sd">    vectors for the polydisperse parameters.  *cutoff* determines the</span>
+<span class="sd">    integration limits: any points with combined weight less than *cutoff*</span>
+<span class="sd">    will not be calculated.</span>
+
+<span class="sd">    Call :meth:`release` when done with the kernel instance.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">kernel</span><span class="p">,</span> <span class="n">dtype</span><span class="p">,</span> <span class="n">model_info</span><span class="p">,</span> <span class="n">q_vectors</span><span class="p">):</span>
+        <span class="c1"># type: (cl.Kernel, np.dtype, ModelInfo, List[np.ndarray]) -&gt; None</span>
+        <span class="n">q_input</span> <span class="o">=</span> <span class="n">GpuInput</span><span class="p">(</span><span class="n">q_vectors</span><span class="p">,</span> <span class="n">dtype</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">kernel</span> <span class="o">=</span> <span class="n">kernel</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">info</span> <span class="o">=</span> <span class="n">model_info</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">dtype</span> <span class="o">=</span> <span class="n">dtype</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">dim</span> <span class="o">=</span> <span class="s1">&#39;2d&#39;</span> <span class="k">if</span> <span class="n">q_input</span><span class="o">.</span><span class="n">is_2d</span> <span class="k">else</span> <span class="s1">&#39;1d&#39;</span>
+        <span class="c1"># plus three for the normalization values</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">result</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">empty</span><span class="p">(</span><span class="n">q_input</span><span class="o">.</span><span class="n">nq</span><span class="o">+</span><span class="mi">1</span><span class="p">,</span> <span class="n">dtype</span><span class="p">)</span>
+
+        <span class="c1"># Inputs and outputs for each kernel call</span>
+        <span class="c1"># Note: res may be shorter than res_b if global_size != nq</span>
+        <span class="n">env</span> <span class="o">=</span> <span class="n">environment</span><span class="p">()</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">queue</span> <span class="o">=</span> <span class="n">env</span><span class="o">.</span><span class="n">get_queue</span><span class="p">(</span><span class="n">dtype</span><span class="p">)</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">result_b</span> <span class="o">=</span> <span class="n">cl</span><span class="o">.</span><span class="n">Buffer</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">queue</span><span class="o">.</span><span class="n">context</span><span class="p">,</span> <span class="n">mf</span><span class="o">.</span><span class="n">READ_WRITE</span><span class="p">,</span>
+                                  <span class="n">q_input</span><span class="o">.</span><span class="n">global_size</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="o">*</span> <span class="n">dtype</span><span class="o">.</span><span class="n">itemsize</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">q_input</span> <span class="o">=</span> <span class="n">q_input</span> <span class="c1"># allocated by GpuInput above</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">_need_release</span> <span class="o">=</span> <span class="p">[</span><span class="bp">self</span><span class="o">.</span><span class="n">result_b</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">q_input</span><span class="p">]</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">real</span> <span class="o">=</span> <span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">float32</span> <span class="k">if</span> <span class="n">dtype</span> <span class="o">==</span> <span class="n">generate</span><span class="o">.</span><span class="n">F32</span>
+                     <span class="k">else</span> <span class="n">np</span><span class="o">.</span><span class="n">float64</span> <span class="k">if</span> <span class="n">dtype</span> <span class="o">==</span> <span class="n">generate</span><span class="o">.</span><span class="n">F64</span>
+                     <span class="k">else</span> <span class="n">np</span><span class="o">.</span><span class="n">float16</span> <span class="k">if</span> <span class="n">dtype</span> <span class="o">==</span> <span class="n">generate</span><span class="o">.</span><span class="n">F16</span>
+                     <span class="k">else</span> <span class="n">np</span><span class="o">.</span><span class="n">float32</span><span class="p">)</span>  <span class="c1"># will never get here, so use np.float32</span>
+
+    <span class="k">def</span> <span class="nf">__call__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">call_details</span><span class="p">,</span> <span class="n">values</span><span class="p">,</span> <span class="n">cutoff</span><span class="p">,</span> <span class="n">magnetic</span><span class="p">):</span>
+        <span class="c1"># type: (CallDetails, np.ndarray, np.ndarray, float, bool) -&gt; np.ndarray</span>
+        <span class="n">context</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">queue</span><span class="o">.</span><span class="n">context</span>
+        <span class="c1"># Arrange data transfer to card</span>
+        <span class="n">details_b</span> <span class="o">=</span> <span class="n">cl</span><span class="o">.</span><span class="n">Buffer</span><span class="p">(</span><span class="n">context</span><span class="p">,</span> <span class="n">mf</span><span class="o">.</span><span class="n">READ_ONLY</span> <span class="o">|</span> <span class="n">mf</span><span class="o">.</span><span class="n">COPY_HOST_PTR</span><span class="p">,</span>
+                              <span class="n">hostbuf</span><span class="o">=</span><span class="n">call_details</span><span class="o">.</span><span class="n">buffer</span><span class="p">)</span>
+        <span class="n">values_b</span> <span class="o">=</span> <span class="n">cl</span><span class="o">.</span><span class="n">Buffer</span><span class="p">(</span><span class="n">context</span><span class="p">,</span> <span class="n">mf</span><span class="o">.</span><span class="n">READ_ONLY</span> <span class="o">|</span> <span class="n">mf</span><span class="o">.</span><span class="n">COPY_HOST_PTR</span><span class="p">,</span>
+                             <span class="n">hostbuf</span><span class="o">=</span><span class="n">values</span><span class="p">)</span>
+
+        <span class="n">kernel</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">kernel</span><span class="p">[</span><span class="mi">1</span> <span class="k">if</span> <span class="n">magnetic</span> <span class="k">else</span> <span class="mi">0</span><span class="p">]</span>
+        <span class="n">args</span> <span class="o">=</span> <span class="p">[</span>
+            <span class="n">np</span><span class="o">.</span><span class="n">uint32</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">q_input</span><span class="o">.</span><span class="n">nq</span><span class="p">),</span> <span class="bp">None</span><span class="p">,</span> <span class="bp">None</span><span class="p">,</span>
+            <span class="n">details_b</span><span class="p">,</span> <span class="n">values_b</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">q_input</span><span class="o">.</span><span class="n">q_b</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">result_b</span><span class="p">,</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">real</span><span class="p">(</span><span class="n">cutoff</span><span class="p">),</span>
+        <span class="p">]</span>
+        <span class="c1">#print(&quot;Calling OpenCL&quot;)</span>
+        <span class="c1">#call_details.show(values)</span>
+        <span class="c1"># Call kernel and retrieve results</span>
+        <span class="n">wait_for</span> <span class="o">=</span> <span class="bp">None</span>
+        <span class="n">last_nap</span> <span class="o">=</span> <span class="n">time</span><span class="o">.</span><span class="n">clock</span><span class="p">()</span>
+        <span class="n">step</span> <span class="o">=</span> <span class="mi">1000000</span><span class="o">//</span><span class="bp">self</span><span class="o">.</span><span class="n">q_input</span><span class="o">.</span><span class="n">nq</span> <span class="o">+</span> <span class="mi">1</span>
+        <span class="k">for</span> <span class="n">start</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="n">call_details</span><span class="o">.</span><span class="n">num_eval</span><span class="p">,</span> <span class="n">step</span><span class="p">):</span>
+            <span class="n">stop</span> <span class="o">=</span> <span class="nb">min</span><span class="p">(</span><span class="n">start</span> <span class="o">+</span> <span class="n">step</span><span class="p">,</span> <span class="n">call_details</span><span class="o">.</span><span class="n">num_eval</span><span class="p">)</span>
+            <span class="c1">#print(&quot;queuing&quot;,start,stop)</span>
+            <span class="n">args</span><span class="p">[</span><span class="mi">1</span><span class="p">:</span><span class="mi">3</span><span class="p">]</span> <span class="o">=</span> <span class="p">[</span><span class="n">np</span><span class="o">.</span><span class="n">int32</span><span class="p">(</span><span class="n">start</span><span class="p">),</span> <span class="n">np</span><span class="o">.</span><span class="n">int32</span><span class="p">(</span><span class="n">stop</span><span class="p">)]</span>
+            <span class="n">wait_for</span> <span class="o">=</span> <span class="p">[</span><span class="n">kernel</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">queue</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">q_input</span><span class="o">.</span><span class="n">global_size</span><span class="p">,</span> <span class="bp">None</span><span class="p">,</span>
+                               <span class="o">*</span><span class="n">args</span><span class="p">,</span> <span class="n">wait_for</span><span class="o">=</span><span class="n">wait_for</span><span class="p">)]</span>
+            <span class="k">if</span> <span class="n">stop</span> <span class="o">&lt;</span> <span class="n">call_details</span><span class="o">.</span><span class="n">num_eval</span><span class="p">:</span>
+                <span class="c1"># Allow other processes to run</span>
+                <span class="n">wait_for</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">wait</span><span class="p">()</span>
+                <span class="n">current_time</span> <span class="o">=</span> <span class="n">time</span><span class="o">.</span><span class="n">clock</span><span class="p">()</span>
+                <span class="k">if</span> <span class="n">current_time</span> <span class="o">-</span> <span class="n">last_nap</span> <span class="o">&gt;</span> <span class="mf">0.5</span><span class="p">:</span>
+                    <span class="n">time</span><span class="o">.</span><span class="n">sleep</span><span class="p">(</span><span class="mf">0.05</span><span class="p">)</span>
+                    <span class="n">last_nap</span> <span class="o">=</span> <span class="n">current_time</span>
+        <span class="n">cl</span><span class="o">.</span><span class="n">enqueue_copy</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">queue</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">result</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">result_b</span><span class="p">)</span>
+        <span class="c1">#print(&quot;result&quot;, self.result)</span>
+
+        <span class="c1"># Free buffers</span>
+        <span class="k">for</span> <span class="n">v</span> <span class="ow">in</span> <span class="p">(</span><span class="n">details_b</span><span class="p">,</span> <span class="n">values_b</span><span class="p">):</span>
+            <span class="k">if</span> <span class="n">v</span> <span class="ow">is</span> <span class="ow">not</span> <span class="bp">None</span><span class="p">:</span>
+                <span class="n">v</span><span class="o">.</span><span class="n">release</span><span class="p">()</span>
+
+        <span class="n">pd_norm</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">result</span><span class="p">[</span><span class="bp">self</span><span class="o">.</span><span class="n">q_input</span><span class="o">.</span><span class="n">nq</span><span class="p">]</span>
+        <span class="n">scale</span> <span class="o">=</span> <span class="n">values</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="o">/</span><span class="p">(</span><span class="n">pd_norm</span> <span class="k">if</span> <span class="n">pd_norm</span> <span class="o">!=</span> <span class="mf">0.0</span> <span class="k">else</span> <span class="mf">1.0</span><span class="p">)</span>
+        <span class="n">background</span> <span class="o">=</span> <span class="n">values</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span>
+        <span class="c1">#print(&quot;scale&quot;,scale,values[0],self.result[self.q_input.nq],background)</span>
+        <span class="k">return</span> <span class="n">scale</span><span class="o">*</span><span class="bp">self</span><span class="o">.</span><span class="n">result</span><span class="p">[:</span><span class="bp">self</span><span class="o">.</span><span class="n">q_input</span><span class="o">.</span><span class="n">nq</span><span class="p">]</span> <span class="o">+</span> <span class="n">background</span>
+        <span class="c1"># return self.result[:self.q_input.nq]</span>
+
+<div class="viewcode-block" id="GpuKernel.release"><a class="viewcode-back" href="../../dev/sasmodels-api/sasmodels.html#sasmodels.kernelcl.GpuKernel.release">[docs]</a>    <span class="k">def</span> <span class="nf">release</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="c1"># type: () -&gt; None</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Release resources associated with the kernel.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">for</span> <span class="n">v</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">_need_release</span><span class="p">:</span>
+            <span class="n">v</span><span class="o">.</span><span class="n">release</span><span class="p">()</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_need_release</span> <span class="o">=</span> <span class="p">[]</span></div>
+
+    <span class="k">def</span> <span class="nf">__del__</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="c1"># type: () -&gt; None</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">release</span><span class="p">()</span></div>
+</pre></div>
+
+          </div>
+        </div>
+      </div>
+      <div class="sphinxsidebar" role="navigation" aria-label="main navigation">
+        <div class="sphinxsidebarwrapper">
+<div id="searchbox" style="display: none" role="search">
+  <h3>Quick search</h3>
+    <form class="search" action="../../search.html" method="get">
+      <input type="text" name="q" />
+      <input type="submit" value="Go" />
+      <input type="hidden" name="check_keywords" value="yes" />
+      <input type="hidden" name="area" value="default" />
+    </form>
+</div>
+<script type="text/javascript">$('#searchbox').show(0);</script>
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="related" role="navigation" aria-label="related navigation">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="../../genindex.html" title="General Index"
+             >index</a></li>
+        <li class="right" >
+          <a href="../../py-modindex.html" title="Python Module Index"
+             >modules</a> |</li>
+        <li class="nav-item nav-item-0"><a href="../../index.html">SasView 4.2.0 documentation</a> &raquo;</li>
+          <li class="nav-item nav-item-1"><a href="../index.html" >Module code</a> &raquo;</li>
+          <li class="nav-item nav-item-2"><a href="../sasmodels.html" >sasmodels</a> &raquo;</li> 
+      </ul>
+    </div>
+    <div class="footer" role="contentinfo">
+        &copy; Copyright 2018, The SasView Project.
+      Created using <a href="http://sphinx-doc.org/">Sphinx</a> 1.4.1.
+    </div>
+  </body>
+</html>

@@ -1,0 +1,475 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+  "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+    
+    <title>sas.sascalc.dataloader.loader &mdash; SasView 4.1.2 documentation</title>
+    
+    <link rel="stylesheet" href="../../../../_static/classic.css" type="text/css" />
+    <link rel="stylesheet" href="../../../../_static/pygments.css" type="text/css" />
+    
+    <script type="text/javascript">
+      var DOCUMENTATION_OPTIONS = {
+        URL_ROOT:    '../../../../',
+        VERSION:     '4.1.2',
+        COLLAPSE_INDEX: false,
+        FILE_SUFFIX: '.html',
+        HAS_SOURCE:  true
+      };
+    </script>
+    <script type="text/javascript" src="../../../../_static/jquery.js"></script>
+    <script type="text/javascript" src="../../../../_static/underscore.js"></script>
+    <script type="text/javascript" src="../../../../_static/doctools.js"></script>
+    <script type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.1/MathJax.js?config=TeX-MML-AM_CHTML"></script>
+    <link rel="top" title="SasView 4.1.2 documentation" href="../../../../index.html" />
+    <link rel="up" title="Module code" href="../../../index.html" /> 
+  </head>
+  <body role="document">
+    <div class="related" role="navigation" aria-label="related navigation">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="../../../../genindex.html" title="General Index"
+             accesskey="I">index</a></li>
+        <li class="right" >
+          <a href="../../../../py-modindex.html" title="Python Module Index"
+             >modules</a> |</li>
+        <li class="nav-item nav-item-0"><a href="../../../../index.html">SasView 4.1.2 documentation</a> &raquo;</li>
+          <li class="nav-item nav-item-1"><a href="../../../index.html" accesskey="U">Module code</a> &raquo;</li> 
+      </ul>
+    </div>  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          <div class="body" role="main">
+            
+  <h1>Source code for sas.sascalc.dataloader.loader</h1><div class="highlight"><pre>
+<span></span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    File handler to support different file extensions.</span>
+<span class="sd">    Uses reflectometry&#39;s registry utility.</span>
+
+<span class="sd">    The default readers are found in the &#39;readers&#39; sub-module</span>
+<span class="sd">    and registered by default at initialization time.</span>
+
+<span class="sd">    To add a new default reader, one must register it in</span>
+<span class="sd">    the register_readers method found in readers/__init__.py.</span>
+
+<span class="sd">    A utility method (find_plugins) is available to inspect</span>
+<span class="sd">    a directory (for instance, a user plug-in directory) and</span>
+<span class="sd">    look for new readers/writers.</span>
+<span class="sd">&quot;&quot;&quot;</span>
+<span class="c1">#####################################################################</span>
+<span class="c1">#This software was developed by the University of Tennessee as part of the</span>
+<span class="c1">#Distributed Data Analysis of Neutron Scattering Experiments (DANSE)</span>
+<span class="c1">#project funded by the US National Science Foundation.</span>
+<span class="c1">#See the license text in license.txt</span>
+<span class="c1">#copyright 2008, University of Tennessee</span>
+<span class="c1">######################################################################</span>
+
+<span class="kn">import</span> <span class="nn">os</span>
+<span class="kn">import</span> <span class="nn">sys</span>
+<span class="kn">import</span> <span class="nn">logging</span>
+<span class="kn">import</span> <span class="nn">time</span>
+<span class="kn">from</span> <span class="nn">zipfile</span> <span class="kn">import</span> <span class="n">ZipFile</span>
+<span class="kn">from</span> <span class="nn">sas.sascalc.data_util.registry</span> <span class="kn">import</span> <span class="n">ExtensionRegistry</span>
+<span class="c1"># Default readers are defined in the readers sub-module</span>
+<span class="kn">import</span> <span class="nn">readers</span>
+<span class="kn">from</span> <span class="nn">readers</span> <span class="kn">import</span> <span class="n">ascii_reader</span>
+<span class="kn">from</span> <span class="nn">readers</span> <span class="kn">import</span> <span class="n">cansas_reader</span>
+
+<div class="viewcode-block" id="Registry"><a class="viewcode-back" href="../../../../dev/api/sas.sascalc.dataloader.html#sas.sascalc.dataloader.loader.Registry">[docs]</a><span class="k">class</span> <span class="nc">Registry</span><span class="p">(</span><span class="n">ExtensionRegistry</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Registry class for file format extensions.</span>
+<span class="sd">    Readers and writers are supported.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+
+    <span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="nb">super</span><span class="p">(</span><span class="n">Registry</span><span class="p">,</span> <span class="bp">self</span><span class="p">)</span><span class="o">.</span><span class="n">__init__</span><span class="p">()</span>
+
+        <span class="c1">## Writers</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">writers</span> <span class="o">=</span> <span class="p">{}</span>
+
+        <span class="c1">## List of wildcards</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">wildcards</span> <span class="o">=</span> <span class="p">[</span><span class="s1">&#39;All (*.*)|*.*&#39;</span><span class="p">]</span>
+
+        <span class="c1">## Creation time, for testing</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_created</span> <span class="o">=</span> <span class="n">time</span><span class="o">.</span><span class="n">time</span><span class="p">()</span>
+
+        <span class="c1"># Register default readers</span>
+        <span class="n">readers</span><span class="o">.</span><span class="n">read_associations</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span>
+
+<div class="viewcode-block" id="Registry.load"><a class="viewcode-back" href="../../../../dev/api/sas.sascalc.dataloader.html#sas.sascalc.dataloader.loader.Registry.load">[docs]</a>    <span class="k">def</span> <span class="nf">load</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">path</span><span class="p">,</span> <span class="n">format</span><span class="o">=</span><span class="bp">None</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Call the loader for the file type of path.</span>
+
+<span class="sd">        :param path: file path</span>
+<span class="sd">        :param format: explicit extension, to force the use</span>
+<span class="sd">            of a particular reader</span>
+
+<span class="sd">        Defaults to the ascii (multi-column) reader</span>
+<span class="sd">        if no reader was registered for the file&#39;s</span>
+<span class="sd">        extension.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">try</span><span class="p">:</span>
+            <span class="k">return</span> <span class="nb">super</span><span class="p">(</span><span class="n">Registry</span><span class="p">,</span> <span class="bp">self</span><span class="p">)</span><span class="o">.</span><span class="n">load</span><span class="p">(</span><span class="n">path</span><span class="p">,</span> <span class="n">format</span><span class="o">=</span><span class="n">format</span><span class="p">)</span>
+        <span class="k">except</span><span class="p">:</span>
+            <span class="k">try</span><span class="p">:</span>
+                <span class="c1"># No reader was found. Default to the ascii reader.</span>
+                <span class="n">ascii_loader</span> <span class="o">=</span> <span class="n">ascii_reader</span><span class="o">.</span><span class="n">Reader</span><span class="p">()</span>
+                <span class="k">return</span> <span class="n">ascii_loader</span><span class="o">.</span><span class="n">read</span><span class="p">(</span><span class="n">path</span><span class="p">)</span>
+            <span class="k">except</span><span class="p">:</span>
+                <span class="n">cansas_loader</span> <span class="o">=</span> <span class="n">cansas_reader</span><span class="o">.</span><span class="n">Reader</span><span class="p">()</span>
+                <span class="k">return</span> <span class="n">cansas_loader</span><span class="o">.</span><span class="n">read</span><span class="p">(</span><span class="n">path</span><span class="p">)</span></div>
+
+<div class="viewcode-block" id="Registry.find_plugins"><a class="viewcode-back" href="../../../../dev/api/sas.sascalc.dataloader.html#sas.sascalc.dataloader.loader.Registry.find_plugins">[docs]</a>    <span class="k">def</span> <span class="nf">find_plugins</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="nb">dir</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Find readers in a given directory. This method</span>
+<span class="sd">        can be used to inspect user plug-in directories to</span>
+<span class="sd">        find new readers/writers.</span>
+
+<span class="sd">        :param dir: directory to search into</span>
+<span class="sd">        :return: number of readers found</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">readers_found</span> <span class="o">=</span> <span class="mi">0</span>
+        <span class="n">temp_path</span> <span class="o">=</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">abspath</span><span class="p">(</span><span class="nb">dir</span><span class="p">)</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">isdir</span><span class="p">(</span><span class="n">temp_path</span><span class="p">):</span>
+            <span class="n">temp_path</span> <span class="o">=</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">os</span><span class="o">.</span><span class="n">getcwd</span><span class="p">(),</span> <span class="nb">dir</span><span class="p">)</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">isdir</span><span class="p">(</span><span class="n">temp_path</span><span class="p">):</span>
+            <span class="n">temp_path</span> <span class="o">=</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">dirname</span><span class="p">(</span><span class="n">__file__</span><span class="p">),</span> <span class="nb">dir</span><span class="p">)</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">isdir</span><span class="p">(</span><span class="n">temp_path</span><span class="p">):</span>
+            <span class="n">temp_path</span> <span class="o">=</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">dirname</span><span class="p">(</span><span class="n">sys</span><span class="o">.</span><span class="n">path</span><span class="p">[</span><span class="mi">0</span><span class="p">]),</span> <span class="nb">dir</span><span class="p">)</span>
+
+        <span class="nb">dir</span> <span class="o">=</span> <span class="n">temp_path</span>
+        <span class="c1"># Check whether the directory exists</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">isdir</span><span class="p">(</span><span class="nb">dir</span><span class="p">):</span>
+            <span class="n">msg</span> <span class="o">=</span> <span class="s2">&quot;DataLoader couldn&#39;t locate DataLoader plugin folder.&quot;</span>
+            <span class="n">msg</span> <span class="o">+=</span> <span class="s2">&quot;&quot;&quot; &quot;</span><span class="si">%s</span><span class="s2">&quot; does not exist&quot;&quot;&quot;</span> <span class="o">%</span> <span class="nb">dir</span>
+            <span class="n">logging</span><span class="o">.</span><span class="n">warning</span><span class="p">(</span><span class="n">msg</span><span class="p">)</span>
+            <span class="k">return</span> <span class="n">readers_found</span>
+
+        <span class="k">for</span> <span class="n">item</span> <span class="ow">in</span> <span class="n">os</span><span class="o">.</span><span class="n">listdir</span><span class="p">(</span><span class="nb">dir</span><span class="p">):</span>
+            <span class="n">full_path</span> <span class="o">=</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="nb">dir</span><span class="p">,</span> <span class="n">item</span><span class="p">)</span>
+            <span class="k">if</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">isfile</span><span class="p">(</span><span class="n">full_path</span><span class="p">):</span>
+
+                <span class="c1"># Process python files</span>
+                <span class="k">if</span> <span class="n">item</span><span class="o">.</span><span class="n">endswith</span><span class="p">(</span><span class="s1">&#39;.py&#39;</span><span class="p">):</span>
+                    <span class="n">toks</span> <span class="o">=</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">splitext</span><span class="p">(</span><span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">basename</span><span class="p">(</span><span class="n">item</span><span class="p">))</span>
+                    <span class="k">try</span><span class="p">:</span>
+                        <span class="n">sys</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">insert</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">abspath</span><span class="p">(</span><span class="nb">dir</span><span class="p">))</span>
+                        <span class="n">module</span> <span class="o">=</span> <span class="nb">__import__</span><span class="p">(</span><span class="n">toks</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span> <span class="nb">globals</span><span class="p">(),</span> <span class="nb">locals</span><span class="p">())</span>
+                        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">_identify_plugin</span><span class="p">(</span><span class="n">module</span><span class="p">):</span>
+                            <span class="n">readers_found</span> <span class="o">+=</span> <span class="mi">1</span>
+                    <span class="k">except</span><span class="p">:</span>
+                        <span class="n">msg</span> <span class="o">=</span> <span class="s2">&quot;Loader: Error importing &quot;</span>
+                        <span class="n">msg</span> <span class="o">+=</span> <span class="s2">&quot;</span><span class="si">%s</span><span class="se">\n</span><span class="s2">  </span><span class="si">%s</span><span class="s2">&quot;</span> <span class="o">%</span> <span class="p">(</span><span class="n">item</span><span class="p">,</span> <span class="n">sys</span><span class="o">.</span><span class="n">exc_value</span><span class="p">)</span>
+                        <span class="n">logging</span><span class="o">.</span><span class="n">error</span><span class="p">(</span><span class="n">msg</span><span class="p">)</span>
+
+                <span class="c1"># Process zip files</span>
+                <span class="k">elif</span> <span class="n">item</span><span class="o">.</span><span class="n">endswith</span><span class="p">(</span><span class="s1">&#39;.zip&#39;</span><span class="p">):</span>
+                    <span class="k">try</span><span class="p">:</span>
+                        <span class="c1"># Find the modules in the zip file</span>
+                        <span class="n">zfile</span> <span class="o">=</span> <span class="n">ZipFile</span><span class="p">(</span><span class="n">item</span><span class="p">)</span>
+                        <span class="n">nlist</span> <span class="o">=</span> <span class="n">zfile</span><span class="o">.</span><span class="n">namelist</span><span class="p">()</span>
+
+                        <span class="n">sys</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">insert</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="n">item</span><span class="p">)</span>
+                        <span class="k">for</span> <span class="n">mfile</span> <span class="ow">in</span> <span class="n">nlist</span><span class="p">:</span>
+                            <span class="k">try</span><span class="p">:</span>
+                                <span class="c1"># Change OS path to python path</span>
+                                <span class="n">fullname</span> <span class="o">=</span> <span class="n">mfile</span><span class="o">.</span><span class="n">replace</span><span class="p">(</span><span class="s1">&#39;/&#39;</span><span class="p">,</span> <span class="s1">&#39;.&#39;</span><span class="p">)</span>
+                                <span class="n">fullname</span> <span class="o">=</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">splitext</span><span class="p">(</span><span class="n">fullname</span><span class="p">)[</span><span class="mi">0</span><span class="p">]</span>
+                                <span class="n">module</span> <span class="o">=</span> <span class="nb">__import__</span><span class="p">(</span><span class="n">fullname</span><span class="p">,</span> <span class="nb">globals</span><span class="p">(),</span>
+                                                    <span class="nb">locals</span><span class="p">(),</span> <span class="p">[</span><span class="s2">&quot;&quot;</span><span class="p">])</span>
+                                <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">_identify_plugin</span><span class="p">(</span><span class="n">module</span><span class="p">):</span>
+                                    <span class="n">readers_found</span> <span class="o">+=</span> <span class="mi">1</span>
+                            <span class="k">except</span><span class="p">:</span>
+                                <span class="n">msg</span> <span class="o">=</span> <span class="s2">&quot;Loader: Error importing&quot;</span>
+                                <span class="n">msg</span> <span class="o">+=</span> <span class="s2">&quot; </span><span class="si">%s</span><span class="se">\n</span><span class="s2">  </span><span class="si">%s</span><span class="s2">&quot;</span> <span class="o">%</span> <span class="p">(</span><span class="n">mfile</span><span class="p">,</span> <span class="n">sys</span><span class="o">.</span><span class="n">exc_value</span><span class="p">)</span>
+                                <span class="n">logging</span><span class="o">.</span><span class="n">error</span><span class="p">(</span><span class="n">msg</span><span class="p">)</span>
+
+                    <span class="k">except</span><span class="p">:</span>
+                        <span class="n">msg</span> <span class="o">=</span> <span class="s2">&quot;Loader: Error importing &quot;</span>
+                        <span class="n">msg</span> <span class="o">+=</span> <span class="s2">&quot; </span><span class="si">%s</span><span class="se">\n</span><span class="s2">  </span><span class="si">%s</span><span class="s2">&quot;</span> <span class="o">%</span> <span class="p">(</span><span class="n">item</span><span class="p">,</span> <span class="n">sys</span><span class="o">.</span><span class="n">exc_value</span><span class="p">)</span>
+                        <span class="n">logging</span><span class="o">.</span><span class="n">error</span><span class="p">(</span><span class="n">msg</span><span class="p">)</span>
+
+        <span class="k">return</span> <span class="n">readers_found</span></div>
+
+<div class="viewcode-block" id="Registry.associate_file_type"><a class="viewcode-back" href="../../../../dev/api/sas.sascalc.dataloader.html#sas.sascalc.dataloader.loader.Registry.associate_file_type">[docs]</a>    <span class="k">def</span> <span class="nf">associate_file_type</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">ext</span><span class="p">,</span> <span class="n">module</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Look into a module to find whether it contains a</span>
+<span class="sd">        Reader class. If so, APPEND it to readers and (potentially)</span>
+<span class="sd">        to the list of writers for the given extension</span>
+
+<span class="sd">        :param ext: file extension [string]</span>
+<span class="sd">        :param module: module object</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">reader_found</span> <span class="o">=</span> <span class="bp">False</span>
+
+        <span class="k">if</span> <span class="nb">hasattr</span><span class="p">(</span><span class="n">module</span><span class="p">,</span> <span class="s2">&quot;Reader&quot;</span><span class="p">):</span>
+            <span class="k">try</span><span class="p">:</span>
+                <span class="c1"># Find supported extensions</span>
+                <span class="n">loader</span> <span class="o">=</span> <span class="n">module</span><span class="o">.</span><span class="n">Reader</span><span class="p">()</span>
+                <span class="k">if</span> <span class="n">ext</span> <span class="ow">not</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">loaders</span><span class="p">:</span>
+                    <span class="bp">self</span><span class="o">.</span><span class="n">loaders</span><span class="p">[</span><span class="n">ext</span><span class="p">]</span> <span class="o">=</span> <span class="p">[]</span>
+                <span class="c1"># Append the new reader to the list</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">loaders</span><span class="p">[</span><span class="n">ext</span><span class="p">]</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">loader</span><span class="o">.</span><span class="n">read</span><span class="p">)</span>
+
+                <span class="n">reader_found</span> <span class="o">=</span> <span class="bp">True</span>
+
+                <span class="c1"># Keep track of wildcards</span>
+                <span class="n">type_name</span> <span class="o">=</span> <span class="n">module</span><span class="o">.</span><span class="n">__name__</span>
+                <span class="k">if</span> <span class="nb">hasattr</span><span class="p">(</span><span class="n">loader</span><span class="p">,</span> <span class="s1">&#39;type_name&#39;</span><span class="p">):</span>
+                    <span class="n">type_name</span> <span class="o">=</span> <span class="n">loader</span><span class="o">.</span><span class="n">type_name</span>
+
+                <span class="n">wcard</span> <span class="o">=</span> <span class="s2">&quot;</span><span class="si">%s</span><span class="s2"> files (*</span><span class="si">%s</span><span class="s2">)|*</span><span class="si">%s</span><span class="s2">&quot;</span> <span class="o">%</span> <span class="p">(</span><span class="n">type_name</span><span class="p">,</span> <span class="n">ext</span><span class="o">.</span><span class="n">lower</span><span class="p">(),</span>
+                                                <span class="n">ext</span><span class="o">.</span><span class="n">lower</span><span class="p">())</span>
+                <span class="k">if</span> <span class="n">wcard</span> <span class="ow">not</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">wildcards</span><span class="p">:</span>
+                    <span class="bp">self</span><span class="o">.</span><span class="n">wildcards</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">wcard</span><span class="p">)</span>
+
+                <span class="c1"># Check whether writing is supported</span>
+                <span class="k">if</span> <span class="nb">hasattr</span><span class="p">(</span><span class="n">loader</span><span class="p">,</span> <span class="s1">&#39;write&#39;</span><span class="p">):</span>
+                    <span class="k">if</span> <span class="n">ext</span> <span class="ow">not</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">writers</span><span class="p">:</span>
+                        <span class="bp">self</span><span class="o">.</span><span class="n">writers</span><span class="p">[</span><span class="n">ext</span><span class="p">]</span> <span class="o">=</span> <span class="p">[]</span>
+                    <span class="c1"># Append the new writer to the list</span>
+                    <span class="bp">self</span><span class="o">.</span><span class="n">writers</span><span class="p">[</span><span class="n">ext</span><span class="p">]</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">loader</span><span class="o">.</span><span class="n">write</span><span class="p">)</span>
+
+            <span class="k">except</span><span class="p">:</span>
+                <span class="n">msg</span> <span class="o">=</span> <span class="s2">&quot;Loader: Error accessing&quot;</span>
+                <span class="n">msg</span> <span class="o">+=</span> <span class="s2">&quot; Reader in </span><span class="si">%s</span><span class="se">\n</span><span class="s2">  </span><span class="si">%s</span><span class="s2">&quot;</span> <span class="o">%</span> <span class="p">(</span><span class="n">module</span><span class="o">.</span><span class="n">__name__</span><span class="p">,</span> <span class="n">sys</span><span class="o">.</span><span class="n">exc_value</span><span class="p">)</span>
+                <span class="n">logging</span><span class="o">.</span><span class="n">error</span><span class="p">(</span><span class="n">msg</span><span class="p">)</span>
+        <span class="k">return</span> <span class="n">reader_found</span></div>
+
+<div class="viewcode-block" id="Registry.associate_file_reader"><a class="viewcode-back" href="../../../../dev/api/sas.sascalc.dataloader.html#sas.sascalc.dataloader.loader.Registry.associate_file_reader">[docs]</a>    <span class="k">def</span> <span class="nf">associate_file_reader</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">ext</span><span class="p">,</span> <span class="n">loader</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Append a reader object to readers</span>
+
+<span class="sd">        :param ext: file extension [string]</span>
+<span class="sd">        :param module: reader object</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">reader_found</span> <span class="o">=</span> <span class="bp">False</span>
+
+        <span class="k">try</span><span class="p">:</span>
+            <span class="c1"># Find supported extensions</span>
+            <span class="k">if</span> <span class="n">ext</span> <span class="ow">not</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">loaders</span><span class="p">:</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">loaders</span><span class="p">[</span><span class="n">ext</span><span class="p">]</span> <span class="o">=</span> <span class="p">[]</span>
+            <span class="c1"># Append the new reader to the list</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">loaders</span><span class="p">[</span><span class="n">ext</span><span class="p">]</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">loader</span><span class="o">.</span><span class="n">read</span><span class="p">)</span>
+
+            <span class="n">reader_found</span> <span class="o">=</span> <span class="bp">True</span>
+
+            <span class="c1"># Keep track of wildcards</span>
+            <span class="k">if</span> <span class="nb">hasattr</span><span class="p">(</span><span class="n">loader</span><span class="p">,</span> <span class="s1">&#39;type_name&#39;</span><span class="p">):</span>
+                <span class="n">type_name</span> <span class="o">=</span> <span class="n">loader</span><span class="o">.</span><span class="n">type_name</span>
+
+                <span class="n">wcard</span> <span class="o">=</span> <span class="s2">&quot;</span><span class="si">%s</span><span class="s2"> files (*</span><span class="si">%s</span><span class="s2">)|*</span><span class="si">%s</span><span class="s2">&quot;</span> <span class="o">%</span> <span class="p">(</span><span class="n">type_name</span><span class="p">,</span> <span class="n">ext</span><span class="o">.</span><span class="n">lower</span><span class="p">(),</span>
+                                                <span class="n">ext</span><span class="o">.</span><span class="n">lower</span><span class="p">())</span>
+                <span class="k">if</span> <span class="n">wcard</span> <span class="ow">not</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">wildcards</span><span class="p">:</span>
+                    <span class="bp">self</span><span class="o">.</span><span class="n">wildcards</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">wcard</span><span class="p">)</span>
+
+        <span class="k">except</span><span class="p">:</span>
+            <span class="n">msg</span> <span class="o">=</span> <span class="s2">&quot;Loader: Error accessing Reader &quot;</span>
+            <span class="n">msg</span> <span class="o">+=</span> <span class="s2">&quot;in </span><span class="si">%s</span><span class="se">\n</span><span class="s2">  </span><span class="si">%s</span><span class="s2">&quot;</span> <span class="o">%</span> <span class="p">(</span><span class="n">loader</span><span class="o">.</span><span class="n">__name__</span><span class="p">,</span> <span class="n">sys</span><span class="o">.</span><span class="n">exc_value</span><span class="p">)</span>
+            <span class="n">logging</span><span class="o">.</span><span class="n">error</span><span class="p">(</span><span class="n">msg</span><span class="p">)</span>
+        <span class="k">return</span> <span class="n">reader_found</span></div>
+
+    <span class="k">def</span> <span class="nf">_identify_plugin</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">module</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Look into a module to find whether it contains a</span>
+<span class="sd">        Reader class. If so, add it to readers and (potentially)</span>
+<span class="sd">        to the list of writers.</span>
+<span class="sd">        :param module: module object</span>
+
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">reader_found</span> <span class="o">=</span> <span class="bp">False</span>
+
+        <span class="k">if</span> <span class="nb">hasattr</span><span class="p">(</span><span class="n">module</span><span class="p">,</span> <span class="s2">&quot;Reader&quot;</span><span class="p">):</span>
+            <span class="k">try</span><span class="p">:</span>
+                <span class="c1"># Find supported extensions</span>
+                <span class="n">loader</span> <span class="o">=</span> <span class="n">module</span><span class="o">.</span><span class="n">Reader</span><span class="p">()</span>
+                <span class="k">for</span> <span class="n">ext</span> <span class="ow">in</span> <span class="n">loader</span><span class="o">.</span><span class="n">ext</span><span class="p">:</span>
+                    <span class="k">if</span> <span class="n">ext</span> <span class="ow">not</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">loaders</span><span class="p">:</span>
+                        <span class="bp">self</span><span class="o">.</span><span class="n">loaders</span><span class="p">[</span><span class="n">ext</span><span class="p">]</span> <span class="o">=</span> <span class="p">[]</span>
+                    <span class="c1"># When finding a reader at run time,</span>
+                    <span class="c1"># treat this reader as the new default</span>
+                    <span class="bp">self</span><span class="o">.</span><span class="n">loaders</span><span class="p">[</span><span class="n">ext</span><span class="p">]</span><span class="o">.</span><span class="n">insert</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="n">loader</span><span class="o">.</span><span class="n">read</span><span class="p">)</span>
+
+                    <span class="n">reader_found</span> <span class="o">=</span> <span class="bp">True</span>
+
+                    <span class="c1"># Keep track of wildcards</span>
+                    <span class="n">type_name</span> <span class="o">=</span> <span class="n">module</span><span class="o">.</span><span class="n">__name__</span>
+                    <span class="k">if</span> <span class="nb">hasattr</span><span class="p">(</span><span class="n">loader</span><span class="p">,</span> <span class="s1">&#39;type_name&#39;</span><span class="p">):</span>
+                        <span class="n">type_name</span> <span class="o">=</span> <span class="n">loader</span><span class="o">.</span><span class="n">type_name</span>
+                    <span class="n">wcard</span> <span class="o">=</span> <span class="s2">&quot;</span><span class="si">%s</span><span class="s2"> files (*</span><span class="si">%s</span><span class="s2">)|*</span><span class="si">%s</span><span class="s2">&quot;</span> <span class="o">%</span> <span class="p">(</span><span class="n">type_name</span><span class="p">,</span> <span class="n">ext</span><span class="o">.</span><span class="n">lower</span><span class="p">(),</span>
+                                                    <span class="n">ext</span><span class="o">.</span><span class="n">lower</span><span class="p">())</span>
+                    <span class="k">if</span> <span class="n">wcard</span> <span class="ow">not</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">wildcards</span><span class="p">:</span>
+                        <span class="bp">self</span><span class="o">.</span><span class="n">wildcards</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">wcard</span><span class="p">)</span>
+
+                <span class="c1"># Check whether writing is supported</span>
+                <span class="k">if</span> <span class="nb">hasattr</span><span class="p">(</span><span class="n">loader</span><span class="p">,</span> <span class="s1">&#39;write&#39;</span><span class="p">):</span>
+                    <span class="k">for</span> <span class="n">ext</span> <span class="ow">in</span> <span class="n">loader</span><span class="o">.</span><span class="n">ext</span><span class="p">:</span>
+                        <span class="k">if</span> <span class="n">ext</span> <span class="ow">not</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">writers</span><span class="p">:</span>
+                            <span class="bp">self</span><span class="o">.</span><span class="n">writers</span><span class="p">[</span><span class="n">ext</span><span class="p">]</span> <span class="o">=</span> <span class="p">[]</span>
+                        <span class="bp">self</span><span class="o">.</span><span class="n">writers</span><span class="p">[</span><span class="n">ext</span><span class="p">]</span><span class="o">.</span><span class="n">insert</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="n">loader</span><span class="o">.</span><span class="n">write</span><span class="p">)</span>
+
+            <span class="k">except</span><span class="p">:</span>
+                <span class="n">msg</span> <span class="o">=</span> <span class="s2">&quot;Loader: Error accessing Reader&quot;</span>
+                <span class="n">msg</span> <span class="o">+=</span> <span class="s2">&quot; in </span><span class="si">%s</span><span class="se">\n</span><span class="s2">  </span><span class="si">%s</span><span class="s2">&quot;</span> <span class="o">%</span> <span class="p">(</span><span class="n">module</span><span class="o">.</span><span class="n">__name__</span><span class="p">,</span> <span class="n">sys</span><span class="o">.</span><span class="n">exc_value</span><span class="p">)</span>
+                <span class="n">logging</span><span class="o">.</span><span class="n">error</span><span class="p">(</span><span class="n">msg</span><span class="p">)</span>
+        <span class="k">return</span> <span class="n">reader_found</span>
+
+<div class="viewcode-block" id="Registry.lookup_writers"><a class="viewcode-back" href="../../../../dev/api/sas.sascalc.dataloader.html#sas.sascalc.dataloader.loader.Registry.lookup_writers">[docs]</a>    <span class="k">def</span> <span class="nf">lookup_writers</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">path</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        :return: the loader associated with the file type of path.</span>
+<span class="sd">        :Raises ValueError: if file type is not known.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="c1"># Find matching extensions</span>
+        <span class="n">extlist</span> <span class="o">=</span> <span class="p">[</span><span class="n">ext</span> <span class="k">for</span> <span class="n">ext</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">extensions</span><span class="p">()</span> <span class="k">if</span> <span class="n">path</span><span class="o">.</span><span class="n">endswith</span><span class="p">(</span><span class="n">ext</span><span class="p">)]</span>
+        <span class="c1"># Sort matching extensions by decreasing order of length</span>
+        <span class="n">extlist</span><span class="o">.</span><span class="n">sort</span><span class="p">(</span><span class="k">lambda</span> <span class="n">a</span><span class="p">,</span> <span class="n">b</span><span class="p">:</span> <span class="nb">len</span><span class="p">(</span><span class="n">a</span><span class="p">)</span> <span class="o">&lt;</span> <span class="nb">len</span><span class="p">(</span><span class="n">b</span><span class="p">))</span>
+        <span class="c1"># Combine loaders for matching extensions into one big list</span>
+        <span class="n">writers</span> <span class="o">=</span> <span class="p">[]</span>
+        <span class="k">for</span> <span class="n">L</span> <span class="ow">in</span> <span class="p">[</span><span class="bp">self</span><span class="o">.</span><span class="n">writers</span><span class="p">[</span><span class="n">ext</span><span class="p">]</span> <span class="k">for</span> <span class="n">ext</span> <span class="ow">in</span> <span class="n">extlist</span><span class="p">]:</span>
+            <span class="n">writers</span><span class="o">.</span><span class="n">extend</span><span class="p">(</span><span class="n">L</span><span class="p">)</span>
+        <span class="c1"># Remove duplicates if they exist</span>
+        <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">writers</span><span class="p">)</span> <span class="o">!=</span> <span class="nb">len</span><span class="p">(</span><span class="nb">set</span><span class="p">(</span><span class="n">writers</span><span class="p">)):</span>
+            <span class="n">result</span> <span class="o">=</span> <span class="p">[]</span>
+            <span class="k">for</span> <span class="n">L</span> <span class="ow">in</span> <span class="n">writers</span><span class="p">:</span>
+                <span class="k">if</span> <span class="n">L</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">result</span><span class="p">:</span>
+                    <span class="n">result</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">L</span><span class="p">)</span>
+            <span class="n">writers</span> <span class="o">=</span> <span class="n">L</span>
+        <span class="c1"># Raise an error if there are no matching extensions</span>
+        <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">writers</span><span class="p">)</span> <span class="o">==</span> <span class="mi">0</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">,</span> <span class="s2">&quot;Unknown file type for &quot;</span> <span class="o">+</span> <span class="n">path</span>
+        <span class="c1"># All done</span>
+        <span class="k">return</span> <span class="n">writers</span></div>
+
+<div class="viewcode-block" id="Registry.save"><a class="viewcode-back" href="../../../../dev/api/sas.sascalc.dataloader.html#sas.sascalc.dataloader.loader.Registry.save">[docs]</a>    <span class="k">def</span> <span class="nf">save</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">path</span><span class="p">,</span> <span class="n">data</span><span class="p">,</span> <span class="n">format</span><span class="o">=</span><span class="bp">None</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Call the writer for the file type of path.</span>
+
+<span class="sd">        Raises ValueError if no writer is available.</span>
+<span class="sd">        Raises KeyError if format is not available.</span>
+<span class="sd">        May raise a writer-defined exception if writer fails.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">if</span> <span class="n">format</span> <span class="ow">is</span> <span class="bp">None</span><span class="p">:</span>
+            <span class="n">writers</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">lookup_writers</span><span class="p">(</span><span class="n">path</span><span class="p">)</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">writers</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">writers</span><span class="p">[</span><span class="n">format</span><span class="p">]</span>
+        <span class="k">for</span> <span class="n">fn</span> <span class="ow">in</span> <span class="n">writers</span><span class="p">:</span>
+            <span class="k">try</span><span class="p">:</span>
+                <span class="k">return</span> <span class="n">fn</span><span class="p">(</span><span class="n">path</span><span class="p">,</span> <span class="n">data</span><span class="p">)</span>
+            <span class="k">except</span><span class="p">:</span>
+                <span class="k">pass</span>  <span class="c1"># give other loaders a chance to succeed</span>
+        <span class="c1"># If we get here it is because all loaders failed</span>
+        <span class="k">raise</span>  <span class="c1"># reraises last exception</span></div></div>
+
+
+<div class="viewcode-block" id="Loader"><a class="viewcode-back" href="../../../../dev/api/sas.sascalc.dataloader.html#sas.sascalc.dataloader.loader.Loader">[docs]</a><span class="k">class</span> <span class="nc">Loader</span><span class="p">(</span><span class="nb">object</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Utility class to use the Registry as a singleton.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="c1">## Registry instance</span>
+    <span class="n">__registry</span> <span class="o">=</span> <span class="n">Registry</span><span class="p">()</span>
+
+<div class="viewcode-block" id="Loader.associate_file_type"><a class="viewcode-back" href="../../../../dev/api/sas.sascalc.dataloader.html#sas.sascalc.dataloader.loader.Loader.associate_file_type">[docs]</a>    <span class="k">def</span> <span class="nf">associate_file_type</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">ext</span><span class="p">,</span> <span class="n">module</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Look into a module to find whether it contains a</span>
+<span class="sd">        Reader class. If so, append it to readers and (potentially)</span>
+<span class="sd">        to the list of writers for the given extension</span>
+
+<span class="sd">        :param ext: file extension [string]</span>
+<span class="sd">        :param module: module object</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">__registry</span><span class="o">.</span><span class="n">associate_file_type</span><span class="p">(</span><span class="n">ext</span><span class="p">,</span> <span class="n">module</span><span class="p">)</span></div>
+
+<div class="viewcode-block" id="Loader.associate_file_reader"><a class="viewcode-back" href="../../../../dev/api/sas.sascalc.dataloader.html#sas.sascalc.dataloader.loader.Loader.associate_file_reader">[docs]</a>    <span class="k">def</span> <span class="nf">associate_file_reader</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">ext</span><span class="p">,</span> <span class="n">loader</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Append a reader object to readers</span>
+
+<span class="sd">        :param ext: file extension [string]</span>
+<span class="sd">        :param module: reader object</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">__registry</span><span class="o">.</span><span class="n">associate_file_reader</span><span class="p">(</span><span class="n">ext</span><span class="p">,</span> <span class="n">loader</span><span class="p">)</span></div>
+
+<div class="viewcode-block" id="Loader.load"><a class="viewcode-back" href="../../../../dev/api/sas.sascalc.dataloader.html#sas.sascalc.dataloader.loader.Loader.load">[docs]</a>    <span class="k">def</span> <span class="nf">load</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="nb">file</span><span class="p">,</span> <span class="n">format</span><span class="o">=</span><span class="bp">None</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Load a file</span>
+
+<span class="sd">        :param file: file name (path)</span>
+<span class="sd">        :param format: specified format to use (optional)</span>
+<span class="sd">        :return: DataInfo object</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">__registry</span><span class="o">.</span><span class="n">load</span><span class="p">(</span><span class="nb">file</span><span class="p">,</span> <span class="n">format</span><span class="p">)</span></div>
+
+<div class="viewcode-block" id="Loader.save"><a class="viewcode-back" href="../../../../dev/api/sas.sascalc.dataloader.html#sas.sascalc.dataloader.loader.Loader.save">[docs]</a>    <span class="k">def</span> <span class="nf">save</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="nb">file</span><span class="p">,</span> <span class="n">data</span><span class="p">,</span> <span class="n">format</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Save a DataInfo object to file</span>
+<span class="sd">        :param file: file name (path)</span>
+<span class="sd">        :param data: DataInfo object</span>
+<span class="sd">        :param format: format to write the data in</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">__registry</span><span class="o">.</span><span class="n">save</span><span class="p">(</span><span class="nb">file</span><span class="p">,</span> <span class="n">data</span><span class="p">,</span> <span class="n">format</span><span class="p">)</span></div>
+
+    <span class="k">def</span> <span class="nf">_get_registry_creation_time</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Internal method used to test the uniqueness</span>
+<span class="sd">        of the registry object</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">__registry</span><span class="o">.</span><span class="n">_created</span>
+
+<div class="viewcode-block" id="Loader.find_plugins"><a class="viewcode-back" href="../../../../dev/api/sas.sascalc.dataloader.html#sas.sascalc.dataloader.loader.Loader.find_plugins">[docs]</a>    <span class="k">def</span> <span class="nf">find_plugins</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">directory</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Find plugins in a given directory</span>
+
+<span class="sd">        :param dir: directory to look into to find new readers/writers</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">__registry</span><span class="o">.</span><span class="n">find_plugins</span><span class="p">(</span><span class="n">directory</span><span class="p">)</span></div>
+
+<div class="viewcode-block" id="Loader.get_wildcards"><a class="viewcode-back" href="../../../../dev/api/sas.sascalc.dataloader.html#sas.sascalc.dataloader.loader.Loader.get_wildcards">[docs]</a>    <span class="k">def</span> <span class="nf">get_wildcards</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Return the list of wildcards</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">__registry</span><span class="o">.</span><span class="n">wildcards</span></div></div>
+</pre></div>
+
+          </div>
+        </div>
+      </div>
+      <div class="sphinxsidebar" role="navigation" aria-label="main navigation">
+        <div class="sphinxsidebarwrapper">
+<div id="searchbox" style="display: none" role="search">
+  <h3>Quick search</h3>
+    <form class="search" action="../../../../search.html" method="get">
+      <input type="text" name="q" />
+      <input type="submit" value="Go" />
+      <input type="hidden" name="check_keywords" value="yes" />
+      <input type="hidden" name="area" value="default" />
+    </form>
+</div>
+<script type="text/javascript">$('#searchbox').show(0);</script>
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="related" role="navigation" aria-label="related navigation">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="../../../../genindex.html" title="General Index"
+             >index</a></li>
+        <li class="right" >
+          <a href="../../../../py-modindex.html" title="Python Module Index"
+             >modules</a> |</li>
+        <li class="nav-item nav-item-0"><a href="../../../../index.html">SasView 4.1.2 documentation</a> &raquo;</li>
+          <li class="nav-item nav-item-1"><a href="../../../index.html" >Module code</a> &raquo;</li> 
+      </ul>
+    </div>
+    <div class="footer" role="contentinfo">
+        &copy; Copyright 2017, The SasView Project.
+      Created using <a href="http://sphinx-doc.org/">Sphinx</a> 1.4.1.
+    </div>
+  </body>
+</html>

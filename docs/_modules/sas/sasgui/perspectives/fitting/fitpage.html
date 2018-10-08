@@ -6,7 +6,7 @@
   <head>
     <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
     
-    <title>sas.sasgui.perspectives.fitting.fitpage &mdash; SasView 4.1.2 documentation</title>
+    <title>sas.sasgui.perspectives.fitting.fitpage &mdash; SasView 4.2.0 documentation</title>
     
     <link rel="stylesheet" href="../../../../../_static/classic.css" type="text/css" />
     <link rel="stylesheet" href="../../../../../_static/pygments.css" type="text/css" />
@@ -14,7 +14,7 @@
     <script type="text/javascript">
       var DOCUMENTATION_OPTIONS = {
         URL_ROOT:    '../../../../../',
-        VERSION:     '4.1.2',
+        VERSION:     '4.2.0',
         COLLAPSE_INDEX: false,
         FILE_SUFFIX: '.html',
         HAS_SOURCE:  true
@@ -24,7 +24,7 @@
     <script type="text/javascript" src="../../../../../_static/underscore.js"></script>
     <script type="text/javascript" src="../../../../../_static/doctools.js"></script>
     <script type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.1/MathJax.js?config=TeX-MML-AM_CHTML"></script>
-    <link rel="top" title="SasView 4.1.2 documentation" href="../../../../../index.html" />
+    <link rel="top" title="SasView 4.2.0 documentation" href="../../../../../index.html" />
     <link rel="up" title="sas.sasgui.perspectives.fitting" href="../fitting.html" /> 
   </head>
   <body role="document">
@@ -37,9 +37,10 @@
         <li class="right" >
           <a href="../../../../../py-modindex.html" title="Python Module Index"
              >modules</a> |</li>
-        <li class="nav-item nav-item-0"><a href="../../../../../index.html">SasView 4.1.2 documentation</a> &raquo;</li>
+        <li class="nav-item nav-item-0"><a href="../../../../../index.html">SasView 4.2.0 documentation</a> &raquo;</li>
           <li class="nav-item nav-item-1"><a href="../../../../index.html" >Module code</a> &raquo;</li>
-          <li class="nav-item nav-item-2"><a href="../fitting.html" accesskey="U">sas.sasgui.perspectives.fitting</a> &raquo;</li> 
+          <li class="nav-item nav-item-2"><a href="../../../../sas.html" >sas</a> &raquo;</li>
+          <li class="nav-item nav-item-3"><a href="../fitting.html" accesskey="U">sas.sasgui.perspectives.fitting</a> &raquo;</li> 
       </ul>
     </div>  
 
@@ -53,16 +54,20 @@
 <span class="sd">    FitPanel class contains fields allowing to display results when</span>
 <span class="sd">    fitting  a model and one data</span>
 <span class="sd">&quot;&quot;&quot;</span>
+<span class="kn">from</span> <span class="nn">__future__</span> <span class="kn">import</span> <span class="n">print_function</span>
+
 <span class="kn">import</span> <span class="nn">sys</span>
 <span class="kn">import</span> <span class="nn">wx</span>
 <span class="kn">import</span> <span class="nn">wx.lib.newevent</span>
-<span class="kn">import</span> <span class="nn">numpy</span>
+<span class="kn">import</span> <span class="nn">numpy</span> <span class="kn">as</span> <span class="nn">np</span>
 <span class="kn">import</span> <span class="nn">copy</span>
 <span class="kn">import</span> <span class="nn">math</span>
 <span class="kn">import</span> <span class="nn">time</span>
 <span class="kn">import</span> <span class="nn">traceback</span>
 
 <span class="kn">from</span> <span class="nn">sasmodels.weights</span> <span class="kn">import</span> <span class="n">MODELS</span> <span class="k">as</span> <span class="n">POLYDISPERSITY_MODELS</span>
+
+<span class="kn">from</span> <span class="nn">sas.sascalc.fit.qsmearing</span> <span class="kn">import</span> <span class="n">smear_selection</span>
 
 <span class="kn">from</span> <span class="nn">sas.sasgui.guiframe.events</span> <span class="kn">import</span> <span class="n">StatusEvent</span><span class="p">,</span> <span class="n">NewPlotEvent</span><span class="p">,</span> \
     <span class="n">PlotQrangeEvent</span>
@@ -73,7 +78,6 @@
 <span class="kn">from</span> <span class="nn">sas.sasgui.perspectives.fitting.basepage</span> <span class="kn">import</span> <span class="n">BasicPage</span> <span class="k">as</span> <span class="n">BasicPage</span>
 <span class="kn">from</span> <span class="nn">sas.sasgui.perspectives.fitting.basepage</span> <span class="kn">import</span> <span class="n">PageInfoEvent</span> <span class="k">as</span> \
     <span class="n">PageInfoEvent</span>
-<span class="kn">from</span> <span class="nn">sas.sascalc.data_util.qsmearing</span> <span class="kn">import</span> <span class="n">smear_selection</span>
 <span class="kn">from</span> <span class="nn">.basepage</span> <span class="kn">import</span> <span class="n">ModelTextCtrl</span>
 
 <span class="p">(</span><span class="n">Chi2UpdateEvent</span><span class="p">,</span> <span class="n">EVT_CHI2_UPDATE</span><span class="p">)</span> <span class="o">=</span> <span class="n">wx</span><span class="o">.</span><span class="n">lib</span><span class="o">.</span><span class="n">newevent</span><span class="o">.</span><span class="n">NewEvent</span><span class="p">()</span>
@@ -82,7 +86,7 @@
 <span class="n">SMEAR_SIZE_H</span> <span class="o">=</span> <span class="mf">0.00</span>
 <span class="n">CUSTOM_MODEL</span> <span class="o">=</span> <span class="s1">&#39;Plugin Models&#39;</span>
 
-<div class="viewcode-block" id="FitPage"><a class="viewcode-back" href="../../../../../dev/api/sas.sasgui.perspectives.fitting.html#sas.sasgui.perspectives.fitting.fitpage.FitPage">[docs]</a><span class="k">class</span> <span class="nc">FitPage</span><span class="p">(</span><span class="n">BasicPage</span><span class="p">):</span>
+<div class="viewcode-block" id="FitPage"><a class="viewcode-back" href="../../../../../dev/sasview-api/sas.sasgui.perspectives.fitting.html#sas.sasgui.perspectives.fitting.fitpage.FitPage">[docs]</a><span class="k">class</span> <span class="nc">FitPage</span><span class="p">(</span><span class="n">BasicPage</span><span class="p">):</span>
     <span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">    FitPanel class contains fields allowing to display results when</span>
 <span class="sd">    fitting  a model and one data</span>
@@ -124,14 +128,14 @@
         <span class="bp">self</span><span class="o">.</span><span class="n">create_default_data</span><span class="p">()</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">_manager</span><span class="o">.</span><span class="n">frame</span><span class="o">.</span><span class="n">Bind</span><span class="p">(</span><span class="n">wx</span><span class="o">.</span><span class="n">EVT_SET_FOCUS</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">on_set_focus</span><span class="p">)</span>
 
-<div class="viewcode-block" id="FitPage.enable_fit_button"><a class="viewcode-back" href="../../../../../dev/api/sas.sasgui.perspectives.fitting.html#sas.sasgui.perspectives.fitting.fitpage.FitPage.enable_fit_button">[docs]</a>    <span class="k">def</span> <span class="nf">enable_fit_button</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+<div class="viewcode-block" id="FitPage.enable_fit_button"><a class="viewcode-back" href="../../../../../dev/sasview-api/sas.sasgui.perspectives.fitting.html#sas.sasgui.perspectives.fitting.fitpage.FitPage.enable_fit_button">[docs]</a>    <span class="k">def</span> <span class="nf">enable_fit_button</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
         <span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">        Enable fit button if data is valid and model is valid</span>
 <span class="sd">        &quot;&quot;&quot;</span>
         <span class="n">flag</span> <span class="o">=</span> <span class="n">check_data_validity</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">data</span><span class="p">)</span> <span class="o">&amp;</span> <span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">model</span> <span class="ow">is</span> <span class="ow">not</span> <span class="bp">None</span><span class="p">)</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">btFit</span><span class="o">.</span><span class="n">Enable</span><span class="p">(</span><span class="n">flag</span><span class="p">)</span></div>
 
-<div class="viewcode-block" id="FitPage.on_set_focus"><a class="viewcode-back" href="../../../../../dev/api/sas.sasgui.perspectives.fitting.html#sas.sasgui.perspectives.fitting.fitpage.FitPage.on_set_focus">[docs]</a>    <span class="k">def</span> <span class="nf">on_set_focus</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">event</span><span class="p">):</span>
+<div class="viewcode-block" id="FitPage.on_set_focus"><a class="viewcode-back" href="../../../../../dev/sasview-api/sas.sasgui.perspectives.fitting.html#sas.sasgui.perspectives.fitting.fitpage.FitPage.on_set_focus">[docs]</a>    <span class="k">def</span> <span class="nf">on_set_focus</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">event</span><span class="p">):</span>
         <span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">        Override the basepage focus method to ensure the save flag is set</span>
 <span class="sd">        properly when focusing on the fit page.</span>
@@ -165,7 +169,7 @@
         <span class="bp">self</span><span class="o">.</span><span class="n">sizer0</span><span class="o">.</span><span class="n">Add</span><span class="p">(</span><span class="n">boxsizer1</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="n">wx</span><span class="o">.</span><span class="n">EXPAND</span> <span class="o">|</span> <span class="n">wx</span><span class="o">.</span><span class="n">ALL</span><span class="p">,</span> <span class="mi">10</span><span class="p">)</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">sizer0</span><span class="o">.</span><span class="n">Layout</span><span class="p">()</span>
 
-<div class="viewcode-block" id="FitPage.enable_datasource"><a class="viewcode-back" href="../../../../../dev/api/sas.sasgui.perspectives.fitting.html#sas.sasgui.perspectives.fitting.fitpage.FitPage.enable_datasource">[docs]</a>    <span class="k">def</span> <span class="nf">enable_datasource</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+<div class="viewcode-block" id="FitPage.enable_datasource"><a class="viewcode-back" href="../../../../../dev/sasview-api/sas.sasgui.perspectives.fitting.html#sas.sasgui.perspectives.fitting.fitpage.FitPage.enable_datasource">[docs]</a>    <span class="k">def</span> <span class="nf">enable_datasource</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
         <span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">        Enable or disable data source control depending on existing data</span>
 <span class="sd">        &quot;&quot;&quot;</span>
@@ -174,7 +178,7 @@
         <span class="k">else</span><span class="p">:</span>
             <span class="bp">self</span><span class="o">.</span><span class="n">dataSource</span><span class="o">.</span><span class="n">Enable</span><span class="p">()</span></div>
 
-<div class="viewcode-block" id="FitPage.fill_data_combobox"><a class="viewcode-back" href="../../../../../dev/api/sas.sasgui.perspectives.fitting.html#sas.sasgui.perspectives.fitting.fitpage.FitPage.fill_data_combobox">[docs]</a>    <span class="k">def</span> <span class="nf">fill_data_combobox</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">data_list</span><span class="p">):</span>
+<div class="viewcode-block" id="FitPage.fill_data_combobox"><a class="viewcode-back" href="../../../../../dev/sasview-api/sas.sasgui.perspectives.fitting.html#sas.sasgui.perspectives.fitting.fitpage.FitPage.fill_data_combobox">[docs]</a>    <span class="k">def</span> <span class="nf">fill_data_combobox</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">data_list</span><span class="p">):</span>
         <span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">        Get a list of data and fill the corresponding combobox</span>
 <span class="sd">        &quot;&quot;&quot;</span>
@@ -209,7 +213,7 @@
         <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">data_list</span><span class="p">)</span> <span class="o">==</span> <span class="mi">1</span><span class="p">:</span>
             <span class="bp">self</span><span class="o">.</span><span class="n">dataSource</span><span class="o">.</span><span class="n">Disable</span><span class="p">()</span></div>
 
-<div class="viewcode-block" id="FitPage.on_select_data"><a class="viewcode-back" href="../../../../../dev/api/sas.sasgui.perspectives.fitting.html#sas.sasgui.perspectives.fitting.fitpage.FitPage.on_select_data">[docs]</a>    <span class="k">def</span> <span class="nf">on_select_data</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">event</span><span class="o">=</span><span class="bp">None</span><span class="p">):</span>
+<div class="viewcode-block" id="FitPage.on_select_data"><a class="viewcode-back" href="../../../../../dev/sasview-api/sas.sasgui.perspectives.fitting.html#sas.sasgui.perspectives.fitting.fitpage.FitPage.on_select_data">[docs]</a>    <span class="k">def</span> <span class="nf">on_select_data</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">event</span><span class="o">=</span><span class="bp">None</span><span class="p">):</span>
         <span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">        On_select_data</span>
 <span class="sd">        &quot;&quot;&quot;</span>
@@ -339,7 +343,7 @@
         <span class="bp">self</span><span class="o">.</span><span class="n">btFitHelp</span> <span class="o">=</span> <span class="n">wx</span><span class="o">.</span><span class="n">Button</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">wx</span><span class="o">.</span><span class="n">ID_ANY</span><span class="p">,</span> <span class="s1">&#39;Help&#39;</span><span class="p">)</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">btFitHelp</span><span class="o">.</span><span class="n">SetToolTipString</span><span class="p">(</span><span class="s2">&quot;General fitting help.&quot;</span><span class="p">)</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">btFitHelp</span><span class="o">.</span><span class="n">Bind</span><span class="p">(</span><span class="n">wx</span><span class="o">.</span><span class="n">EVT_BUTTON</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">_onFitHelp</span><span class="p">)</span>
-        
+
         <span class="c1"># Resolution Smearing Help button (for now use same technique as</span>
         <span class="c1"># used for dI help to get tiniest possible button that works</span>
         <span class="c1"># both on MAC and PC.  Should completely rewrite the fitting sizer</span>
@@ -353,7 +357,7 @@
                                      <span class="n">style</span><span class="o">=</span><span class="n">wx</span><span class="o">.</span><span class="n">BU_EXACTFIT</span><span class="p">,</span> <span class="n">size</span><span class="o">=</span><span class="n">size_q</span><span class="p">)</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">btSmearHelp</span><span class="o">.</span><span class="n">SetToolTipString</span><span class="p">(</span><span class="s2">&quot;Resolution smearing help.&quot;</span><span class="p">)</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">btSmearHelp</span><span class="o">.</span><span class="n">Bind</span><span class="p">(</span><span class="n">wx</span><span class="o">.</span><span class="n">EVT_BUTTON</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">_onSmearHelp</span><span class="p">)</span>
-        
+
         <span class="c1"># textcntrl for custom resolution</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">smear_pinhole_percent</span> <span class="o">=</span> <span class="n">ModelTextCtrl</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">wx</span><span class="o">.</span><span class="n">ID_ANY</span><span class="p">,</span>
                                                    <span class="n">size</span><span class="o">=</span><span class="p">(</span><span class="n">_BOX_WIDTH</span> <span class="o">-</span> <span class="mi">25</span><span class="p">,</span> <span class="mi">20</span><span class="p">),</span>
@@ -414,7 +418,7 @@
 
         <span class="c1"># StaticText for chi2, N(for fitting), Npts + Log/linear spacing</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">tcChi</span> <span class="o">=</span> <span class="n">BGTextCtrl</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">wx</span><span class="o">.</span><span class="n">ID_ANY</span><span class="p">,</span> <span class="s2">&quot;-&quot;</span><span class="p">,</span> <span class="n">size</span><span class="o">=</span><span class="p">(</span><span class="mi">75</span><span class="p">,</span> <span class="mi">20</span><span class="p">),</span> <span class="n">style</span><span class="o">=</span><span class="mi">0</span><span class="p">)</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">tcChi</span><span class="o">.</span><span class="n">SetToolTipString</span><span class="p">(</span><span class="s2">&quot;Chi2/Npts(Fit)&quot;</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">tcChi</span><span class="o">.</span><span class="n">SetToolTipString</span><span class="p">(</span><span class="s2">&quot;Chi2/DOF (DOF=Npts-Npar fitted)&quot;</span><span class="p">)</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">Npts_fit</span> <span class="o">=</span> <span class="n">BGTextCtrl</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">wx</span><span class="o">.</span><span class="n">ID_ANY</span><span class="p">,</span> <span class="s2">&quot;-&quot;</span><span class="p">,</span> <span class="n">size</span><span class="o">=</span><span class="p">(</span><span class="mi">75</span><span class="p">,</span> <span class="mi">20</span><span class="p">),</span> <span class="n">style</span><span class="o">=</span><span class="mi">0</span><span class="p">)</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">Npts_fit</span><span class="o">.</span><span class="n">SetToolTipString</span><span class="p">(</span>
             <span class="s2">&quot; Npts : number of points selected for fitting&quot;</span><span class="p">)</span>
@@ -440,7 +444,7 @@
         <span class="bp">self</span><span class="o">.</span><span class="n">points_sizer</span><span class="o">.</span><span class="n">Add</span><span class="p">(</span><span class="n">wx</span><span class="o">.</span><span class="n">StaticText</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">wx</span><span class="o">.</span><span class="n">ID_ANY</span><span class="p">,</span> <span class="s1">&#39;Npts    &#39;</span><span class="p">))</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">points_sizer</span><span class="o">.</span><span class="n">Add</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">pointsbox</span><span class="p">)</span>
 
-        <span class="n">box_description_1</span> <span class="o">=</span> <span class="n">wx</span><span class="o">.</span><span class="n">StaticText</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">wx</span><span class="o">.</span><span class="n">ID_ANY</span><span class="p">,</span> <span class="s1">&#39;   Chi2/Npts&#39;</span><span class="p">)</span>
+        <span class="n">box_description_1</span> <span class="o">=</span> <span class="n">wx</span><span class="o">.</span><span class="n">StaticText</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">wx</span><span class="o">.</span><span class="n">ID_ANY</span><span class="p">,</span> <span class="s1">&#39;Reduced Chi2&#39;</span><span class="p">)</span>
         <span class="n">box_description_2</span> <span class="o">=</span> <span class="n">wx</span><span class="o">.</span><span class="n">StaticText</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">wx</span><span class="o">.</span><span class="n">ID_ANY</span><span class="p">,</span> <span class="s1">&#39;Npts(Fit)&#39;</span><span class="p">)</span>
 
         <span class="c1"># StaticText for smear</span>
@@ -614,13 +618,13 @@
         <span class="n">sizer</span><span class="o">.</span><span class="n">Add</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">points_sizer</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">)</span>
         <span class="n">sizer</span><span class="o">.</span><span class="n">Add</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">draw_button</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">)</span>
         <span class="n">sizer</span><span class="o">.</span><span class="n">Add</span><span class="p">((</span><span class="o">-</span><span class="mi">1</span><span class="p">,</span> <span class="mi">5</span><span class="p">))</span>
-        
+
         <span class="n">sizer</span><span class="o">.</span><span class="n">Add</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">tcChi</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">)</span>
         <span class="n">sizer</span><span class="o">.</span><span class="n">Add</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">Npts_fit</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">)</span>
         <span class="n">sizer</span><span class="o">.</span><span class="n">Add</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">Npts_total</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">)</span>
         <span class="n">sizer</span><span class="o">.</span><span class="n">Add</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">btFit</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">)</span>
         <span class="n">sizer</span><span class="o">.</span><span class="n">Add</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">btFitHelp</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">)</span>
-        
+
         <span class="n">boxsizer_range</span><span class="o">.</span><span class="n">Add</span><span class="p">(</span><span class="n">sizer_chi2</span><span class="p">)</span>
         <span class="n">boxsizer_range</span><span class="o">.</span><span class="n">Add</span><span class="p">(</span><span class="n">sizer</span><span class="p">)</span>
         <span class="k">if</span> <span class="n">is_2d_data</span><span class="p">:</span>
@@ -755,9 +759,8 @@
                             <span class="n">text2</span><span class="o">.</span><span class="n">Hide</span><span class="p">()</span>
 
                         <span class="n">ix</span> <span class="o">=</span> <span class="mi">3</span>
-                        <span class="n">ctl2</span> <span class="o">=</span> <span class="n">wx</span><span class="o">.</span><span class="n">TextCtrl</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">wx</span><span class="o">.</span><span class="n">ID_ANY</span><span class="p">,</span>
-                                           <span class="n">size</span><span class="o">=</span><span class="p">(</span><span class="n">_BOX_WIDTH</span> <span class="o">/</span> <span class="mf">1.3</span><span class="p">,</span> <span class="mi">20</span><span class="p">),</span>
-                                           <span class="n">style</span><span class="o">=</span><span class="mi">0</span><span class="p">)</span>
+                        <span class="n">ctl2</span> <span class="o">=</span> <span class="n">BGTextCtrl</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">wx</span><span class="o">.</span><span class="n">ID_ANY</span><span class="p">,</span>
+                                           <span class="n">size</span><span class="o">=</span><span class="p">(</span><span class="n">_BOX_WIDTH</span> <span class="o">/</span> <span class="mf">1.3</span><span class="p">,</span> <span class="mi">20</span><span class="p">))</span>
 
                         <span class="bp">self</span><span class="o">.</span><span class="n">sizer4_4</span><span class="o">.</span><span class="n">Add</span><span class="p">(</span><span class="n">ctl2</span><span class="p">,</span> <span class="p">(</span><span class="n">iy</span><span class="p">,</span> <span class="n">ix</span><span class="p">),</span> <span class="p">(</span><span class="mi">1</span><span class="p">,</span> <span class="mi">1</span><span class="p">),</span>
                                           <span class="n">wx</span><span class="o">.</span><span class="n">EXPAND</span> <span class="o">|</span> <span class="n">wx</span><span class="o">.</span><span class="n">ADJUST_MINSIZE</span><span class="p">,</span> <span class="mi">0</span><span class="p">)</span>
@@ -1128,12 +1131,12 @@
 <span class="sd">        :param evt: Triggers on clicking the help button</span>
 <span class="sd">        &quot;&quot;&quot;</span>
 
-        <span class="n">_TreeLocation</span> <span class="o">=</span> <span class="s2">&quot;user/sasgui/perspectives/fitting/sm_help.html&quot;</span>
+        <span class="n">_TreeLocation</span> <span class="o">=</span> <span class="s2">&quot;user/sasgui/perspectives/fitting/resolution.html&quot;</span>
         <span class="n">_doc_viewer</span> <span class="o">=</span> <span class="n">DocumentationWindow</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">wx</span><span class="o">.</span><span class="n">ID_ANY</span><span class="p">,</span> <span class="n">_TreeLocation</span><span class="p">,</span> <span class="s2">&quot;&quot;</span><span class="p">,</span>
                                           <span class="s2">&quot;Instrumental Resolution Smearing </span><span class="se">\</span>
 <span class="s2">                                          Help&quot;</span><span class="p">)</span>
 
-<div class="viewcode-block" id="FitPage.set_fitbutton"><a class="viewcode-back" href="../../../../../dev/api/sas.sasgui.perspectives.fitting.html#sas.sasgui.perspectives.fitting.fitpage.FitPage.set_fitbutton">[docs]</a>    <span class="k">def</span> <span class="nf">set_fitbutton</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+<div class="viewcode-block" id="FitPage.set_fitbutton"><a class="viewcode-back" href="../../../../../dev/sasview-api/sas.sasgui.perspectives.fitting.html#sas.sasgui.perspectives.fitting.fitpage.FitPage.set_fitbutton">[docs]</a>    <span class="k">def</span> <span class="nf">set_fitbutton</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
         <span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">        Set fit button label depending on the fit_started[bool]</span>
 <span class="sd">        &quot;&quot;&quot;</span>
@@ -1153,7 +1156,7 @@
         <span class="bp">self</span><span class="o">.</span><span class="n">btFit</span><span class="o">.</span><span class="n">SetForegroundColour</span><span class="p">(</span><span class="n">color</span><span class="p">)</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">btFit</span><span class="o">.</span><span class="n">Enable</span><span class="p">(</span><span class="bp">True</span><span class="p">)</span></div>
 
-<div class="viewcode-block" id="FitPage.get_weight_flag"><a class="viewcode-back" href="../../../../../dev/api/sas.sasgui.perspectives.fitting.html#sas.sasgui.perspectives.fitting.fitpage.FitPage.get_weight_flag">[docs]</a>    <span class="k">def</span> <span class="nf">get_weight_flag</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+<div class="viewcode-block" id="FitPage.get_weight_flag"><a class="viewcode-back" href="../../../../../dev/sasview-api/sas.sasgui.perspectives.fitting.html#sas.sasgui.perspectives.fitting.fitpage.FitPage.get_weight_flag">[docs]</a>    <span class="k">def</span> <span class="nf">get_weight_flag</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
         <span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">        Get flag corresponding to a given weighting dI data.</span>
 <span class="sd">        &quot;&quot;&quot;</span>
@@ -1165,13 +1168,13 @@
         <span class="k">for</span> <span class="n">item</span> <span class="ow">in</span> <span class="n">button_list</span><span class="p">:</span>
             <span class="k">if</span> <span class="n">item</span><span class="o">.</span><span class="n">GetValue</span><span class="p">():</span>
                 <span class="k">if</span> <span class="n">button_list</span><span class="o">.</span><span class="n">index</span><span class="p">(</span><span class="n">item</span><span class="p">)</span> <span class="o">==</span> <span class="mi">0</span><span class="p">:</span>
-                    <span class="n">flag</span> <span class="o">=</span> <span class="mi">0</span>  <span class="c1"># dy = numpy.ones_like(dy_data)</span>
+                    <span class="n">flag</span> <span class="o">=</span> <span class="mi">0</span>  <span class="c1"># dy = np.ones_like(dy_data)</span>
                 <span class="k">elif</span> <span class="n">button_list</span><span class="o">.</span><span class="n">index</span><span class="p">(</span><span class="n">item</span><span class="p">)</span> <span class="o">==</span> <span class="mi">1</span><span class="p">:</span>
                     <span class="n">flag</span> <span class="o">=</span> <span class="mi">1</span>  <span class="c1"># dy = dy_data</span>
                 <span class="k">elif</span> <span class="n">button_list</span><span class="o">.</span><span class="n">index</span><span class="p">(</span><span class="n">item</span><span class="p">)</span> <span class="o">==</span> <span class="mi">2</span><span class="p">:</span>
-                    <span class="n">flag</span> <span class="o">=</span> <span class="mi">2</span>  <span class="c1"># dy = numpy.sqrt(numpy.abs(data))</span>
+                    <span class="n">flag</span> <span class="o">=</span> <span class="mi">2</span>  <span class="c1"># dy = np.sqrt(np.abs(data))</span>
                 <span class="k">elif</span> <span class="n">button_list</span><span class="o">.</span><span class="n">index</span><span class="p">(</span><span class="n">item</span><span class="p">)</span> <span class="o">==</span> <span class="mi">3</span><span class="p">:</span>
-                    <span class="n">flag</span> <span class="o">=</span> <span class="mi">3</span>  <span class="c1"># dy = numpy.abs(data)</span>
+                    <span class="n">flag</span> <span class="o">=</span> <span class="mi">3</span>  <span class="c1"># dy = np.abs(data)</span>
                 <span class="k">break</span>
         <span class="k">return</span> <span class="n">flag</span></div>
 
@@ -1185,29 +1188,42 @@
         <span class="bp">self</span><span class="o">.</span><span class="n">_manager</span><span class="o">.</span><span class="n">_reset_schedule_problem</span><span class="p">(</span><span class="n">value</span><span class="o">=</span><span class="mi">0</span><span class="p">)</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">_on_fit_complete</span><span class="p">()</span>
 
-<div class="viewcode-block" id="FitPage.rename_model"><a class="viewcode-back" href="../../../../../dev/api/sas.sasgui.perspectives.fitting.html#sas.sasgui.perspectives.fitting.fitpage.FitPage.rename_model">[docs]</a>    <span class="k">def</span> <span class="nf">rename_model</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+<div class="viewcode-block" id="FitPage.rename_model"><a class="viewcode-back" href="../../../../../dev/sasview-api/sas.sasgui.perspectives.fitting.html#sas.sasgui.perspectives.fitting.fitpage.FitPage.rename_model">[docs]</a>    <span class="k">def</span> <span class="nf">rename_model</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
         <span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">        find a short name for model</span>
 <span class="sd">        &quot;&quot;&quot;</span>
         <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">model</span> <span class="ow">is</span> <span class="ow">not</span> <span class="bp">None</span><span class="p">:</span>
             <span class="bp">self</span><span class="o">.</span><span class="n">model</span><span class="o">.</span><span class="n">name</span> <span class="o">=</span> <span class="s2">&quot;M&quot;</span> <span class="o">+</span> <span class="nb">str</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">index_model</span><span class="p">)</span></div>
 
-    <span class="k">def</span> <span class="nf">_on_select_model</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">event</span><span class="o">=</span><span class="bp">None</span><span class="p">):</span>
+    <span class="k">def</span> <span class="nf">_on_select_model</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">event</span><span class="o">=</span><span class="bp">None</span><span class="p">,</span> <span class="n">keep_pars</span><span class="o">=</span><span class="bp">False</span><span class="p">):</span>
         <span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">        call back for model selection</span>
 <span class="sd">        &quot;&quot;&quot;</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">Show</span><span class="p">(</span><span class="bp">False</span><span class="p">)</span>
-        <span class="n">copy_flag</span> <span class="o">=</span> <span class="bp">False</span>
-        <span class="n">is_poly_enabled</span> <span class="o">=</span> <span class="bp">None</span>
         <span class="k">if</span> <span class="n">event</span> <span class="ow">is</span> <span class="ow">not</span> <span class="bp">None</span><span class="p">:</span>
-            <span class="k">if</span> <span class="p">(</span><span class="n">event</span><span class="o">.</span><span class="n">GetEventObject</span><span class="p">()</span> <span class="o">==</span> <span class="bp">self</span><span class="o">.</span><span class="n">formfactorbox</span>
-                    <span class="ow">and</span> <span class="bp">self</span><span class="o">.</span><span class="n">structurebox</span><span class="o">.</span><span class="n">GetLabel</span><span class="p">()</span> <span class="o">!=</span> <span class="s1">&#39;None&#39;</span><span class="p">)</span>\
-                    <span class="ow">or</span> <span class="n">event</span><span class="o">.</span><span class="n">GetEventObject</span><span class="p">()</span> <span class="o">==</span> <span class="bp">self</span><span class="o">.</span><span class="n">structurebox</span>\
-                    <span class="ow">or</span> <span class="n">event</span><span class="o">.</span><span class="n">GetEventObject</span><span class="p">()</span> <span class="o">==</span> <span class="bp">self</span><span class="o">.</span><span class="n">multifactorbox</span><span class="p">:</span>
-                <span class="n">copy_flag</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">get_copy_params</span><span class="p">()</span>
-                <span class="n">is_poly_enabled</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">enable_disp</span><span class="o">.</span><span class="n">GetValue</span><span class="p">()</span>
+            <span class="n">control</span> <span class="o">=</span> <span class="n">event</span><span class="o">.</span><span class="n">GetEventObject</span><span class="p">()</span>
+            <span class="k">if</span> <span class="p">((</span><span class="n">control</span> <span class="o">==</span> <span class="bp">self</span><span class="o">.</span><span class="n">formfactorbox</span>
+                 <span class="ow">and</span> <span class="bp">self</span><span class="o">.</span><span class="n">structurebox</span><span class="o">.</span><span class="n">GetLabel</span><span class="p">()</span> <span class="o">!=</span> <span class="s1">&#39;None&#39;</span><span class="p">)</span>
+                    <span class="ow">or</span> <span class="n">control</span> <span class="o">==</span> <span class="bp">self</span><span class="o">.</span><span class="n">structurebox</span>
+                    <span class="ow">or</span> <span class="n">control</span> <span class="o">==</span> <span class="bp">self</span><span class="o">.</span><span class="n">multifactorbox</span><span class="p">):</span>
+                <span class="n">keep_pars</span> <span class="o">=</span> <span class="bp">True</span>
 
-        <span class="bp">self</span><span class="o">.</span><span class="n">_on_select_model_helper</span><span class="p">()</span>
+        <span class="k">if</span> <span class="n">keep_pars</span><span class="p">:</span>
+            <span class="n">saved_pars</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">get_copy_params</span><span class="p">()</span>
+            <span class="n">is_poly_enabled</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">enable_disp</span><span class="o">.</span><span class="n">GetValue</span><span class="p">()</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">saved_pars</span> <span class="o">=</span> <span class="bp">None</span>
+            <span class="n">is_poly_enabled</span> <span class="o">=</span> <span class="bp">None</span>
+
+        <span class="k">try</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_on_select_model_helper</span><span class="p">()</span>
+        <span class="k">except</span> <span class="ne">Exception</span> <span class="k">as</span> <span class="n">e</span><span class="p">:</span>
+            <span class="n">evt</span> <span class="o">=</span> <span class="n">StatusEvent</span><span class="p">(</span><span class="n">status</span><span class="o">=</span><span class="n">e</span><span class="o">.</span><span class="n">message</span><span class="p">,</span> <span class="n">info</span><span class="o">=</span><span class="s2">&quot;error&quot;</span><span class="p">)</span>
+            <span class="n">wx</span><span class="o">.</span><span class="n">PostEvent</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_manager</span><span class="o">.</span><span class="n">parent</span><span class="p">,</span> <span class="n">evt</span><span class="p">)</span>
+            <span class="c1"># Set S(Q) to None</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">structurebox</span><span class="o">.</span><span class="n">SetSelection</span><span class="p">(</span><span class="mi">0</span><span class="p">)</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_on_select_model</span><span class="p">()</span>
+            <span class="k">return</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">set_model_param_sizer</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">model</span><span class="p">)</span>
         <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">model</span> <span class="ow">is</span> <span class="bp">None</span><span class="p">:</span>
             <span class="bp">self</span><span class="o">.</span><span class="n">_set_bookmark_flag</span><span class="p">(</span><span class="bp">False</span><span class="p">)</span>
@@ -1220,7 +1236,7 @@
         <span class="c1"># Note: if we fix this, then remove ID_DISPERSER_HELP from basepage</span>
         <span class="k">try</span><span class="p">:</span>
             <span class="bp">self</span><span class="o">.</span><span class="n">set_dispers_sizer</span><span class="p">()</span>
-        <span class="k">except</span><span class="p">:</span>
+        <span class="k">except</span> <span class="ne">Exception</span><span class="p">:</span>
             <span class="k">pass</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">state</span><span class="o">.</span><span class="n">enable_disp</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">enable_disp</span><span class="o">.</span><span class="n">GetValue</span><span class="p">()</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">state</span><span class="o">.</span><span class="n">disable_disp</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">disable_disp</span><span class="o">.</span><span class="n">GetValue</span><span class="p">()</span>
@@ -1281,37 +1297,40 @@
             <span class="bp">self</span><span class="o">.</span><span class="n">state</span><span class="o">.</span><span class="n">model</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">model</span><span class="o">.</span><span class="n">clone</span><span class="p">()</span>
             <span class="bp">self</span><span class="o">.</span><span class="n">state</span><span class="o">.</span><span class="n">model</span><span class="o">.</span><span class="n">name</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">model</span><span class="o">.</span><span class="n">name</span>
 
+        <span class="c1"># when select a model only from guictr/button</span>
+        <span class="k">if</span> <span class="n">is_poly_enabled</span> <span class="ow">is</span> <span class="ow">not</span> <span class="bp">None</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">enable_disp</span><span class="o">.</span><span class="n">SetValue</span><span class="p">(</span><span class="n">is_poly_enabled</span><span class="p">)</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">disable_disp</span><span class="o">.</span><span class="n">SetValue</span><span class="p">(</span><span class="ow">not</span> <span class="n">is_poly_enabled</span><span class="p">)</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_set_dipers_Param</span><span class="p">(</span><span class="n">event</span><span class="o">=</span><span class="bp">None</span><span class="p">)</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">state</span><span class="o">.</span><span class="n">enable_disp</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">enable_disp</span><span class="o">.</span><span class="n">GetValue</span><span class="p">()</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">state</span><span class="o">.</span><span class="n">disable_disp</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">disable_disp</span><span class="o">.</span><span class="n">GetValue</span><span class="p">()</span>
+
+        <span class="c1"># Keep the previous param values</span>
+        <span class="k">if</span> <span class="n">saved_pars</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">get_paste_params</span><span class="p">(</span><span class="n">saved_pars</span><span class="p">)</span>
+
+        <span class="c1"># Make sure the model parameters correspond to the fit parameters</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_update_paramv_on_fit</span><span class="p">()</span>
+
         <span class="k">if</span> <span class="n">event</span> <span class="ow">is</span> <span class="ow">not</span> <span class="bp">None</span><span class="p">:</span>
+            <span class="c1"># update list of plugins if new plugin is available</span>
+            <span class="c1"># mod_cat = self.categorybox.GetStringSelection()</span>
+            <span class="c1"># if mod_cat == CUSTOM_MODEL:</span>
+            <span class="c1">#     temp = self.parent.update_model_list()</span>
+            <span class="c1">#     for v in self.parent.model_dictionary.values():</span>
+            <span class="c1">#         if v.id == self.model.id:</span>
+            <span class="c1">#             self.model = v()</span>
+            <span class="c1">#             break</span>
+            <span class="c1">#     if temp:</span>
+            <span class="c1">#         self.model_list_box = temp</span>
+            <span class="c1">#         current_val = self.formfactorbox.GetLabel()</span>
+            <span class="c1">#         pos = self.formfactorbox.GetSelection()</span>
+            <span class="c1">#         self._show_combox_helper()</span>
+            <span class="c1">#         self.formfactorbox.SetStringSelection(current_val)</span>
+            <span class="c1">#         self.formfactorbox.SetValue(current_val)</span>
             <span class="c1"># post state to fit panel</span>
             <span class="n">new_event</span> <span class="o">=</span> <span class="n">PageInfoEvent</span><span class="p">(</span><span class="n">page</span><span class="o">=</span><span class="bp">self</span><span class="p">)</span>
             <span class="n">wx</span><span class="o">.</span><span class="n">PostEvent</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">parent</span><span class="p">,</span> <span class="n">new_event</span><span class="p">)</span>
-            <span class="c1"># update list of plugins if new plugin is available</span>
-            <span class="n">mod_cat</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">categorybox</span><span class="o">.</span><span class="n">GetStringSelection</span><span class="p">()</span>
-            <span class="k">if</span> <span class="n">mod_cat</span> <span class="o">==</span> <span class="n">CUSTOM_MODEL</span><span class="p">:</span>
-                <span class="n">temp_id</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">model</span><span class="o">.</span><span class="n">id</span>
-                <span class="n">temp</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">parent</span><span class="o">.</span><span class="n">update_model_list</span><span class="p">()</span>
-                <span class="k">for</span> <span class="n">v</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">parent</span><span class="o">.</span><span class="n">model_dictionary</span><span class="o">.</span><span class="n">values</span><span class="p">():</span>
-                    <span class="k">if</span> <span class="n">v</span><span class="o">.</span><span class="n">id</span> <span class="o">==</span> <span class="n">temp_id</span><span class="p">:</span>
-                        <span class="bp">self</span><span class="o">.</span><span class="n">model</span> <span class="o">=</span> <span class="n">v</span><span class="p">()</span>
-                        <span class="k">break</span>
-                <span class="k">if</span> <span class="n">temp</span><span class="p">:</span>
-                    <span class="bp">self</span><span class="o">.</span><span class="n">model_list_box</span> <span class="o">=</span> <span class="n">temp</span>
-                    <span class="n">current_val</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">formfactorbox</span><span class="o">.</span><span class="n">GetLabel</span><span class="p">()</span>
-                    <span class="n">pos</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">formfactorbox</span><span class="o">.</span><span class="n">GetSelection</span><span class="p">()</span>
-                    <span class="bp">self</span><span class="o">.</span><span class="n">_show_combox_helper</span><span class="p">()</span>
-                    <span class="bp">self</span><span class="o">.</span><span class="n">formfactorbox</span><span class="o">.</span><span class="n">SetSelection</span><span class="p">(</span><span class="n">pos</span><span class="p">)</span>
-                    <span class="bp">self</span><span class="o">.</span><span class="n">formfactorbox</span><span class="o">.</span><span class="n">SetValue</span><span class="p">(</span><span class="n">current_val</span><span class="p">)</span>
-            <span class="c1"># when select a model only from guictr/button</span>
-            <span class="k">if</span> <span class="n">is_poly_enabled</span> <span class="ow">is</span> <span class="ow">not</span> <span class="bp">None</span><span class="p">:</span>
-                <span class="bp">self</span><span class="o">.</span><span class="n">enable_disp</span><span class="o">.</span><span class="n">SetValue</span><span class="p">(</span><span class="n">is_poly_enabled</span><span class="p">)</span>
-                <span class="bp">self</span><span class="o">.</span><span class="n">disable_disp</span><span class="o">.</span><span class="n">SetValue</span><span class="p">(</span><span class="ow">not</span> <span class="n">is_poly_enabled</span><span class="p">)</span>
-                <span class="bp">self</span><span class="o">.</span><span class="n">_set_dipers_Param</span><span class="p">(</span><span class="n">event</span><span class="o">=</span><span class="bp">None</span><span class="p">)</span>
-                <span class="bp">self</span><span class="o">.</span><span class="n">state</span><span class="o">.</span><span class="n">enable_disp</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">enable_disp</span><span class="o">.</span><span class="n">GetValue</span><span class="p">()</span>
-                <span class="bp">self</span><span class="o">.</span><span class="n">state</span><span class="o">.</span><span class="n">disable_disp</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">disable_disp</span><span class="o">.</span><span class="n">GetValue</span><span class="p">()</span>
-
-            <span class="c1"># Keep the previous param values</span>
-            <span class="k">if</span> <span class="n">copy_flag</span><span class="p">:</span>
-                <span class="bp">self</span><span class="o">.</span><span class="n">get_paste_params</span><span class="p">(</span><span class="n">copy_flag</span><span class="p">)</span>
             <span class="n">wx</span><span class="o">.</span><span class="n">CallAfter</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_onDraw</span><span class="p">,</span> <span class="bp">None</span><span class="p">)</span>
 
         <span class="k">else</span><span class="p">:</span>
@@ -1418,7 +1437,7 @@
         <span class="n">wx</span><span class="o">.</span><span class="n">PostEvent</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">parent</span><span class="p">,</span> <span class="n">event</span><span class="p">)</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">state_change</span> <span class="o">=</span> <span class="bp">False</span>
 
-<div class="viewcode-block" id="FitPage.qrang_set_focus"><a class="viewcode-back" href="../../../../../dev/api/sas.sasgui.perspectives.fitting.html#sas.sasgui.perspectives.fitting.fitpage.FitPage.qrang_set_focus">[docs]</a>    <span class="k">def</span> <span class="nf">qrang_set_focus</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">event</span><span class="o">=</span><span class="bp">None</span><span class="p">):</span>
+<div class="viewcode-block" id="FitPage.qrang_set_focus"><a class="viewcode-back" href="../../../../../dev/sasview-api/sas.sasgui.perspectives.fitting.html#sas.sasgui.perspectives.fitting.fitpage.FitPage.qrang_set_focus">[docs]</a>    <span class="k">def</span> <span class="nf">qrang_set_focus</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">event</span><span class="o">=</span><span class="bp">None</span><span class="p">):</span>
         <span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">        ON Qrange focus</span>
 <span class="sd">        &quot;&quot;&quot;</span>
@@ -1427,7 +1446,7 @@
         <span class="c1"># tcrtl = event.GetEventObject()</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">_validate_qrange</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">qmin</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">qmax</span><span class="p">)</span></div>
 
-<div class="viewcode-block" id="FitPage.qrange_click"><a class="viewcode-back" href="../../../../../dev/api/sas.sasgui.perspectives.fitting.html#sas.sasgui.perspectives.fitting.fitpage.FitPage.qrange_click">[docs]</a>    <span class="k">def</span> <span class="nf">qrange_click</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">event</span><span class="p">):</span>
+<div class="viewcode-block" id="FitPage.qrange_click"><a class="viewcode-back" href="../../../../../dev/sasview-api/sas.sasgui.perspectives.fitting.html#sas.sasgui.perspectives.fitting.fitpage.FitPage.qrange_click">[docs]</a>    <span class="k">def</span> <span class="nf">qrange_click</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">event</span><span class="p">):</span>
         <span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">        On Qrange textctrl click, make the qrange lines in the plot</span>
 <span class="sd">        &quot;&quot;&quot;</span>
@@ -1445,7 +1464,7 @@
                                      <span class="n">group_id</span><span class="o">=</span><span class="n">d_group_id</span><span class="p">,</span> <span class="n">leftdown</span><span class="o">=</span><span class="n">is_click</span><span class="p">,</span>
                                      <span class="n">active</span><span class="o">=</span><span class="n">act_ctrl</span><span class="p">))</span></div>
 
-<div class="viewcode-block" id="FitPage.on_qrange_text"><a class="viewcode-back" href="../../../../../dev/api/sas.sasgui.perspectives.fitting.html#sas.sasgui.perspectives.fitting.fitpage.FitPage.on_qrange_text">[docs]</a>    <span class="k">def</span> <span class="nf">on_qrange_text</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">event</span><span class="p">):</span>
+<div class="viewcode-block" id="FitPage.on_qrange_text"><a class="viewcode-back" href="../../../../../dev/sasview-api/sas.sasgui.perspectives.fitting.html#sas.sasgui.perspectives.fitting.fitpage.FitPage.on_qrange_text">[docs]</a>    <span class="k">def</span> <span class="nf">on_qrange_text</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">event</span><span class="p">):</span>
         <span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">        #On q range value updated. DO not combine with qrange_click().</span>
 <span class="sd">        &quot;&quot;&quot;</span>
@@ -1462,7 +1481,7 @@
                                      <span class="n">active</span><span class="o">=</span><span class="n">act_ctrl</span><span class="p">))</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">_validate_qrange</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">qmin</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">qmax</span><span class="p">)</span></div>
 
-<div class="viewcode-block" id="FitPage.on_key"><a class="viewcode-back" href="../../../../../dev/api/sas.sasgui.perspectives.fitting.html#sas.sasgui.perspectives.fitting.fitpage.FitPage.on_key">[docs]</a>    <span class="k">def</span> <span class="nf">on_key</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">event</span><span class="p">):</span>
+<div class="viewcode-block" id="FitPage.on_key"><a class="viewcode-back" href="../../../../../dev/sasview-api/sas.sasgui.perspectives.fitting.html#sas.sasgui.perspectives.fitting.fitpage.FitPage.on_key">[docs]</a>    <span class="k">def</span> <span class="nf">on_key</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">event</span><span class="p">):</span>
         <span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">        On Key down</span>
 <span class="sd">        &quot;&quot;&quot;</span>
@@ -1476,7 +1495,7 @@
             <span class="k">return</span>
         <span class="n">key</span> <span class="o">=</span> <span class="n">event</span><span class="o">.</span><span class="n">GetKeyCode</span><span class="p">()</span>
         <span class="n">length</span> <span class="o">=</span> <span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">data</span><span class="o">.</span><span class="n">x</span><span class="p">)</span>
-        <span class="n">indx</span> <span class="o">=</span> <span class="p">(</span><span class="n">numpy</span><span class="o">.</span><span class="n">abs</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">data</span><span class="o">.</span><span class="n">x</span> <span class="o">-</span> <span class="n">x_data</span><span class="p">))</span><span class="o">.</span><span class="n">argmin</span><span class="p">()</span>
+        <span class="n">indx</span> <span class="o">=</span> <span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">abs</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">data</span><span class="o">.</span><span class="n">x</span> <span class="o">-</span> <span class="n">x_data</span><span class="p">))</span><span class="o">.</span><span class="n">argmin</span><span class="p">()</span>
         <span class="c1"># return array.flat[idx]</span>
         <span class="k">if</span> <span class="n">key</span> <span class="o">==</span> <span class="n">wx</span><span class="o">.</span><span class="n">WXK_PAGEUP</span> <span class="ow">or</span> <span class="n">key</span> <span class="o">==</span> <span class="n">wx</span><span class="o">.</span><span class="n">WXK_NUMPAD_PAGEUP</span><span class="p">:</span>
             <span class="n">indx</span> <span class="o">+=</span> <span class="mi">1</span>
@@ -1531,11 +1550,11 @@
             <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">data</span><span class="o">.</span><span class="n">__class__</span><span class="o">.</span><span class="n">__name__</span> <span class="o">==</span> <span class="s2">&quot;Data2D&quot;</span> <span class="ow">or</span> \
                     <span class="bp">self</span><span class="o">.</span><span class="n">enable2D</span><span class="p">:</span>
                 <span class="c1"># set mask</span>
-                <span class="n">radius</span> <span class="o">=</span> <span class="n">numpy</span><span class="o">.</span><span class="n">sqrt</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">data</span><span class="o">.</span><span class="n">qx_data</span> <span class="o">*</span> <span class="bp">self</span><span class="o">.</span><span class="n">data</span><span class="o">.</span><span class="n">qx_data</span> <span class="o">+</span>
+                <span class="n">radius</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">sqrt</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">data</span><span class="o">.</span><span class="n">qx_data</span> <span class="o">*</span> <span class="bp">self</span><span class="o">.</span><span class="n">data</span><span class="o">.</span><span class="n">qx_data</span> <span class="o">+</span>
                                     <span class="bp">self</span><span class="o">.</span><span class="n">data</span><span class="o">.</span><span class="n">qy_data</span> <span class="o">*</span> <span class="bp">self</span><span class="o">.</span><span class="n">data</span><span class="o">.</span><span class="n">qy_data</span><span class="p">)</span>
                 <span class="n">index_data</span> <span class="o">=</span> <span class="p">((</span><span class="bp">self</span><span class="o">.</span><span class="n">qmin_x</span> <span class="o">&lt;=</span> <span class="n">radius</span><span class="p">)</span> <span class="o">&amp;</span> <span class="p">(</span><span class="n">radius</span> <span class="o">&lt;=</span> <span class="bp">self</span><span class="o">.</span><span class="n">qmax_x</span><span class="p">))</span>
                 <span class="n">index_data</span> <span class="o">=</span> <span class="p">(</span><span class="n">index_data</span><span class="p">)</span> <span class="o">&amp;</span> <span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">data</span><span class="o">.</span><span class="n">mask</span><span class="p">)</span>
-                <span class="n">index_data</span> <span class="o">=</span> <span class="p">(</span><span class="n">index_data</span><span class="p">)</span> <span class="o">&amp;</span> <span class="p">(</span><span class="n">numpy</span><span class="o">.</span><span class="n">isfinite</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">data</span><span class="o">.</span><span class="n">data</span><span class="p">))</span>
+                <span class="n">index_data</span> <span class="o">=</span> <span class="p">(</span><span class="n">index_data</span><span class="p">)</span> <span class="o">&amp;</span> <span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">isfinite</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">data</span><span class="o">.</span><span class="n">data</span><span class="p">))</span>
                 <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">index_data</span><span class="p">[</span><span class="n">index_data</span><span class="p">])</span> <span class="o">&lt;</span> <span class="mi">10</span><span class="p">:</span>
                     <span class="n">msg</span> <span class="o">=</span> <span class="s2">&quot;Cannot Plot :No or too little npts in&quot;</span>
                     <span class="n">msg</span> <span class="o">+=</span> <span class="s2">&quot; that data range!!!  &quot;</span>
@@ -1652,13 +1671,13 @@
                 <span class="ow">and</span> <span class="n">data</span><span class="o">.</span><span class="n">dqx_data</span><span class="o">.</span><span class="n">any</span><span class="p">()</span> <span class="o">!=</span> <span class="mi">0</span> \
                 <span class="ow">and</span> <span class="n">data</span><span class="o">.</span><span class="n">dqx_data</span><span class="o">.</span><span class="n">any</span><span class="p">()</span> <span class="o">!=</span> <span class="mi">0</span><span class="p">:</span>
                 <span class="bp">self</span><span class="o">.</span><span class="n">smear_type</span> <span class="o">=</span> <span class="s2">&quot;Pinhole2d&quot;</span>
-                <span class="bp">self</span><span class="o">.</span><span class="n">dq_l</span> <span class="o">=</span> <span class="n">format_number</span><span class="p">(</span><span class="n">numpy</span><span class="o">.</span><span class="n">average</span><span class="p">(</span><span class="n">data</span><span class="o">.</span><span class="n">dqx_data</span><span class="p">))</span>
-                <span class="bp">self</span><span class="o">.</span><span class="n">dq_r</span> <span class="o">=</span> <span class="n">format_number</span><span class="p">(</span><span class="n">numpy</span><span class="o">.</span><span class="n">average</span><span class="p">(</span><span class="n">data</span><span class="o">.</span><span class="n">dqy_data</span><span class="p">))</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">dq_l</span> <span class="o">=</span> <span class="n">format_number</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">average</span><span class="p">(</span><span class="n">data</span><span class="o">.</span><span class="n">dqx_data</span><span class="p">))</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">dq_r</span> <span class="o">=</span> <span class="n">format_number</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">average</span><span class="p">(</span><span class="n">data</span><span class="o">.</span><span class="n">dqy_data</span><span class="p">))</span>
                 <span class="k">return</span>
             <span class="k">else</span><span class="p">:</span>
                 <span class="k">return</span>
         <span class="c1"># check if it is pinhole smear and get min max if it is.</span>
-        <span class="k">if</span> <span class="n">data</span><span class="o">.</span><span class="n">dx</span> <span class="ow">is</span> <span class="ow">not</span> <span class="bp">None</span> <span class="ow">and</span> <span class="n">numpy</span><span class="o">.</span><span class="n">any</span><span class="p">(</span><span class="n">data</span><span class="o">.</span><span class="n">dx</span><span class="p">):</span>
+        <span class="k">if</span> <span class="n">data</span><span class="o">.</span><span class="n">dx</span> <span class="ow">is</span> <span class="ow">not</span> <span class="bp">None</span> <span class="ow">and</span> <span class="n">np</span><span class="o">.</span><span class="n">any</span><span class="p">(</span><span class="n">data</span><span class="o">.</span><span class="n">dx</span><span class="p">):</span>
             <span class="bp">self</span><span class="o">.</span><span class="n">smear_type</span> <span class="o">=</span> <span class="s2">&quot;Pinhole&quot;</span>
             <span class="bp">self</span><span class="o">.</span><span class="n">dq_l</span> <span class="o">=</span> <span class="n">data</span><span class="o">.</span><span class="n">dx</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
             <span class="bp">self</span><span class="o">.</span><span class="n">dq_r</span> <span class="o">=</span> <span class="n">data</span><span class="o">.</span><span class="n">dx</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span>
@@ -1666,9 +1685,9 @@
         <span class="c1"># check if it is slit smear and get min max if it is.</span>
         <span class="k">elif</span> <span class="n">data</span><span class="o">.</span><span class="n">dxl</span> <span class="ow">is</span> <span class="ow">not</span> <span class="bp">None</span> <span class="ow">or</span> <span class="n">data</span><span class="o">.</span><span class="n">dxw</span> <span class="ow">is</span> <span class="ow">not</span> <span class="bp">None</span><span class="p">:</span>
             <span class="bp">self</span><span class="o">.</span><span class="n">smear_type</span> <span class="o">=</span> <span class="s2">&quot;Slit&quot;</span>
-            <span class="k">if</span> <span class="n">data</span><span class="o">.</span><span class="n">dxl</span> <span class="ow">is</span> <span class="ow">not</span> <span class="bp">None</span> <span class="ow">and</span> <span class="n">numpy</span><span class="o">.</span><span class="n">all</span><span class="p">(</span><span class="n">data</span><span class="o">.</span><span class="n">dxl</span><span class="p">,</span> <span class="mi">0</span><span class="p">):</span>
+            <span class="k">if</span> <span class="n">data</span><span class="o">.</span><span class="n">dxl</span> <span class="ow">is</span> <span class="ow">not</span> <span class="bp">None</span> <span class="ow">and</span> <span class="n">np</span><span class="o">.</span><span class="n">all</span><span class="p">(</span><span class="n">data</span><span class="o">.</span><span class="n">dxl</span><span class="p">,</span> <span class="mi">0</span><span class="p">):</span>
                 <span class="bp">self</span><span class="o">.</span><span class="n">dq_l</span> <span class="o">=</span> <span class="n">data</span><span class="o">.</span><span class="n">dxl</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
-            <span class="k">if</span> <span class="n">data</span><span class="o">.</span><span class="n">dxw</span> <span class="ow">is</span> <span class="ow">not</span> <span class="bp">None</span> <span class="ow">and</span> <span class="n">numpy</span><span class="o">.</span><span class="n">all</span><span class="p">(</span><span class="n">data</span><span class="o">.</span><span class="n">dxw</span><span class="p">,</span> <span class="mi">0</span><span class="p">):</span>
+            <span class="k">if</span> <span class="n">data</span><span class="o">.</span><span class="n">dxw</span> <span class="ow">is</span> <span class="ow">not</span> <span class="bp">None</span> <span class="ow">and</span> <span class="n">np</span><span class="o">.</span><span class="n">all</span><span class="p">(</span><span class="n">data</span><span class="o">.</span><span class="n">dxw</span><span class="p">,</span> <span class="mi">0</span><span class="p">):</span>
                 <span class="bp">self</span><span class="o">.</span><span class="n">dq_r</span> <span class="o">=</span> <span class="n">data</span><span class="o">.</span><span class="n">dxw</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
         <span class="c1"># return self.smear_type,self.dq_l,self.dq_r</span>
 
@@ -1762,18 +1781,8 @@
         <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">model</span><span class="o">.</span><span class="n">__class__</span> <span class="ow">not</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">model_list_box</span><span class="p">[</span><span class="s2">&quot;Multi-Functions&quot;</span><span class="p">]</span> \
                 <span class="ow">and</span> <span class="ow">not</span> <span class="bp">self</span><span class="o">.</span><span class="n">temp_multi_functional</span><span class="p">:</span>
             <span class="k">return</span> <span class="bp">None</span>
-        <span class="c1"># Get the func name list</span>
-        <span class="nb">list</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">model</span><span class="o">.</span><span class="n">fun_list</span>
-        <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="nb">list</span><span class="p">)</span> <span class="o">==</span> <span class="mi">0</span><span class="p">:</span>
-            <span class="k">return</span> <span class="bp">None</span>
-        <span class="c1"># build function (combo)box</span>
-        <span class="n">ind</span> <span class="o">=</span> <span class="mi">0</span>
-        <span class="k">while</span><span class="p">(</span><span class="n">ind</span> <span class="o">&lt;</span> <span class="nb">len</span><span class="p">(</span><span class="nb">list</span><span class="p">)):</span>
-            <span class="k">for</span> <span class="n">key</span><span class="p">,</span> <span class="n">val</span> <span class="ow">in</span> <span class="nb">list</span><span class="o">.</span><span class="n">iteritems</span><span class="p">():</span>
-                <span class="k">if</span> <span class="p">(</span><span class="n">val</span> <span class="o">==</span> <span class="n">ind</span><span class="p">):</span>
-                    <span class="n">fun_box</span><span class="o">.</span><span class="n">Append</span><span class="p">(</span><span class="n">key</span><span class="p">,</span> <span class="n">val</span><span class="p">)</span>
-                    <span class="k">break</span>
-            <span class="n">ind</span> <span class="o">+=</span> <span class="mi">1</span>
+        <span class="k">for</span> <span class="n">index</span><span class="p">,</span> <span class="n">choice</span> <span class="ow">in</span> <span class="nb">enumerate</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">model</span><span class="o">.</span><span class="n">fun_list</span><span class="p">):</span>
+            <span class="n">fun_box</span><span class="o">.</span><span class="n">Append</span><span class="p">(</span><span class="n">choice</span><span class="p">,</span> <span class="n">index</span><span class="p">)</span>
 
     <span class="k">def</span> <span class="nf">_on_select_accuracy</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">event</span><span class="p">):</span>
         <span class="sd">&quot;&quot;&quot;</span>
@@ -1801,7 +1810,7 @@
         <span class="n">name</span> <span class="o">=</span> <span class="n">fun_box</span><span class="o">.</span><span class="n">Name</span>
         <span class="n">value</span> <span class="o">=</span> <span class="n">fun_box</span><span class="o">.</span><span class="n">GetValue</span><span class="p">()</span>
         <span class="k">if</span> <span class="n">value</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">model</span><span class="o">.</span><span class="n">fun_list</span><span class="p">:</span>
-            <span class="n">fun_val</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">model</span><span class="o">.</span><span class="n">fun_list</span><span class="p">[</span><span class="n">value</span><span class="p">]</span>
+            <span class="n">fun_val</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">model</span><span class="o">.</span><span class="n">fun_list</span><span class="o">.</span><span class="n">index</span><span class="p">(</span><span class="n">value</span><span class="p">)</span>
 
         <span class="bp">self</span><span class="o">.</span><span class="n">model</span><span class="o">.</span><span class="n">setParam</span><span class="p">(</span><span class="n">name</span><span class="p">,</span> <span class="n">fun_val</span><span class="p">)</span>
         <span class="c1"># save state</span>
@@ -1863,20 +1872,13 @@
         <span class="k">if</span> <span class="ow">not</span> <span class="n">flag</span><span class="p">:</span>
             <span class="bp">self</span><span class="o">.</span><span class="n">onSmear</span><span class="p">(</span><span class="bp">None</span><span class="p">)</span>
 
-    <span class="k">def</span> <span class="nf">_mac_sleep</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">sec</span><span class="o">=</span><span class="mf">0.2</span><span class="p">):</span>
-        <span class="sd">&quot;&quot;&quot;</span>
-<span class="sd">        Give sleep to MAC</span>
-<span class="sd">        &quot;&quot;&quot;</span>
-        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">is_mac</span><span class="p">:</span>
-            <span class="n">time</span><span class="o">.</span><span class="n">sleep</span><span class="p">(</span><span class="n">sec</span><span class="p">)</span>
-
-<div class="viewcode-block" id="FitPage.get_view_mode"><a class="viewcode-back" href="../../../../../dev/api/sas.sasgui.perspectives.fitting.html#sas.sasgui.perspectives.fitting.fitpage.FitPage.get_view_mode">[docs]</a>    <span class="k">def</span> <span class="nf">get_view_mode</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+<div class="viewcode-block" id="FitPage.get_view_mode"><a class="viewcode-back" href="../../../../../dev/sasview-api/sas.sasgui.perspectives.fitting.html#sas.sasgui.perspectives.fitting.fitpage.FitPage.get_view_mode">[docs]</a>    <span class="k">def</span> <span class="nf">get_view_mode</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
         <span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">        return True if the panel allow 2D or False if 1D</span>
 <span class="sd">        &quot;&quot;&quot;</span>
         <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">enable2D</span></div>
 
-<div class="viewcode-block" id="FitPage.compute_data_set_range"><a class="viewcode-back" href="../../../../../dev/api/sas.sasgui.perspectives.fitting.html#sas.sasgui.perspectives.fitting.fitpage.FitPage.compute_data_set_range">[docs]</a>    <span class="k">def</span> <span class="nf">compute_data_set_range</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">data_list</span><span class="p">):</span>
+<div class="viewcode-block" id="FitPage.compute_data_set_range"><a class="viewcode-back" href="../../../../../dev/sasview-api/sas.sasgui.perspectives.fitting.html#sas.sasgui.perspectives.fitting.fitpage.FitPage.compute_data_set_range">[docs]</a>    <span class="k">def</span> <span class="nf">compute_data_set_range</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">data_list</span><span class="p">):</span>
         <span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">        find the range that include all data  in the set</span>
 <span class="sd">        return the minimum and the maximum values</span>
@@ -1889,7 +1891,7 @@
                 <span class="bp">self</span><span class="o">.</span><span class="n">npts_data_set</span> <span class="o">+=</span> <span class="n">npts</span>
         <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">qmin_data_set</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">qmax_data_set</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">npts_data_set</span></div>
 
-<div class="viewcode-block" id="FitPage.compute_data_range"><a class="viewcode-back" href="../../../../../dev/api/sas.sasgui.perspectives.fitting.html#sas.sasgui.perspectives.fitting.fitpage.FitPage.compute_data_range">[docs]</a>    <span class="k">def</span> <span class="nf">compute_data_range</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">data</span><span class="p">):</span>
+<div class="viewcode-block" id="FitPage.compute_data_range"><a class="viewcode-back" href="../../../../../dev/sasview-api/sas.sasgui.perspectives.fitting.html#sas.sasgui.perspectives.fitting.fitpage.FitPage.compute_data_range">[docs]</a>    <span class="k">def</span> <span class="nf">compute_data_range</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">data</span><span class="p">):</span>
         <span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">        compute the minimum and the maximum range of the data</span>
 <span class="sd">        return the npts contains in data</span>
@@ -1926,7 +1928,7 @@
                 <span class="n">npts</span> <span class="o">=</span> <span class="nb">len</span><span class="p">(</span><span class="n">data</span><span class="o">.</span><span class="n">data</span><span class="p">)</span>
         <span class="k">return</span> <span class="n">qmin</span><span class="p">,</span> <span class="n">qmax</span><span class="p">,</span> <span class="n">npts</span></div>
 
-<div class="viewcode-block" id="FitPage.set_data"><a class="viewcode-back" href="../../../../../dev/api/sas.sasgui.perspectives.fitting.html#sas.sasgui.perspectives.fitting.fitpage.FitPage.set_data">[docs]</a>    <span class="k">def</span> <span class="nf">set_data</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">data</span><span class="p">):</span>
+<div class="viewcode-block" id="FitPage.set_data"><a class="viewcode-back" href="../../../../../dev/sasview-api/sas.sasgui.perspectives.fitting.html#sas.sasgui.perspectives.fitting.fitpage.FitPage.set_data">[docs]</a>    <span class="k">def</span> <span class="nf">set_data</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">data</span><span class="p">):</span>
         <span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">        reset the current data</span>
 <span class="sd">        &quot;&quot;&quot;</span>
@@ -1975,19 +1977,19 @@
                 <span class="bp">self</span><span class="o">.</span><span class="n">pinhole_smearer</span><span class="o">.</span><span class="n">Enable</span><span class="p">(</span><span class="bp">True</span><span class="p">)</span>
                 <span class="bp">self</span><span class="o">.</span><span class="n">default_mask</span> <span class="o">=</span> <span class="n">copy</span><span class="o">.</span><span class="n">deepcopy</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">data</span><span class="o">.</span><span class="n">mask</span><span class="p">)</span>
                 <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">data</span><span class="o">.</span><span class="n">err_data</span> <span class="ow">is</span> <span class="ow">not</span> <span class="bp">None</span> \
-                        <span class="ow">and</span> <span class="n">numpy</span><span class="o">.</span><span class="n">any</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">data</span><span class="o">.</span><span class="n">err_data</span><span class="p">):</span>
+                        <span class="ow">and</span> <span class="n">np</span><span class="o">.</span><span class="n">any</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">data</span><span class="o">.</span><span class="n">err_data</span><span class="p">):</span>
                     <span class="n">di_flag</span> <span class="o">=</span> <span class="bp">True</span>
                 <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">data</span><span class="o">.</span><span class="n">dqx_data</span> <span class="ow">is</span> <span class="ow">not</span> <span class="bp">None</span> \
-                        <span class="ow">and</span> <span class="n">numpy</span><span class="o">.</span><span class="n">any</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">data</span><span class="o">.</span><span class="n">dqx_data</span><span class="p">):</span>
+                        <span class="ow">and</span> <span class="n">np</span><span class="o">.</span><span class="n">any</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">data</span><span class="o">.</span><span class="n">dqx_data</span><span class="p">):</span>
                     <span class="n">dq_flag</span> <span class="o">=</span> <span class="bp">True</span>
             <span class="k">else</span><span class="p">:</span>
                 <span class="bp">self</span><span class="o">.</span><span class="n">slit_smearer</span><span class="o">.</span><span class="n">Enable</span><span class="p">(</span><span class="bp">True</span><span class="p">)</span>
                 <span class="bp">self</span><span class="o">.</span><span class="n">pinhole_smearer</span><span class="o">.</span><span class="n">Enable</span><span class="p">(</span><span class="bp">True</span><span class="p">)</span>
-                <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">data</span><span class="o">.</span><span class="n">dy</span> <span class="ow">is</span> <span class="ow">not</span> <span class="bp">None</span> <span class="ow">and</span> <span class="n">numpy</span><span class="o">.</span><span class="n">any</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">data</span><span class="o">.</span><span class="n">dy</span><span class="p">):</span>
+                <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">data</span><span class="o">.</span><span class="n">dy</span> <span class="ow">is</span> <span class="ow">not</span> <span class="bp">None</span> <span class="ow">and</span> <span class="n">np</span><span class="o">.</span><span class="n">any</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">data</span><span class="o">.</span><span class="n">dy</span><span class="p">):</span>
                     <span class="n">di_flag</span> <span class="o">=</span> <span class="bp">True</span>
-                <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">data</span><span class="o">.</span><span class="n">dx</span> <span class="ow">is</span> <span class="ow">not</span> <span class="bp">None</span> <span class="ow">and</span> <span class="n">numpy</span><span class="o">.</span><span class="n">any</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">data</span><span class="o">.</span><span class="n">dx</span><span class="p">):</span>
+                <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">data</span><span class="o">.</span><span class="n">dx</span> <span class="ow">is</span> <span class="ow">not</span> <span class="bp">None</span> <span class="ow">and</span> <span class="n">np</span><span class="o">.</span><span class="n">any</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">data</span><span class="o">.</span><span class="n">dx</span><span class="p">):</span>
                     <span class="n">dq_flag</span> <span class="o">=</span> <span class="bp">True</span>
-                <span class="k">elif</span> <span class="bp">self</span><span class="o">.</span><span class="n">data</span><span class="o">.</span><span class="n">dxl</span> <span class="ow">is</span> <span class="ow">not</span> <span class="bp">None</span> <span class="ow">and</span> <span class="n">numpy</span><span class="o">.</span><span class="n">any</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">data</span><span class="o">.</span><span class="n">dxl</span><span class="p">):</span>
+                <span class="k">elif</span> <span class="bp">self</span><span class="o">.</span><span class="n">data</span><span class="o">.</span><span class="n">dxl</span> <span class="ow">is</span> <span class="ow">not</span> <span class="bp">None</span> <span class="ow">and</span> <span class="n">np</span><span class="o">.</span><span class="n">any</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">data</span><span class="o">.</span><span class="n">dxl</span><span class="p">):</span>
                     <span class="n">dq_flag</span> <span class="o">=</span> <span class="bp">True</span>
 
             <span class="k">if</span> <span class="n">dq_flag</span><span class="p">:</span>
@@ -2051,6 +2053,7 @@
 
         <span class="bp">self</span><span class="o">.</span><span class="n">on_smear_helper</span><span class="p">()</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">on_set_focus</span><span class="p">(</span><span class="bp">None</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">Layout</span><span class="p">()</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">Refresh</span><span class="p">()</span>
         <span class="c1"># update model plot with new data information</span>
         <span class="k">if</span> <span class="n">flag</span><span class="p">:</span>
@@ -2082,7 +2085,7 @@
 <span class="sd">        &quot;&quot;&quot;</span>
         <span class="k">pass</span>
 
-<div class="viewcode-block" id="FitPage.reset_page"><a class="viewcode-back" href="../../../../../dev/api/sas.sasgui.perspectives.fitting.html#sas.sasgui.perspectives.fitting.fitpage.FitPage.reset_page">[docs]</a>    <span class="k">def</span> <span class="nf">reset_page</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">state</span><span class="p">,</span> <span class="n">first</span><span class="o">=</span><span class="bp">False</span><span class="p">):</span>
+<div class="viewcode-block" id="FitPage.reset_page"><a class="viewcode-back" href="../../../../../dev/sasview-api/sas.sasgui.perspectives.fitting.html#sas.sasgui.perspectives.fitting.fitpage.FitPage.reset_page">[docs]</a>    <span class="k">def</span> <span class="nf">reset_page</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">state</span><span class="p">,</span> <span class="n">first</span><span class="o">=</span><span class="bp">False</span><span class="p">):</span>
         <span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">        reset the state</span>
 <span class="sd">        &quot;&quot;&quot;</span>
@@ -2092,6 +2095,8 @@
             <span class="bp">self</span><span class="o">.</span><span class="n">select_param</span><span class="p">()</span>
             <span class="c1"># Save state_fit</span>
             <span class="bp">self</span><span class="o">.</span><span class="n">save_current_state_fit</span><span class="p">()</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">onSmear</span><span class="p">(</span><span class="bp">None</span><span class="p">)</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_onDraw</span><span class="p">(</span><span class="bp">None</span><span class="p">)</span>
         <span class="k">except</span><span class="p">:</span>
             <span class="bp">self</span><span class="o">.</span><span class="n">_show_combox_helper</span><span class="p">()</span>
             <span class="n">msg</span> <span class="o">=</span> <span class="s2">&quot;Error: This model state has missing or outdated &quot;</span>
@@ -2102,13 +2107,13 @@
         <span class="bp">self</span><span class="o">.</span><span class="n">_lay_out</span><span class="p">()</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">Refresh</span><span class="p">()</span></div>
 
-<div class="viewcode-block" id="FitPage.get_range"><a class="viewcode-back" href="../../../../../dev/api/sas.sasgui.perspectives.fitting.html#sas.sasgui.perspectives.fitting.fitpage.FitPage.get_range">[docs]</a>    <span class="k">def</span> <span class="nf">get_range</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+<div class="viewcode-block" id="FitPage.get_range"><a class="viewcode-back" href="../../../../../dev/sasview-api/sas.sasgui.perspectives.fitting.html#sas.sasgui.perspectives.fitting.fitpage.FitPage.get_range">[docs]</a>    <span class="k">def</span> <span class="nf">get_range</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
         <span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">        return the fitting range</span>
 <span class="sd">        &quot;&quot;&quot;</span>
         <span class="k">return</span> <span class="nb">float</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">qmin_x</span><span class="p">),</span> <span class="nb">float</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">qmax_x</span><span class="p">)</span></div>
 
-<div class="viewcode-block" id="FitPage.get_npts2fit"><a class="viewcode-back" href="../../../../../dev/api/sas.sasgui.perspectives.fitting.html#sas.sasgui.perspectives.fitting.fitpage.FitPage.get_npts2fit">[docs]</a>    <span class="k">def</span> <span class="nf">get_npts2fit</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+<div class="viewcode-block" id="FitPage.get_npts2fit"><a class="viewcode-back" href="../../../../../dev/sasview-api/sas.sasgui.perspectives.fitting.html#sas.sasgui.perspectives.fitting.fitpage.FitPage.get_npts2fit">[docs]</a>    <span class="k">def</span> <span class="nf">get_npts2fit</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
         <span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">        return numbers of data points within qrange</span>
 
@@ -2121,11 +2126,11 @@
         <span class="n">qmin</span><span class="p">,</span> <span class="n">qmax</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">get_range</span><span class="p">()</span>
         <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">data</span><span class="o">.</span><span class="n">__class__</span><span class="o">.</span><span class="n">__name__</span> <span class="o">==</span> <span class="s2">&quot;Data2D&quot;</span> <span class="ow">or</span> \
                         <span class="bp">self</span><span class="o">.</span><span class="n">enable2D</span><span class="p">:</span>
-            <span class="n">radius</span> <span class="o">=</span> <span class="n">numpy</span><span class="o">.</span><span class="n">sqrt</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">data</span><span class="o">.</span><span class="n">qx_data</span> <span class="o">*</span> <span class="bp">self</span><span class="o">.</span><span class="n">data</span><span class="o">.</span><span class="n">qx_data</span> <span class="o">+</span>
+            <span class="n">radius</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">sqrt</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">data</span><span class="o">.</span><span class="n">qx_data</span> <span class="o">*</span> <span class="bp">self</span><span class="o">.</span><span class="n">data</span><span class="o">.</span><span class="n">qx_data</span> <span class="o">+</span>
                                 <span class="bp">self</span><span class="o">.</span><span class="n">data</span><span class="o">.</span><span class="n">qy_data</span> <span class="o">*</span> <span class="bp">self</span><span class="o">.</span><span class="n">data</span><span class="o">.</span><span class="n">qy_data</span><span class="p">)</span>
             <span class="n">index_data</span> <span class="o">=</span> <span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">qmin_x</span> <span class="o">&lt;=</span> <span class="n">radius</span><span class="p">)</span> <span class="o">&amp;</span> <span class="p">(</span><span class="n">radius</span> <span class="o">&lt;=</span> <span class="bp">self</span><span class="o">.</span><span class="n">qmax_x</span><span class="p">)</span>
             <span class="n">index_data</span> <span class="o">=</span> <span class="p">(</span><span class="n">index_data</span><span class="p">)</span> <span class="o">&amp;</span> <span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">data</span><span class="o">.</span><span class="n">mask</span><span class="p">)</span>
-            <span class="n">index_data</span> <span class="o">=</span> <span class="p">(</span><span class="n">index_data</span><span class="p">)</span> <span class="o">&amp;</span> <span class="p">(</span><span class="n">numpy</span><span class="o">.</span><span class="n">isfinite</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">data</span><span class="o">.</span><span class="n">data</span><span class="p">))</span>
+            <span class="n">index_data</span> <span class="o">=</span> <span class="p">(</span><span class="n">index_data</span><span class="p">)</span> <span class="o">&amp;</span> <span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">isfinite</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">data</span><span class="o">.</span><span class="n">data</span><span class="p">))</span>
             <span class="n">npts2fit</span> <span class="o">=</span> <span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">data</span><span class="o">.</span><span class="n">data</span><span class="p">[</span><span class="n">index_data</span><span class="p">])</span>
         <span class="k">else</span><span class="p">:</span>
             <span class="k">for</span> <span class="n">qx</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">data</span><span class="o">.</span><span class="n">x</span><span class="p">:</span>
@@ -2133,19 +2138,19 @@
                     <span class="n">npts2fit</span> <span class="o">+=</span> <span class="mi">1</span>
         <span class="k">return</span> <span class="n">npts2fit</span></div>
 
-<div class="viewcode-block" id="FitPage.show_npts2fit"><a class="viewcode-back" href="../../../../../dev/api/sas.sasgui.perspectives.fitting.html#sas.sasgui.perspectives.fitting.fitpage.FitPage.show_npts2fit">[docs]</a>    <span class="k">def</span> <span class="nf">show_npts2fit</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+<div class="viewcode-block" id="FitPage.show_npts2fit"><a class="viewcode-back" href="../../../../../dev/sasview-api/sas.sasgui.perspectives.fitting.html#sas.sasgui.perspectives.fitting.fitpage.FitPage.show_npts2fit">[docs]</a>    <span class="k">def</span> <span class="nf">show_npts2fit</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
         <span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">        setValue Npts for fitting</span>
 <span class="sd">        &quot;&quot;&quot;</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">Npts_fit</span><span class="o">.</span><span class="n">SetValue</span><span class="p">(</span><span class="nb">str</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">get_npts2fit</span><span class="p">()))</span></div>
 
-<div class="viewcode-block" id="FitPage.get_chi2"><a class="viewcode-back" href="../../../../../dev/api/sas.sasgui.perspectives.fitting.html#sas.sasgui.perspectives.fitting.fitpage.FitPage.get_chi2">[docs]</a>    <span class="k">def</span> <span class="nf">get_chi2</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+<div class="viewcode-block" id="FitPage.get_chi2"><a class="viewcode-back" href="../../../../../dev/sasview-api/sas.sasgui.perspectives.fitting.html#sas.sasgui.perspectives.fitting.fitpage.FitPage.get_chi2">[docs]</a>    <span class="k">def</span> <span class="nf">get_chi2</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
         <span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">        return the current chi2</span>
 <span class="sd">        &quot;&quot;&quot;</span>
         <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">tcChi</span><span class="o">.</span><span class="n">GetValue</span><span class="p">()</span></div>
 
-<div class="viewcode-block" id="FitPage.onsetValues"><a class="viewcode-back" href="../../../../../dev/api/sas.sasgui.perspectives.fitting.html#sas.sasgui.perspectives.fitting.fitpage.FitPage.onsetValues">[docs]</a>    <span class="k">def</span> <span class="nf">onsetValues</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">chisqr</span><span class="p">,</span> <span class="n">p_name</span><span class="p">,</span> <span class="n">out</span><span class="p">,</span> <span class="n">cov</span><span class="p">):</span>
+<div class="viewcode-block" id="FitPage.onsetValues"><a class="viewcode-back" href="../../../../../dev/sasview-api/sas.sasgui.perspectives.fitting.html#sas.sasgui.perspectives.fitting.fitpage.FitPage.onsetValues">[docs]</a>    <span class="k">def</span> <span class="nf">onsetValues</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">chisqr</span><span class="p">,</span> <span class="n">p_name</span><span class="p">,</span> <span class="n">out</span><span class="p">,</span> <span class="n">cov</span><span class="p">):</span>
         <span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">        Build the panel from the fit result</span>
 
@@ -2158,7 +2163,7 @@
 
         <span class="c1"># make sure stop button to fit button all the time</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">_on_fit_complete</span><span class="p">()</span>
-        <span class="k">if</span> <span class="n">out</span> <span class="ow">is</span> <span class="bp">None</span> <span class="ow">or</span> <span class="ow">not</span> <span class="n">numpy</span><span class="o">.</span><span class="n">isfinite</span><span class="p">(</span><span class="n">chisqr</span><span class="p">):</span>
+        <span class="k">if</span> <span class="n">out</span> <span class="ow">is</span> <span class="bp">None</span> <span class="ow">or</span> <span class="ow">not</span> <span class="n">np</span><span class="o">.</span><span class="n">isfinite</span><span class="p">(</span><span class="n">chisqr</span><span class="p">):</span>
             <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">,</span> <span class="s2">&quot;Fit error occured...&quot;</span>
 
         <span class="n">is_modified</span> <span class="o">=</span> <span class="bp">False</span>
@@ -2169,7 +2174,7 @@
         <span class="bp">self</span><span class="o">.</span><span class="n">_clear_Err_on_Fit</span><span class="p">()</span>
 
         <span class="c1"># Check if chi2 is finite</span>
-        <span class="k">if</span> <span class="n">chisqr</span> <span class="ow">is</span> <span class="ow">not</span> <span class="bp">None</span> <span class="ow">and</span> <span class="n">numpy</span><span class="o">.</span><span class="n">isfinite</span><span class="p">(</span><span class="n">chisqr</span><span class="p">):</span>
+        <span class="k">if</span> <span class="n">chisqr</span> <span class="ow">is</span> <span class="ow">not</span> <span class="bp">None</span> <span class="ow">and</span> <span class="n">np</span><span class="o">.</span><span class="n">isfinite</span><span class="p">(</span><span class="n">chisqr</span><span class="p">):</span>
             <span class="c1"># format chi2</span>
             <span class="n">chi2</span> <span class="o">=</span> <span class="n">format_number</span><span class="p">(</span><span class="n">chisqr</span><span class="p">,</span> <span class="bp">True</span><span class="p">)</span>
             <span class="bp">self</span><span class="o">.</span><span class="n">tcChi</span><span class="o">.</span><span class="n">SetValue</span><span class="p">(</span><span class="n">chi2</span><span class="p">)</span>
@@ -2221,7 +2226,7 @@
                             <span class="k">pass</span>
 
                         <span class="k">if</span> <span class="n">cov</span><span class="p">[</span><span class="n">ind</span><span class="p">]</span> <span class="ow">is</span> <span class="ow">not</span> <span class="bp">None</span><span class="p">:</span>
-                            <span class="k">if</span> <span class="n">numpy</span><span class="o">.</span><span class="n">isfinite</span><span class="p">(</span><span class="nb">float</span><span class="p">(</span><span class="n">cov</span><span class="p">[</span><span class="n">ind</span><span class="p">])):</span>
+                            <span class="k">if</span> <span class="n">np</span><span class="o">.</span><span class="n">isfinite</span><span class="p">(</span><span class="nb">float</span><span class="p">(</span><span class="n">cov</span><span class="p">[</span><span class="n">ind</span><span class="p">])):</span>
                                 <span class="n">val_err</span> <span class="o">=</span> <span class="n">format_number</span><span class="p">(</span><span class="n">cov</span><span class="p">[</span><span class="n">ind</span><span class="p">],</span> <span class="bp">True</span><span class="p">)</span>
                                 <span class="n">item</span><span class="p">[</span><span class="mi">4</span><span class="p">]</span><span class="o">.</span><span class="n">SetForegroundColour</span><span class="p">(</span><span class="n">wx</span><span class="o">.</span><span class="n">BLACK</span><span class="p">)</span>
                             <span class="k">else</span><span class="p">:</span>
@@ -2245,11 +2250,10 @@
         <span class="k">if</span> <span class="ow">not</span> <span class="bp">self</span><span class="o">.</span><span class="n">is_mac</span><span class="p">:</span>
             <span class="bp">self</span><span class="o">.</span><span class="n">Layout</span><span class="p">()</span>
             <span class="bp">self</span><span class="o">.</span><span class="n">Refresh</span><span class="p">()</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">_mac_sleep</span><span class="p">(</span><span class="mf">0.1</span><span class="p">)</span>
         <span class="c1"># plot model ( when drawing, do not update chisqr value again)</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">_draw_model</span><span class="p">(</span><span class="n">update_chisqr</span><span class="o">=</span><span class="bp">False</span><span class="p">,</span> <span class="n">source</span><span class="o">=</span><span class="s1">&#39;fit&#39;</span><span class="p">)</span></div>
 
-<div class="viewcode-block" id="FitPage.onWeighting"><a class="viewcode-back" href="../../../../../dev/api/sas.sasgui.perspectives.fitting.html#sas.sasgui.perspectives.fitting.fitpage.FitPage.onWeighting">[docs]</a>    <span class="k">def</span> <span class="nf">onWeighting</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">event</span><span class="p">):</span>
+<div class="viewcode-block" id="FitPage.onWeighting"><a class="viewcode-back" href="../../../../../dev/sasview-api/sas.sasgui.perspectives.fitting.html#sas.sasgui.perspectives.fitting.fitpage.FitPage.onWeighting">[docs]</a>    <span class="k">def</span> <span class="nf">onWeighting</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">event</span><span class="p">):</span>
         <span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">        On Weighting radio button event, sets the weightbt_string</span>
 <span class="sd">        &quot;&quot;&quot;</span>
@@ -2269,7 +2273,7 @@
                                      <span class="n">is2d</span><span class="o">=</span><span class="n">is_2D</span><span class="p">,</span>
                                      <span class="n">fid</span><span class="o">=</span><span class="bp">None</span><span class="p">)</span>
 
-<div class="viewcode-block" id="FitPage.onPinholeSmear"><a class="viewcode-back" href="../../../../../dev/api/sas.sasgui.perspectives.fitting.html#sas.sasgui.perspectives.fitting.fitpage.FitPage.onPinholeSmear">[docs]</a>    <span class="k">def</span> <span class="nf">onPinholeSmear</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">event</span><span class="p">):</span>
+<div class="viewcode-block" id="FitPage.onPinholeSmear"><a class="viewcode-back" href="../../../../../dev/sasview-api/sas.sasgui.perspectives.fitting.html#sas.sasgui.perspectives.fitting.fitpage.FitPage.onPinholeSmear">[docs]</a>    <span class="k">def</span> <span class="nf">onPinholeSmear</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">event</span><span class="p">):</span>
         <span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">        Create a custom pinhole smear object that will change the way residuals</span>
 <span class="sd">        are compute when fitting</span>
@@ -2345,12 +2349,12 @@
         <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">_is_2D</span><span class="p">():</span>
             <span class="bp">self</span><span class="o">.</span><span class="n">smear_type</span> <span class="o">=</span> <span class="s1">&#39;Pinhole2d&#39;</span>
             <span class="n">len_data</span> <span class="o">=</span> <span class="nb">len</span><span class="p">(</span><span class="n">data</span><span class="o">.</span><span class="n">data</span><span class="p">)</span>
-            <span class="n">data</span><span class="o">.</span><span class="n">dqx_data</span> <span class="o">=</span> <span class="n">numpy</span><span class="o">.</span><span class="n">zeros</span><span class="p">(</span><span class="n">len_data</span><span class="p">)</span>
-            <span class="n">data</span><span class="o">.</span><span class="n">dqy_data</span> <span class="o">=</span> <span class="n">numpy</span><span class="o">.</span><span class="n">zeros</span><span class="p">(</span><span class="n">len_data</span><span class="p">)</span>
+            <span class="n">data</span><span class="o">.</span><span class="n">dqx_data</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">zeros</span><span class="p">(</span><span class="n">len_data</span><span class="p">)</span>
+            <span class="n">data</span><span class="o">.</span><span class="n">dqy_data</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">zeros</span><span class="p">(</span><span class="n">len_data</span><span class="p">)</span>
         <span class="k">else</span><span class="p">:</span>
             <span class="bp">self</span><span class="o">.</span><span class="n">smear_type</span> <span class="o">=</span> <span class="s1">&#39;Pinhole&#39;</span>
             <span class="n">len_data</span> <span class="o">=</span> <span class="nb">len</span><span class="p">(</span><span class="n">data</span><span class="o">.</span><span class="n">x</span><span class="p">)</span>
-            <span class="n">data</span><span class="o">.</span><span class="n">dx</span> <span class="o">=</span> <span class="n">numpy</span><span class="o">.</span><span class="n">zeros</span><span class="p">(</span><span class="n">len_data</span><span class="p">)</span>
+            <span class="n">data</span><span class="o">.</span><span class="n">dx</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">zeros</span><span class="p">(</span><span class="n">len_data</span><span class="p">)</span>
             <span class="n">data</span><span class="o">.</span><span class="n">dxl</span> <span class="o">=</span> <span class="bp">None</span>
             <span class="n">data</span><span class="o">.</span><span class="n">dxw</span> <span class="o">=</span> <span class="bp">None</span>
         <span class="n">msg</span> <span class="o">=</span> <span class="bp">None</span>
@@ -2395,7 +2399,7 @@
                                   <span class="n">uid</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">uid</span><span class="p">)</span>
         <span class="k">return</span> <span class="n">msg</span>
 
-<div class="viewcode-block" id="FitPage.update_pinhole_smear"><a class="viewcode-back" href="../../../../../dev/api/sas.sasgui.perspectives.fitting.html#sas.sasgui.perspectives.fitting.fitpage.FitPage.update_pinhole_smear">[docs]</a>    <span class="k">def</span> <span class="nf">update_pinhole_smear</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+<div class="viewcode-block" id="FitPage.update_pinhole_smear"><a class="viewcode-back" href="../../../../../dev/sasview-api/sas.sasgui.perspectives.fitting.html#sas.sasgui.perspectives.fitting.fitpage.FitPage.update_pinhole_smear">[docs]</a>    <span class="k">def</span> <span class="nf">update_pinhole_smear</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
         <span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">        called by kill_focus on pinhole TextCntrl</span>
 <span class="sd">        to update the changes</span>
@@ -2415,7 +2419,7 @@
         <span class="k">else</span><span class="p">:</span>
             <span class="k">return</span> <span class="bp">True</span></div>
 
-<div class="viewcode-block" id="FitPage.onSlitSmear"><a class="viewcode-back" href="../../../../../dev/api/sas.sasgui.perspectives.fitting.html#sas.sasgui.perspectives.fitting.fitpage.FitPage.onSlitSmear">[docs]</a>    <span class="k">def</span> <span class="nf">onSlitSmear</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">event</span><span class="p">):</span>
+<div class="viewcode-block" id="FitPage.onSlitSmear"><a class="viewcode-back" href="../../../../../dev/sasview-api/sas.sasgui.perspectives.fitting.html#sas.sasgui.perspectives.fitting.fitpage.FitPage.onSlitSmear">[docs]</a>    <span class="k">def</span> <span class="nf">onSlitSmear</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">event</span><span class="p">):</span>
         <span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">        Create a custom slit smear object that will change the way residuals</span>
 <span class="sd">        are compute when fitting</span>
@@ -2523,11 +2527,11 @@
 
         <span class="k">try</span><span class="p">:</span>
             <span class="bp">self</span><span class="o">.</span><span class="n">dxl</span> <span class="o">=</span> <span class="nb">float</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">smear_slit_height</span><span class="o">.</span><span class="n">GetValue</span><span class="p">())</span>
-            <span class="n">data</span><span class="o">.</span><span class="n">dxl</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">dxl</span> <span class="o">*</span> <span class="n">numpy</span><span class="o">.</span><span class="n">ones</span><span class="p">(</span><span class="n">data_len</span><span class="p">)</span>
+            <span class="n">data</span><span class="o">.</span><span class="n">dxl</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">dxl</span> <span class="o">*</span> <span class="n">np</span><span class="o">.</span><span class="n">ones</span><span class="p">(</span><span class="n">data_len</span><span class="p">)</span>
             <span class="bp">self</span><span class="o">.</span><span class="n">smear_slit_height</span><span class="o">.</span><span class="n">SetBackgroundColour</span><span class="p">(</span><span class="n">wx</span><span class="o">.</span><span class="n">WHITE</span><span class="p">)</span>
         <span class="k">except</span><span class="p">:</span>
             <span class="bp">self</span><span class="o">.</span><span class="n">dxl</span> <span class="o">=</span> <span class="bp">None</span>
-            <span class="n">data</span><span class="o">.</span><span class="n">dxl</span> <span class="o">=</span> <span class="n">numpy</span><span class="o">.</span><span class="n">zeros</span><span class="p">(</span><span class="n">data_len</span><span class="p">)</span>
+            <span class="n">data</span><span class="o">.</span><span class="n">dxl</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">zeros</span><span class="p">(</span><span class="n">data_len</span><span class="p">)</span>
             <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">smear_slit_height</span><span class="o">.</span><span class="n">GetValue</span><span class="p">()</span><span class="o">.</span><span class="n">lstrip</span><span class="p">()</span><span class="o">.</span><span class="n">rstrip</span><span class="p">()</span> <span class="o">!=</span> <span class="s2">&quot;&quot;</span><span class="p">:</span>
                 <span class="bp">self</span><span class="o">.</span><span class="n">smear_slit_height</span><span class="o">.</span><span class="n">SetBackgroundColour</span><span class="p">(</span><span class="s2">&quot;pink&quot;</span><span class="p">)</span>
                 <span class="n">msg</span> <span class="o">=</span> <span class="s2">&quot;Wrong value entered... &quot;</span>
@@ -2536,10 +2540,10 @@
         <span class="k">try</span><span class="p">:</span>
             <span class="bp">self</span><span class="o">.</span><span class="n">dxw</span> <span class="o">=</span> <span class="nb">float</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">smear_slit_width</span><span class="o">.</span><span class="n">GetValue</span><span class="p">())</span>
             <span class="bp">self</span><span class="o">.</span><span class="n">smear_slit_width</span><span class="o">.</span><span class="n">SetBackgroundColour</span><span class="p">(</span><span class="n">wx</span><span class="o">.</span><span class="n">WHITE</span><span class="p">)</span>
-            <span class="n">data</span><span class="o">.</span><span class="n">dxw</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">dxw</span> <span class="o">*</span> <span class="n">numpy</span><span class="o">.</span><span class="n">ones</span><span class="p">(</span><span class="n">data_len</span><span class="p">)</span>
+            <span class="n">data</span><span class="o">.</span><span class="n">dxw</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">dxw</span> <span class="o">*</span> <span class="n">np</span><span class="o">.</span><span class="n">ones</span><span class="p">(</span><span class="n">data_len</span><span class="p">)</span>
         <span class="k">except</span><span class="p">:</span>
             <span class="bp">self</span><span class="o">.</span><span class="n">dxw</span> <span class="o">=</span> <span class="bp">None</span>
-            <span class="n">data</span><span class="o">.</span><span class="n">dxw</span> <span class="o">=</span> <span class="n">numpy</span><span class="o">.</span><span class="n">zeros</span><span class="p">(</span><span class="n">data_len</span><span class="p">)</span>
+            <span class="n">data</span><span class="o">.</span><span class="n">dxw</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">zeros</span><span class="p">(</span><span class="n">data_len</span><span class="p">)</span>
             <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">smear_slit_width</span><span class="o">.</span><span class="n">GetValue</span><span class="p">()</span><span class="o">.</span><span class="n">lstrip</span><span class="p">()</span><span class="o">.</span><span class="n">rstrip</span><span class="p">()</span> <span class="o">!=</span> <span class="s2">&quot;&quot;</span><span class="p">:</span>
                 <span class="bp">self</span><span class="o">.</span><span class="n">smear_slit_width</span><span class="o">.</span><span class="n">SetBackgroundColour</span><span class="p">(</span><span class="s2">&quot;pink&quot;</span><span class="p">)</span>
                 <span class="n">msg</span> <span class="o">=</span> <span class="s2">&quot;Wrong Fit value entered... &quot;</span>
@@ -2557,7 +2561,7 @@
                                   <span class="n">uid</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">uid</span><span class="p">)</span>
         <span class="k">return</span> <span class="n">msg</span>
 
-<div class="viewcode-block" id="FitPage.update_slit_smear"><a class="viewcode-back" href="../../../../../dev/api/sas.sasgui.perspectives.fitting.html#sas.sasgui.perspectives.fitting.fitpage.FitPage.update_slit_smear">[docs]</a>    <span class="k">def</span> <span class="nf">update_slit_smear</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+<div class="viewcode-block" id="FitPage.update_slit_smear"><a class="viewcode-back" href="../../../../../dev/sasview-api/sas.sasgui.perspectives.fitting.html#sas.sasgui.perspectives.fitting.fitpage.FitPage.update_slit_smear">[docs]</a>    <span class="k">def</span> <span class="nf">update_slit_smear</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
         <span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">        called by kill_focus on pinhole TextCntrl</span>
 <span class="sd">        to update the changes</span>
@@ -2578,7 +2582,7 @@
         <span class="k">else</span><span class="p">:</span>
             <span class="k">return</span> <span class="bp">True</span></div>
 
-<div class="viewcode-block" id="FitPage.onSmear"><a class="viewcode-back" href="../../../../../dev/api/sas.sasgui.perspectives.fitting.html#sas.sasgui.perspectives.fitting.fitpage.FitPage.onSmear">[docs]</a>    <span class="k">def</span> <span class="nf">onSmear</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">event</span><span class="p">):</span>
+<div class="viewcode-block" id="FitPage.onSmear"><a class="viewcode-back" href="../../../../../dev/sasview-api/sas.sasgui.perspectives.fitting.html#sas.sasgui.perspectives.fitting.fitpage.FitPage.onSmear">[docs]</a>    <span class="k">def</span> <span class="nf">onSmear</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">event</span><span class="p">):</span>
         <span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">        Create a smear object that will change the way residuals</span>
 <span class="sd">        are computed when fitting</span>
@@ -2617,7 +2621,7 @@
         <span class="bp">self</span><span class="o">.</span><span class="n">state</span><span class="o">.</span><span class="n">pinhole_smearer</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">pinhole_smearer</span><span class="o">.</span><span class="n">GetValue</span><span class="p">()</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">state</span><span class="o">.</span><span class="n">slit_smearer</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">slit_smearer</span><span class="o">.</span><span class="n">GetValue</span><span class="p">()</span></div>
 
-<div class="viewcode-block" id="FitPage.on_smear_helper"><a class="viewcode-back" href="../../../../../dev/api/sas.sasgui.perspectives.fitting.html#sas.sasgui.perspectives.fitting.fitpage.FitPage.on_smear_helper">[docs]</a>    <span class="k">def</span> <span class="nf">on_smear_helper</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">update</span><span class="o">=</span><span class="bp">False</span><span class="p">):</span>
+<div class="viewcode-block" id="FitPage.on_smear_helper"><a class="viewcode-back" href="../../../../../dev/sasview-api/sas.sasgui.perspectives.fitting.html#sas.sasgui.perspectives.fitting.fitpage.FitPage.on_smear_helper">[docs]</a>    <span class="k">def</span> <span class="nf">on_smear_helper</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">update</span><span class="o">=</span><span class="bp">False</span><span class="p">):</span>
         <span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">        Help for onSmear</span>
 
@@ -2658,7 +2662,7 @@
 
         <span class="k">return</span> <span class="n">temp_smearer</span></div>
 
-<div class="viewcode-block" id="FitPage.on_complete_chisqr"><a class="viewcode-back" href="../../../../../dev/api/sas.sasgui.perspectives.fitting.html#sas.sasgui.perspectives.fitting.fitpage.FitPage.on_complete_chisqr">[docs]</a>    <span class="k">def</span> <span class="nf">on_complete_chisqr</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">event</span><span class="p">):</span>
+<div class="viewcode-block" id="FitPage.on_complete_chisqr"><a class="viewcode-back" href="../../../../../dev/sasview-api/sas.sasgui.perspectives.fitting.html#sas.sasgui.perspectives.fitting.fitpage.FitPage.on_complete_chisqr">[docs]</a>    <span class="k">def</span> <span class="nf">on_complete_chisqr</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">event</span><span class="p">):</span>
         <span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">        Display result chisqr on the panel</span>
 <span class="sd">        :event: activated by fitting/ complete after draw</span>
@@ -2666,7 +2670,7 @@
         <span class="k">try</span><span class="p">:</span>
             <span class="k">if</span> <span class="n">event</span> <span class="ow">is</span> <span class="bp">None</span><span class="p">:</span>
                 <span class="n">output</span> <span class="o">=</span> <span class="s2">&quot;-&quot;</span>
-            <span class="k">elif</span> <span class="ow">not</span> <span class="n">numpy</span><span class="o">.</span><span class="n">isfinite</span><span class="p">(</span><span class="n">event</span><span class="o">.</span><span class="n">output</span><span class="p">):</span>
+            <span class="k">elif</span> <span class="ow">not</span> <span class="n">np</span><span class="o">.</span><span class="n">isfinite</span><span class="p">(</span><span class="n">event</span><span class="o">.</span><span class="n">output</span><span class="p">):</span>
                 <span class="n">output</span> <span class="o">=</span> <span class="s2">&quot;-&quot;</span>
             <span class="k">else</span><span class="p">:</span>
                 <span class="n">output</span> <span class="o">=</span> <span class="n">event</span><span class="o">.</span><span class="n">output</span>
@@ -2675,7 +2679,7 @@
         <span class="k">except</span><span class="p">:</span>
             <span class="k">pass</span></div>
 
-<div class="viewcode-block" id="FitPage.get_all_checked_params"><a class="viewcode-back" href="../../../../../dev/api/sas.sasgui.perspectives.fitting.html#sas.sasgui.perspectives.fitting.fitpage.FitPage.get_all_checked_params">[docs]</a>    <span class="k">def</span> <span class="nf">get_all_checked_params</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+<div class="viewcode-block" id="FitPage.get_all_checked_params"><a class="viewcode-back" href="../../../../../dev/sasview-api/sas.sasgui.perspectives.fitting.html#sas.sasgui.perspectives.fitting.fitpage.FitPage.get_all_checked_params">[docs]</a>    <span class="k">def</span> <span class="nf">get_all_checked_params</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
         <span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">        Found all parameters current check and add them to list of parameters</span>
 <span class="sd">        to fit</span>
@@ -2699,7 +2703,7 @@
                 <span class="n">param2fit</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">item</span><span class="p">[</span><span class="mi">1</span><span class="p">])</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">_manager</span><span class="o">.</span><span class="n">set_param2fit</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">uid</span><span class="p">,</span> <span class="n">param2fit</span><span class="p">)</span></div>
 
-<div class="viewcode-block" id="FitPage.select_param"><a class="viewcode-back" href="../../../../../dev/api/sas.sasgui.perspectives.fitting.html#sas.sasgui.perspectives.fitting.fitpage.FitPage.select_param">[docs]</a>    <span class="k">def</span> <span class="nf">select_param</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">event</span><span class="o">=</span><span class="bp">None</span><span class="p">):</span>
+<div class="viewcode-block" id="FitPage.select_param"><a class="viewcode-back" href="../../../../../dev/sasview-api/sas.sasgui.perspectives.fitting.html#sas.sasgui.perspectives.fitting.fitpage.FitPage.select_param">[docs]</a>    <span class="k">def</span> <span class="nf">select_param</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">event</span><span class="o">=</span><span class="bp">None</span><span class="p">):</span>
         <span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">        Select TextCtrl  checked for fitting purpose and stores them</span>
 <span class="sd">        in  self.param_toFit=[] list</span>
@@ -2758,7 +2762,7 @@
                 <span class="n">param2fit</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">item</span><span class="p">[</span><span class="mi">1</span><span class="p">])</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">_manager</span><span class="o">.</span><span class="n">set_param2fit</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">uid</span><span class="p">,</span> <span class="n">param2fit</span><span class="p">)</span></div>
 
-<div class="viewcode-block" id="FitPage.set_model_param_sizer"><a class="viewcode-back" href="../../../../../dev/api/sas.sasgui.perspectives.fitting.html#sas.sasgui.perspectives.fitting.fitpage.FitPage.set_model_param_sizer">[docs]</a>    <span class="k">def</span> <span class="nf">set_model_param_sizer</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">model</span><span class="p">):</span>
+<div class="viewcode-block" id="FitPage.set_model_param_sizer"><a class="viewcode-back" href="../../../../../dev/sasview-api/sas.sasgui.perspectives.fitting.html#sas.sasgui.perspectives.fitting.fitpage.FitPage.set_model_param_sizer">[docs]</a>    <span class="k">def</span> <span class="nf">set_model_param_sizer</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">model</span><span class="p">):</span>
         <span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">        Build the panel from the model content</span>
 
@@ -2840,7 +2844,7 @@
             <span class="c1"># no numbers</span>
             <span class="k">else</span><span class="p">:</span>
                 <span class="k">return</span> <span class="nb">cmp</span><span class="p">(</span><span class="n">a</span><span class="o">.</span><span class="n">lower</span><span class="p">(),</span> <span class="n">b</span><span class="o">.</span><span class="n">lower</span><span class="p">())</span>
-        
+
         <span class="c1"># keys obtained now from ordered dict, so commenting alphabetical</span>
         <span class="c1"># ordering keys.sort(custom_compare)</span>
 
@@ -2944,8 +2948,8 @@
                     <span class="k">if</span> <span class="ow">not</span> <span class="bp">self</span><span class="o">.</span><span class="n">is_mac</span><span class="p">:</span>
                         <span class="n">text2</span><span class="o">.</span><span class="n">Hide</span><span class="p">()</span>
                     <span class="n">ix</span> <span class="o">+=</span> <span class="mi">1</span>
-                    <span class="n">ctl2</span> <span class="o">=</span> <span class="n">wx</span><span class="o">.</span><span class="n">TextCtrl</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">wx</span><span class="o">.</span><span class="n">ID_ANY</span><span class="p">,</span>
-                                       <span class="n">size</span><span class="o">=</span><span class="p">(</span><span class="n">_BOX_WIDTH</span> <span class="o">/</span> <span class="mf">1.2</span><span class="p">,</span> <span class="mi">20</span><span class="p">),</span> <span class="n">style</span><span class="o">=</span><span class="mi">0</span><span class="p">)</span>
+                    <span class="n">ctl2</span> <span class="o">=</span> <span class="n">BGTextCtrl</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">wx</span><span class="o">.</span><span class="n">ID_ANY</span><span class="p">,</span>
+                                       <span class="n">size</span><span class="o">=</span><span class="p">(</span><span class="n">_BOX_WIDTH</span> <span class="o">/</span> <span class="mf">1.2</span><span class="p">,</span> <span class="mi">20</span><span class="p">))</span>
                     <span class="n">sizer</span><span class="o">.</span><span class="n">Add</span><span class="p">(</span><span class="n">ctl2</span><span class="p">,</span> <span class="p">(</span><span class="n">iy</span><span class="p">,</span> <span class="n">ix</span><span class="p">),</span> <span class="p">(</span><span class="mi">1</span><span class="p">,</span> <span class="mi">1</span><span class="p">),</span>
                               <span class="n">wx</span><span class="o">.</span><span class="n">EXPAND</span> <span class="o">|</span> <span class="n">wx</span><span class="o">.</span><span class="n">ADJUST_MINSIZE</span><span class="p">,</span> <span class="mi">0</span><span class="p">)</span>
                     <span class="k">if</span> <span class="ow">not</span> <span class="bp">self</span><span class="o">.</span><span class="n">is_mac</span><span class="p">:</span>
@@ -3174,7 +3178,7 @@
         <span class="bp">self</span><span class="o">.</span><span class="n">sizer3</span><span class="o">.</span><span class="n">Layout</span><span class="p">()</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">Layout</span><span class="p">()</span></div>
 
-<div class="viewcode-block" id="FitPage.on_right_down"><a class="viewcode-back" href="../../../../../dev/api/sas.sasgui.perspectives.fitting.html#sas.sasgui.perspectives.fitting.fitpage.FitPage.on_right_down">[docs]</a>    <span class="k">def</span> <span class="nf">on_right_down</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">event</span><span class="p">):</span>
+<div class="viewcode-block" id="FitPage.on_right_down"><a class="viewcode-back" href="../../../../../dev/sasview-api/sas.sasgui.perspectives.fitting.html#sas.sasgui.perspectives.fitting.fitpage.FitPage.on_right_down">[docs]</a>    <span class="k">def</span> <span class="nf">on_right_down</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">event</span><span class="p">):</span>
         <span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">        Get key stroke event</span>
 <span class="sd">        &quot;&quot;&quot;</span>
@@ -3236,7 +3240,7 @@
             <span class="bp">self</span><span class="o">.</span><span class="n">pinhole_smearer</span><span class="o">.</span><span class="n">Enable</span><span class="p">(</span><span class="bp">True</span><span class="p">)</span></div>
 
 
-<div class="viewcode-block" id="BGTextCtrl"><a class="viewcode-back" href="../../../../../dev/api/sas.sasgui.perspectives.fitting.html#sas.sasgui.perspectives.fitting.fitpage.BGTextCtrl">[docs]</a><span class="k">class</span> <span class="nc">BGTextCtrl</span><span class="p">(</span><span class="n">wx</span><span class="o">.</span><span class="n">TextCtrl</span><span class="p">):</span>
+<div class="viewcode-block" id="BGTextCtrl"><a class="viewcode-back" href="../../../../../dev/sasview-api/sas.sasgui.perspectives.fitting.html#sas.sasgui.perspectives.fitting.fitpage.BGTextCtrl">[docs]</a><span class="k">class</span> <span class="nc">BGTextCtrl</span><span class="p">(</span><span class="n">wx</span><span class="o">.</span><span class="n">TextCtrl</span><span class="p">):</span>
     <span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">    Text control used to display outputs.</span>
 <span class="sd">    No editing allowed. The background is</span>
@@ -3288,13 +3292,14 @@
         <li class="right" >
           <a href="../../../../../py-modindex.html" title="Python Module Index"
              >modules</a> |</li>
-        <li class="nav-item nav-item-0"><a href="../../../../../index.html">SasView 4.1.2 documentation</a> &raquo;</li>
+        <li class="nav-item nav-item-0"><a href="../../../../../index.html">SasView 4.2.0 documentation</a> &raquo;</li>
           <li class="nav-item nav-item-1"><a href="../../../../index.html" >Module code</a> &raquo;</li>
-          <li class="nav-item nav-item-2"><a href="../fitting.html" >sas.sasgui.perspectives.fitting</a> &raquo;</li> 
+          <li class="nav-item nav-item-2"><a href="../../../../sas.html" >sas</a> &raquo;</li>
+          <li class="nav-item nav-item-3"><a href="../fitting.html" >sas.sasgui.perspectives.fitting</a> &raquo;</li> 
       </ul>
     </div>
     <div class="footer" role="contentinfo">
-        &copy; Copyright 2017, The SasView Project.
+        &copy; Copyright 2018, The SasView Project.
       Created using <a href="http://sphinx-doc.org/">Sphinx</a> 1.4.1.
     </div>
   </body>

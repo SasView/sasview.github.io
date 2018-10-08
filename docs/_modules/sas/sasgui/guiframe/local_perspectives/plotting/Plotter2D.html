@@ -6,7 +6,7 @@
   <head>
     <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
     
-    <title>sas.sasgui.guiframe.local_perspectives.plotting.Plotter2D &mdash; SasView 4.1.2 documentation</title>
+    <title>sas.sasgui.guiframe.local_perspectives.plotting.Plotter2D &mdash; SasView 4.2.0 documentation</title>
     
     <link rel="stylesheet" href="../../../../../../_static/classic.css" type="text/css" />
     <link rel="stylesheet" href="../../../../../../_static/pygments.css" type="text/css" />
@@ -14,7 +14,7 @@
     <script type="text/javascript">
       var DOCUMENTATION_OPTIONS = {
         URL_ROOT:    '../../../../../../',
-        VERSION:     '4.1.2',
+        VERSION:     '4.2.0',
         COLLAPSE_INDEX: false,
         FILE_SUFFIX: '.html',
         HAS_SOURCE:  true
@@ -24,7 +24,7 @@
     <script type="text/javascript" src="../../../../../../_static/underscore.js"></script>
     <script type="text/javascript" src="../../../../../../_static/doctools.js"></script>
     <script type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.1/MathJax.js?config=TeX-MML-AM_CHTML"></script>
-    <link rel="top" title="SasView 4.1.2 documentation" href="../../../../../../index.html" />
+    <link rel="top" title="SasView 4.2.0 documentation" href="../../../../../../index.html" />
     <link rel="up" title="sas.sasgui.guiframe" href="../../../guiframe.html" /> 
   </head>
   <body role="document">
@@ -37,9 +37,10 @@
         <li class="right" >
           <a href="../../../../../../py-modindex.html" title="Python Module Index"
              >modules</a> |</li>
-        <li class="nav-item nav-item-0"><a href="../../../../../../index.html">SasView 4.1.2 documentation</a> &raquo;</li>
+        <li class="nav-item nav-item-0"><a href="../../../../../../index.html">SasView 4.2.0 documentation</a> &raquo;</li>
           <li class="nav-item nav-item-1"><a href="../../../../../index.html" >Module code</a> &raquo;</li>
-          <li class="nav-item nav-item-2"><a href="../../../guiframe.html" accesskey="U">sas.sasgui.guiframe</a> &raquo;</li> 
+          <li class="nav-item nav-item-2"><a href="../../../../../sas.html" >sas</a> &raquo;</li>
+          <li class="nav-item nav-item-3"><a href="../../../guiframe.html" accesskey="U">sas.sasgui.guiframe</a> &raquo;</li> 
       </ul>
     </div>  
 
@@ -64,7 +65,7 @@
 <span class="kn">import</span> <span class="nn">wx</span>
 <span class="kn">import</span> <span class="nn">sys</span>
 <span class="kn">import</span> <span class="nn">math</span>
-<span class="kn">import</span> <span class="nn">numpy</span>
+<span class="kn">import</span> <span class="nn">numpy</span> <span class="kn">as</span> <span class="nn">np</span>
 <span class="kn">import</span> <span class="nn">logging</span>
 <span class="kn">from</span> <span class="nn">sas.sasgui.plottools.PlotPanel</span> <span class="kn">import</span> <span class="n">PlotPanel</span>
 <span class="kn">from</span> <span class="nn">sas.sasgui.plottools.plottables</span> <span class="kn">import</span> <span class="n">Graph</span>
@@ -81,24 +82,26 @@
 <span class="kn">from</span> <span class="nn">graphAppearance</span> <span class="kn">import</span> <span class="n">graphAppearance</span>
 <span class="p">(</span><span class="n">InternalEvent</span><span class="p">,</span> <span class="n">EVT_INTERNAL</span><span class="p">)</span> <span class="o">=</span> <span class="n">wx</span><span class="o">.</span><span class="n">lib</span><span class="o">.</span><span class="n">newevent</span><span class="o">.</span><span class="n">NewEvent</span><span class="p">()</span>
 
+<span class="n">logger</span> <span class="o">=</span> <span class="n">logging</span><span class="o">.</span><span class="n">getLogger</span><span class="p">(</span><span class="n">__name__</span><span class="p">)</span>
+
 <span class="n">DEFAULT_QMAX</span> <span class="o">=</span> <span class="mf">0.05</span>
 <span class="n">DEFAULT_QSTEP</span> <span class="o">=</span> <span class="mf">0.001</span>
 <span class="n">DEFAULT_BEAM</span> <span class="o">=</span> <span class="mf">0.005</span>
 <span class="n">BIN_WIDTH</span> <span class="o">=</span> <span class="mf">1.0</span>
 
 
-<div class="viewcode-block" id="find_key"><a class="viewcode-back" href="../../../../../../dev/api/sas.sasgui.guiframe.local_perspectives.plotting.html#sas.sasgui.guiframe.local_perspectives.plotting.Plotter2D.find_key">[docs]</a><span class="k">def</span> <span class="nf">find_key</span><span class="p">(</span><span class="n">dic</span><span class="p">,</span> <span class="n">val</span><span class="p">):</span>
+<div class="viewcode-block" id="find_key"><a class="viewcode-back" href="../../../../../../dev/sasview-api/sas.sasgui.guiframe.local_perspectives.plotting.html#sas.sasgui.guiframe.local_perspectives.plotting.Plotter2D.find_key">[docs]</a><span class="k">def</span> <span class="nf">find_key</span><span class="p">(</span><span class="n">dic</span><span class="p">,</span> <span class="n">val</span><span class="p">):</span>
     <span class="sd">&quot;&quot;&quot;return the key of dictionary dic given the value&quot;&quot;&quot;</span>
     <span class="k">return</span> <span class="p">[</span><span class="n">k</span> <span class="k">for</span> <span class="n">k</span><span class="p">,</span> <span class="n">v</span> <span class="ow">in</span> <span class="n">dic</span><span class="o">.</span><span class="n">iteritems</span><span class="p">()</span> <span class="k">if</span> <span class="n">v</span> <span class="o">==</span> <span class="n">val</span><span class="p">][</span><span class="mi">0</span><span class="p">]</span></div>
 
 
-<div class="viewcode-block" id="NavigationToolBar2D"><a class="viewcode-back" href="../../../../../../dev/api/sas.sasgui.guiframe.local_perspectives.plotting.html#sas.sasgui.guiframe.local_perspectives.plotting.Plotter2D.NavigationToolBar2D">[docs]</a><span class="k">class</span> <span class="nc">NavigationToolBar2D</span><span class="p">(</span><span class="n">NavigationToolBar</span><span class="p">):</span>
+<div class="viewcode-block" id="NavigationToolBar2D"><a class="viewcode-back" href="../../../../../../dev/sasview-api/sas.sasgui.guiframe.local_perspectives.plotting.html#sas.sasgui.guiframe.local_perspectives.plotting.Plotter2D.NavigationToolBar2D">[docs]</a><span class="k">class</span> <span class="nc">NavigationToolBar2D</span><span class="p">(</span><span class="n">NavigationToolBar</span><span class="p">):</span>
     <span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">    &quot;&quot;&quot;</span>
     <span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">canvas</span><span class="p">,</span> <span class="n">parent</span><span class="o">=</span><span class="bp">None</span><span class="p">):</span>
         <span class="n">NavigationToolBar</span><span class="o">.</span><span class="n">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">canvas</span><span class="o">=</span><span class="n">canvas</span><span class="p">,</span> <span class="n">parent</span><span class="o">=</span><span class="n">parent</span><span class="p">)</span>
 
-<div class="viewcode-block" id="NavigationToolBar2D.delete_option"><a class="viewcode-back" href="../../../../../../dev/api/sas.sasgui.guiframe.local_perspectives.plotting.html#sas.sasgui.guiframe.local_perspectives.plotting.Plotter2D.NavigationToolBar2D.delete_option">[docs]</a>    <span class="k">def</span> <span class="nf">delete_option</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+<div class="viewcode-block" id="NavigationToolBar2D.delete_option"><a class="viewcode-back" href="../../../../../../dev/sasview-api/sas.sasgui.guiframe.local_perspectives.plotting.html#sas.sasgui.guiframe.local_perspectives.plotting.Plotter2D.NavigationToolBar2D.delete_option">[docs]</a>    <span class="k">def</span> <span class="nf">delete_option</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
         <span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">        remove default toolbar item</span>
 <span class="sd">        &quot;&quot;&quot;</span>
@@ -109,7 +112,7 @@
         <span class="c1">#delete unwanted button that configures subplot parameters</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">DeleteToolByPos</span><span class="p">(</span><span class="mi">4</span><span class="p">)</span></div>
 
-<div class="viewcode-block" id="NavigationToolBar2D.add_option"><a class="viewcode-back" href="../../../../../../dev/api/sas.sasgui.guiframe.local_perspectives.plotting.html#sas.sasgui.guiframe.local_perspectives.plotting.Plotter2D.NavigationToolBar2D.add_option">[docs]</a>    <span class="k">def</span> <span class="nf">add_option</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+<div class="viewcode-block" id="NavigationToolBar2D.add_option"><a class="viewcode-back" href="../../../../../../dev/sasview-api/sas.sasgui.guiframe.local_perspectives.plotting.html#sas.sasgui.guiframe.local_perspectives.plotting.Plotter2D.NavigationToolBar2D.add_option">[docs]</a>    <span class="k">def</span> <span class="nf">add_option</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
         <span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">        add item to the toolbar</span>
 <span class="sd">        &quot;&quot;&quot;</span>
@@ -127,7 +130,7 @@
         <span class="n">wx</span><span class="o">.</span><span class="n">EVT_TOOL</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">id_print</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">on_print</span><span class="p">)</span></div></div>
 
 
-<div class="viewcode-block" id="ModelPanel2D"><a class="viewcode-back" href="../../../../../../dev/api/sas.sasgui.guiframe.local_perspectives.plotting.html#sas.sasgui.guiframe.local_perspectives.plotting.Plotter2D.ModelPanel2D">[docs]</a><span class="k">class</span> <span class="nc">ModelPanel2D</span><span class="p">(</span><span class="n">ModelPanel1D</span><span class="p">):</span>
+<div class="viewcode-block" id="ModelPanel2D"><a class="viewcode-back" href="../../../../../../dev/sasview-api/sas.sasgui.guiframe.local_perspectives.plotting.html#sas.sasgui.guiframe.local_perspectives.plotting.Plotter2D.ModelPanel2D">[docs]</a><span class="k">class</span> <span class="nc">ModelPanel2D</span><span class="p">(</span><span class="n">ModelPanel1D</span><span class="p">):</span>
     <span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">    Plot panel for use with the GUI manager</span>
 <span class="sd">    &quot;&quot;&quot;</span>
@@ -187,16 +190,16 @@
         <span class="bp">self</span><span class="o">.</span><span class="n">default_zmin_ctl</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">zmin_2D</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">default_zmax_ctl</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">zmax_2D</span>
 
-<div class="viewcode-block" id="ModelPanel2D.on_plot_qrange"><a class="viewcode-back" href="../../../../../../dev/api/sas.sasgui.guiframe.local_perspectives.plotting.html#sas.sasgui.guiframe.local_perspectives.plotting.Plotter2D.ModelPanel2D.on_plot_qrange">[docs]</a>    <span class="k">def</span> <span class="nf">on_plot_qrange</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">event</span><span class="o">=</span><span class="bp">None</span><span class="p">):</span>
+<div class="viewcode-block" id="ModelPanel2D.on_plot_qrange"><a class="viewcode-back" href="../../../../../../dev/sasview-api/sas.sasgui.guiframe.local_perspectives.plotting.html#sas.sasgui.guiframe.local_perspectives.plotting.Plotter2D.ModelPanel2D.on_plot_qrange">[docs]</a>    <span class="k">def</span> <span class="nf">on_plot_qrange</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">event</span><span class="o">=</span><span class="bp">None</span><span class="p">):</span>
         <span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">        On Qmin Qmax vertical line event</span>
 <span class="sd">        &quot;&quot;&quot;</span>
         <span class="c1"># Not implemented</span>
-        <span class="k">if</span> <span class="n">event</span> <span class="o">==</span> <span class="bp">None</span><span class="p">:</span>
+        <span class="k">if</span> <span class="n">event</span> <span class="ow">is</span> <span class="bp">None</span><span class="p">:</span>
             <span class="k">return</span>
         <span class="n">event</span><span class="o">.</span><span class="n">Skip</span><span class="p">()</span></div>
 
-<div class="viewcode-block" id="ModelPanel2D.onLeftDown"><a class="viewcode-back" href="../../../../../../dev/api/sas.sasgui.guiframe.local_perspectives.plotting.html#sas.sasgui.guiframe.local_perspectives.plotting.Plotter2D.ModelPanel2D.onLeftDown">[docs]</a>    <span class="k">def</span> <span class="nf">onLeftDown</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">event</span><span class="p">):</span>
+<div class="viewcode-block" id="ModelPanel2D.onLeftDown"><a class="viewcode-back" href="../../../../../../dev/sasview-api/sas.sasgui.guiframe.local_perspectives.plotting.html#sas.sasgui.guiframe.local_perspectives.plotting.Plotter2D.ModelPanel2D.onLeftDown">[docs]</a>    <span class="k">def</span> <span class="nf">onLeftDown</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">event</span><span class="p">):</span>
         <span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">        left button down and ready to drag</span>
 
@@ -204,7 +207,7 @@
         <span class="c1"># Check that the LEFT button was pressed</span>
         <span class="n">PlotPanel</span><span class="o">.</span><span class="n">onLeftDown</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">event</span><span class="p">)</span>
         <span class="n">ax</span> <span class="o">=</span> <span class="n">event</span><span class="o">.</span><span class="n">inaxes</span>
-        <span class="k">if</span> <span class="n">ax</span> <span class="o">!=</span> <span class="bp">None</span><span class="p">:</span>
+        <span class="k">if</span> <span class="n">ax</span> <span class="ow">is</span> <span class="ow">not</span> <span class="bp">None</span><span class="p">:</span>
             <span class="c1"># data coordinate position</span>
             <span class="n">pos_x</span> <span class="o">=</span> <span class="s2">&quot;</span><span class="si">%8.3g</span><span class="s2">&quot;</span> <span class="o">%</span> <span class="n">event</span><span class="o">.</span><span class="n">xdata</span>
             <span class="n">pos_y</span> <span class="o">=</span> <span class="s2">&quot;</span><span class="si">%8.3g</span><span class="s2">&quot;</span> <span class="o">%</span> <span class="n">event</span><span class="o">.</span><span class="n">ydata</span>
@@ -214,7 +217,7 @@
         <span class="bp">self</span><span class="o">.</span><span class="n">_manager</span><span class="o">.</span><span class="n">set_panel_on_focus</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span>
         <span class="n">wx</span><span class="o">.</span><span class="n">PostEvent</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">parent</span><span class="p">,</span> <span class="n">PanelOnFocusEvent</span><span class="p">(</span><span class="n">panel</span><span class="o">=</span><span class="bp">self</span><span class="p">))</span></div>
 
-<div class="viewcode-block" id="ModelPanel2D.add_toolbar"><a class="viewcode-back" href="../../../../../../dev/api/sas.sasgui.guiframe.local_perspectives.plotting.html#sas.sasgui.guiframe.local_perspectives.plotting.Plotter2D.ModelPanel2D.add_toolbar">[docs]</a>    <span class="k">def</span> <span class="nf">add_toolbar</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+<div class="viewcode-block" id="ModelPanel2D.add_toolbar"><a class="viewcode-back" href="../../../../../../dev/sasview-api/sas.sasgui.guiframe.local_perspectives.plotting.html#sas.sasgui.guiframe.local_perspectives.plotting.Plotter2D.ModelPanel2D.add_toolbar">[docs]</a>    <span class="k">def</span> <span class="nf">add_toolbar</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
         <span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">        add toolbar</span>
 <span class="sd">        &quot;&quot;&quot;</span>
@@ -230,7 +233,7 @@
         <span class="c1"># update the axes menu on the toolbar</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">toolbar</span><span class="o">.</span><span class="n">update</span><span class="p">()</span></div>
 
-<div class="viewcode-block" id="ModelPanel2D.plot_data"><a class="viewcode-back" href="../../../../../../dev/api/sas.sasgui.guiframe.local_perspectives.plotting.html#sas.sasgui.guiframe.local_perspectives.plotting.Plotter2D.ModelPanel2D.plot_data">[docs]</a>    <span class="k">def</span> <span class="nf">plot_data</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">data</span><span class="p">):</span>
+<div class="viewcode-block" id="ModelPanel2D.plot_data"><a class="viewcode-back" href="../../../../../../dev/sasview-api/sas.sasgui.guiframe.local_perspectives.plotting.html#sas.sasgui.guiframe.local_perspectives.plotting.Plotter2D.ModelPanel2D.plot_data">[docs]</a>    <span class="k">def</span> <span class="nf">plot_data</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">data</span><span class="p">):</span>
         <span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">        Data is ready to be displayed</span>
 
@@ -275,7 +278,7 @@
         <span class="bp">self</span><span class="o">.</span><span class="n">graph</span><span class="o">.</span><span class="n">yaxis</span><span class="p">(</span><span class="n">data</span><span class="o">.</span><span class="n">_yaxis</span><span class="p">,</span> <span class="n">data</span><span class="o">.</span><span class="n">_yunit</span><span class="p">)</span>
         <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">_is_changed_legend_label</span><span class="p">:</span>
             <span class="n">data</span><span class="o">.</span><span class="n">label</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">title_label</span>
-        <span class="k">if</span> <span class="n">data</span><span class="o">.</span><span class="n">label</span> <span class="o">==</span> <span class="bp">None</span><span class="p">:</span>
+        <span class="k">if</span> <span class="n">data</span><span class="o">.</span><span class="n">label</span> <span class="ow">is</span> <span class="bp">None</span><span class="p">:</span>
             <span class="n">data</span><span class="o">.</span><span class="n">label</span> <span class="o">=</span> <span class="n">data</span><span class="o">.</span><span class="n">name</span>
         <span class="k">if</span> <span class="ow">not</span> <span class="bp">self</span><span class="o">.</span><span class="n">title_font</span><span class="p">:</span>
             <span class="bp">self</span><span class="o">.</span><span class="n">graph</span><span class="o">.</span><span class="n">title</span><span class="p">(</span><span class="n">data</span><span class="o">.</span><span class="n">label</span><span class="p">)</span>
@@ -312,14 +315,14 @@
         <span class="n">data</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">data2D</span>
         <span class="c1"># control axis labels from the panel itself</span>
         <span class="n">yname</span><span class="p">,</span> <span class="n">yunits</span> <span class="o">=</span> <span class="n">data</span><span class="o">.</span><span class="n">get_yaxis</span><span class="p">()</span>
-        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">yaxis_label</span> <span class="o">!=</span> <span class="bp">None</span><span class="p">:</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">yaxis_label</span> <span class="ow">is</span> <span class="ow">not</span> <span class="bp">None</span><span class="p">:</span>
             <span class="n">yname</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">yaxis_label</span>
             <span class="n">yunits</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">yaxis_unit</span>
         <span class="k">else</span><span class="p">:</span>
             <span class="bp">self</span><span class="o">.</span><span class="n">yaxis_label</span> <span class="o">=</span> <span class="n">yname</span>
             <span class="bp">self</span><span class="o">.</span><span class="n">yaxis_unit</span> <span class="o">=</span> <span class="n">yunits</span>
         <span class="n">xname</span><span class="p">,</span> <span class="n">xunits</span> <span class="o">=</span> <span class="n">data</span><span class="o">.</span><span class="n">get_xaxis</span><span class="p">()</span>
-        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">xaxis_label</span> <span class="o">!=</span> <span class="bp">None</span><span class="p">:</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">xaxis_label</span> <span class="ow">is</span> <span class="ow">not</span> <span class="bp">None</span><span class="p">:</span>
             <span class="n">xname</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">xaxis_label</span>
             <span class="n">xunits</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">xaxis_unit</span>
         <span class="k">else</span><span class="p">:</span>
@@ -330,7 +333,7 @@
         <span class="bp">self</span><span class="o">.</span><span class="n">yaxis</span><span class="p">(</span><span class="n">yname</span><span class="p">,</span> <span class="n">yunits</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">yaxis_font</span><span class="p">,</span>
                    <span class="bp">self</span><span class="o">.</span><span class="n">yaxis_color</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">yaxis_tick</span><span class="p">)</span>
 
-<div class="viewcode-block" id="ModelPanel2D.onContextMenu"><a class="viewcode-back" href="../../../../../../dev/api/sas.sasgui.guiframe.local_perspectives.plotting.html#sas.sasgui.guiframe.local_perspectives.plotting.Plotter2D.ModelPanel2D.onContextMenu">[docs]</a>    <span class="k">def</span> <span class="nf">onContextMenu</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">event</span><span class="p">):</span>
+<div class="viewcode-block" id="ModelPanel2D.onContextMenu"><a class="viewcode-back" href="../../../../../../dev/sasview-api/sas.sasgui.guiframe.local_perspectives.plotting.html#sas.sasgui.guiframe.local_perspectives.plotting.Plotter2D.ModelPanel2D.onContextMenu">[docs]</a>    <span class="k">def</span> <span class="nf">onContextMenu</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">event</span><span class="p">):</span>
         <span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">        2D plot context menu</span>
 
@@ -368,8 +371,8 @@
         <span class="n">slicerpop</span><span class="o">.</span><span class="n">AppendSeparator</span><span class="p">()</span>
         <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">data2D</span><span class="o">.</span><span class="n">detector</span><span class="p">)</span> <span class="o">&lt;=</span> <span class="mi">1</span><span class="p">:</span>
             <span class="n">item_list</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">parent</span><span class="o">.</span><span class="n">get_current_context_menu</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span>
-            <span class="k">if</span> <span class="p">(</span><span class="ow">not</span> <span class="n">item_list</span> <span class="o">==</span> <span class="bp">None</span><span class="p">)</span> <span class="ow">and</span> <span class="p">(</span><span class="ow">not</span> <span class="nb">len</span><span class="p">(</span><span class="n">item_list</span><span class="p">)</span> <span class="o">==</span> <span class="mi">0</span><span class="p">)</span> <span class="ow">and</span>\
-                <span class="bp">self</span><span class="o">.</span><span class="n">data2D</span><span class="o">.</span><span class="n">name</span><span class="o">.</span><span class="n">split</span><span class="p">(</span><span class="s2">&quot; &quot;</span><span class="p">)[</span><span class="mi">0</span><span class="p">]</span> <span class="o">!=</span> <span class="s1">&#39;Residuals&#39;</span><span class="p">:</span>
+            <span class="k">if</span> <span class="p">((</span><span class="n">item_list</span> <span class="ow">is</span> <span class="ow">not</span> <span class="bp">None</span><span class="p">)</span> <span class="ow">and</span> <span class="nb">len</span><span class="p">(</span><span class="n">item_list</span><span class="p">)</span> <span class="ow">and</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">data2D</span><span class="o">.</span><span class="n">name</span><span class="o">.</span><span class="n">split</span><span class="p">(</span><span class="s2">&quot; &quot;</span><span class="p">)[</span><span class="mi">0</span><span class="p">]</span> <span class="o">!=</span> <span class="s1">&#39;Residuals&#39;</span><span class="p">):</span>
                 <span class="k">for</span> <span class="n">item</span><span class="p">,</span> <span class="n">wx_id</span> <span class="ow">in</span> <span class="nb">zip</span><span class="p">(</span><span class="n">item_list</span><span class="p">,</span> <span class="p">[</span><span class="n">ids</span><span class="o">.</span><span class="n">next</span><span class="p">()</span> <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">item_list</span><span class="p">))]):</span>
                     <span class="k">try</span><span class="p">:</span>
                         <span class="n">slicerpop</span><span class="o">.</span><span class="n">Append</span><span class="p">(</span><span class="n">wx_id</span><span class="p">,</span> <span class="n">item</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span> <span class="n">item</span><span class="p">[</span><span class="mi">1</span><span class="p">])</span>
@@ -403,13 +406,14 @@
             <span class="n">wx_id</span> <span class="o">=</span> <span class="n">ids</span><span class="o">.</span><span class="n">next</span><span class="p">()</span>
             <span class="n">slicerpop</span><span class="o">.</span><span class="n">Append</span><span class="p">(</span><span class="n">wx_id</span><span class="p">,</span> <span class="s1">&#39;&amp;Box Averaging in Qy&#39;</span><span class="p">)</span>
             <span class="n">wx</span><span class="o">.</span><span class="n">EVT_MENU</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">wx_id</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">onBoxavgY</span><span class="p">)</span>
-            <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">slicer</span> <span class="o">!=</span> <span class="bp">None</span><span class="p">:</span>
+            <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">slicer</span> <span class="ow">is</span> <span class="ow">not</span> <span class="bp">None</span><span class="p">:</span>
                 <span class="n">wx_id</span> <span class="o">=</span> <span class="n">ids</span><span class="o">.</span><span class="n">next</span><span class="p">()</span>
                 <span class="n">slicerpop</span><span class="o">.</span><span class="n">Append</span><span class="p">(</span><span class="n">wx_id</span><span class="p">,</span> <span class="s1">&#39;&amp;Clear Slicer&#39;</span><span class="p">)</span>
                 <span class="n">wx</span><span class="o">.</span><span class="n">EVT_MENU</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">wx_id</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">onClearSlicer</span><span class="p">)</span>
                 <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">slicer</span><span class="o">.</span><span class="n">__class__</span><span class="o">.</span><span class="n">__name__</span> <span class="o">!=</span> <span class="s2">&quot;BoxSum&quot;</span><span class="p">:</span>
                     <span class="n">wx_id</span> <span class="o">=</span> <span class="n">ids</span><span class="o">.</span><span class="n">next</span><span class="p">()</span>
-                    <span class="n">slicerpop</span><span class="o">.</span><span class="n">Append</span><span class="p">(</span><span class="n">wx_id</span><span class="p">,</span> <span class="s1">&#39;&amp;Edit Slicer Parameters&#39;</span><span class="p">)</span>
+                    <span class="n">name</span> <span class="o">=</span> <span class="s1">&#39;&amp;Edit Slicer Parameters and Batch Slicing&#39;</span>
+                    <span class="n">slicerpop</span><span class="o">.</span><span class="n">Append</span><span class="p">(</span><span class="n">wx_id</span><span class="p">,</span> <span class="n">name</span><span class="p">)</span>
                     <span class="n">wx</span><span class="o">.</span><span class="n">EVT_MENU</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">wx_id</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">_onEditSlicer</span><span class="p">)</span>
             <span class="n">slicerpop</span><span class="o">.</span><span class="n">AppendSeparator</span><span class="p">()</span>
 
@@ -447,7 +451,7 @@
             <span class="n">pos</span> <span class="o">=</span> <span class="p">(</span><span class="n">pos_x</span><span class="p">,</span> <span class="n">pos_y</span> <span class="o">+</span> <span class="mi">5</span><span class="p">)</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">PopupMenu</span><span class="p">(</span><span class="n">slicerpop</span><span class="p">,</span> <span class="n">pos</span><span class="p">)</span></div>
 
-<div class="viewcode-block" id="ModelPanel2D.onEditLabels"><a class="viewcode-back" href="../../../../../../dev/api/sas.sasgui.guiframe.local_perspectives.plotting.html#sas.sasgui.guiframe.local_perspectives.plotting.Plotter2D.ModelPanel2D.onEditLabels">[docs]</a>    <span class="k">def</span> <span class="nf">onEditLabels</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">event</span><span class="p">):</span>
+<div class="viewcode-block" id="ModelPanel2D.onEditLabels"><a class="viewcode-back" href="../../../../../../dev/sasview-api/sas.sasgui.guiframe.local_perspectives.plotting.html#sas.sasgui.guiframe.local_perspectives.plotting.Plotter2D.ModelPanel2D.onEditLabels">[docs]</a>    <span class="k">def</span> <span class="nf">onEditLabels</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">event</span><span class="p">):</span>
         <span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">        Edit legend label</span>
 <span class="sd">        &quot;&quot;&quot;</span>
@@ -482,8 +486,8 @@
                     <span class="bp">self</span><span class="o">.</span><span class="n">subplot</span><span class="o">.</span><span class="n">figure</span><span class="o">.</span><span class="n">canvas</span><span class="o">.</span><span class="n">draw_idle</span><span class="p">()</span>
             <span class="k">except</span><span class="p">:</span>
                 <span class="n">msg</span> <span class="o">=</span> <span class="s2">&quot;Add Text: Error. Check your property values...&quot;</span>
-                <span class="n">logging</span><span class="o">.</span><span class="n">error</span><span class="p">(</span><span class="n">msg</span><span class="p">)</span>
-                <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">parent</span> <span class="o">!=</span> <span class="bp">None</span><span class="p">:</span>
+                <span class="n">logger</span><span class="o">.</span><span class="n">error</span><span class="p">(</span><span class="n">msg</span><span class="p">)</span>
+                <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">parent</span> <span class="ow">is</span> <span class="ow">not</span> <span class="bp">None</span><span class="p">:</span>
                     <span class="n">wx</span><span class="o">.</span><span class="n">PostEvent</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">parent</span><span class="p">,</span> <span class="n">StatusEvent</span><span class="p">(</span><span class="n">status</span><span class="o">=</span><span class="n">msg</span><span class="p">))</span>
         <span class="n">dial</span><span class="o">.</span><span class="n">Destroy</span><span class="p">()</span></div>
 
@@ -529,27 +533,27 @@
                    <span class="n">color</span><span class="o">=</span><span class="mi">0</span><span class="p">,</span> <span class="n">symbol</span><span class="o">=</span><span class="mi">0</span><span class="p">,</span> <span class="n">label</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">data2D</span><span class="o">.</span><span class="n">name</span><span class="p">)</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">subplot</span><span class="o">.</span><span class="n">figure</span><span class="o">.</span><span class="n">canvas</span><span class="o">.</span><span class="n">draw_idle</span><span class="p">()</span>
 
-<div class="viewcode-block" id="ModelPanel2D.freeze_axes"><a class="viewcode-back" href="../../../../../../dev/api/sas.sasgui.guiframe.local_perspectives.plotting.html#sas.sasgui.guiframe.local_perspectives.plotting.Plotter2D.ModelPanel2D.freeze_axes">[docs]</a>    <span class="k">def</span> <span class="nf">freeze_axes</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+<div class="viewcode-block" id="ModelPanel2D.freeze_axes"><a class="viewcode-back" href="../../../../../../dev/sasview-api/sas.sasgui.guiframe.local_perspectives.plotting.html#sas.sasgui.guiframe.local_perspectives.plotting.Plotter2D.ModelPanel2D.freeze_axes">[docs]</a>    <span class="k">def</span> <span class="nf">freeze_axes</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
         <span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">        &quot;&quot;&quot;</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">axes_frozen</span> <span class="o">=</span> <span class="bp">True</span></div>
 
-<div class="viewcode-block" id="ModelPanel2D.thaw_axes"><a class="viewcode-back" href="../../../../../../dev/api/sas.sasgui.guiframe.local_perspectives.plotting.html#sas.sasgui.guiframe.local_perspectives.plotting.Plotter2D.ModelPanel2D.thaw_axes">[docs]</a>    <span class="k">def</span> <span class="nf">thaw_axes</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+<div class="viewcode-block" id="ModelPanel2D.thaw_axes"><a class="viewcode-back" href="../../../../../../dev/sasview-api/sas.sasgui.guiframe.local_perspectives.plotting.html#sas.sasgui.guiframe.local_perspectives.plotting.Plotter2D.ModelPanel2D.thaw_axes">[docs]</a>    <span class="k">def</span> <span class="nf">thaw_axes</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
         <span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">        &quot;&quot;&quot;</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">axes_frozen</span> <span class="o">=</span> <span class="bp">False</span></div>
 
-<div class="viewcode-block" id="ModelPanel2D.onMouseMotion"><a class="viewcode-back" href="../../../../../../dev/api/sas.sasgui.guiframe.local_perspectives.plotting.html#sas.sasgui.guiframe.local_perspectives.plotting.Plotter2D.ModelPanel2D.onMouseMotion">[docs]</a>    <span class="k">def</span> <span class="nf">onMouseMotion</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">event</span><span class="p">):</span>
+<div class="viewcode-block" id="ModelPanel2D.onMouseMotion"><a class="viewcode-back" href="../../../../../../dev/sasview-api/sas.sasgui.guiframe.local_perspectives.plotting.html#sas.sasgui.guiframe.local_perspectives.plotting.Plotter2D.ModelPanel2D.onMouseMotion">[docs]</a>    <span class="k">def</span> <span class="nf">onMouseMotion</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">event</span><span class="p">):</span>
         <span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">        &quot;&quot;&quot;</span>
         <span class="k">pass</span></div>
 
-<div class="viewcode-block" id="ModelPanel2D.onWheel"><a class="viewcode-back" href="../../../../../../dev/api/sas.sasgui.guiframe.local_perspectives.plotting.html#sas.sasgui.guiframe.local_perspectives.plotting.Plotter2D.ModelPanel2D.onWheel">[docs]</a>    <span class="k">def</span> <span class="nf">onWheel</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">event</span><span class="p">):</span>
+<div class="viewcode-block" id="ModelPanel2D.onWheel"><a class="viewcode-back" href="../../../../../../dev/sasview-api/sas.sasgui.guiframe.local_perspectives.plotting.html#sas.sasgui.guiframe.local_perspectives.plotting.Plotter2D.ModelPanel2D.onWheel">[docs]</a>    <span class="k">def</span> <span class="nf">onWheel</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">event</span><span class="p">):</span>
         <span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">        &quot;&quot;&quot;</span>
         <span class="k">pass</span></div>
 
-<div class="viewcode-block" id="ModelPanel2D.update"><a class="viewcode-back" href="../../../../../../dev/api/sas.sasgui.guiframe.local_perspectives.plotting.html#sas.sasgui.guiframe.local_perspectives.plotting.Plotter2D.ModelPanel2D.update">[docs]</a>    <span class="k">def</span> <span class="nf">update</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">draw</span><span class="o">=</span><span class="bp">True</span><span class="p">):</span>
+<div class="viewcode-block" id="ModelPanel2D.update"><a class="viewcode-back" href="../../../../../../dev/sasview-api/sas.sasgui.guiframe.local_perspectives.plotting.html#sas.sasgui.guiframe.local_perspectives.plotting.Plotter2D.ModelPanel2D.update">[docs]</a>    <span class="k">def</span> <span class="nf">update</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">draw</span><span class="o">=</span><span class="bp">True</span><span class="p">):</span>
         <span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">        Respond to changes in the model by recalculating the</span>
 <span class="sd">        profiles and resetting the widgets.</span>
@@ -580,15 +584,15 @@
 <span class="sd">        :param slicer: slicer class to create</span>
 
 <span class="sd">        &quot;&quot;&quot;</span>
-        <span class="c1">## Clear current slicer</span>
-        <span class="k">if</span> <span class="ow">not</span> <span class="bp">self</span><span class="o">.</span><span class="n">slicer</span> <span class="o">==</span> <span class="bp">None</span><span class="p">:</span>
+        <span class="c1"># Clear current slicer</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">slicer</span> <span class="ow">is</span> <span class="ow">not</span> <span class="bp">None</span><span class="p">:</span>
             <span class="bp">self</span><span class="o">.</span><span class="n">slicer</span><span class="o">.</span><span class="n">clear</span><span class="p">()</span>
-        <span class="c1">## Create a new slicer</span>
+        <span class="c1"># Create a new slicer</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">slicer_z</span> <span class="o">+=</span> <span class="mi">1</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">slicer</span> <span class="o">=</span> <span class="n">slicer</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">subplot</span><span class="p">,</span> <span class="n">zorder</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">slicer_z</span><span class="p">)</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">subplot</span><span class="o">.</span><span class="n">set_ylim</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">data2D</span><span class="o">.</span><span class="n">ymin</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">data2D</span><span class="o">.</span><span class="n">ymax</span><span class="p">)</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">subplot</span><span class="o">.</span><span class="n">set_xlim</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">data2D</span><span class="o">.</span><span class="n">xmin</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">data2D</span><span class="o">.</span><span class="n">xmax</span><span class="p">)</span>
-        <span class="c1">## Draw slicer</span>
+        <span class="c1"># Draw slicer</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">update</span><span class="p">()</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">slicer</span><span class="o">.</span><span class="n">update</span><span class="p">()</span>
         <span class="n">msg</span> <span class="o">=</span> <span class="s2">&quot;Plotter2D._setSlicer  </span><span class="si">%s</span><span class="s2">&quot;</span> <span class="o">%</span> <span class="bp">self</span><span class="o">.</span><span class="n">slicer</span><span class="o">.</span><span class="n">__class__</span><span class="o">.</span><span class="n">__name__</span>
@@ -600,7 +604,7 @@
         <span class="n">event</span><span class="o">.</span><span class="n">params</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">slicer</span><span class="o">.</span><span class="n">get_params</span><span class="p">()</span>
         <span class="n">wx</span><span class="o">.</span><span class="n">PostEvent</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">event</span><span class="p">)</span>
 
-<div class="viewcode-block" id="ModelPanel2D.onMaskedCircular"><a class="viewcode-back" href="../../../../../../dev/api/sas.sasgui.guiframe.local_perspectives.plotting.html#sas.sasgui.guiframe.local_perspectives.plotting.Plotter2D.ModelPanel2D.onMaskedCircular">[docs]</a>    <span class="k">def</span> <span class="nf">onMaskedCircular</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">event</span><span class="p">):</span>
+<div class="viewcode-block" id="ModelPanel2D.onMaskedCircular"><a class="viewcode-back" href="../../../../../../dev/sasview-api/sas.sasgui.guiframe.local_perspectives.plotting.html#sas.sasgui.guiframe.local_perspectives.plotting.Plotter2D.ModelPanel2D.onMaskedCircular">[docs]</a>    <span class="k">def</span> <span class="nf">onMaskedCircular</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">event</span><span class="p">):</span>
         <span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">        perform circular averaging on Data2D with mask if it exists</span>
 
@@ -609,7 +613,7 @@
 <span class="sd">        &quot;&quot;&quot;</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">onCircular</span><span class="p">(</span><span class="n">event</span><span class="p">,</span> <span class="bp">True</span><span class="p">)</span></div>
 
-<div class="viewcode-block" id="ModelPanel2D.onCircular"><a class="viewcode-back" href="../../../../../../dev/api/sas.sasgui.guiframe.local_perspectives.plotting.html#sas.sasgui.guiframe.local_perspectives.plotting.Plotter2D.ModelPanel2D.onCircular">[docs]</a>    <span class="k">def</span> <span class="nf">onCircular</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">event</span><span class="p">,</span> <span class="n">ismask</span><span class="o">=</span><span class="bp">False</span><span class="p">):</span>
+<div class="viewcode-block" id="ModelPanel2D.onCircular"><a class="viewcode-back" href="../../../../../../dev/sasview-api/sas.sasgui.guiframe.local_perspectives.plotting.html#sas.sasgui.guiframe.local_perspectives.plotting.Plotter2D.ModelPanel2D.onCircular">[docs]</a>    <span class="k">def</span> <span class="nf">onCircular</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">event</span><span class="p">,</span> <span class="n">ismask</span><span class="o">=</span><span class="bp">False</span><span class="p">):</span>
         <span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">        perform circular averaging on Data2D</span>
 
@@ -617,18 +621,18 @@
 
 <span class="sd">        &quot;&quot;&quot;</span>
         <span class="c1"># Find the best number of bins</span>
-        <span class="n">npt</span> <span class="o">=</span> <span class="n">math</span><span class="o">.</span><span class="n">sqrt</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">data2D</span><span class="o">.</span><span class="n">data</span><span class="p">[</span><span class="n">numpy</span><span class="o">.</span><span class="n">isfinite</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">data2D</span><span class="o">.</span><span class="n">data</span><span class="p">)]))</span>
+        <span class="n">npt</span> <span class="o">=</span> <span class="n">math</span><span class="o">.</span><span class="n">sqrt</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">data2D</span><span class="o">.</span><span class="n">data</span><span class="p">[</span><span class="n">np</span><span class="o">.</span><span class="n">isfinite</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">data2D</span><span class="o">.</span><span class="n">data</span><span class="p">)]))</span>
         <span class="n">npt</span> <span class="o">=</span> <span class="n">math</span><span class="o">.</span><span class="n">floor</span><span class="p">(</span><span class="n">npt</span><span class="p">)</span>
         <span class="kn">from</span> <span class="nn">sas.sascalc.dataloader.manipulations</span> <span class="kn">import</span> <span class="n">CircularAverage</span>
-        <span class="c1">## compute the maximum radius of data2D</span>
+        <span class="c1"># compute the maximum radius of data2D</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">qmax</span> <span class="o">=</span> <span class="nb">max</span><span class="p">(</span><span class="n">math</span><span class="o">.</span><span class="n">fabs</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">data2D</span><span class="o">.</span><span class="n">xmax</span><span class="p">),</span>
                         <span class="n">math</span><span class="o">.</span><span class="n">fabs</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">data2D</span><span class="o">.</span><span class="n">xmin</span><span class="p">))</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">ymax</span> <span class="o">=</span> <span class="nb">max</span><span class="p">(</span><span class="n">math</span><span class="o">.</span><span class="n">fabs</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">data2D</span><span class="o">.</span><span class="n">ymax</span><span class="p">),</span>
                         <span class="n">math</span><span class="o">.</span><span class="n">fabs</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">data2D</span><span class="o">.</span><span class="n">ymin</span><span class="p">))</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">radius</span> <span class="o">=</span> <span class="n">math</span><span class="o">.</span><span class="n">sqrt</span><span class="p">(</span><span class="n">math</span><span class="o">.</span><span class="n">pow</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">qmax</span><span class="p">,</span> <span class="mi">2</span><span class="p">)</span> <span class="o">+</span> <span class="n">math</span><span class="o">.</span><span class="n">pow</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">ymax</span><span class="p">,</span> <span class="mi">2</span><span class="p">))</span>
-        <span class="c1">##Compute beam width</span>
+        <span class="c1"># Compute beam width</span>
         <span class="n">bin_width</span> <span class="o">=</span> <span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">qmax</span> <span class="o">+</span> <span class="bp">self</span><span class="o">.</span><span class="n">qmax</span><span class="p">)</span> <span class="o">/</span> <span class="n">npt</span>
-        <span class="c1">## Create data1D circular average of data2D</span>
+        <span class="c1"># Create data1D circular average of data2D</span>
         <span class="n">Circle</span> <span class="o">=</span> <span class="n">CircularAverage</span><span class="p">(</span><span class="n">r_min</span><span class="o">=</span><span class="mi">0</span><span class="p">,</span> <span class="n">r_max</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">radius</span><span class="p">,</span>
                                  <span class="n">bin_width</span><span class="o">=</span><span class="n">bin_width</span><span class="p">)</span>
         <span class="n">circ</span> <span class="o">=</span> <span class="n">Circle</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">data2D</span><span class="p">,</span> <span class="n">ismask</span><span class="o">=</span><span class="n">ismask</span><span class="p">)</span>
@@ -647,11 +651,11 @@
         <span class="n">new_plot</span><span class="o">.</span><span class="n">dxw</span> <span class="o">=</span> <span class="n">dxw</span>
         <span class="n">new_plot</span><span class="o">.</span><span class="n">name</span> <span class="o">=</span> <span class="s2">&quot;Circ avg &quot;</span> <span class="o">+</span> <span class="bp">self</span><span class="o">.</span><span class="n">data2D</span><span class="o">.</span><span class="n">name</span>
         <span class="n">new_plot</span><span class="o">.</span><span class="n">source</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">data2D</span><span class="o">.</span><span class="n">source</span>
-        <span class="c1">#new_plot.info = self.data2D.info</span>
+        <span class="c1"># new_plot.info = self.data2D.info</span>
         <span class="n">new_plot</span><span class="o">.</span><span class="n">interactive</span> <span class="o">=</span> <span class="bp">True</span>
         <span class="n">new_plot</span><span class="o">.</span><span class="n">detector</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">data2D</span><span class="o">.</span><span class="n">detector</span>
 
-        <span class="c1">## If the data file does not tell us what the axes are, just assume...</span>
+        <span class="c1"># If the data file does not tell us what the axes are, just assume...</span>
         <span class="n">new_plot</span><span class="o">.</span><span class="n">xaxis</span><span class="p">(</span><span class="s2">&quot;</span><span class="se">\\</span><span class="s2">rm{Q}&quot;</span><span class="p">,</span> <span class="s2">&quot;A^{-1}&quot;</span><span class="p">)</span>
         <span class="k">if</span> <span class="nb">hasattr</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">data2D</span><span class="p">,</span> <span class="s2">&quot;scale&quot;</span><span class="p">)</span> <span class="ow">and</span> \
                     <span class="bp">self</span><span class="o">.</span><span class="n">data2D</span><span class="o">.</span><span class="n">scale</span> <span class="o">==</span> <span class="s1">&#39;linear&#39;</span><span class="p">:</span>
@@ -663,8 +667,7 @@
         <span class="n">new_plot</span><span class="o">.</span><span class="n">group_id</span> <span class="o">=</span> <span class="s2">&quot;2daverage&quot;</span> <span class="o">+</span> <span class="bp">self</span><span class="o">.</span><span class="n">data2D</span><span class="o">.</span><span class="n">name</span>
         <span class="n">new_plot</span><span class="o">.</span><span class="n">id</span> <span class="o">=</span> <span class="s2">&quot;Circ avg &quot;</span> <span class="o">+</span> <span class="bp">self</span><span class="o">.</span><span class="n">data2D</span><span class="o">.</span><span class="n">name</span>
         <span class="n">new_plot</span><span class="o">.</span><span class="n">is_data</span> <span class="o">=</span> <span class="bp">True</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">parent</span><span class="o">.</span><span class="n">update_theory</span><span class="p">(</span><span class="n">data_id</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">data2D</span><span class="o">.</span><span class="n">id</span><span class="p">,</span> \
-                                       <span class="n">theory</span><span class="o">=</span><span class="n">new_plot</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">parent</span><span class="o">.</span><span class="n">update_theory</span><span class="p">(</span><span class="n">data_id</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">data2D</span><span class="o">.</span><span class="n">id</span><span class="p">,</span> <span class="n">theory</span><span class="o">=</span><span class="n">new_plot</span><span class="p">)</span>
         <span class="n">wx</span><span class="o">.</span><span class="n">PostEvent</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">parent</span><span class="p">,</span>
                      <span class="n">NewPlotEvent</span><span class="p">(</span><span class="n">plot</span><span class="o">=</span><span class="n">new_plot</span><span class="p">,</span> <span class="n">title</span><span class="o">=</span><span class="n">new_plot</span><span class="o">.</span><span class="n">name</span><span class="p">))</span></div>
 
@@ -677,15 +680,15 @@
 <span class="sd">        :param event: wx.menu event</span>
 
 <span class="sd">        &quot;&quot;&quot;</span>
-        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">slicer</span> <span class="o">!=</span> <span class="bp">None</span><span class="p">:</span>
-            <span class="kn">from</span> <span class="nn">SlicerParameters</span> <span class="kn">import</span> <span class="n">SlicerParameterPanel</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">slicer</span> <span class="ow">is</span> <span class="ow">not</span> <span class="bp">None</span><span class="p">:</span>
+            <span class="kn">from</span> <span class="nn">parameters_panel_slicer</span> <span class="kn">import</span> <span class="n">SlicerParameterPanel</span>
             <span class="n">dialog</span> <span class="o">=</span> <span class="n">SlicerParameterPanel</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="o">-</span><span class="mi">1</span><span class="p">,</span> <span class="s2">&quot;Slicer Parameters&quot;</span><span class="p">)</span>
             <span class="n">dialog</span><span class="o">.</span><span class="n">set_slicer</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">slicer</span><span class="o">.</span><span class="n">__class__</span><span class="o">.</span><span class="n">__name__</span><span class="p">,</span>
                               <span class="bp">self</span><span class="o">.</span><span class="n">slicer</span><span class="o">.</span><span class="n">get_params</span><span class="p">())</span>
             <span class="k">if</span> <span class="n">dialog</span><span class="o">.</span><span class="n">ShowModal</span><span class="p">()</span> <span class="o">==</span> <span class="n">wx</span><span class="o">.</span><span class="n">ID_OK</span><span class="p">:</span>
                 <span class="n">dialog</span><span class="o">.</span><span class="n">Destroy</span><span class="p">()</span>
 
-<div class="viewcode-block" id="ModelPanel2D.onSectorQ"><a class="viewcode-back" href="../../../../../../dev/api/sas.sasgui.guiframe.local_perspectives.plotting.html#sas.sasgui.guiframe.local_perspectives.plotting.Plotter2D.ModelPanel2D.onSectorQ">[docs]</a>    <span class="k">def</span> <span class="nf">onSectorQ</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">event</span><span class="p">):</span>
+<div class="viewcode-block" id="ModelPanel2D.onSectorQ"><a class="viewcode-back" href="../../../../../../dev/sasview-api/sas.sasgui.guiframe.local_perspectives.plotting.html#sas.sasgui.guiframe.local_perspectives.plotting.Plotter2D.ModelPanel2D.onSectorQ">[docs]</a>    <span class="k">def</span> <span class="nf">onSectorQ</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">event</span><span class="p">):</span>
         <span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">        Perform sector averaging on Q and draw sector slicer</span>
 <span class="sd">        &quot;&quot;&quot;</span>
@@ -693,7 +696,7 @@
         <span class="bp">self</span><span class="o">.</span><span class="n">onClearSlicer</span><span class="p">(</span><span class="n">event</span><span class="p">)</span>
         <span class="n">wx</span><span class="o">.</span><span class="n">PostEvent</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">InternalEvent</span><span class="p">(</span><span class="n">slicer</span><span class="o">=</span><span class="n">SectorInteractor</span><span class="p">))</span></div>
 
-<div class="viewcode-block" id="ModelPanel2D.onSectorPhi"><a class="viewcode-back" href="../../../../../../dev/api/sas.sasgui.guiframe.local_perspectives.plotting.html#sas.sasgui.guiframe.local_perspectives.plotting.Plotter2D.ModelPanel2D.onSectorPhi">[docs]</a>    <span class="k">def</span> <span class="nf">onSectorPhi</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">event</span><span class="p">):</span>
+<div class="viewcode-block" id="ModelPanel2D.onSectorPhi"><a class="viewcode-back" href="../../../../../../dev/sasview-api/sas.sasgui.guiframe.local_perspectives.plotting.html#sas.sasgui.guiframe.local_perspectives.plotting.Plotter2D.ModelPanel2D.onSectorPhi">[docs]</a>    <span class="k">def</span> <span class="nf">onSectorPhi</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">event</span><span class="p">):</span>
         <span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">        Perform sector averaging on Phi and draw annulus slicer</span>
 <span class="sd">        &quot;&quot;&quot;</span>
@@ -701,7 +704,7 @@
         <span class="bp">self</span><span class="o">.</span><span class="n">onClearSlicer</span><span class="p">(</span><span class="n">event</span><span class="p">)</span>
         <span class="n">wx</span><span class="o">.</span><span class="n">PostEvent</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">InternalEvent</span><span class="p">(</span><span class="n">slicer</span><span class="o">=</span><span class="n">AnnulusInteractor</span><span class="p">))</span></div>
 
-<div class="viewcode-block" id="ModelPanel2D.onBoxSum"><a class="viewcode-back" href="../../../../../../dev/api/sas.sasgui.guiframe.local_perspectives.plotting.html#sas.sasgui.guiframe.local_perspectives.plotting.Plotter2D.ModelPanel2D.onBoxSum">[docs]</a>    <span class="k">def</span> <span class="nf">onBoxSum</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">event</span><span class="p">):</span>
+<div class="viewcode-block" id="ModelPanel2D.onBoxSum"><a class="viewcode-back" href="../../../../../../dev/sasview-api/sas.sasgui.guiframe.local_perspectives.plotting.html#sas.sasgui.guiframe.local_perspectives.plotting.Plotter2D.ModelPanel2D.onBoxSum">[docs]</a>    <span class="k">def</span> <span class="nf">onBoxSum</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">event</span><span class="p">):</span>
         <span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">        &quot;&quot;&quot;</span>
         <span class="kn">from</span> <span class="nn">sas.sasgui.guiframe.gui_manager</span> <span class="kn">import</span> <span class="n">MDIFrame</span>
@@ -716,7 +719,7 @@
         <span class="c1">## Value used to initially set the slicer panel</span>
         <span class="n">params</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">slicer</span><span class="o">.</span><span class="n">get_params</span><span class="p">()</span>
         <span class="c1">## Create a new panel to display results of summation of Data2D</span>
-        <span class="kn">from</span> <span class="nn">slicerpanel</span> <span class="kn">import</span> <span class="n">SlicerPanel</span>
+        <span class="kn">from</span> <span class="nn">parameters_panel_boxsum</span> <span class="kn">import</span> <span class="n">SlicerPanel</span>
         <span class="n">win</span> <span class="o">=</span> <span class="n">MDIFrame</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">parent</span><span class="p">,</span> <span class="bp">None</span><span class="p">,</span> <span class="s1">&#39;None&#39;</span><span class="p">,</span> <span class="p">(</span><span class="mi">100</span><span class="p">,</span> <span class="mi">200</span><span class="p">))</span>
         <span class="n">new_panel</span> <span class="o">=</span> <span class="n">SlicerPanel</span><span class="p">(</span><span class="n">parent</span><span class="o">=</span><span class="n">win</span><span class="p">,</span> <span class="nb">id</span><span class="o">=-</span><span class="mi">1</span><span class="p">,</span>
                                 <span class="n">base</span><span class="o">=</span><span class="bp">self</span><span class="p">,</span> <span class="nb">type</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">slicer</span><span class="o">.</span><span class="n">__class__</span><span class="o">.</span><span class="n">__name__</span><span class="p">,</span>
@@ -740,7 +743,7 @@
         <span class="n">wx</span><span class="o">.</span><span class="n">CallAfter</span><span class="p">(</span><span class="n">new_panel</span><span class="o">.</span><span class="n">frame</span><span class="o">.</span><span class="n">Show</span><span class="p">)</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">panel_slicer</span> <span class="o">=</span> <span class="n">new_panel</span></div>
 
-<div class="viewcode-block" id="ModelPanel2D.onBoxavgX"><a class="viewcode-back" href="../../../../../../dev/api/sas.sasgui.guiframe.local_perspectives.plotting.html#sas.sasgui.guiframe.local_perspectives.plotting.Plotter2D.ModelPanel2D.onBoxavgX">[docs]</a>    <span class="k">def</span> <span class="nf">onBoxavgX</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">event</span><span class="p">):</span>
+<div class="viewcode-block" id="ModelPanel2D.onBoxavgX"><a class="viewcode-back" href="../../../../../../dev/sasview-api/sas.sasgui.guiframe.local_perspectives.plotting.html#sas.sasgui.guiframe.local_perspectives.plotting.Plotter2D.ModelPanel2D.onBoxavgX">[docs]</a>    <span class="k">def</span> <span class="nf">onBoxavgX</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">event</span><span class="p">):</span>
         <span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">        Perform 2D data averaging on Qx</span>
 <span class="sd">        Create a new slicer .</span>
@@ -751,7 +754,7 @@
         <span class="bp">self</span><span class="o">.</span><span class="n">onClearSlicer</span><span class="p">(</span><span class="n">event</span><span class="p">)</span>
         <span class="n">wx</span><span class="o">.</span><span class="n">PostEvent</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">InternalEvent</span><span class="p">(</span><span class="n">slicer</span><span class="o">=</span><span class="n">BoxInteractorX</span><span class="p">))</span></div>
 
-<div class="viewcode-block" id="ModelPanel2D.onBoxavgY"><a class="viewcode-back" href="../../../../../../dev/api/sas.sasgui.guiframe.local_perspectives.plotting.html#sas.sasgui.guiframe.local_perspectives.plotting.Plotter2D.ModelPanel2D.onBoxavgY">[docs]</a>    <span class="k">def</span> <span class="nf">onBoxavgY</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">event</span><span class="p">):</span>
+<div class="viewcode-block" id="ModelPanel2D.onBoxavgY"><a class="viewcode-back" href="../../../../../../dev/sasview-api/sas.sasgui.guiframe.local_perspectives.plotting.html#sas.sasgui.guiframe.local_perspectives.plotting.Plotter2D.ModelPanel2D.onBoxavgY">[docs]</a>    <span class="k">def</span> <span class="nf">onBoxavgY</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">event</span><span class="p">):</span>
         <span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">        Perform 2D data averaging on Qy</span>
 <span class="sd">        Create a new slicer .</span>
@@ -763,11 +766,11 @@
         <span class="bp">self</span><span class="o">.</span><span class="n">onClearSlicer</span><span class="p">(</span><span class="n">event</span><span class="p">)</span>
         <span class="n">wx</span><span class="o">.</span><span class="n">PostEvent</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">InternalEvent</span><span class="p">(</span><span class="n">slicer</span><span class="o">=</span><span class="n">BoxInteractorY</span><span class="p">))</span></div>
 
-<div class="viewcode-block" id="ModelPanel2D.onClearSlicer"><a class="viewcode-back" href="../../../../../../dev/api/sas.sasgui.guiframe.local_perspectives.plotting.html#sas.sasgui.guiframe.local_perspectives.plotting.Plotter2D.ModelPanel2D.onClearSlicer">[docs]</a>    <span class="k">def</span> <span class="nf">onClearSlicer</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">event</span><span class="p">):</span>
+<div class="viewcode-block" id="ModelPanel2D.onClearSlicer"><a class="viewcode-back" href="../../../../../../dev/sasview-api/sas.sasgui.guiframe.local_perspectives.plotting.html#sas.sasgui.guiframe.local_perspectives.plotting.Plotter2D.ModelPanel2D.onClearSlicer">[docs]</a>    <span class="k">def</span> <span class="nf">onClearSlicer</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">event</span><span class="p">):</span>
         <span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">        Clear the slicer on the plot</span>
 <span class="sd">        &quot;&quot;&quot;</span>
-        <span class="k">if</span> <span class="ow">not</span> <span class="bp">self</span><span class="o">.</span><span class="n">slicer</span> <span class="o">==</span> <span class="bp">None</span><span class="p">:</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">slicer</span> <span class="ow">is</span> <span class="ow">not</span> <span class="bp">None</span><span class="p">:</span>
             <span class="bp">self</span><span class="o">.</span><span class="n">slicer</span><span class="o">.</span><span class="n">clear</span><span class="p">()</span>
             <span class="bp">self</span><span class="o">.</span><span class="n">subplot</span><span class="o">.</span><span class="n">figure</span><span class="o">.</span><span class="n">canvas</span><span class="o">.</span><span class="n">draw</span><span class="p">()</span>
             <span class="bp">self</span><span class="o">.</span><span class="n">slicer</span> <span class="o">=</span> <span class="bp">None</span>
@@ -783,7 +786,7 @@
 
 <span class="sd">        &quot;&quot;&quot;</span>
         <span class="n">event_id</span> <span class="o">=</span> <span class="nb">str</span><span class="p">(</span><span class="n">evt</span><span class="o">.</span><span class="n">GetId</span><span class="p">())</span>
-        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">parent</span> <span class="o">!=</span> <span class="bp">None</span><span class="p">:</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">parent</span> <span class="ow">is</span> <span class="ow">not</span> <span class="bp">None</span><span class="p">:</span>
             <span class="bp">self</span><span class="o">.</span><span class="n">_default_save_location</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">parent</span><span class="o">.</span><span class="n">_default_save_location</span>
         <span class="n">default_name</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">plots</span><span class="p">[</span><span class="bp">self</span><span class="o">.</span><span class="n">graph</span><span class="o">.</span><span class="n">selected_plottable</span><span class="p">]</span><span class="o">.</span><span class="n">label</span>
         <span class="k">if</span> <span class="n">default_name</span><span class="o">.</span><span class="n">count</span><span class="p">(</span><span class="s1">&#39;.&#39;</span><span class="p">)</span> <span class="o">&gt;</span> <span class="mi">0</span><span class="p">:</span>
@@ -806,12 +809,12 @@
         <span class="n">default_name</span> <span class="o">=</span> <span class="n">data</span><span class="o">.</span><span class="n">label</span>
         <span class="k">if</span> <span class="n">default_name</span><span class="o">.</span><span class="n">count</span><span class="p">(</span><span class="s1">&#39;.&#39;</span><span class="p">)</span> <span class="o">&gt;</span> <span class="mi">0</span><span class="p">:</span>
             <span class="n">default_name</span> <span class="o">=</span> <span class="n">default_name</span><span class="o">.</span><span class="n">split</span><span class="p">(</span><span class="s1">&#39;.&#39;</span><span class="p">)[</span><span class="mi">0</span><span class="p">]</span>
-        <span class="c1">#default_name += &quot;_out&quot;</span>
-        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">parent</span> <span class="o">!=</span> <span class="bp">None</span><span class="p">:</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">parent</span> <span class="ow">is</span> <span class="ow">not</span> <span class="bp">None</span><span class="p">:</span>
             <span class="bp">self</span><span class="o">.</span><span class="n">parent</span><span class="o">.</span><span class="n">show_data2d</span><span class="p">(</span><span class="n">data</span><span class="p">,</span> <span class="n">default_name</span><span class="p">)</span>
 
-<div class="viewcode-block" id="ModelPanel2D.modifyGraphAppearance"><a class="viewcode-back" href="../../../../../../dev/api/sas.sasgui.guiframe.local_perspectives.plotting.html#sas.sasgui.guiframe.local_perspectives.plotting.Plotter2D.ModelPanel2D.modifyGraphAppearance">[docs]</a>    <span class="k">def</span> <span class="nf">modifyGraphAppearance</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">e</span><span class="p">):</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">graphApp</span> <span class="o">=</span> <span class="n">graphAppearance</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="s1">&#39;Modify graph appearance&#39;</span><span class="p">,</span> <span class="n">legend</span><span class="o">=</span><span class="bp">False</span><span class="p">)</span>
+<div class="viewcode-block" id="ModelPanel2D.modifyGraphAppearance"><a class="viewcode-back" href="../../../../../../dev/sasview-api/sas.sasgui.guiframe.local_perspectives.plotting.html#sas.sasgui.guiframe.local_perspectives.plotting.Plotter2D.ModelPanel2D.modifyGraphAppearance">[docs]</a>    <span class="k">def</span> <span class="nf">modifyGraphAppearance</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">e</span><span class="p">):</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">graphApp</span> <span class="o">=</span> <span class="n">graphAppearance</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="s1">&#39;Modify graph appearance&#39;</span><span class="p">,</span>
+                                        <span class="n">legend</span><span class="o">=</span><span class="bp">False</span><span class="p">)</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">graphApp</span><span class="o">.</span><span class="n">setDefaults</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">grid_on</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">legend_on</span><span class="p">,</span>
                                   <span class="bp">self</span><span class="o">.</span><span class="n">xaxis_label</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">yaxis_label</span><span class="p">,</span>
                                   <span class="bp">self</span><span class="o">.</span><span class="n">xaxis_unit</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">yaxis_unit</span><span class="p">,</span>
@@ -821,7 +824,7 @@
                                   <span class="bp">self</span><span class="o">.</span><span class="n">is_xtick</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">is_ytick</span><span class="p">)</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">graphApp</span><span class="o">.</span><span class="n">Bind</span><span class="p">(</span><span class="n">wx</span><span class="o">.</span><span class="n">EVT_CLOSE</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">on_graphApp_close</span><span class="p">)</span></div>
 
-<div class="viewcode-block" id="ModelPanel2D.on_graphApp_close"><a class="viewcode-back" href="../../../../../../dev/api/sas.sasgui.guiframe.local_perspectives.plotting.html#sas.sasgui.guiframe.local_perspectives.plotting.Plotter2D.ModelPanel2D.on_graphApp_close">[docs]</a>    <span class="k">def</span> <span class="nf">on_graphApp_close</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">e</span><span class="p">):</span>
+<div class="viewcode-block" id="ModelPanel2D.on_graphApp_close"><a class="viewcode-back" href="../../../../../../dev/sasview-api/sas.sasgui.guiframe.local_perspectives.plotting.html#sas.sasgui.guiframe.local_perspectives.plotting.Plotter2D.ModelPanel2D.on_graphApp_close">[docs]</a>    <span class="k">def</span> <span class="nf">on_graphApp_close</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">e</span><span class="p">):</span>
         <span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">            Gets values from graph appearance dialog and sends them off</span>
 <span class="sd">            to modify the plot</span>
@@ -878,13 +881,14 @@
         <li class="right" >
           <a href="../../../../../../py-modindex.html" title="Python Module Index"
              >modules</a> |</li>
-        <li class="nav-item nav-item-0"><a href="../../../../../../index.html">SasView 4.1.2 documentation</a> &raquo;</li>
+        <li class="nav-item nav-item-0"><a href="../../../../../../index.html">SasView 4.2.0 documentation</a> &raquo;</li>
           <li class="nav-item nav-item-1"><a href="../../../../../index.html" >Module code</a> &raquo;</li>
-          <li class="nav-item nav-item-2"><a href="../../../guiframe.html" >sas.sasgui.guiframe</a> &raquo;</li> 
+          <li class="nav-item nav-item-2"><a href="../../../../../sas.html" >sas</a> &raquo;</li>
+          <li class="nav-item nav-item-3"><a href="../../../guiframe.html" >sas.sasgui.guiframe</a> &raquo;</li> 
       </ul>
     </div>
     <div class="footer" role="contentinfo">
-        &copy; Copyright 2017, The SasView Project.
+        &copy; Copyright 2018, The SasView Project.
       Created using <a href="http://sphinx-doc.org/">Sphinx</a> 1.4.1.
     </div>
   </body>

@@ -6,7 +6,7 @@
   <head>
     <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
     
-    <title>star_polymer &mdash; SasView 4.1.2 documentation</title>
+    <title>star_polymer &mdash; SasView 4.2.0 documentation</title>
     
     <link rel="stylesheet" href="../../_static/classic.css" type="text/css" />
     <link rel="stylesheet" href="../../_static/pygments.css" type="text/css" />
@@ -14,7 +14,7 @@
     <script type="text/javascript">
       var DOCUMENTATION_OPTIONS = {
         URL_ROOT:    '../../',
-        VERSION:     '4.1.2',
+        VERSION:     '4.2.0',
         COLLAPSE_INDEX: false,
         FILE_SUFFIX: '.html',
         HAS_SOURCE:  true
@@ -24,8 +24,8 @@
     <script type="text/javascript" src="../../_static/underscore.js"></script>
     <script type="text/javascript" src="../../_static/doctools.js"></script>
     <script type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.1/MathJax.js?config=TeX-MML-AM_CHTML"></script>
-    <link rel="top" title="SasView 4.1.2 documentation" href="../../index.html" />
-    <link rel="up" title="Shape-Independent Functions" href="../shape-independent.html" />
+    <link rel="top" title="SasView 4.2.0 documentation" href="../../index.html" />
+    <link rel="up" title="Shape-Independent Functions" href="../sasgui/perspectives/fitting/models/shape-independent.html" />
     <link rel="next" title="surface_fractal" href="surface_fractal.html" />
     <link rel="prev" title="spinodal" href="spinodal.html" /> 
   </head>
@@ -45,10 +45,10 @@
         <li class="right" >
           <a href="spinodal.html" title="spinodal"
              accesskey="P">previous</a> |</li>
-        <li class="nav-item nav-item-0"><a href="../../index.html">SasView 4.1.2 documentation</a> &raquo;</li>
+        <li class="nav-item nav-item-0"><a href="../../index.html">SasView 4.2.0 documentation</a> &raquo;</li>
           <li class="nav-item nav-item-1"><a href="../user.html" >SasView User Documentation</a> &raquo;</li>
-          <li class="nav-item nav-item-2"><a href="../index.html" >Model Functions</a> &raquo;</li>
-          <li class="nav-item nav-item-3"><a href="../shape-independent.html" accesskey="U">Shape-Independent Functions</a> &raquo;</li> 
+          <li class="nav-item nav-item-2"><a href="../sasgui/perspectives/fitting/models/index.html" >Model Functions</a> &raquo;</li>
+          <li class="nav-item nav-item-3"><a href="../sasgui/perspectives/fitting/models/shape-independent.html" accesskey="U">Shape-Independent Functions</a> &raquo;</li> 
       </ul>
     </div>  
 
@@ -62,10 +62,10 @@
 <p>Star polymer model with Gaussian statistics</p>
 <table border="1" class="docutils">
 <colgroup>
-<col width="13%" />
-<col width="60%" />
-<col width="9%" />
-<col width="17%" />
+<col width="12%" />
+<col width="65%" />
+<col width="8%" />
+<col width="15%" />
 </colgroup>
 <thead valign="bottom">
 <tr class="row-odd"><th class="head">Parameter</th>
@@ -86,8 +86,8 @@
 <td>0.001</td>
 </tr>
 <tr class="row-even"><td>rg_squared</td>
-<td>Ensemble radius of gyration SQUARED of an arm</td>
-<td>Ang^2</td>
+<td>Ensemble radius of gyration SQUARED of the full polymer</td>
+<td>Å<sup>2</sup></td>
 <td>100</td>
 </tr>
 <tr class="row-odd"><td>arms</td>
@@ -98,31 +98,64 @@
 </tbody>
 </table>
 <p>The returned value is scaled to units of cm<sup>-1</sup> sr<sup>-1</sup>, absolute scale.</p>
-<p>The Benoit model for a simple star polymer, with Gaussian coils arms from
-a common point.</p>
 <p><strong>Definition</strong></p>
+<p>Calcuates the scattering from a simple star polymer with f equal Gaussian coil
+arms. A star being defined as a branched polymer with all the branches
+emanating from a common central (in the case of this model) point.  It is
+derived as a special case of on the Benoit model for general branched
+polymers<a class="footnote-reference" href="#citbenoit" id="id2">[1]</a> as also used by Richter <em>et al.</em><a class="footnote-reference" href="#citrichter" id="id3">[2]</a></p>
 <p>For a star with <span class="math">\(f\)</span> arms the scattering intensity <span class="math">\(I(q)\)</span> is calculated as</p>
 <div class="math">
 \[I(q) = \frac{2}{fv^2}\left[ v-1+\exp(-v)+\frac{f-1}{2}
        \left[ 1-\exp(-v)\right]^2\right]\]</div>
 <p>where</p>
 <div class="math">
-\[v=\frac{u^2f}{(3f-2)}\]</div>
+\[v=\frac{uf}{(3f-2)}\]</div>
 <p>and</p>
 <div class="math">
 \[u = \left\langle R_{g}^2\right\rangle q^2\]</div>
-<p>contains the square of the ensemble average radius-of-gyration of an arm.
-Note that when there is only one arm, <span class="math">\(f = 1\)</span>, the Debye Gaussian coil
-equation is recovered. Star polymers in solutions tend to have strong
-interparticle and osmotic effects, so the Benoit equation may not work well.
-At small <span class="math">\(q\)</span> the Guinier term and hence <span class="math">\(I(q=0)\)</span> is the same as for <span class="math">\(f\)</span> arms
-of radius of gyration <span class="math">\(R_g\)</span>, as described for the <a class="reference internal" href="mono_gauss_coil.html#mono-gauss-coil"><span class="std std-ref">mono_gauss_coil</span></a> model.</p>
-<div class="figure" id="id2">
+<p>contains the square of the ensemble average radius-of-gyration of the full
+polymer while v contains the radius of gyration of a single arm <span class="math">\(R_{arm}\)</span>.
+The two are related as:</p>
+<div class="math">
+\[R_{arm}^2 = \frac{f}{3f-2} R_{g}^2\]</div>
+<p>Note that when there is only one arm, <span class="math">\(f = 1\)</span>, the Debye Gaussian coil
+equation is recovered.</p>
+<div class="admonition note">
+<p class="first admonition-title">Note</p>
+<p class="last">Star polymers in solutions tend to have strong interparticle and osmotic
+effects. Thus the Benoit equation may not work well for many real cases.
+A newer model for star polymer incorporating excluded volume has been
+developed by Li et al in arXiv:1404.6269 [physics.chem-ph].  Also, at small
+<span class="math">\(q\)</span> the scattering, i.e. the Guinier term, is not sensitive to the number of
+arms, and hence &#8216;scale&#8217; here is simply <span class="math">\(I(q=0)\)</span> as described for the
+<a class="reference internal" href="mono_gauss_coil.html#mono-gauss-coil"><span class="std std-ref">mono_gauss_coil</span></a> model, using volume fraction <span class="math">\(\phi\)</span> and volume V
+for the whole star polymer.</p>
+</div>
+<div class="figure" id="id4">
 <img alt="../../_images/star_polymer_autogenfig.png" src="../../_images/star_polymer_autogenfig.png" />
-<p class="caption"><span class="caption-number">Fig. 104 </span><span class="caption-text">1D plot corresponding to the default parameters of the model.</span></p>
+<p class="caption"><span class="caption-number">Fig. 117 </span><span class="caption-text">1D plot corresponding to the default parameters of the model.</span></p>
 </div>
 <p><strong>References</strong></p>
-<p>H Benoit <em>J. Polymer Science</em>, 11, 596-599 (1953)</p>
+<table class="docutils footnote" frame="void" id="citbenoit" rules="none">
+<colgroup><col class="label" /><col /></colgroup>
+<tbody valign="top">
+<tr><td class="label"><a class="fn-backref" href="#id2">[1]</a></td><td>H Benoit <em>J. Polymer Science</em>, 11, 507-510 (1953)</td></tr>
+</tbody>
+</table>
+<table class="docutils footnote" frame="void" id="citrichter" rules="none">
+<colgroup><col class="label" /><col /></colgroup>
+<tbody valign="top">
+<tr><td class="label"><a class="fn-backref" href="#id3">[2]</a></td><td>D Richter, B. Farago, J. S. Huang, L. J. Fetters,
+B Ewen <em>Macromolecules</em>, 22, 468-472 (1989)</td></tr>
+</tbody>
+</table>
+<p><strong>Authorship and Verification</strong></p>
+<ul class="simple">
+<li><strong>Author:</strong> Kieran Campbell <strong>Date:</strong> July 24, 2012</li>
+<li><strong>Last Modified by:</strong> Paul Butler <strong>Date:</strong> Auguts 26, 2017</li>
+<li><strong>Last Reviewed by:</strong> Ziang Li and Richard Heenan <strong>Date:</strong> May 17, 2017</li>
+</ul>
 </div>
 
 
@@ -173,14 +206,14 @@ of radius of gyration <span class="math">\(R_g\)</span>, as described for the <a
         <li class="right" >
           <a href="spinodal.html" title="spinodal"
              >previous</a> |</li>
-        <li class="nav-item nav-item-0"><a href="../../index.html">SasView 4.1.2 documentation</a> &raquo;</li>
+        <li class="nav-item nav-item-0"><a href="../../index.html">SasView 4.2.0 documentation</a> &raquo;</li>
           <li class="nav-item nav-item-1"><a href="../user.html" >SasView User Documentation</a> &raquo;</li>
-          <li class="nav-item nav-item-2"><a href="../index.html" >Model Functions</a> &raquo;</li>
-          <li class="nav-item nav-item-3"><a href="../shape-independent.html" >Shape-Independent Functions</a> &raquo;</li> 
+          <li class="nav-item nav-item-2"><a href="../sasgui/perspectives/fitting/models/index.html" >Model Functions</a> &raquo;</li>
+          <li class="nav-item nav-item-3"><a href="../sasgui/perspectives/fitting/models/shape-independent.html" >Shape-Independent Functions</a> &raquo;</li> 
       </ul>
     </div>
     <div class="footer" role="contentinfo">
-        &copy; Copyright 2017, The SasView Project.
+        &copy; Copyright 2018, The SasView Project.
       Created using <a href="http://sphinx-doc.org/">Sphinx</a> 1.4.1.
     </div>
   </body>

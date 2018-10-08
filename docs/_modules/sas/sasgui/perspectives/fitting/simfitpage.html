@@ -6,7 +6,7 @@
   <head>
     <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
     
-    <title>sas.sasgui.perspectives.fitting.simfitpage &mdash; SasView 4.1.2 documentation</title>
+    <title>sas.sasgui.perspectives.fitting.simfitpage &mdash; SasView 4.2.0 documentation</title>
     
     <link rel="stylesheet" href="../../../../../_static/classic.css" type="text/css" />
     <link rel="stylesheet" href="../../../../../_static/pygments.css" type="text/css" />
@@ -14,7 +14,7 @@
     <script type="text/javascript">
       var DOCUMENTATION_OPTIONS = {
         URL_ROOT:    '../../../../../',
-        VERSION:     '4.1.2',
+        VERSION:     '4.2.0',
         COLLAPSE_INDEX: false,
         FILE_SUFFIX: '.html',
         HAS_SOURCE:  true
@@ -24,7 +24,7 @@
     <script type="text/javascript" src="../../../../../_static/underscore.js"></script>
     <script type="text/javascript" src="../../../../../_static/doctools.js"></script>
     <script type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.1/MathJax.js?config=TeX-MML-AM_CHTML"></script>
-    <link rel="top" title="SasView 4.1.2 documentation" href="../../../../../index.html" />
+    <link rel="top" title="SasView 4.2.0 documentation" href="../../../../../index.html" />
     <link rel="up" title="sas.sasgui.perspectives.fitting" href="../fitting.html" /> 
   </head>
   <body role="document">
@@ -37,9 +37,10 @@
         <li class="right" >
           <a href="../../../../../py-modindex.html" title="Python Module Index"
              >modules</a> |</li>
-        <li class="nav-item nav-item-0"><a href="../../../../../index.html">SasView 4.1.2 documentation</a> &raquo;</li>
+        <li class="nav-item nav-item-0"><a href="../../../../../index.html">SasView 4.2.0 documentation</a> &raquo;</li>
           <li class="nav-item nav-item-1"><a href="../../../../index.html" >Module code</a> &raquo;</li>
-          <li class="nav-item nav-item-2"><a href="../fitting.html" accesskey="U">sas.sasgui.perspectives.fitting</a> &raquo;</li> 
+          <li class="nav-item nav-item-2"><a href="../../../../sas.html" >sas</a> &raquo;</li>
+          <li class="nav-item nav-item-3"><a href="../fitting.html" accesskey="U">sas.sasgui.perspectives.fitting</a> &raquo;</li> 
       </ul>
     </div>  
 
@@ -50,8 +51,22 @@
             
   <h1>Source code for sas.sasgui.perspectives.fitting.simfitpage</h1><div class="highlight"><pre>
 <span></span><span class="sd">&quot;&quot;&quot;</span>
-<span class="sd">    Simultaneous fit page</span>
+<span class="sd">    Simultaneous or Batch fit page</span>
 <span class="sd">&quot;&quot;&quot;</span>
+<span class="c1"># Note that this is used for both Simultaneous/Constrained fit AND for</span>
+<span class="c1"># combined batch fit.  This is done through setting of the batch_on parameter.</span>
+<span class="c1"># There are the a half dozen or so places where an if statement is used as in</span>
+<span class="c1"># if not batch_on:</span>
+<span class="c1">#     xxxx</span>
+<span class="c1"># else:</span>
+<span class="c1">#     xxxx</span>
+<span class="c1"># This is just wrong but dont have time to fix this go. Proper approach would be</span>
+<span class="c1"># to strip all parts of the code that depend on batch_on and create the top</span>
+<span class="c1"># level class from which a contrained/simultaneous fit page and a combined</span>
+<span class="c1"># batch page inherit.</span>
+<span class="c1">#</span>
+<span class="c1">#            04/09/2017   --PDB</span>
+
 <span class="kn">import</span> <span class="nn">sys</span>
 <span class="kn">from</span> <span class="nn">collections</span> <span class="kn">import</span> <span class="n">namedtuple</span>
 
@@ -59,6 +74,7 @@
 <span class="kn">import</span> <span class="nn">wx.lib.newevent</span>
 <span class="kn">from</span> <span class="nn">wx.lib.scrolledpanel</span> <span class="kn">import</span> <span class="n">ScrolledPanel</span>
 
+<span class="kn">from</span> <span class="nn">sas.sascalc.fit.pagestate</span> <span class="kn">import</span> <span class="n">SimFitPageState</span>
 <span class="kn">from</span> <span class="nn">sas.sasgui.guiframe.events</span> <span class="kn">import</span> <span class="n">StatusEvent</span><span class="p">,</span> <span class="n">PanelOnFocusEvent</span>
 <span class="kn">from</span> <span class="nn">sas.sasgui.guiframe.panel_base</span> <span class="kn">import</span> <span class="n">PanelBase</span>
 <span class="kn">from</span> <span class="nn">sas.sasgui.guiframe.utils</span> <span class="kn">import</span> <span class="n">IdList</span>
@@ -79,7 +95,7 @@
         <span class="s1">&#39;model_cbox param_cbox egal_txt constraint btRemove sizer&#39;</span><span class="p">)</span>
 
 
-<div class="viewcode-block" id="get_fittableParam"><a class="viewcode-back" href="../../../../../dev/api/sas.sasgui.perspectives.fitting.html#sas.sasgui.perspectives.fitting.simfitpage.get_fittableParam">[docs]</a><span class="k">def</span> <span class="nf">get_fittableParam</span><span class="p">(</span><span class="n">model</span><span class="p">):</span>
+<div class="viewcode-block" id="get_fittableParam"><a class="viewcode-back" href="../../../../../dev/sasview-api/sas.sasgui.perspectives.fitting.html#sas.sasgui.perspectives.fitting.simfitpage.get_fittableParam">[docs]</a><span class="k">def</span> <span class="nf">get_fittableParam</span><span class="p">(</span><span class="n">model</span><span class="p">):</span>
     <span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">    return list of fittable parameters from a model</span>
 
@@ -97,8 +113,7 @@
 
     <span class="k">return</span> <span class="n">fittable_param</span></div>
 
-
-<div class="viewcode-block" id="SimultaneousFitPage"><a class="viewcode-back" href="../../../../../dev/api/sas.sasgui.perspectives.fitting.html#sas.sasgui.perspectives.fitting.simfitpage.SimultaneousFitPage">[docs]</a><span class="k">class</span> <span class="nc">SimultaneousFitPage</span><span class="p">(</span><span class="n">ScrolledPanel</span><span class="p">,</span> <span class="n">PanelBase</span><span class="p">):</span>
+<div class="viewcode-block" id="SimultaneousFitPage"><a class="viewcode-back" href="../../../../../dev/sasview-api/sas.sasgui.perspectives.fitting.html#sas.sasgui.perspectives.fitting.simfitpage.SimultaneousFitPage">[docs]</a><span class="k">class</span> <span class="nc">SimultaneousFitPage</span><span class="p">(</span><span class="n">ScrolledPanel</span><span class="p">,</span> <span class="n">PanelBase</span><span class="p">):</span>
     <span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">    Simultaneous fitting panel</span>
 <span class="sd">    All that needs to be defined are the</span>
@@ -154,7 +169,7 @@
         <span class="bp">self</span><span class="o">.</span><span class="n">draw_page</span><span class="p">()</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">_set_save_flag</span><span class="p">(</span><span class="bp">False</span><span class="p">)</span>
 
-<div class="viewcode-block" id="SimultaneousFitPage.define_page_structure"><a class="viewcode-back" href="../../../../../dev/api/sas.sasgui.perspectives.fitting.html#sas.sasgui.perspectives.fitting.simfitpage.SimultaneousFitPage.define_page_structure">[docs]</a>    <span class="k">def</span> <span class="nf">define_page_structure</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+<div class="viewcode-block" id="SimultaneousFitPage.define_page_structure"><a class="viewcode-back" href="../../../../../dev/sasview-api/sas.sasgui.perspectives.fitting.html#sas.sasgui.perspectives.fitting.simfitpage.SimultaneousFitPage.define_page_structure">[docs]</a>    <span class="k">def</span> <span class="nf">define_page_structure</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
         <span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">        Create empty sizers, their hierarchy and set the sizer for the panel</span>
 <span class="sd">        &quot;&quot;&quot;</span>
@@ -172,7 +187,7 @@
         <span class="bp">self</span><span class="o">.</span><span class="n">SetSizer</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">vbox</span><span class="p">)</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">Centre</span><span class="p">()</span></div>
 
-<div class="viewcode-block" id="SimultaneousFitPage.set_state"><a class="viewcode-back" href="../../../../../dev/api/sas.sasgui.perspectives.fitting.html#sas.sasgui.perspectives.fitting.simfitpage.SimultaneousFitPage.set_state">[docs]</a>    <span class="k">def</span> <span class="nf">set_state</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+<div class="viewcode-block" id="SimultaneousFitPage.set_state"><a class="viewcode-back" href="../../../../../dev/sasview-api/sas.sasgui.perspectives.fitting.html#sas.sasgui.perspectives.fitting.simfitpage.SimultaneousFitPage.set_state">[docs]</a>    <span class="k">def</span> <span class="nf">set_state</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
         <span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">        Define a set of state parameters for saving simultaneous fits.</span>
 <span class="sd">        &quot;&quot;&quot;</span>
@@ -186,17 +201,78 @@
         <span class="bp">self</span><span class="o">.</span><span class="n">state</span><span class="o">.</span><span class="n">constraints_list</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">constraints_list</span>
         <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">get_state</span><span class="p">()</span></div>
 
-<div class="viewcode-block" id="SimultaneousFitPage.get_state"><a class="viewcode-back" href="../../../../../dev/api/sas.sasgui.perspectives.fitting.html#sas.sasgui.perspectives.fitting.simfitpage.SimultaneousFitPage.get_state">[docs]</a>    <span class="k">def</span> <span class="nf">get_state</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+<div class="viewcode-block" id="SimultaneousFitPage.get_state"><a class="viewcode-back" href="../../../../../dev/sasview-api/sas.sasgui.perspectives.fitting.html#sas.sasgui.perspectives.fitting.simfitpage.SimultaneousFitPage.get_state">[docs]</a>    <span class="k">def</span> <span class="nf">get_state</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
         <span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">        Return the state of the current page</span>
 <span class="sd">        :return: self.state</span>
 <span class="sd">        &quot;&quot;&quot;</span>
         <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">state</span></div>
 
-<div class="viewcode-block" id="SimultaneousFitPage.draw_page"><a class="viewcode-back" href="../../../../../dev/api/sas.sasgui.perspectives.fitting.html#sas.sasgui.perspectives.fitting.simfitpage.SimultaneousFitPage.draw_page">[docs]</a>    <span class="k">def</span> <span class="nf">draw_page</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+<div class="viewcode-block" id="SimultaneousFitPage.load_from_save_state"><a class="viewcode-back" href="../../../../../dev/sasview-api/sas.sasgui.perspectives.fitting.html#sas.sasgui.perspectives.fitting.simfitpage.SimultaneousFitPage.load_from_save_state">[docs]</a>    <span class="k">def</span> <span class="nf">load_from_save_state</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">sim_state</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Load in a simultaneous/constrained fit from a save state</span>
+<span class="sd">        :param fit: Fitpanel object</span>
+<span class="sd">        :return: None</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">init_map</span> <span class="o">=</span> <span class="p">{}</span>
+        <span class="n">final_map</span> <span class="o">=</span> <span class="p">{}</span>
+        <span class="c1"># Process each model and associate old M# with new M#</span>
+        <span class="n">i</span> <span class="o">=</span> <span class="mi">0</span>
+        <span class="k">for</span> <span class="n">model</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">model_list</span><span class="p">:</span>
+            <span class="n">model_id</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_format_id</span><span class="p">(</span><span class="n">model</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span><span class="o">.</span><span class="n">keys</span><span class="p">()[</span><span class="mi">0</span><span class="p">])</span>
+            <span class="k">for</span> <span class="n">saved_model</span> <span class="ow">in</span> <span class="n">sim_state</span><span class="o">.</span><span class="n">model_list</span><span class="p">:</span>
+                <span class="n">save_id</span> <span class="o">=</span> <span class="n">saved_model</span><span class="o">.</span><span class="n">pop</span><span class="p">(</span><span class="s1">&#39;name&#39;</span><span class="p">)</span>
+                <span class="n">saved_model</span><span class="p">[</span><span class="s1">&#39;name&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="n">save_id</span>
+                <span class="n">save_id</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_format_id</span><span class="p">(</span><span class="n">save_id</span><span class="p">)</span>
+                <span class="k">if</span> <span class="n">save_id</span> <span class="o">==</span> <span class="n">model_id</span><span class="p">:</span>
+                    <span class="n">inter_id</span> <span class="o">=</span> <span class="nb">str</span><span class="p">(</span><span class="n">i</span><span class="p">)</span><span class="o">*</span><span class="mi">5</span>
+                    <span class="n">init_map</span><span class="p">[</span><span class="n">saved_model</span><span class="o">.</span><span class="n">pop</span><span class="p">(</span><span class="s1">&#39;fit_page_source&#39;</span><span class="p">)]</span> <span class="o">=</span> <span class="n">inter_id</span>
+                    <span class="n">final_map</span><span class="p">[</span><span class="n">inter_id</span><span class="p">]</span> <span class="o">=</span> <span class="n">model</span><span class="p">[</span><span class="mi">3</span><span class="p">]</span><span class="o">.</span><span class="n">name</span>
+                    <span class="n">check</span> <span class="o">=</span> <span class="nb">bool</span><span class="p">(</span><span class="n">saved_model</span><span class="o">.</span><span class="n">pop</span><span class="p">(</span><span class="s1">&#39;checked&#39;</span><span class="p">))</span>
+                    <span class="bp">self</span><span class="o">.</span><span class="n">model_list</span><span class="p">[</span><span class="n">i</span><span class="p">][</span><span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">SetValue</span><span class="p">(</span><span class="n">check</span><span class="p">)</span>
+                    <span class="k">break</span>
+            <span class="n">i</span> <span class="o">+=</span> <span class="mi">1</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">check_model_name</span><span class="p">(</span><span class="bp">None</span><span class="p">)</span>
+
+        <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">sim_state</span><span class="o">.</span><span class="n">constraints_list</span><span class="p">)</span> <span class="o">&gt;</span> <span class="mi">0</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">hide_constraint</span><span class="o">.</span><span class="n">SetValue</span><span class="p">(</span><span class="bp">False</span><span class="p">)</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">show_constraint</span><span class="o">.</span><span class="n">SetValue</span><span class="p">(</span><span class="bp">True</span><span class="p">)</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_display_constraint</span><span class="p">(</span><span class="bp">None</span><span class="p">)</span>
+
+        <span class="k">for</span> <span class="n">index</span><span class="p">,</span> <span class="n">item</span> <span class="ow">in</span> <span class="nb">enumerate</span><span class="p">(</span><span class="n">sim_state</span><span class="o">.</span><span class="n">constraints_list</span><span class="p">):</span>
+            <span class="n">model_cbox</span> <span class="o">=</span> <span class="n">item</span><span class="o">.</span><span class="n">pop</span><span class="p">(</span><span class="s1">&#39;model_cbox&#39;</span><span class="p">)</span>
+            <span class="k">if</span> <span class="n">model_cbox</span> <span class="o">!=</span> <span class="s2">&quot;&quot;</span><span class="p">:</span>
+                <span class="n">constraint_value</span> <span class="o">=</span> <span class="n">item</span><span class="o">.</span><span class="n">pop</span><span class="p">(</span><span class="s1">&#39;constraint&#39;</span><span class="p">)</span>
+                <span class="n">param</span> <span class="o">=</span> <span class="n">item</span><span class="o">.</span><span class="n">pop</span><span class="p">(</span><span class="s1">&#39;param_cbox&#39;</span><span class="p">)</span>
+                <span class="n">equality</span> <span class="o">=</span> <span class="n">item</span><span class="o">.</span><span class="n">pop</span><span class="p">(</span><span class="s1">&#39;egal_txt&#39;</span><span class="p">)</span>
+                <span class="k">for</span> <span class="n">key</span><span class="p">,</span> <span class="n">value</span> <span class="ow">in</span> <span class="n">init_map</span><span class="o">.</span><span class="n">items</span><span class="p">():</span>
+                    <span class="n">model_cbox</span> <span class="o">=</span> <span class="n">model_cbox</span><span class="o">.</span><span class="n">replace</span><span class="p">(</span><span class="n">key</span><span class="p">,</span> <span class="n">value</span><span class="p">)</span>
+                    <span class="n">constraint_value</span> <span class="o">=</span> <span class="n">constraint_value</span><span class="o">.</span><span class="n">replace</span><span class="p">(</span><span class="n">key</span><span class="p">,</span> <span class="n">value</span><span class="p">)</span>
+                <span class="k">for</span> <span class="n">key</span><span class="p">,</span> <span class="n">value</span> <span class="ow">in</span> <span class="n">final_map</span><span class="o">.</span><span class="n">items</span><span class="p">():</span>
+                    <span class="n">model_cbox</span> <span class="o">=</span> <span class="n">model_cbox</span><span class="o">.</span><span class="n">replace</span><span class="p">(</span><span class="n">key</span><span class="p">,</span> <span class="n">value</span><span class="p">)</span>
+                    <span class="n">constraint_value</span> <span class="o">=</span> <span class="n">constraint_value</span><span class="o">.</span><span class="n">replace</span><span class="p">(</span><span class="n">key</span><span class="p">,</span> <span class="n">value</span><span class="p">)</span>
+
+                <span class="bp">self</span><span class="o">.</span><span class="n">constraints_list</span><span class="p">[</span><span class="n">index</span><span class="p">][</span><span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">SetValue</span><span class="p">(</span><span class="n">model_cbox</span><span class="p">)</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">_on_select_model</span><span class="p">(</span><span class="bp">None</span><span class="p">)</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">constraints_list</span><span class="p">[</span><span class="n">index</span><span class="p">][</span><span class="mi">1</span><span class="p">]</span><span class="o">.</span><span class="n">SetValue</span><span class="p">(</span><span class="n">param</span><span class="p">)</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">constraints_list</span><span class="p">[</span><span class="n">index</span><span class="p">][</span><span class="mi">2</span><span class="p">]</span><span class="o">.</span><span class="n">SetLabel</span><span class="p">(</span><span class="n">equality</span><span class="p">)</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">constraints_list</span><span class="p">[</span><span class="n">index</span><span class="p">][</span><span class="mi">3</span><span class="p">]</span><span class="o">.</span><span class="n">SetValue</span><span class="p">(</span><span class="n">constraint_value</span><span class="p">)</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">_on_add_constraint</span><span class="p">(</span><span class="bp">None</span><span class="p">)</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">_manager</span><span class="o">.</span><span class="n">sim_page</span> <span class="o">=</span> <span class="bp">self</span></div>
+
+    <span class="k">def</span> <span class="nf">_format_id</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">original_id</span><span class="p">):</span>
+        <span class="n">original_id</span> <span class="o">=</span> <span class="n">original_id</span><span class="o">.</span><span class="n">rstrip</span><span class="p">(</span><span class="s1">&#39;1234567890.&#39;</span><span class="p">)</span>
+        <span class="n">new_id_list</span> <span class="o">=</span> <span class="n">original_id</span><span class="o">.</span><span class="n">split</span><span class="p">()</span>
+        <span class="n">new_id</span> <span class="o">=</span> <span class="s1">&#39; &#39;</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">new_id_list</span><span class="p">)</span>
+        <span class="k">return</span> <span class="n">new_id</span>
+
+
+
+<div class="viewcode-block" id="SimultaneousFitPage.draw_page"><a class="viewcode-back" href="../../../../../dev/sasview-api/sas.sasgui.perspectives.fitting.html#sas.sasgui.perspectives.fitting.simfitpage.SimultaneousFitPage.draw_page">[docs]</a>    <span class="k">def</span> <span class="nf">draw_page</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
         <span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">        Construct the Simultaneous/Constrained fit page. fills the first</span>
-<span class="sd">        region (sizer1) with the list of available fit page pairs of data </span>
+<span class="sd">        region (sizer1) with the list of available fit page pairs of data</span>
 <span class="sd">        and models.  Then fills sizer2 with the checkbox for adding</span>
 <span class="sd">        constraints, and finally fills sizer3 with the fit button and</span>
 <span class="sd">        instructions.</span>
@@ -450,7 +526,10 @@
 
         <span class="c1"># General Help button</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">btHelp</span> <span class="o">=</span> <span class="n">wx</span><span class="o">.</span><span class="n">Button</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">wx</span><span class="o">.</span><span class="n">ID_HELP</span><span class="p">,</span> <span class="s1">&#39;HELP&#39;</span><span class="p">)</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">btHelp</span><span class="o">.</span><span class="n">SetToolTipString</span><span class="p">(</span><span class="s2">&quot;Simultaneous/Constrained Fitting help.&quot;</span><span class="p">)</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">batch_on</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">btHelp</span><span class="o">.</span><span class="n">SetToolTipString</span><span class="p">(</span><span class="s2">&quot;Combined Batch Fitting help.&quot;</span><span class="p">)</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">btHelp</span><span class="o">.</span><span class="n">SetToolTipString</span><span class="p">(</span><span class="s2">&quot;Simultaneous/Constrained Fitting help.&quot;</span><span class="p">)</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">btHelp</span><span class="o">.</span><span class="n">Bind</span><span class="p">(</span><span class="n">wx</span><span class="o">.</span><span class="n">EVT_BUTTON</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">_on_help</span><span class="p">)</span>
 
         <span class="c1"># hint text on button line</span>
@@ -469,7 +548,7 @@
         <span class="n">boxsizer1</span><span class="o">.</span><span class="n">Add</span><span class="p">(</span><span class="n">sizer_button</span><span class="p">,</span> <span class="n">flag</span><span class="o">=</span><span class="n">wx</span><span class="o">.</span><span class="n">TOP</span> <span class="o">|</span> <span class="n">wx</span><span class="o">.</span><span class="n">BOTTOM</span><span class="p">,</span> <span class="n">border</span><span class="o">=</span><span class="mi">10</span><span class="p">)</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">run_fit_sizer</span><span class="o">.</span><span class="n">Add</span><span class="p">(</span><span class="n">boxsizer1</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="n">wx</span><span class="o">.</span><span class="n">EXPAND</span> <span class="o">|</span> <span class="n">wx</span><span class="o">.</span><span class="n">ALL</span><span class="p">,</span> <span class="mi">10</span><span class="p">)</span>
 
-<div class="viewcode-block" id="SimultaneousFitPage.on_remove"><a class="viewcode-back" href="../../../../../dev/api/sas.sasgui.perspectives.fitting.html#sas.sasgui.perspectives.fitting.simfitpage.SimultaneousFitPage.on_remove">[docs]</a>    <span class="k">def</span> <span class="nf">on_remove</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">event</span><span class="p">):</span>
+<div class="viewcode-block" id="SimultaneousFitPage.on_remove"><a class="viewcode-back" href="../../../../../dev/sasview-api/sas.sasgui.perspectives.fitting.html#sas.sasgui.perspectives.fitting.simfitpage.SimultaneousFitPage.on_remove">[docs]</a>    <span class="k">def</span> <span class="nf">on_remove</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">event</span><span class="p">):</span>
         <span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">        Remove constraint fields</span>
 <span class="sd">        &quot;&quot;&quot;</span>
@@ -494,7 +573,7 @@
                 <span class="bp">self</span><span class="o">.</span><span class="n">FitInside</span><span class="p">()</span>
                 <span class="k">break</span>
 
-<div class="viewcode-block" id="SimultaneousFitPage.on_fit"><a class="viewcode-back" href="../../../../../dev/api/sas.sasgui.perspectives.fitting.html#sas.sasgui.perspectives.fitting.simfitpage.SimultaneousFitPage.on_fit">[docs]</a>    <span class="k">def</span> <span class="nf">on_fit</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">event</span><span class="p">):</span>
+<div class="viewcode-block" id="SimultaneousFitPage.on_fit"><a class="viewcode-back" href="../../../../../dev/sasview-api/sas.sasgui.perspectives.fitting.html#sas.sasgui.perspectives.fitting.simfitpage.SimultaneousFitPage.on_fit">[docs]</a>    <span class="k">def</span> <span class="nf">on_fit</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">event</span><span class="p">):</span>
         <span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">        signal for fitting</span>
 
@@ -551,7 +630,7 @@
         <span class="bp">self</span><span class="o">.</span><span class="n">manager</span><span class="o">.</span><span class="n">_reset_schedule_problem</span><span class="p">(</span><span class="n">value</span><span class="o">=</span><span class="mi">0</span><span class="p">)</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">_on_fit_complete</span><span class="p">()</span>
 
-<div class="viewcode-block" id="SimultaneousFitPage.set_fitbutton"><a class="viewcode-back" href="../../../../../dev/api/sas.sasgui.perspectives.fitting.html#sas.sasgui.perspectives.fitting.simfitpage.SimultaneousFitPage.set_fitbutton">[docs]</a>    <span class="k">def</span> <span class="nf">set_fitbutton</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+<div class="viewcode-block" id="SimultaneousFitPage.set_fitbutton"><a class="viewcode-back" href="../../../../../dev/sasview-api/sas.sasgui.perspectives.fitting.html#sas.sasgui.perspectives.fitting.simfitpage.SimultaneousFitPage.set_fitbutton">[docs]</a>    <span class="k">def</span> <span class="nf">set_fitbutton</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
         <span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">        Set fit button label depending on the fit_started</span>
 <span class="sd">        &quot;&quot;&quot;</span>
@@ -577,12 +656,18 @@
 <span class="sd">    :param event: Triggers on clicking the help button</span>
 <span class="sd">    &quot;&quot;&quot;</span>
         <span class="n">_TreeLocation</span> <span class="o">=</span> <span class="s2">&quot;user/sasgui/perspectives/fitting/fitting_help.html&quot;</span>
-        <span class="n">_PageAnchor</span> <span class="o">=</span> <span class="s2">&quot;#simultaneous-fit-mode&quot;</span>
-        <span class="n">_doc_viewer</span> <span class="o">=</span> <span class="n">DocumentationWindow</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">ID_DOC</span><span class="p">,</span> <span class="n">_TreeLocation</span><span class="p">,</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="bp">self</span><span class="o">.</span><span class="n">batch_on</span><span class="p">:</span>
+            <span class="n">_PageAnchor</span> <span class="o">=</span> <span class="s2">&quot;#simultaneous-fit-mode&quot;</span>
+            <span class="n">_doc_viewer</span> <span class="o">=</span> <span class="n">DocumentationWindow</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">ID_DOC</span><span class="p">,</span> <span class="n">_TreeLocation</span><span class="p">,</span>
                                           <span class="n">_PageAnchor</span><span class="p">,</span>
                                           <span class="s2">&quot;Simultaneous/Constrained Fitting Help&quot;</span><span class="p">)</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">_PageAnchor</span> <span class="o">=</span> <span class="s2">&quot;#combined-batch-fit-mode&quot;</span>
+            <span class="n">_doc_viewer</span> <span class="o">=</span> <span class="n">DocumentationWindow</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">ID_DOC</span><span class="p">,</span> <span class="n">_TreeLocation</span><span class="p">,</span>
+                                          <span class="n">_PageAnchor</span><span class="p">,</span>
+                                          <span class="s2">&quot;Combined Batch Fit Help&quot;</span><span class="p">)</span>
 
-<div class="viewcode-block" id="SimultaneousFitPage.set_manager"><a class="viewcode-back" href="../../../../../dev/api/sas.sasgui.perspectives.fitting.html#sas.sasgui.perspectives.fitting.simfitpage.SimultaneousFitPage.set_manager">[docs]</a>    <span class="k">def</span> <span class="nf">set_manager</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">manager</span><span class="p">):</span>
+<div class="viewcode-block" id="SimultaneousFitPage.set_manager"><a class="viewcode-back" href="../../../../../dev/sasview-api/sas.sasgui.perspectives.fitting.html#sas.sasgui.perspectives.fitting.simfitpage.SimultaneousFitPage.set_manager">[docs]</a>    <span class="k">def</span> <span class="nf">set_manager</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">manager</span><span class="p">):</span>
         <span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">        set panel manager</span>
 
@@ -590,7 +675,7 @@
 <span class="sd">        &quot;&quot;&quot;</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">manager</span> <span class="o">=</span> <span class="n">manager</span></div>
 
-<div class="viewcode-block" id="SimultaneousFitPage.check_all_model_name"><a class="viewcode-back" href="../../../../../dev/api/sas.sasgui.perspectives.fitting.html#sas.sasgui.perspectives.fitting.simfitpage.SimultaneousFitPage.check_all_model_name">[docs]</a>    <span class="k">def</span> <span class="nf">check_all_model_name</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">event</span><span class="o">=</span><span class="bp">None</span><span class="p">):</span>
+<div class="viewcode-block" id="SimultaneousFitPage.check_all_model_name"><a class="viewcode-back" href="../../../../../dev/sasview-api/sas.sasgui.perspectives.fitting.html#sas.sasgui.perspectives.fitting.simfitpage.SimultaneousFitPage.check_all_model_name">[docs]</a>    <span class="k">def</span> <span class="nf">check_all_model_name</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">event</span><span class="o">=</span><span class="bp">None</span><span class="p">):</span>
         <span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">        check all models names</span>
 <span class="sd">        &quot;&quot;&quot;</span>
@@ -620,7 +705,7 @@
         <span class="bp">self</span><span class="o">.</span><span class="n">_update_easy_setup_cb</span><span class="p">()</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">FitInside</span><span class="p">()</span></div>
 
-<div class="viewcode-block" id="SimultaneousFitPage.check_model_name"><a class="viewcode-back" href="../../../../../dev/api/sas.sasgui.perspectives.fitting.html#sas.sasgui.perspectives.fitting.simfitpage.SimultaneousFitPage.check_model_name">[docs]</a>    <span class="k">def</span> <span class="nf">check_model_name</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">event</span><span class="p">):</span>
+<div class="viewcode-block" id="SimultaneousFitPage.check_model_name"><a class="viewcode-back" href="../../../../../dev/sasview-api/sas.sasgui.perspectives.fitting.html#sas.sasgui.perspectives.fitting.simfitpage.SimultaneousFitPage.check_model_name">[docs]</a>    <span class="k">def</span> <span class="nf">check_model_name</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">event</span><span class="p">):</span>
         <span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">        Save information related to checkbox and their states</span>
 <span class="sd">        &quot;&quot;&quot;</span>
@@ -942,7 +1027,7 @@
 
         <span class="n">param_cbox</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">constraints_list</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span><span class="o">.</span><span class="n">param_cbox</span>
         <span class="n">param_cbox</span><span class="o">.</span><span class="n">Clear</span><span class="p">()</span>
-        <span class="c1"># insert only fittable paramaters</span>
+        <span class="c1"># insert only fittable parameters</span>
         <span class="k">for</span> <span class="n">param</span> <span class="ow">in</span> <span class="n">param_list</span><span class="p">:</span>
             <span class="n">param_cbox</span><span class="o">.</span><span class="n">Append</span><span class="p">(</span><span class="nb">str</span><span class="p">(</span><span class="n">param</span><span class="p">),</span> <span class="n">model</span><span class="p">)</span>
         <span class="n">param_cbox</span><span class="o">.</span><span class="n">Show</span><span class="p">(</span><span class="bp">True</span><span class="p">)</span>
@@ -1053,7 +1138,7 @@
                     <span class="k">break</span>
         <span class="k">return</span> <span class="bp">True</span>
 
-<div class="viewcode-block" id="SimultaneousFitPage.on_set_focus"><a class="viewcode-back" href="../../../../../dev/api/sas.sasgui.perspectives.fitting.html#sas.sasgui.perspectives.fitting.simfitpage.SimultaneousFitPage.on_set_focus">[docs]</a>    <span class="k">def</span> <span class="nf">on_set_focus</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">event</span><span class="o">=</span><span class="bp">None</span><span class="p">):</span>
+<div class="viewcode-block" id="SimultaneousFitPage.on_set_focus"><a class="viewcode-back" href="../../../../../dev/sasview-api/sas.sasgui.perspectives.fitting.html#sas.sasgui.perspectives.fitting.simfitpage.SimultaneousFitPage.on_set_focus">[docs]</a>    <span class="k">def</span> <span class="nf">on_set_focus</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">event</span><span class="o">=</span><span class="bp">None</span><span class="p">):</span>
         <span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">        The derivative class is on focus if implemented</span>
 <span class="sd">        &quot;&quot;&quot;</span>
@@ -1063,93 +1148,13 @@
             <span class="bp">self</span><span class="o">.</span><span class="n">page_finder</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">parent</span><span class="o">.</span><span class="n">_manager</span><span class="o">.</span><span class="n">get_page_finder</span><span class="p">()</span></div></div>
 
 
-<div class="viewcode-block" id="setComboBoxItems"><a class="viewcode-back" href="../../../../../dev/api/sas.sasgui.perspectives.fitting.html#sas.sasgui.perspectives.fitting.simfitpage.setComboBoxItems">[docs]</a><span class="k">def</span> <span class="nf">setComboBoxItems</span><span class="p">(</span><span class="n">cbox</span><span class="p">,</span> <span class="n">items</span><span class="p">):</span>
+<div class="viewcode-block" id="setComboBoxItems"><a class="viewcode-back" href="../../../../../dev/sasview-api/sas.sasgui.perspectives.fitting.html#sas.sasgui.perspectives.fitting.simfitpage.setComboBoxItems">[docs]</a><span class="k">def</span> <span class="nf">setComboBoxItems</span><span class="p">(</span><span class="n">cbox</span><span class="p">,</span> <span class="n">items</span><span class="p">):</span>
     <span class="k">assert</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">cbox</span><span class="p">,</span> <span class="n">wx</span><span class="o">.</span><span class="n">ComboBox</span><span class="p">)</span>
     <span class="n">selected</span> <span class="o">=</span> <span class="n">cbox</span><span class="o">.</span><span class="n">GetStringSelection</span><span class="p">()</span>
     <span class="n">cbox</span><span class="o">.</span><span class="n">Clear</span><span class="p">()</span>
     <span class="k">for</span> <span class="n">k</span><span class="p">,</span> <span class="p">(</span><span class="n">name</span><span class="p">,</span> <span class="n">value</span><span class="p">)</span> <span class="ow">in</span> <span class="nb">enumerate</span><span class="p">(</span><span class="n">items</span><span class="p">):</span>
         <span class="n">cbox</span><span class="o">.</span><span class="n">Append</span><span class="p">(</span><span class="n">name</span><span class="p">,</span> <span class="n">value</span><span class="p">)</span>
     <span class="n">cbox</span><span class="o">.</span><span class="n">SetStringSelection</span><span class="p">(</span><span class="n">selected</span><span class="p">)</span></div>
-
-
-<div class="viewcode-block" id="SimFitPageState"><a class="viewcode-back" href="../../../../../dev/api/sas.sasgui.perspectives.fitting.html#sas.sasgui.perspectives.fitting.simfitpage.SimFitPageState">[docs]</a><span class="k">class</span> <span class="nc">SimFitPageState</span><span class="p">:</span>
-    <span class="sd">&quot;&quot;&quot;</span>
-<span class="sd">    State of the simultaneous fit page for saving purposes</span>
-<span class="sd">    &quot;&quot;&quot;</span>
-
-    <span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
-        <span class="c1"># Sim Fit Page Number</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">fit_page_no</span> <span class="o">=</span> <span class="bp">None</span>
-        <span class="c1"># Select all data</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">select_all</span> <span class="o">=</span> <span class="bp">False</span>
-        <span class="c1"># Data sets sent to fit page</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">model_list</span> <span class="o">=</span> <span class="p">[]</span>
-        <span class="c1"># Data sets to be fit</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">model_to_fit</span> <span class="o">=</span> <span class="p">[]</span>
-        <span class="c1"># Number of constraints</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">no_constraint</span> <span class="o">=</span> <span class="mi">0</span>
-        <span class="c1"># Dictionary of constraints</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">constraint_dict</span> <span class="o">=</span> <span class="p">{}</span>
-        <span class="c1"># List of constraints</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">constraints_list</span> <span class="o">=</span> <span class="p">[]</span>
-
-<div class="viewcode-block" id="SimFitPageState.load_from_save_state"><a class="viewcode-back" href="../../../../../dev/api/sas.sasgui.perspectives.fitting.html#sas.sasgui.perspectives.fitting.simfitpage.SimFitPageState.load_from_save_state">[docs]</a>    <span class="k">def</span> <span class="nf">load_from_save_state</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">fit</span><span class="p">):</span>
-        <span class="sd">&quot;&quot;&quot;</span>
-<span class="sd">        Load in a simultaneous/constrained fit from a save state</span>
-<span class="sd">        :param fit: Fitpanel object</span>
-<span class="sd">        :return: None</span>
-<span class="sd">        &quot;&quot;&quot;</span>
-
-        <span class="n">model_map</span> <span class="o">=</span> <span class="p">{}</span>
-        <span class="k">if</span> <span class="n">fit</span><span class="o">.</span><span class="n">fit_panel</span><span class="o">.</span><span class="n">sim_page</span> <span class="ow">is</span> <span class="bp">None</span><span class="p">:</span>
-            <span class="n">fit</span><span class="o">.</span><span class="n">fit_panel</span><span class="o">.</span><span class="n">add_sim_page</span><span class="p">()</span>
-        <span class="n">sim_page</span> <span class="o">=</span> <span class="n">fit</span><span class="o">.</span><span class="n">fit_panel</span><span class="o">.</span><span class="n">sim_page</span>
-
-        <span class="c1"># Process each model and associate old M# with new M#</span>
-        <span class="n">i</span> <span class="o">=</span> <span class="mi">0</span>
-        <span class="k">for</span> <span class="n">model</span> <span class="ow">in</span> <span class="n">sim_page</span><span class="o">.</span><span class="n">model_list</span><span class="p">:</span>
-            <span class="n">model_id</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_format_id</span><span class="p">(</span><span class="n">model</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span><span class="o">.</span><span class="n">keys</span><span class="p">()[</span><span class="mi">0</span><span class="p">])</span>
-            <span class="k">for</span> <span class="n">saved_model</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">model_list</span><span class="p">:</span>
-                <span class="n">save_id</span> <span class="o">=</span> <span class="n">saved_model</span><span class="o">.</span><span class="n">pop</span><span class="p">(</span><span class="s1">&#39;name&#39;</span><span class="p">)</span>
-                <span class="n">saved_model</span><span class="p">[</span><span class="s1">&#39;name&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="n">save_id</span>
-                <span class="n">save_id</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_format_id</span><span class="p">(</span><span class="n">save_id</span><span class="p">)</span>
-                <span class="k">if</span> <span class="n">save_id</span> <span class="o">==</span> <span class="n">model_id</span><span class="p">:</span>
-                    <span class="n">model_map</span><span class="p">[</span><span class="n">saved_model</span><span class="o">.</span><span class="n">pop</span><span class="p">(</span><span class="s1">&#39;fit_page_source&#39;</span><span class="p">)]</span> <span class="o">=</span> \
-                        <span class="n">model</span><span class="p">[</span><span class="mi">3</span><span class="p">]</span><span class="o">.</span><span class="n">name</span>
-                    <span class="n">check</span> <span class="o">=</span> <span class="nb">bool</span><span class="p">(</span><span class="n">saved_model</span><span class="o">.</span><span class="n">pop</span><span class="p">(</span><span class="s1">&#39;checked&#39;</span><span class="p">))</span>
-                    <span class="n">sim_page</span><span class="o">.</span><span class="n">model_list</span><span class="p">[</span><span class="n">i</span><span class="p">][</span><span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">SetValue</span><span class="p">(</span><span class="n">check</span><span class="p">)</span>
-                    <span class="k">break</span>
-            <span class="n">i</span> <span class="o">+=</span> <span class="mi">1</span>
-        <span class="n">sim_page</span><span class="o">.</span><span class="n">check_model_name</span><span class="p">(</span><span class="bp">None</span><span class="p">)</span>
-
-        <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">constraints_list</span><span class="p">)</span> <span class="o">&gt;</span> <span class="mi">0</span><span class="p">:</span>
-            <span class="n">sim_page</span><span class="o">.</span><span class="n">hide_constraint</span><span class="o">.</span><span class="n">SetValue</span><span class="p">(</span><span class="bp">False</span><span class="p">)</span>
-            <span class="n">sim_page</span><span class="o">.</span><span class="n">show_constraint</span><span class="o">.</span><span class="n">SetValue</span><span class="p">(</span><span class="bp">True</span><span class="p">)</span>
-            <span class="n">sim_page</span><span class="o">.</span><span class="n">_display_constraint</span><span class="p">(</span><span class="bp">None</span><span class="p">)</span>
-
-        <span class="k">for</span> <span class="n">index</span><span class="p">,</span> <span class="n">item</span> <span class="ow">in</span> <span class="nb">enumerate</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">constraints_list</span><span class="p">):</span>
-            <span class="n">model_cbox</span> <span class="o">=</span> <span class="n">item</span><span class="o">.</span><span class="n">pop</span><span class="p">(</span><span class="s1">&#39;model_cbox&#39;</span><span class="p">)</span>
-            <span class="k">if</span> <span class="n">model_cbox</span> <span class="o">!=</span> <span class="s2">&quot;&quot;</span><span class="p">:</span>
-                <span class="n">constraint_value</span> <span class="o">=</span> <span class="n">item</span><span class="o">.</span><span class="n">pop</span><span class="p">(</span><span class="s1">&#39;constraint&#39;</span><span class="p">)</span>
-                <span class="n">param</span> <span class="o">=</span> <span class="n">item</span><span class="o">.</span><span class="n">pop</span><span class="p">(</span><span class="s1">&#39;param_cbox&#39;</span><span class="p">)</span>
-                <span class="n">equality</span> <span class="o">=</span> <span class="n">item</span><span class="o">.</span><span class="n">pop</span><span class="p">(</span><span class="s1">&#39;egal_txt&#39;</span><span class="p">)</span>
-                <span class="k">for</span> <span class="n">key</span><span class="p">,</span> <span class="n">value</span> <span class="ow">in</span> <span class="n">model_map</span><span class="o">.</span><span class="n">iteritems</span><span class="p">():</span>
-                    <span class="n">model_cbox</span><span class="o">.</span><span class="n">replace</span><span class="p">(</span><span class="n">key</span><span class="p">,</span> <span class="n">value</span><span class="p">)</span>
-                    <span class="n">constraint_value</span><span class="o">.</span><span class="n">replace</span><span class="p">(</span><span class="n">key</span><span class="p">,</span> <span class="n">value</span><span class="p">)</span>
-
-                <span class="n">sim_page</span><span class="o">.</span><span class="n">constraints_list</span><span class="p">[</span><span class="n">index</span><span class="p">][</span><span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">SetValue</span><span class="p">(</span><span class="n">model_cbox</span><span class="p">)</span>
-                <span class="n">sim_page</span><span class="o">.</span><span class="n">_on_select_model</span><span class="p">(</span><span class="bp">None</span><span class="p">)</span>
-                <span class="n">sim_page</span><span class="o">.</span><span class="n">constraints_list</span><span class="p">[</span><span class="n">index</span><span class="p">][</span><span class="mi">1</span><span class="p">]</span><span class="o">.</span><span class="n">SetValue</span><span class="p">(</span><span class="n">param</span><span class="p">)</span>
-                <span class="n">sim_page</span><span class="o">.</span><span class="n">constraints_list</span><span class="p">[</span><span class="n">index</span><span class="p">][</span><span class="mi">2</span><span class="p">]</span><span class="o">.</span><span class="n">SetLabel</span><span class="p">(</span><span class="n">equality</span><span class="p">)</span>
-                <span class="n">sim_page</span><span class="o">.</span><span class="n">constraints_list</span><span class="p">[</span><span class="n">index</span><span class="p">][</span><span class="mi">3</span><span class="p">]</span><span class="o">.</span><span class="n">SetValue</span><span class="p">(</span><span class="n">constraint_value</span><span class="p">)</span>
-                <span class="n">sim_page</span><span class="o">.</span><span class="n">_on_add_constraint</span><span class="p">(</span><span class="bp">None</span><span class="p">)</span>
-                <span class="n">sim_page</span><span class="o">.</span><span class="n">_manager</span><span class="o">.</span><span class="n">sim_page</span> <span class="o">=</span> <span class="n">sim_page</span></div>
-
-    <span class="k">def</span> <span class="nf">_format_id</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">original_id</span><span class="p">):</span>
-        <span class="n">original_id</span> <span class="o">=</span> <span class="n">original_id</span><span class="o">.</span><span class="n">rstrip</span><span class="p">(</span><span class="s1">&#39;1234567890.&#39;</span><span class="p">)</span>
-        <span class="n">new_id_list</span> <span class="o">=</span> <span class="n">original_id</span><span class="o">.</span><span class="n">split</span><span class="p">()</span>
-        <span class="n">new_id</span> <span class="o">=</span> <span class="s1">&#39; &#39;</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">new_id_list</span><span class="p">)</span>
-        <span class="k">return</span> <span class="n">new_id</span></div>
 </pre></div>
 
           </div>
@@ -1180,13 +1185,14 @@
         <li class="right" >
           <a href="../../../../../py-modindex.html" title="Python Module Index"
              >modules</a> |</li>
-        <li class="nav-item nav-item-0"><a href="../../../../../index.html">SasView 4.1.2 documentation</a> &raquo;</li>
+        <li class="nav-item nav-item-0"><a href="../../../../../index.html">SasView 4.2.0 documentation</a> &raquo;</li>
           <li class="nav-item nav-item-1"><a href="../../../../index.html" >Module code</a> &raquo;</li>
-          <li class="nav-item nav-item-2"><a href="../fitting.html" >sas.sasgui.perspectives.fitting</a> &raquo;</li> 
+          <li class="nav-item nav-item-2"><a href="../../../../sas.html" >sas</a> &raquo;</li>
+          <li class="nav-item nav-item-3"><a href="../fitting.html" >sas.sasgui.perspectives.fitting</a> &raquo;</li> 
       </ul>
     </div>
     <div class="footer" role="contentinfo">
-        &copy; Copyright 2017, The SasView Project.
+        &copy; Copyright 2018, The SasView Project.
       Created using <a href="http://sphinx-doc.org/">Sphinx</a> 1.4.1.
     </div>
   </body>
