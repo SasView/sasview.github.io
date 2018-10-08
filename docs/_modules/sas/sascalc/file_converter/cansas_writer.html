@@ -1,0 +1,201 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+  "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+    
+    <title>sas.sascalc.file_converter.cansas_writer &mdash; SasView 4.2.0 documentation</title>
+    
+    <link rel="stylesheet" href="../../../../_static/classic.css" type="text/css" />
+    <link rel="stylesheet" href="../../../../_static/pygments.css" type="text/css" />
+    
+    <script type="text/javascript">
+      var DOCUMENTATION_OPTIONS = {
+        URL_ROOT:    '../../../../',
+        VERSION:     '4.2.0',
+        COLLAPSE_INDEX: false,
+        FILE_SUFFIX: '.html',
+        HAS_SOURCE:  true
+      };
+    </script>
+    <script type="text/javascript" src="../../../../_static/jquery.js"></script>
+    <script type="text/javascript" src="../../../../_static/underscore.js"></script>
+    <script type="text/javascript" src="../../../../_static/doctools.js"></script>
+    <script type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.1/MathJax.js?config=TeX-MML-AM_CHTML"></script>
+    <link rel="top" title="SasView 4.2.0 documentation" href="../../../../index.html" />
+    <link rel="up" title="sas" href="../../../sas.html" /> 
+  </head>
+  <body role="document">
+    <div class="related" role="navigation" aria-label="related navigation">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="../../../../genindex.html" title="General Index"
+             accesskey="I">index</a></li>
+        <li class="right" >
+          <a href="../../../../py-modindex.html" title="Python Module Index"
+             >modules</a> |</li>
+        <li class="nav-item nav-item-0"><a href="../../../../index.html">SasView 4.2.0 documentation</a> &raquo;</li>
+          <li class="nav-item nav-item-1"><a href="../../../index.html" >Module code</a> &raquo;</li>
+          <li class="nav-item nav-item-2"><a href="../../../sas.html" accesskey="U">sas</a> &raquo;</li> 
+      </ul>
+    </div>  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          <div class="body" role="main">
+            
+  <h1>Source code for sas.sascalc.file_converter.cansas_writer</h1><div class="highlight"><pre>
+<span></span><span class="kn">from</span> <span class="nn">sas.sascalc.dataloader.readers.cansas_reader</span> <span class="kn">import</span> <span class="n">Reader</span> <span class="k">as</span> <span class="n">CansasReader</span>
+<span class="kn">from</span> <span class="nn">sas.sascalc.dataloader.data_info</span> <span class="kn">import</span> <span class="n">Data1D</span>
+
+<span class="kn">import</span> <span class="nn">inspect</span>
+
+<div class="viewcode-block" id="CansasWriter"><a class="viewcode-back" href="../../../../dev/sasview-api/sas.sascalc.file_converter.html#sas.sascalc.file_converter.cansas_writer.CansasWriter">[docs]</a><span class="k">class</span> <span class="nc">CansasWriter</span><span class="p">(</span><span class="n">CansasReader</span><span class="p">):</span>
+
+<div class="viewcode-block" id="CansasWriter.write"><a class="viewcode-back" href="../../../../dev/sasview-api/sas.sascalc.file_converter.html#sas.sascalc.file_converter.cansas_writer.CansasWriter.write">[docs]</a>    <span class="k">def</span> <span class="nf">write</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">filename</span><span class="p">,</span> <span class="n">frame_data</span><span class="p">,</span> <span class="n">sasentry_attrs</span><span class="o">=</span><span class="bp">None</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Write the content of a Data1D as a CanSAS XML file</span>
+
+<span class="sd">        :param filename: name of the file to write</span>
+<span class="sd">        :param datainfo: Data1D object</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="c1"># Create XML document</span>
+        <span class="n">doc</span><span class="p">,</span> <span class="n">_</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_to_xml_doc</span><span class="p">(</span><span class="n">frame_data</span><span class="p">,</span> <span class="n">sasentry_attrs</span><span class="p">)</span>
+        <span class="c1"># Write the file</span>
+        <span class="n">file_ref</span> <span class="o">=</span> <span class="nb">open</span><span class="p">(</span><span class="n">filename</span><span class="p">,</span> <span class="s1">&#39;w&#39;</span><span class="p">)</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">encoding</span> <span class="ow">is</span> <span class="bp">None</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">encoding</span> <span class="o">=</span> <span class="s2">&quot;UTF-8&quot;</span>
+        <span class="n">doc</span><span class="o">.</span><span class="n">write</span><span class="p">(</span><span class="n">file_ref</span><span class="p">,</span> <span class="n">encoding</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">encoding</span><span class="p">,</span>
+                  <span class="n">pretty_print</span><span class="o">=</span><span class="bp">True</span><span class="p">,</span> <span class="n">xml_declaration</span><span class="o">=</span><span class="bp">True</span><span class="p">)</span>
+        <span class="n">file_ref</span><span class="o">.</span><span class="n">close</span><span class="p">()</span></div>
+
+
+    <span class="k">def</span> <span class="nf">_to_xml_doc</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">frame_data</span><span class="p">,</span> <span class="n">sasentry_attrs</span><span class="o">=</span><span class="bp">None</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Create an XML document to contain the content of an array of Data1Ds</span>
+
+<span class="sd">        :param frame_data: An array of Data1D objects</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">valid_class</span> <span class="o">=</span> <span class="nb">all</span><span class="p">([</span><span class="nb">issubclass</span><span class="p">(</span><span class="n">data</span><span class="o">.</span><span class="n">__class__</span><span class="p">,</span> <span class="n">Data1D</span><span class="p">)</span> <span class="k">for</span> <span class="n">data</span> <span class="ow">in</span> <span class="n">frame_data</span><span class="p">])</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="n">valid_class</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="ne">RuntimeError</span><span class="p">(</span><span class="s2">&quot;The cansas writer expects an array of &quot;</span>
+                <span class="s2">&quot;Data1D instances&quot;</span><span class="p">)</span>
+
+        <span class="c1"># Get PIs and create root element</span>
+        <span class="n">pi_string</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_get_pi_string</span><span class="p">()</span>
+        <span class="c1"># Define namespaces and create SASroot object</span>
+        <span class="n">main_node</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_create_main_node</span><span class="p">()</span>
+        <span class="c1"># Create ElementTree, append SASroot and apply processing instructions</span>
+        <span class="n">base_string</span> <span class="o">=</span> <span class="n">pi_string</span> <span class="o">+</span> <span class="bp">self</span><span class="o">.</span><span class="n">to_string</span><span class="p">(</span><span class="n">main_node</span><span class="p">)</span>
+        <span class="n">base_element</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">create_element_from_string</span><span class="p">(</span><span class="n">base_string</span><span class="p">)</span>
+        <span class="n">doc</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">create_tree</span><span class="p">(</span><span class="n">base_element</span><span class="p">)</span>
+        <span class="c1"># Create SASentry Element</span>
+        <span class="n">entry_node</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">create_element</span><span class="p">(</span><span class="s2">&quot;SASentry&quot;</span><span class="p">,</span> <span class="n">sasentry_attrs</span><span class="p">)</span>
+        <span class="n">root</span> <span class="o">=</span> <span class="n">doc</span><span class="o">.</span><span class="n">getroot</span><span class="p">()</span>
+        <span class="n">root</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">entry_node</span><span class="p">)</span>
+
+        <span class="c1"># Use the first element in the array for writing metadata</span>
+        <span class="n">datainfo</span> <span class="o">=</span> <span class="n">frame_data</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
+        <span class="c1"># Add Title to SASentry</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">write_node</span><span class="p">(</span><span class="n">entry_node</span><span class="p">,</span> <span class="s2">&quot;Title&quot;</span><span class="p">,</span> <span class="n">datainfo</span><span class="o">.</span><span class="n">title</span><span class="p">)</span>
+        <span class="c1"># Add Run to SASentry</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_write_run_names</span><span class="p">(</span><span class="n">datainfo</span><span class="p">,</span> <span class="n">entry_node</span><span class="p">)</span>
+        <span class="c1"># Add Data info to SASEntry</span>
+        <span class="k">for</span> <span class="n">data_info</span> <span class="ow">in</span> <span class="n">frame_data</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_write_data</span><span class="p">(</span><span class="n">data_info</span><span class="p">,</span> <span class="n">entry_node</span><span class="p">)</span>
+        <span class="c1"># Transmission Spectrum Info</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_write_trans_spectrum</span><span class="p">(</span><span class="n">datainfo</span><span class="p">,</span> <span class="n">entry_node</span><span class="p">)</span>
+        <span class="c1"># Sample info</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_write_sample_info</span><span class="p">(</span><span class="n">datainfo</span><span class="p">,</span> <span class="n">entry_node</span><span class="p">)</span>
+        <span class="c1"># Instrument info</span>
+        <span class="n">instr</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_write_instrument</span><span class="p">(</span><span class="n">datainfo</span><span class="p">,</span> <span class="n">entry_node</span><span class="p">)</span>
+        <span class="c1">#   Source</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_write_source</span><span class="p">(</span><span class="n">datainfo</span><span class="p">,</span> <span class="n">instr</span><span class="p">)</span>
+        <span class="c1">#   Collimation</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_write_collimation</span><span class="p">(</span><span class="n">datainfo</span><span class="p">,</span> <span class="n">instr</span><span class="p">)</span>
+        <span class="c1">#   Detectors</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_write_detectors</span><span class="p">(</span><span class="n">datainfo</span><span class="p">,</span> <span class="n">instr</span><span class="p">)</span>
+        <span class="c1"># Processes info</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_write_process_notes</span><span class="p">(</span><span class="n">datainfo</span><span class="p">,</span> <span class="n">entry_node</span><span class="p">)</span>
+        <span class="c1"># Note info</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_write_notes</span><span class="p">(</span><span class="n">datainfo</span><span class="p">,</span> <span class="n">entry_node</span><span class="p">)</span>
+        <span class="c1"># Return the document, and the SASentry node associated with</span>
+        <span class="c1">#      the data we just wrote</span>
+
+        <span class="k">return</span> <span class="n">doc</span><span class="p">,</span> <span class="n">entry_node</span>
+
+    <span class="k">def</span> <span class="nf">_write_data</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">datainfo</span><span class="p">,</span> <span class="n">entry_node</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Writes the I and Q data to the XML file</span>
+
+<span class="sd">        :param datainfo: The Data1D object the information is coming from</span>
+<span class="sd">        :param entry_node: lxml node ElementTree object to be appended to</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">node</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">create_element</span><span class="p">(</span><span class="s2">&quot;SASdata&quot;</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">node</span><span class="p">,</span> <span class="n">entry_node</span><span class="p">)</span>
+
+        <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">datainfo</span><span class="o">.</span><span class="n">x</span><span class="p">)):</span>
+            <span class="n">point</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">create_element</span><span class="p">(</span><span class="s2">&quot;Idata&quot;</span><span class="p">)</span>
+            <span class="n">node</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">point</span><span class="p">)</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">write_node</span><span class="p">(</span><span class="n">point</span><span class="p">,</span> <span class="s2">&quot;Q&quot;</span><span class="p">,</span> <span class="n">datainfo</span><span class="o">.</span><span class="n">x</span><span class="p">[</span><span class="n">i</span><span class="p">],</span>
+                            <span class="p">{</span><span class="s1">&#39;unit&#39;</span><span class="p">:</span> <span class="n">datainfo</span><span class="o">.</span><span class="n">x_unit</span><span class="p">})</span>
+            <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">datainfo</span><span class="o">.</span><span class="n">y</span><span class="p">)</span> <span class="o">&gt;=</span> <span class="n">i</span><span class="p">:</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">write_node</span><span class="p">(</span><span class="n">point</span><span class="p">,</span> <span class="s2">&quot;I&quot;</span><span class="p">,</span> <span class="n">datainfo</span><span class="o">.</span><span class="n">y</span><span class="p">[</span><span class="n">i</span><span class="p">],</span>
+                                <span class="p">{</span><span class="s1">&#39;unit&#39;</span><span class="p">:</span> <span class="n">datainfo</span><span class="o">.</span><span class="n">y_unit</span><span class="p">})</span>
+            <span class="k">if</span> <span class="n">datainfo</span><span class="o">.</span><span class="n">dy</span> <span class="ow">is</span> <span class="ow">not</span> <span class="bp">None</span> <span class="ow">and</span> <span class="nb">len</span><span class="p">(</span><span class="n">datainfo</span><span class="o">.</span><span class="n">dy</span><span class="p">)</span> <span class="o">&gt;</span> <span class="n">i</span><span class="p">:</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">write_node</span><span class="p">(</span><span class="n">point</span><span class="p">,</span> <span class="s2">&quot;Idev&quot;</span><span class="p">,</span> <span class="n">datainfo</span><span class="o">.</span><span class="n">dy</span><span class="p">[</span><span class="n">i</span><span class="p">],</span>
+                                <span class="p">{</span><span class="s1">&#39;unit&#39;</span><span class="p">:</span> <span class="n">datainfo</span><span class="o">.</span><span class="n">y_unit</span><span class="p">})</span>
+            <span class="k">if</span> <span class="n">datainfo</span><span class="o">.</span><span class="n">dx</span> <span class="ow">is</span> <span class="ow">not</span> <span class="bp">None</span> <span class="ow">and</span> <span class="nb">len</span><span class="p">(</span><span class="n">datainfo</span><span class="o">.</span><span class="n">dx</span><span class="p">)</span> <span class="o">&gt;</span> <span class="n">i</span><span class="p">:</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">write_node</span><span class="p">(</span><span class="n">point</span><span class="p">,</span> <span class="s2">&quot;Qdev&quot;</span><span class="p">,</span> <span class="n">datainfo</span><span class="o">.</span><span class="n">dx</span><span class="p">[</span><span class="n">i</span><span class="p">],</span>
+                                <span class="p">{</span><span class="s1">&#39;unit&#39;</span><span class="p">:</span> <span class="n">datainfo</span><span class="o">.</span><span class="n">x_unit</span><span class="p">})</span>
+            <span class="k">if</span> <span class="n">datainfo</span><span class="o">.</span><span class="n">dxw</span> <span class="ow">is</span> <span class="ow">not</span> <span class="bp">None</span> <span class="ow">and</span> <span class="nb">len</span><span class="p">(</span><span class="n">datainfo</span><span class="o">.</span><span class="n">dxw</span><span class="p">)</span> <span class="o">&gt;</span> <span class="n">i</span><span class="p">:</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">write_node</span><span class="p">(</span><span class="n">point</span><span class="p">,</span> <span class="s2">&quot;dQw&quot;</span><span class="p">,</span> <span class="n">datainfo</span><span class="o">.</span><span class="n">dxw</span><span class="p">[</span><span class="n">i</span><span class="p">],</span>
+                                <span class="p">{</span><span class="s1">&#39;unit&#39;</span><span class="p">:</span> <span class="n">datainfo</span><span class="o">.</span><span class="n">x_unit</span><span class="p">})</span>
+            <span class="k">if</span> <span class="n">datainfo</span><span class="o">.</span><span class="n">dxl</span> <span class="ow">is</span> <span class="ow">not</span> <span class="bp">None</span> <span class="ow">and</span> <span class="nb">len</span><span class="p">(</span><span class="n">datainfo</span><span class="o">.</span><span class="n">dxl</span><span class="p">)</span> <span class="o">&gt;</span> <span class="n">i</span><span class="p">:</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">write_node</span><span class="p">(</span><span class="n">point</span><span class="p">,</span> <span class="s2">&quot;dQl&quot;</span><span class="p">,</span> <span class="n">datainfo</span><span class="o">.</span><span class="n">dxl</span><span class="p">[</span><span class="n">i</span><span class="p">],</span>
+                                <span class="p">{</span><span class="s1">&#39;unit&#39;</span><span class="p">:</span> <span class="n">datainfo</span><span class="o">.</span><span class="n">x_unit</span><span class="p">})</span></div>
+</pre></div>
+
+          </div>
+        </div>
+      </div>
+      <div class="sphinxsidebar" role="navigation" aria-label="main navigation">
+        <div class="sphinxsidebarwrapper">
+<div id="searchbox" style="display: none" role="search">
+  <h3>Quick search</h3>
+    <form class="search" action="../../../../search.html" method="get">
+      <input type="text" name="q" />
+      <input type="submit" value="Go" />
+      <input type="hidden" name="check_keywords" value="yes" />
+      <input type="hidden" name="area" value="default" />
+    </form>
+</div>
+<script type="text/javascript">$('#searchbox').show(0);</script>
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="related" role="navigation" aria-label="related navigation">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="../../../../genindex.html" title="General Index"
+             >index</a></li>
+        <li class="right" >
+          <a href="../../../../py-modindex.html" title="Python Module Index"
+             >modules</a> |</li>
+        <li class="nav-item nav-item-0"><a href="../../../../index.html">SasView 4.2.0 documentation</a> &raquo;</li>
+          <li class="nav-item nav-item-1"><a href="../../../index.html" >Module code</a> &raquo;</li>
+          <li class="nav-item nav-item-2"><a href="../../../sas.html" >sas</a> &raquo;</li> 
+      </ul>
+    </div>
+    <div class="footer" role="contentinfo">
+        &copy; Copyright 2018, The SasView Project.
+      Created using <a href="http://sphinx-doc.org/">Sphinx</a> 1.4.1.
+    </div>
+  </body>
+</html>

@@ -1,0 +1,447 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+  "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+    
+    <title>Polydispersity &amp; Orientational Distributions &mdash; SasView 4.2.0 documentation</title>
+    
+    <link rel="stylesheet" href="../../../../../_static/classic.css" type="text/css" />
+    <link rel="stylesheet" href="../../../../../_static/pygments.css" type="text/css" />
+    
+    <script type="text/javascript">
+      var DOCUMENTATION_OPTIONS = {
+        URL_ROOT:    '../../../../../',
+        VERSION:     '4.2.0',
+        COLLAPSE_INDEX: false,
+        FILE_SUFFIX: '.html',
+        HAS_SOURCE:  true
+      };
+    </script>
+    <script type="text/javascript" src="../../../../../_static/jquery.js"></script>
+    <script type="text/javascript" src="../../../../../_static/underscore.js"></script>
+    <script type="text/javascript" src="../../../../../_static/doctools.js"></script>
+    <script type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.1/MathJax.js?config=TeX-MML-AM_CHTML"></script>
+    <link rel="top" title="SasView 4.2.0 documentation" href="../../../../../index.html" />
+    <link rel="up" title="Fitting Documentation" href="../fitting.html" />
+    <link rel="next" title="Resolution Functions" href="../resolution.html" />
+    <link rel="prev" title="Assessing Fit Quality" href="../residuals_help.html" /> 
+  </head>
+  <body role="document">
+    <div class="related" role="navigation" aria-label="related navigation">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="../../../../../genindex.html" title="General Index"
+             accesskey="I">index</a></li>
+        <li class="right" >
+          <a href="../../../../../py-modindex.html" title="Python Module Index"
+             >modules</a> |</li>
+        <li class="right" >
+          <a href="../resolution.html" title="Resolution Functions"
+             accesskey="N">next</a> |</li>
+        <li class="right" >
+          <a href="../residuals_help.html" title="Assessing Fit Quality"
+             accesskey="P">previous</a> |</li>
+        <li class="nav-item nav-item-0"><a href="../../../../../index.html">SasView 4.2.0 documentation</a> &raquo;</li>
+          <li class="nav-item nav-item-1"><a href="../../../../user.html" >SasView User Documentation</a> &raquo;</li>
+          <li class="nav-item nav-item-2"><a href="../../../../analysis.html" >Fitting &amp; Other Analyses</a> &raquo;</li>
+          <li class="nav-item nav-item-3"><a href="../fitting.html" accesskey="U">Fitting Documentation</a> &raquo;</li> 
+      </ul>
+    </div>  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          <div class="body" role="main">
+            
+  <div class="section" id="polydispersity-orientational-distributions">
+<span id="polydispersityhelp"></span><h1>Polydispersity &amp; Orientational Distributions</h1>
+<p>For some models we can calculate the average intensity for a population of
+particles that possess size and/or orientational (ie, angular) distributions.
+In SasView we call the former <em>polydispersity</em> but use the parameter <em>PD</em> to
+parameterise both. In other words, the meaning of <em>PD</em> in a model depends on
+the actual parameter it is being applied too.</p>
+<p>The resultant intensity is then normalized by the average particle volume such
+that</p>
+<div class="math">
+\[P(q) = \text{scale} \langle F^* F \rangle / V + \text{background}\]</div>
+<p>where <span class="math">\(F\)</span> is the scattering amplitude and <span class="math">\(\langle\cdot\rangle\)</span> denotes an
+average over the distribution <span class="math">\(f(x; \bar x, \sigma)\)</span>, giving</p>
+<div class="math">
+\[P(q) = \frac{\text{scale}}{V} \int_\mathbb{R}
+f(x; \bar x, \sigma) F^2(q, x)\, dx + \text{background}\]</div>
+<p>Each distribution is characterized by a center value <span class="math">\(\bar x\)</span> or
+<span class="math">\(x_\text{med}\)</span>, a width parameter <span class="math">\(\sigma\)</span> (note this is <em>not necessarily</em>
+the standard deviation, so read the description of the distribution carefully),
+the number of sigmas <span class="math">\(N_\sigma\)</span> to include from the tails of the distribution,
+and the number of points used to compute the average. The center of the
+distribution is set by the value of the model parameter.</p>
+<p>The distribution width applied to <em>volume</em> (ie, shape-describing) parameters
+is relative to the center value such that <span class="math">\(\sigma = \mathrm{PD} \cdot \bar x\)</span>.
+However, the distribution width applied to <em>orientation</em> parameters is just
+<span class="math">\(\sigma = \mathrm{PD}\)</span>.</p>
+<p><span class="math">\(N_\sigma\)</span> determines how far into the tails to evaluate the distribution,
+with larger values of <span class="math">\(N_\sigma\)</span> required for heavier tailed distributions.
+The scattering in general falls rapidly with <span class="math">\(qr\)</span> so the usual assumption
+that <span class="math">\(f(r - 3\sigma_r)\)</span> is tiny and therefore <span class="math">\(f(r - 3\sigma_r)f(r - 3\sigma_r)\)</span>
+will not contribute much to the average may not hold when particles are large.
+This, too, will require increasing <span class="math">\(N_\sigma\)</span>.</p>
+<p>Users should note that the averaging computation is very intensive. Applying
+polydispersion and/or orientational distributions to multiple parameters at
+the same time, or increasing the number of points in the distribution, will
+require patience! However, the calculations are generally more robust with
+more data points or more angles.</p>
+<p>The following distribution functions are provided:</p>
+<ul class="simple">
+<li><em>Uniform Distribution</em></li>
+<li><em>Rectangular Distribution</em></li>
+<li><em>Gaussian Distribution</em></li>
+<li><em>Boltzmann Distribution</em></li>
+<li><em>Lognormal Distribution</em></li>
+<li><em>Schulz Distribution</em></li>
+<li><em>Array Distribution</em></li>
+</ul>
+<p>These are all implemented as <em>number-average</em> distributions.</p>
+<p>Additional distributions are under consideration.</p>
+<p><strong>Beware: when the Polydispersity &amp; Orientational Distribution panel in SasView is</strong>
+<strong>first opened, the default distribution for all parameters is the Gaussian Distribution.</strong>
+<strong>This may not be suitable. See Suggested Applications below.</strong></p>
+<div class="admonition note">
+<p class="first admonition-title">Note</p>
+<p class="last">In 2009 IUPAC decided to introduce the new term &#8216;dispersity&#8217; to replace
+the term &#8216;polydispersity&#8217; (see <a class="reference external" href="http://media.iupac.org/publications/pac/2009/pdf/8102x0351.pdf">Pure Appl. Chem., (2009), 81(2),
+351-353</a>
+in order to make the terminology describing distributions of chemical
+properties unambiguous. However, these terms are unrelated to the
+proportional size distributions and orientational distributions used in
+SasView models.</p>
+</div>
+<div class="section" id="suggested-applications">
+<h2>Suggested Applications</h2>
+<p>If applying polydispersion to parameters describing particle sizes, consider using
+the Lognormal or Schulz distributions.</p>
+<p>If applying polydispersion to parameters describing interfacial thicknesses
+or angular orientations, consider using the Gaussian or Boltzmann distributions.</p>
+<p>If applying polydispersion to parameters describing angles, use the Uniform
+distribution. Beware of using distributions that are always positive (eg, the
+Lognormal) because angles can be negative!</p>
+<p>The array distribution allows a user-defined distribution to be applied.</p>
+</div>
+<div class="section" id="uniform-distribution">
+<h2>Uniform Distribution</h2>
+<p>The Uniform Distribution is defined as</p>
+<div class="math">
+\[\begin{split}f(x) = \frac{1}{\text{Norm}}
+\begin{cases}
+    1 &amp; \text{for } |x - \bar x| \leq \sigma \\
+    0 &amp; \text{for } |x - \bar x| &gt; \sigma
+\end{cases}\end{split}\]</div>
+<p>where <span class="math">\(\bar x\)</span> (<span class="math">\(x_\text{mean}\)</span> in the figure) is the mean of the
+distribution, <span class="math">\(\sigma\)</span> is the half-width, and <em>Norm</em> is a normalization
+factor which is determined during the numerical calculation.</p>
+<p>The polydispersity in sasmodels is given by</p>
+<div class="math">
+\[\text{PD} = \sigma / \bar x\]</div>
+<div class="figure" id="id1">
+<img alt="../../../../../_images/pd_uniform.jpg" src="../../../../../_images/pd_uniform.jpg" />
+<p class="caption"><span class="caption-number">Fig. 127 </span><span class="caption-text">Uniform distribution.</span></p>
+</div>
+<p>The value <span class="math">\(N_\sigma\)</span> is ignored for this distribution.</p>
+</div>
+<div class="section" id="rectangular-distribution">
+<h2>Rectangular Distribution</h2>
+<p>The Rectangular Distribution is defined as</p>
+<div class="math">
+\[\begin{split}f(x) = \frac{1}{\text{Norm}}
+\begin{cases}
+    1 &amp; \text{for } |x - \bar x| \leq w \\
+    0 &amp; \text{for } |x - \bar x| &gt; w
+\end{cases}\end{split}\]</div>
+<p>where <span class="math">\(\bar x\)</span> (<span class="math">\(x_\text{mean}\)</span> in the figure) is the mean of the
+distribution, <span class="math">\(w\)</span> is the half-width, and <em>Norm</em> is a normalization
+factor which is determined during the numerical calculation.</p>
+<p>Note that the standard deviation and the half width <span class="math">\(w\)</span> are different!</p>
+<p>The standard deviation is</p>
+<div class="math">
+\[\sigma = w / \sqrt{3}\]</div>
+<p>whilst the polydispersity in sasmodels is given by</p>
+<div class="math">
+\[\text{PD} = \sigma / \bar x\]</div>
+<div class="figure" id="id2">
+<img alt="../../../../../_images/pd_rectangular.jpg" src="../../../../../_images/pd_rectangular.jpg" />
+<p class="caption"><span class="caption-number">Fig. 128 </span><span class="caption-text">Rectangular distribution.</span></p>
+</div>
+<div class="admonition note">
+<p class="first admonition-title">Note</p>
+<p class="last">The Rectangular Distribution is deprecated in favour of the
+Uniform Distribution above and is described here for backwards
+compatibility with earlier versions of SasView only.</p>
+</div>
+</div>
+<div class="section" id="gaussian-distribution">
+<h2>Gaussian Distribution</h2>
+<p>The Gaussian Distribution is defined as</p>
+<div class="math">
+\[f(x) = \frac{1}{\text{Norm}}
+        \exp\left(-\frac{(x - \bar x)^2}{2\sigma^2}\right)\]</div>
+<p>where <span class="math">\(\bar x\)</span> (<span class="math">\(x_\text{mean}\)</span> in the figure) is the mean of the
+distribution and <em>Norm</em> is a normalization factor which is determined
+during the numerical calculation.</p>
+<p>The polydispersity in sasmodels is given by</p>
+<div class="math">
+\[\text{PD} = \sigma / \bar x\]</div>
+<div class="figure" id="id3">
+<img alt="../../../../../_images/pd_gaussian.jpg" src="../../../../../_images/pd_gaussian.jpg" />
+<p class="caption"><span class="caption-number">Fig. 129 </span><span class="caption-text">Normal distribution.</span></p>
+</div>
+</div>
+<div class="section" id="boltzmann-distribution">
+<h2>Boltzmann Distribution</h2>
+<p>The Boltzmann Distribution is defined as</p>
+<div class="math">
+\[f(x) = \frac{1}{\text{Norm}}
+        \exp\left(-\frac{ | x - \bar x | }{\sigma}\right)\]</div>
+<p>where <span class="math">\(\bar x\)</span> (<span class="math">\(x_\text{mean}\)</span> in the figure) is the mean of the
+distribution and <em>Norm</em> is a normalization factor which is determined
+during the numerical calculation.</p>
+<p>The width is defined as</p>
+<div class="math">
+\[\sigma=\frac{k T}{E}\]</div>
+<p>which is the inverse Boltzmann factor, where <span class="math">\(k\)</span> is the Boltzmann constant,
+<span class="math">\(T\)</span> the temperature in Kelvin and <span class="math">\(E\)</span> a characteristic energy per particle.</p>
+<div class="figure" id="id4">
+<img alt="../../../../../_images/pd_boltzmann.jpg" src="../../../../../_images/pd_boltzmann.jpg" />
+<p class="caption"><span class="caption-number">Fig. 130 </span><span class="caption-text">Boltzmann distribution.</span></p>
+</div>
+</div>
+<div class="section" id="lognormal-distribution">
+<h2>Lognormal Distribution</h2>
+<p>The Lognormal Distribution describes a function of <span class="math">\(x\)</span> where <span class="math">\(\ln (x)\)</span> has
+a normal distribution. The result is a distribution that is skewed towards
+larger values of <span class="math">\(x\)</span>.</p>
+<p>The Lognormal Distribution is defined as</p>
+<div class="math">
+\[f(x) = \frac{1}{\text{Norm}}\frac{1}{x\sigma}
+        \exp\left(-\frac{1}{2}
+                    \bigg(\frac{\ln(x) - \mu}{\sigma}\bigg)^2\right)\]</div>
+<p>where <em>Norm</em> is a normalization factor which will be determined during
+the numerical calculation, <span class="math">\(\mu=\ln(x_\text{med})\)</span> and <span class="math">\(x_\text{med}\)</span>
+is the <em>median</em> value of the <em>lognormal</em> distribution, but <span class="math">\(\sigma\)</span> is
+a parameter describing the width of the underlying <em>normal</em> distribution.</p>
+<p><span class="math">\(x_\text{med}\)</span> will be the value given for the respective size parameter
+in sasmodels, for example, <em>radius=60</em>.</p>
+<p>The polydispersity in sasmodels is given by</p>
+<div class="math">
+\[\text{PD} = \sigma = p / x_\text{med}\]</div>
+<p>The mean value of the distribution is given by <span class="math">\(\bar x = \exp(\mu+ \sigma^2/2)\)</span>
+and the peak value by <span class="math">\(\max x = \exp(\mu - \sigma^2)\)</span>.</p>
+<p>The variance (the square of the standard deviation) of the <em>lognormal</em>
+distribution is given by</p>
+<div class="math">
+\[\nu = [\exp({\sigma}^2) - 1] \exp({2\mu + \sigma^2})\]</div>
+<p>Note that larger values of PD might need a larger number of points
+and <span class="math">\(N_\sigma\)</span>.</p>
+<div class="figure" id="id5">
+<img alt="../../../../../_images/pd_lognormal.jpg" src="../../../../../_images/pd_lognormal.jpg" />
+<p class="caption"><span class="caption-number">Fig. 131 </span><span class="caption-text">Lognormal distribution for PD=0.1.</span></p>
+</div>
+<p>For further information on the Lognormal distribution see:
+<a class="reference external" href="http://en.wikipedia.org/wiki/Log-normal_distribution">http://en.wikipedia.org/wiki/Log-normal_distribution</a> and
+<a class="reference external" href="http://mathworld.wolfram.com/LogNormalDistribution.html">http://mathworld.wolfram.com/LogNormalDistribution.html</a></p>
+</div>
+<div class="section" id="schulz-distribution">
+<h2>Schulz Distribution</h2>
+<p>The Schulz (sometimes written Schultz) distribution is similar to the
+Lognormal distribution, in that it is also skewed towards larger values of
+<span class="math">\(x\)</span>, but which has computational advantages over the Lognormal distribution.</p>
+<p>The Schulz distribution is defined as</p>
+<div class="math">
+\[f(x) = \frac{1}{\text{Norm}} (z+1)^{z+1}(x/\bar x)^z
+        \frac{\exp[-(z+1)x/\bar x]}{\bar x\Gamma(z+1)}\]</div>
+<p>where <span class="math">\(\bar x\)</span> (<span class="math">\(x_\text{mean}\)</span> in the figure) is the mean of the
+distribution, <em>Norm</em> is a normalization factor which is determined
+during the numerical calculation, and <span class="math">\(z\)</span> is a measure of the width
+of the distribution such that</p>
+<div class="math">
+\[z = (1-p^2) / p^2\]</div>
+<p>where <span class="math">\(p\)</span> is the polydispersity in sasmodels given by</p>
+<div class="math">
+\[PD = p = \sigma / \bar x\]</div>
+<p>and <span class="math">\(\sigma\)</span> is the RMS deviation from <span class="math">\(\bar x\)</span>.</p>
+<p>Note that larger values of PD might need a larger number of points
+and <span class="math">\(N_\sigma\)</span>. For example, for PD=0.7 with radius=60 Å, at least
+Npts&gt;=160 and Nsigmas&gt;=15 are required.</p>
+<div class="figure" id="id6">
+<img alt="../../../../../_images/pd_schulz.jpg" src="../../../../../_images/pd_schulz.jpg" />
+<p class="caption"><span class="caption-number">Fig. 132 </span><span class="caption-text">Schulz distribution.</span></p>
+</div>
+<p>For further information on the Schulz distribution see:
+M Kotlarchyk &amp; S-H Chen, <em>J Chem Phys</em>, (1983), 79, 2461 and
+M Kotlarchyk, RB Stephens, and JS Huang, <em>J Phys Chem</em>, (1988), 92, 1533</p>
+</div>
+<div class="section" id="array-distribution">
+<h2>Array Distribution</h2>
+<p>This user-definable distribution should be given as a simple ASCII text
+file where the array is defined by two columns of numbers: <span class="math">\(x\)</span> and <span class="math">\(f(x)\)</span>.
+The <span class="math">\(f(x)\)</span> will be normalized to 1 during the computation.</p>
+<p>Example of what an array distribution file should look like:</p>
+<table border="1" class="docutils">
+<colgroup>
+<col width="44%" />
+<col width="56%" />
+</colgroup>
+<tbody valign="top">
+<tr class="row-odd"><td>30</td>
+<td>0.1</td>
+</tr>
+<tr class="row-even"><td>32</td>
+<td>0.3</td>
+</tr>
+<tr class="row-odd"><td>35</td>
+<td>0.4</td>
+</tr>
+<tr class="row-even"><td>36</td>
+<td>0.5</td>
+</tr>
+<tr class="row-odd"><td>37</td>
+<td>0.6</td>
+</tr>
+<tr class="row-even"><td>39</td>
+<td>0.7</td>
+</tr>
+<tr class="row-odd"><td>41</td>
+<td>0.9</td>
+</tr>
+</tbody>
+</table>
+<p>Only these array values are used computation, therefore the parameter value
+given for the model will have no affect, and will be ignored when computing
+the average.  This means that any parameter with an array distribution will
+not be fitable.</p>
+</div>
+<div class="section" id="note-about-dls-polydispersity">
+<h2>Note about DLS polydispersity</h2>
+<p>Several measures of polydispersity abound in Dynamic Light Scattering (DLS) and
+it should not be assumed that any of the following can be simply equated with
+the polydispersity <em>PD</em> parameter used in SasView.</p>
+<p>The dimensionless <strong>Polydispersity Index (PI)</strong> is a measure of the width of the
+distribution of autocorrelation function decay rates (<em>not</em> the distribution of
+particle sizes itself, though the two are inversely related) and is defined by
+ISO 22412:2017 as</p>
+<div class="math">
+\[PI = \mu_{2} / \bar \Gamma^2\]</div>
+<p>where <span class="math">\(\mu_\text{2}\)</span> is the second cumulant, and <span class="math">\(\bar \Gamma^2\)</span> is the
+intensity-weighted average value, of the distribution of decay rates.</p>
+<p><em>If the distribution of decay rates is Gaussian</em> then</p>
+<div class="math">
+\[PI = \sigma^2 / 2\bar \Gamma^2\]</div>
+<p>where <span class="math">\(\sigma\)</span> is the standard deviation, allowing a <strong>Relative Polydispersity (RP)</strong>
+to be defined as</p>
+<div class="math">
+\[RP = \sigma / \bar \Gamma = \sqrt{2 \cdot PI}\]</div>
+<p>PI values smaller than 0.05 indicate a highly monodisperse system. Values
+greater than 0.7 indicate significant polydispersity.</p>
+<p>The <strong>size polydispersity P-parameter</strong> is defined as the relative standard
+deviation coefficient of variation</p>
+<div class="math">
+\[P = \sqrt\nu / \bar R\]</div>
+<p>where <span class="math">\(\nu\)</span> is the variance of the distribution and <span class="math">\(\bar R\)</span> is the mean
+value of <span class="math">\(R\)</span>. Here, the product <span class="math">\(P \bar R\)</span> is <em>equal</em> to the standard
+deviation of the Lognormal distribution.</p>
+<p>P values smaller than 0.13 indicate a monodisperse system.</p>
+<p>For more information see:</p>
+<p><a class="reference external" href="https://www.iso.org/standard/65410.html">ISO 22412:2017, International Standards Organisation (2017)</a>.</p>
+<p><a class="reference external" href="http://www.materials-talks.com/blog/2014/10/23/polydispersity-what-does-it-mean-for-dls-and-chromatography/">Polydispersity: What does it mean for DLS and Chromatography</a>.</p>
+<p><a class="reference external" href="http://www.biophysics.bioc.cam.ac.uk/wp-content/uploads/2011/02/DLS_Terms_defined_Malvern.pdf">Dynamic Light Scattering: Common Terms Defined, Whitepaper WP111214. Malvern Instruments (2011)</a>.</p>
+<p>S King, C Washington &amp; R Heenan, <em>Phys Chem Chem Phys</em>, (2005), 7, 143.</p>
+<p>T Allen, in <em>Particle Size Measurement</em>, 4th Edition, Chapman &amp; Hall, London (1990).</p>
+<p><em>Document History</em></p>
+<div class="line-block">
+<div class="line">2015-05-01 Steve King</div>
+<div class="line">2017-05-08 Paul Kienzle</div>
+<div class="line">2018-03-20 Steve King</div>
+<div class="line">2018-04-04 Steve King</div>
+<div class="line">2018-08-09 Steve King</div>
+</div>
+</div>
+</div>
+
+
+          </div>
+        </div>
+      </div>
+      <div class="sphinxsidebar" role="navigation" aria-label="main navigation">
+        <div class="sphinxsidebarwrapper">
+  <h3><a href="../../../../../index.html">Table Of Contents</a></h3>
+  <ul>
+<li><a class="reference internal" href="#">Polydispersity &amp; Orientational Distributions</a><ul>
+<li><a class="reference internal" href="#suggested-applications">Suggested Applications</a></li>
+<li><a class="reference internal" href="#uniform-distribution">Uniform Distribution</a></li>
+<li><a class="reference internal" href="#rectangular-distribution">Rectangular Distribution</a></li>
+<li><a class="reference internal" href="#gaussian-distribution">Gaussian Distribution</a></li>
+<li><a class="reference internal" href="#boltzmann-distribution">Boltzmann Distribution</a></li>
+<li><a class="reference internal" href="#lognormal-distribution">Lognormal Distribution</a></li>
+<li><a class="reference internal" href="#schulz-distribution">Schulz Distribution</a></li>
+<li><a class="reference internal" href="#array-distribution">Array Distribution</a></li>
+<li><a class="reference internal" href="#note-about-dls-polydispersity">Note about DLS polydispersity</a></li>
+</ul>
+</li>
+</ul>
+
+  <h4>Previous topic</h4>
+  <p class="topless"><a href="../residuals_help.html"
+                        title="previous chapter">Assessing Fit Quality</a></p>
+  <h4>Next topic</h4>
+  <p class="topless"><a href="../resolution.html"
+                        title="next chapter">Resolution Functions</a></p>
+  <div role="note" aria-label="source link">
+    <h3>This Page</h3>
+    <ul class="this-page-menu">
+      <li><a href="../../../../../_sources/user/sasgui/perspectives/fitting/pd/polydispersity.txt"
+            rel="nofollow">Show Source</a></li>
+    </ul>
+   </div>
+<div id="searchbox" style="display: none" role="search">
+  <h3>Quick search</h3>
+    <form class="search" action="../../../../../search.html" method="get">
+      <input type="text" name="q" />
+      <input type="submit" value="Go" />
+      <input type="hidden" name="check_keywords" value="yes" />
+      <input type="hidden" name="area" value="default" />
+    </form>
+</div>
+<script type="text/javascript">$('#searchbox').show(0);</script>
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="related" role="navigation" aria-label="related navigation">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="../../../../../genindex.html" title="General Index"
+             >index</a></li>
+        <li class="right" >
+          <a href="../../../../../py-modindex.html" title="Python Module Index"
+             >modules</a> |</li>
+        <li class="right" >
+          <a href="../resolution.html" title="Resolution Functions"
+             >next</a> |</li>
+        <li class="right" >
+          <a href="../residuals_help.html" title="Assessing Fit Quality"
+             >previous</a> |</li>
+        <li class="nav-item nav-item-0"><a href="../../../../../index.html">SasView 4.2.0 documentation</a> &raquo;</li>
+          <li class="nav-item nav-item-1"><a href="../../../../user.html" >SasView User Documentation</a> &raquo;</li>
+          <li class="nav-item nav-item-2"><a href="../../../../analysis.html" >Fitting &amp; Other Analyses</a> &raquo;</li>
+          <li class="nav-item nav-item-3"><a href="../fitting.html" >Fitting Documentation</a> &raquo;</li> 
+      </ul>
+    </div>
+    <div class="footer" role="contentinfo">
+        &copy; Copyright 2018, The SasView Project.
+      Created using <a href="http://sphinx-doc.org/">Sphinx</a> 1.4.1.
+    </div>
+  </body>
+</html>

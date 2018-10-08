@@ -1,0 +1,427 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+  "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+    
+    <title>sas.sascalc.fit.MultiplicationModel &mdash; SasView 4.2.0 documentation</title>
+    
+    <link rel="stylesheet" href="../../../../_static/classic.css" type="text/css" />
+    <link rel="stylesheet" href="../../../../_static/pygments.css" type="text/css" />
+    
+    <script type="text/javascript">
+      var DOCUMENTATION_OPTIONS = {
+        URL_ROOT:    '../../../../',
+        VERSION:     '4.2.0',
+        COLLAPSE_INDEX: false,
+        FILE_SUFFIX: '.html',
+        HAS_SOURCE:  true
+      };
+    </script>
+    <script type="text/javascript" src="../../../../_static/jquery.js"></script>
+    <script type="text/javascript" src="../../../../_static/underscore.js"></script>
+    <script type="text/javascript" src="../../../../_static/doctools.js"></script>
+    <script type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.1/MathJax.js?config=TeX-MML-AM_CHTML"></script>
+    <link rel="top" title="SasView 4.2.0 documentation" href="../../../../index.html" />
+    <link rel="up" title="sas" href="../../../sas.html" /> 
+  </head>
+  <body role="document">
+    <div class="related" role="navigation" aria-label="related navigation">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="../../../../genindex.html" title="General Index"
+             accesskey="I">index</a></li>
+        <li class="right" >
+          <a href="../../../../py-modindex.html" title="Python Module Index"
+             >modules</a> |</li>
+        <li class="nav-item nav-item-0"><a href="../../../../index.html">SasView 4.2.0 documentation</a> &raquo;</li>
+          <li class="nav-item nav-item-1"><a href="../../../index.html" >Module code</a> &raquo;</li>
+          <li class="nav-item nav-item-2"><a href="../../../sas.html" accesskey="U">sas</a> &raquo;</li> 
+      </ul>
+    </div>  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          <div class="body" role="main">
+            
+  <h1>Source code for sas.sascalc.fit.MultiplicationModel</h1><div class="highlight"><pre>
+<span></span><span class="kn">import</span> <span class="nn">copy</span>
+
+<span class="kn">import</span> <span class="nn">numpy</span> <span class="kn">as</span> <span class="nn">np</span>
+
+<span class="kn">from</span> <span class="nn">sas.sascalc.calculator.BaseComponent</span> <span class="kn">import</span> <span class="n">BaseComponent</span>
+
+<div class="viewcode-block" id="MultiplicationModel"><a class="viewcode-back" href="../../../../dev/sasview-api/sas.sascalc.fit.html#sas.sascalc.fit.MultiplicationModel.MultiplicationModel">[docs]</a><span class="k">class</span> <span class="nc">MultiplicationModel</span><span class="p">(</span><span class="n">BaseComponent</span><span class="p">):</span>
+    <span class="sd">r&quot;&quot;&quot;</span>
+<span class="sd">        Use for P(Q)\*S(Q); function call must be in the order of P(Q) and then S(Q):</span>
+<span class="sd">        The model parameters are combined from both models, P(Q) and S(Q), except 1) &#39;radius_effective&#39; of S(Q)</span>
+<span class="sd">        which will be calculated from P(Q) via calculate_ER(),</span>
+<span class="sd">        and 2) &#39;scale&#39; in P model which is synchronized w/ volfraction in S</span>
+<span class="sd">        then P*S is multiplied by a new parameter, &#39;scale_factor&#39;.</span>
+<span class="sd">        The polydispersion is applicable only to P(Q), not to S(Q).</span>
+
+<span class="sd">        .. note:: P(Q) refers to &#39;form factor&#39; model while S(Q) does to &#39;structure factor&#39;.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">p_model</span><span class="p">,</span> <span class="n">s_model</span> <span class="p">):</span>
+        <span class="n">BaseComponent</span><span class="o">.</span><span class="n">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        :param p_model: form factor, P(Q)</span>
+<span class="sd">        :param s_model: structure factor, S(Q)</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+
+        <span class="c1">## Setting  model name model description</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">description</span> <span class="o">=</span> <span class="s2">&quot;&quot;</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">name</span> <span class="o">=</span> <span class="n">p_model</span><span class="o">.</span><span class="n">name</span> <span class="o">+</span><span class="s2">&quot; * &quot;</span><span class="o">+</span> <span class="n">s_model</span><span class="o">.</span><span class="n">name</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">description</span><span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">name</span> <span class="o">+</span> <span class="s2">&quot;</span><span class="se">\n</span><span class="s2">&quot;</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">fill_description</span><span class="p">(</span><span class="n">p_model</span><span class="p">,</span> <span class="n">s_model</span><span class="p">)</span>
+
+        <span class="c1">## Define parameters</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">params</span> <span class="o">=</span> <span class="p">{}</span>
+
+        <span class="c1">## Parameter details [units, min, max]</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">details</span> <span class="o">=</span> <span class="p">{}</span>
+
+        <span class="c1">## Define parameters to exclude from multiplication model</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">excluded_params</span><span class="o">=</span><span class="p">{</span><span class="s1">&#39;radius_effective&#39;</span><span class="p">,</span><span class="s1">&#39;scale&#39;</span><span class="p">,</span><span class="s1">&#39;background&#39;</span><span class="p">}</span>
+
+        <span class="c1">##models</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">p_model</span> <span class="o">=</span> <span class="n">p_model</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">s_model</span> <span class="o">=</span> <span class="n">s_model</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">magnetic_params</span> <span class="o">=</span> <span class="p">[]</span>
+        <span class="c1">## dispersion</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_set_dispersion</span><span class="p">()</span>
+        <span class="c1">## Define parameters</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_set_params</span><span class="p">()</span>
+        <span class="c1">## New parameter:Scaling factor</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">params</span><span class="p">[</span><span class="s1">&#39;scale_factor&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="mi">1</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">params</span><span class="p">[</span><span class="s1">&#39;background&#39;</span><span class="p">]</span>  <span class="o">=</span> <span class="mi">0</span>
+
+        <span class="c1">## Parameter details [units, min, max]</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_set_details</span><span class="p">()</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">details</span><span class="p">[</span><span class="s1">&#39;scale_factor&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="p">[</span><span class="s1">&#39;&#39;</span><span class="p">,</span> <span class="mf">0.0</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">inf</span><span class="p">]</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">details</span><span class="p">[</span><span class="s1">&#39;background&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="p">[</span><span class="s1">&#39;&#39;</span><span class="p">,</span><span class="o">-</span><span class="n">np</span><span class="o">.</span><span class="n">inf</span><span class="p">,</span><span class="n">np</span><span class="o">.</span><span class="n">inf</span><span class="p">]</span>
+
+        <span class="c1">#list of parameter that can be fitted</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_set_fixed_params</span><span class="p">()</span>
+        <span class="c1">## parameters with orientation</span>
+        <span class="k">for</span> <span class="n">item</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">p_model</span><span class="o">.</span><span class="n">orientation_params</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">orientation_params</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">item</span><span class="p">)</span>
+        <span class="k">for</span> <span class="n">item</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">p_model</span><span class="o">.</span><span class="n">magnetic_params</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">magnetic_params</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">item</span><span class="p">)</span>
+        <span class="k">for</span> <span class="n">item</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">s_model</span><span class="o">.</span><span class="n">orientation_params</span><span class="p">:</span>
+            <span class="k">if</span> <span class="ow">not</span> <span class="n">item</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">orientation_params</span><span class="p">:</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">orientation_params</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">item</span><span class="p">)</span>
+        <span class="c1"># get multiplicity if model provide it, else 1.</span>
+        <span class="k">try</span><span class="p">:</span>
+            <span class="n">multiplicity</span> <span class="o">=</span> <span class="n">p_model</span><span class="o">.</span><span class="n">multiplicity</span>
+        <span class="k">except</span> <span class="ne">AttributeError</span><span class="p">:</span>
+            <span class="n">multiplicity</span> <span class="o">=</span> <span class="mi">1</span>
+        <span class="c1">## functional multiplicity of the model</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">multiplicity</span> <span class="o">=</span> <span class="n">multiplicity</span>
+
+        <span class="c1"># non-fittable parameters</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">non_fittable</span> <span class="o">=</span> <span class="n">p_model</span><span class="o">.</span><span class="n">non_fittable</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">multiplicity_info</span> <span class="o">=</span> <span class="p">[]</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">fun_list</span> <span class="o">=</span> <span class="p">[]</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">non_fittable</span> <span class="o">&gt;</span> <span class="mi">1</span><span class="p">:</span>
+            <span class="k">try</span><span class="p">:</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">multiplicity_info</span> <span class="o">=</span> <span class="n">p_model</span><span class="o">.</span><span class="n">multiplicity_info</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">fun_list</span> <span class="o">=</span> <span class="n">p_model</span><span class="o">.</span><span class="n">fun_list</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">is_multiplicity_model</span> <span class="o">=</span> <span class="bp">True</span>
+            <span class="k">except</span> <span class="ne">AttributeError</span><span class="p">:</span>
+                <span class="k">pass</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">is_multiplicity_model</span> <span class="o">=</span> <span class="bp">False</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">multiplicity_info</span> <span class="o">=</span> <span class="p">[</span><span class="mi">0</span><span class="p">]</span>
+
+    <span class="k">def</span> <span class="nf">_clone</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">obj</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Internal utility function to copy the internal data members to a</span>
+<span class="sd">        fresh copy.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">obj</span><span class="o">.</span><span class="n">params</span>     <span class="o">=</span> <span class="n">copy</span><span class="o">.</span><span class="n">deepcopy</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">params</span><span class="p">)</span>
+        <span class="n">obj</span><span class="o">.</span><span class="n">description</span>     <span class="o">=</span> <span class="n">copy</span><span class="o">.</span><span class="n">deepcopy</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">description</span><span class="p">)</span>
+        <span class="n">obj</span><span class="o">.</span><span class="n">details</span>    <span class="o">=</span> <span class="n">copy</span><span class="o">.</span><span class="n">deepcopy</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">details</span><span class="p">)</span>
+        <span class="n">obj</span><span class="o">.</span><span class="n">dispersion</span> <span class="o">=</span> <span class="n">copy</span><span class="o">.</span><span class="n">deepcopy</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">dispersion</span><span class="p">)</span>
+        <span class="n">obj</span><span class="o">.</span><span class="n">p_model</span>  <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">p_model</span><span class="o">.</span><span class="n">clone</span><span class="p">()</span>
+        <span class="n">obj</span><span class="o">.</span><span class="n">s_model</span>  <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">s_model</span><span class="o">.</span><span class="n">clone</span><span class="p">()</span>
+        <span class="c1">#obj = copy.deepcopy(self)</span>
+        <span class="k">return</span> <span class="n">obj</span>
+
+
+    <span class="k">def</span> <span class="nf">_set_dispersion</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        combine the two models&#39; dispersions. Polydispersity should not be</span>
+<span class="sd">        applied to s_model</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="c1">##set dispersion only from p_model</span>
+        <span class="k">for</span> <span class="n">name</span> <span class="p">,</span> <span class="n">value</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">p_model</span><span class="o">.</span><span class="n">dispersion</span><span class="o">.</span><span class="n">items</span><span class="p">():</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">dispersion</span><span class="p">[</span><span class="n">name</span><span class="p">]</span> <span class="o">=</span> <span class="n">value</span>
+
+<div class="viewcode-block" id="MultiplicationModel.getProfile"><a class="viewcode-back" href="../../../../dev/sasview-api/sas.sascalc.fit.html#sas.sascalc.fit.MultiplicationModel.MultiplicationModel.getProfile">[docs]</a>    <span class="k">def</span> <span class="nf">getProfile</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Get SLD profile of p_model if exists</span>
+
+<span class="sd">        :return: (r, beta) where r is a list of radius of the transition points\</span>
+<span class="sd">                beta is a list of the corresponding SLD values</span>
+
+<span class="sd">        .. note:: This works only for func_shell num = 2 (exp function).</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">try</span><span class="p">:</span>
+            <span class="n">x</span><span class="p">,</span> <span class="n">y</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">p_model</span><span class="o">.</span><span class="n">getProfile</span><span class="p">()</span>
+        <span class="k">except</span><span class="p">:</span>
+            <span class="n">x</span> <span class="o">=</span> <span class="bp">None</span>
+            <span class="n">y</span> <span class="o">=</span> <span class="bp">None</span>
+
+        <span class="k">return</span> <span class="n">x</span><span class="p">,</span> <span class="n">y</span></div>
+
+    <span class="k">def</span> <span class="nf">_set_params</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Concatenate the parameters of the two models to create</span>
+<span class="sd">        these model parameters</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+
+        <span class="k">for</span> <span class="n">name</span> <span class="p">,</span> <span class="n">value</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">p_model</span><span class="o">.</span><span class="n">params</span><span class="o">.</span><span class="n">items</span><span class="p">():</span>
+            <span class="k">if</span> <span class="ow">not</span> <span class="n">name</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">params</span><span class="o">.</span><span class="n">keys</span><span class="p">()</span> <span class="ow">and</span> <span class="n">name</span> <span class="ow">not</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">excluded_params</span><span class="p">:</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">params</span><span class="p">[</span><span class="n">name</span><span class="p">]</span> <span class="o">=</span> <span class="n">value</span>
+
+        <span class="k">for</span> <span class="n">name</span> <span class="p">,</span> <span class="n">value</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">s_model</span><span class="o">.</span><span class="n">params</span><span class="o">.</span><span class="n">items</span><span class="p">():</span>
+            <span class="c1">#Remove the radius_effective from the (P*S) model parameters.</span>
+            <span class="k">if</span> <span class="ow">not</span> <span class="n">name</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">params</span><span class="o">.</span><span class="n">keys</span><span class="p">()</span> <span class="ow">and</span> <span class="n">name</span> <span class="ow">not</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">excluded_params</span><span class="p">:</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">params</span><span class="p">[</span><span class="n">name</span><span class="p">]</span> <span class="o">=</span> <span class="n">value</span>
+
+        <span class="c1"># Set &quot;scale and effec_radius to P and S model as initializing</span>
+        <span class="c1"># since run P*S comes from P and S separately.</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_set_backgrounds</span><span class="p">()</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_set_scale_factor</span><span class="p">()</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_set_radius_effective</span><span class="p">()</span>
+
+    <span class="k">def</span> <span class="nf">_set_details</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Concatenate details of the two models to create</span>
+<span class="sd">        this model&#39;s details</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">for</span> <span class="n">name</span><span class="p">,</span> <span class="n">detail</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">p_model</span><span class="o">.</span><span class="n">details</span><span class="o">.</span><span class="n">items</span><span class="p">():</span>
+            <span class="k">if</span> <span class="n">name</span> <span class="ow">not</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">excluded_params</span><span class="p">:</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">details</span><span class="p">[</span><span class="n">name</span><span class="p">]</span> <span class="o">=</span> <span class="n">detail</span>
+
+        <span class="k">for</span> <span class="n">name</span> <span class="p">,</span> <span class="n">detail</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">s_model</span><span class="o">.</span><span class="n">details</span><span class="o">.</span><span class="n">items</span><span class="p">():</span>
+            <span class="k">if</span> <span class="ow">not</span> <span class="n">name</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">details</span><span class="o">.</span><span class="n">keys</span><span class="p">()</span> <span class="ow">or</span> <span class="n">name</span> <span class="ow">not</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">exluded_params</span><span class="p">:</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">details</span><span class="p">[</span><span class="n">name</span><span class="p">]</span> <span class="o">=</span> <span class="n">detail</span>
+
+    <span class="k">def</span> <span class="nf">_set_backgrounds</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Set component backgrounds to zero</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">if</span> <span class="s1">&#39;background&#39;</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">p_model</span><span class="o">.</span><span class="n">params</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">p_model</span><span class="o">.</span><span class="n">setParam</span><span class="p">(</span><span class="s1">&#39;background&#39;</span><span class="p">,</span><span class="mi">0</span><span class="p">)</span>
+        <span class="k">if</span> <span class="s1">&#39;background&#39;</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">s_model</span><span class="o">.</span><span class="n">params</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">s_model</span><span class="o">.</span><span class="n">setParam</span><span class="p">(</span><span class="s1">&#39;background&#39;</span><span class="p">,</span><span class="mi">0</span><span class="p">)</span>
+
+
+    <span class="k">def</span> <span class="nf">_set_scale_factor</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Set scale=volfraction for P model</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">value</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">params</span><span class="p">[</span><span class="s1">&#39;volfraction&#39;</span><span class="p">]</span>
+        <span class="k">if</span> <span class="n">value</span> <span class="ow">is</span> <span class="ow">not</span> <span class="bp">None</span><span class="p">:</span>
+            <span class="n">factor</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">p_model</span><span class="o">.</span><span class="n">calculate_VR</span><span class="p">()</span>
+            <span class="k">if</span> <span class="n">factor</span> <span class="ow">is</span> <span class="bp">None</span> <span class="ow">or</span> <span class="n">factor</span> <span class="o">==</span> <span class="bp">NotImplemented</span> <span class="ow">or</span> <span class="n">factor</span> <span class="o">==</span> <span class="mf">0.0</span><span class="p">:</span>
+                <span class="n">val</span> <span class="o">=</span> <span class="n">value</span>
+            <span class="k">else</span><span class="p">:</span>
+                <span class="n">val</span> <span class="o">=</span> <span class="n">value</span> <span class="o">/</span> <span class="n">factor</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">p_model</span><span class="o">.</span><span class="n">setParam</span><span class="p">(</span><span class="s1">&#39;scale&#39;</span><span class="p">,</span> <span class="n">value</span><span class="p">)</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">s_model</span><span class="o">.</span><span class="n">setParam</span><span class="p">(</span><span class="s1">&#39;volfraction&#39;</span><span class="p">,</span> <span class="n">val</span><span class="p">)</span>
+
+    <span class="k">def</span> <span class="nf">_set_radius_effective</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Set effective radius to S(Q) model</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="s1">&#39;radius_effective&#39;</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">s_model</span><span class="o">.</span><span class="n">params</span><span class="o">.</span><span class="n">keys</span><span class="p">():</span>
+            <span class="k">return</span>
+        <span class="n">effective_radius</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">p_model</span><span class="o">.</span><span class="n">calculate_ER</span><span class="p">()</span>
+        <span class="c1">#Reset the effective_radius of s_model just before the run</span>
+        <span class="k">if</span> <span class="n">effective_radius</span> <span class="ow">is</span> <span class="ow">not</span> <span class="bp">None</span> <span class="ow">and</span> <span class="n">effective_radius</span> <span class="o">!=</span> <span class="bp">NotImplemented</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">s_model</span><span class="o">.</span><span class="n">setParam</span><span class="p">(</span><span class="s1">&#39;radius_effective&#39;</span><span class="p">,</span> <span class="n">effective_radius</span><span class="p">)</span>
+
+<div class="viewcode-block" id="MultiplicationModel.setParam"><a class="viewcode-back" href="../../../../dev/sasview-api/sas.sascalc.fit.html#sas.sascalc.fit.MultiplicationModel.MultiplicationModel.setParam">[docs]</a>    <span class="k">def</span> <span class="nf">setParam</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">name</span><span class="p">,</span> <span class="n">value</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Set the value of a model parameter</span>
+
+<span class="sd">        :param name: name of the parameter</span>
+<span class="sd">        :param value: value of the parameter</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="c1"># set param to P*S model</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_setParamHelper</span><span class="p">(</span> <span class="n">name</span><span class="p">,</span> <span class="n">value</span><span class="p">)</span>
+
+        <span class="c1">## setParam to p model</span>
+        <span class="c1"># set &#39;scale&#39; in P(Q) equal to volfraction</span>
+        <span class="k">if</span> <span class="n">name</span> <span class="o">==</span> <span class="s1">&#39;volfraction&#39;</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_set_scale_factor</span><span class="p">()</span>
+        <span class="k">elif</span> <span class="n">name</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">p_model</span><span class="o">.</span><span class="n">getParamList</span><span class="p">()</span> <span class="ow">and</span> <span class="n">name</span> <span class="ow">not</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">excluded_params</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">p_model</span><span class="o">.</span><span class="n">setParam</span><span class="p">(</span> <span class="n">name</span><span class="p">,</span> <span class="n">value</span><span class="p">)</span>
+
+        <span class="c1">## setParam to s model</span>
+        <span class="c1"># This is a little bit abundant: Todo: find better way</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_set_radius_effective</span><span class="p">()</span>
+        <span class="k">if</span> <span class="n">name</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">s_model</span><span class="o">.</span><span class="n">getParamList</span><span class="p">()</span> <span class="ow">and</span> <span class="n">name</span> <span class="ow">not</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">excluded_params</span><span class="p">:</span>
+            <span class="k">if</span> <span class="n">name</span> <span class="o">!=</span> <span class="s1">&#39;volfraction&#39;</span><span class="p">:</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">s_model</span><span class="o">.</span><span class="n">setParam</span><span class="p">(</span> <span class="n">name</span><span class="p">,</span> <span class="n">value</span><span class="p">)</span></div>
+
+
+        <span class="c1">#self._setParamHelper( name, value)</span>
+
+    <span class="k">def</span> <span class="nf">_setParamHelper</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">name</span><span class="p">,</span> <span class="n">value</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Helper function to setparam</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="c1"># Look for dispersion parameters</span>
+        <span class="n">toks</span> <span class="o">=</span> <span class="n">name</span><span class="o">.</span><span class="n">split</span><span class="p">(</span><span class="s1">&#39;.&#39;</span><span class="p">)</span>
+        <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">toks</span><span class="p">)</span><span class="o">==</span><span class="mi">2</span><span class="p">:</span>
+            <span class="k">for</span> <span class="n">item</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">dispersion</span><span class="o">.</span><span class="n">keys</span><span class="p">():</span>
+                <span class="k">if</span> <span class="n">item</span><span class="o">.</span><span class="n">lower</span><span class="p">()</span><span class="o">==</span><span class="n">toks</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">lower</span><span class="p">():</span>
+                    <span class="k">for</span> <span class="n">par</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">dispersion</span><span class="p">[</span><span class="n">item</span><span class="p">]:</span>
+                        <span class="k">if</span> <span class="n">par</span><span class="o">.</span><span class="n">lower</span><span class="p">()</span> <span class="o">==</span> <span class="n">toks</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span><span class="o">.</span><span class="n">lower</span><span class="p">():</span>
+                            <span class="bp">self</span><span class="o">.</span><span class="n">dispersion</span><span class="p">[</span><span class="n">item</span><span class="p">][</span><span class="n">par</span><span class="p">]</span> <span class="o">=</span> <span class="n">value</span>
+                            <span class="k">return</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="c1"># Look for standard parameter</span>
+            <span class="k">for</span> <span class="n">item</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">params</span><span class="o">.</span><span class="n">keys</span><span class="p">():</span>
+                <span class="k">if</span> <span class="n">item</span><span class="o">.</span><span class="n">lower</span><span class="p">()</span> <span class="o">==</span> <span class="n">name</span><span class="o">.</span><span class="n">lower</span><span class="p">():</span>
+                    <span class="bp">self</span><span class="o">.</span><span class="n">params</span><span class="p">[</span><span class="n">item</span><span class="p">]</span> <span class="o">=</span> <span class="n">value</span>
+                    <span class="k">return</span>
+
+        <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s2">&quot;Model does not contain parameter </span><span class="si">%s</span><span class="s2">&quot;</span> <span class="o">%</span> <span class="n">name</span><span class="p">)</span>
+
+
+    <span class="k">def</span> <span class="nf">_set_fixed_params</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Fill the self.fixed list with the p_model fixed list</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">for</span> <span class="n">item</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">p_model</span><span class="o">.</span><span class="n">fixed</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">fixed</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">item</span><span class="p">)</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">fixed</span><span class="o">.</span><span class="n">sort</span><span class="p">()</span>
+
+
+<div class="viewcode-block" id="MultiplicationModel.run"><a class="viewcode-back" href="../../../../dev/sasview-api/sas.sascalc.fit.html#sas.sascalc.fit.MultiplicationModel.MultiplicationModel.run">[docs]</a>    <span class="k">def</span> <span class="nf">run</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">x</span> <span class="o">=</span> <span class="mf">0.0</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Evaluate the model</span>
+
+<span class="sd">        :param x: input q-value (float or [float, float] as [r, theta])</span>
+<span class="sd">        :return: (scattering function value)</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="c1"># set effective radius and scaling factor before run</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_set_radius_effective</span><span class="p">()</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_set_scale_factor</span><span class="p">()</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">params</span><span class="p">[</span><span class="s1">&#39;scale_factor&#39;</span><span class="p">]</span> <span class="o">*</span> <span class="bp">self</span><span class="o">.</span><span class="n">p_model</span><span class="o">.</span><span class="n">run</span><span class="p">(</span><span class="n">x</span><span class="p">)</span> <span class="o">*</span> \
+                            <span class="bp">self</span><span class="o">.</span><span class="n">s_model</span><span class="o">.</span><span class="n">run</span><span class="p">(</span><span class="n">x</span><span class="p">)</span> <span class="o">+</span> <span class="bp">self</span><span class="o">.</span><span class="n">params</span><span class="p">[</span><span class="s1">&#39;background&#39;</span><span class="p">]</span></div>
+
+<div class="viewcode-block" id="MultiplicationModel.runXY"><a class="viewcode-back" href="../../../../dev/sasview-api/sas.sascalc.fit.html#sas.sascalc.fit.MultiplicationModel.MultiplicationModel.runXY">[docs]</a>    <span class="k">def</span> <span class="nf">runXY</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">x</span> <span class="o">=</span> <span class="mf">0.0</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Evaluate the model</span>
+
+<span class="sd">        :param x: input q-value (float or [float, float] as [qx, qy])</span>
+<span class="sd">        :return: scattering function value</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="c1"># set effective radius and scaling factor before run</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_set_radius_effective</span><span class="p">()</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_set_scale_factor</span><span class="p">()</span>
+        <span class="n">out</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">params</span><span class="p">[</span><span class="s1">&#39;scale_factor&#39;</span><span class="p">]</span> <span class="o">*</span> <span class="bp">self</span><span class="o">.</span><span class="n">p_model</span><span class="o">.</span><span class="n">runXY</span><span class="p">(</span><span class="n">x</span><span class="p">)</span> <span class="o">*</span> \
+                        <span class="bp">self</span><span class="o">.</span><span class="n">s_model</span><span class="o">.</span><span class="n">runXY</span><span class="p">(</span><span class="n">x</span><span class="p">)</span> <span class="o">+</span> <span class="bp">self</span><span class="o">.</span><span class="n">params</span><span class="p">[</span><span class="s1">&#39;background&#39;</span><span class="p">]</span>
+        <span class="k">return</span> <span class="n">out</span></div>
+
+    <span class="c1">## Now (May27,10) directly uses the model eval function</span>
+    <span class="c1">## instead of the for-loop in Base Component.</span>
+<div class="viewcode-block" id="MultiplicationModel.evalDistribution"><a class="viewcode-back" href="../../../../dev/sasview-api/sas.sascalc.fit.html#sas.sascalc.fit.MultiplicationModel.MultiplicationModel.evalDistribution">[docs]</a>    <span class="k">def</span> <span class="nf">evalDistribution</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">x</span> <span class="o">=</span> <span class="p">[]):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Evaluate the model in cartesian coordinates</span>
+
+<span class="sd">        :param x: input q[], or [qx[], qy[]]</span>
+<span class="sd">        :return: scattering function P(q[])</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="c1"># set effective radius and scaling factor before run</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_set_radius_effective</span><span class="p">()</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_set_scale_factor</span><span class="p">()</span>
+        <span class="n">out</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">params</span><span class="p">[</span><span class="s1">&#39;scale_factor&#39;</span><span class="p">]</span> <span class="o">*</span> <span class="bp">self</span><span class="o">.</span><span class="n">p_model</span><span class="o">.</span><span class="n">evalDistribution</span><span class="p">(</span><span class="n">x</span><span class="p">)</span> <span class="o">*</span> \
+                        <span class="bp">self</span><span class="o">.</span><span class="n">s_model</span><span class="o">.</span><span class="n">evalDistribution</span><span class="p">(</span><span class="n">x</span><span class="p">)</span> <span class="o">+</span> <span class="bp">self</span><span class="o">.</span><span class="n">params</span><span class="p">[</span><span class="s1">&#39;background&#39;</span><span class="p">]</span>
+        <span class="k">return</span> <span class="n">out</span></div>
+
+<div class="viewcode-block" id="MultiplicationModel.set_dispersion"><a class="viewcode-back" href="../../../../dev/sasview-api/sas.sascalc.fit.html#sas.sascalc.fit.MultiplicationModel.MultiplicationModel.set_dispersion">[docs]</a>    <span class="k">def</span> <span class="nf">set_dispersion</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">parameter</span><span class="p">,</span> <span class="n">dispersion</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Set the dispersion object for a model parameter</span>
+
+<span class="sd">        :param parameter: name of the parameter [string]</span>
+<span class="sd">        :dispersion: dispersion object of type DispersionModel</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">value</span> <span class="o">=</span> <span class="bp">None</span>
+        <span class="k">try</span><span class="p">:</span>
+            <span class="k">if</span> <span class="n">parameter</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">p_model</span><span class="o">.</span><span class="n">dispersion</span><span class="o">.</span><span class="n">keys</span><span class="p">():</span>
+                <span class="n">value</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">p_model</span><span class="o">.</span><span class="n">set_dispersion</span><span class="p">(</span><span class="n">parameter</span><span class="p">,</span> <span class="n">dispersion</span><span class="p">)</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_set_dispersion</span><span class="p">()</span>
+            <span class="k">return</span> <span class="n">value</span>
+        <span class="k">except</span><span class="p">:</span>
+            <span class="k">raise</span></div>
+
+<div class="viewcode-block" id="MultiplicationModel.fill_description"><a class="viewcode-back" href="../../../../dev/sasview-api/sas.sascalc.fit.html#sas.sascalc.fit.MultiplicationModel.MultiplicationModel.fill_description">[docs]</a>    <span class="k">def</span> <span class="nf">fill_description</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">p_model</span><span class="p">,</span> <span class="n">s_model</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Fill the description for P(Q)*S(Q)</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">description</span> <span class="o">=</span> <span class="s2">&quot;&quot;</span>
+        <span class="n">description</span> <span class="o">+=</span> <span class="s2">&quot;Note:1) The radius_effective (effective radius) of </span><span class="si">%s</span><span class="s2"> </span><span class="se">\n</span><span class="s2">&quot;</span><span class="o">%</span>\
+                                                                <span class="p">(</span><span class="n">s_model</span><span class="o">.</span><span class="n">name</span><span class="p">)</span>
+        <span class="n">description</span> <span class="o">+=</span> <span class="s2">&quot;             is automatically calculated &quot;</span>
+        <span class="n">description</span> <span class="o">+=</span> <span class="s2">&quot;from size parameters (radius...).</span><span class="se">\n</span><span class="s2">&quot;</span>
+        <span class="n">description</span> <span class="o">+=</span> <span class="s2">&quot;         2) For non-spherical shape, &quot;</span>
+        <span class="n">description</span> <span class="o">+=</span> <span class="s2">&quot;this approximation is valid </span><span class="se">\n</span><span class="s2">&quot;</span>
+        <span class="n">description</span> <span class="o">+=</span> <span class="s2">&quot;            only for limited systems. &quot;</span>
+        <span class="n">description</span> <span class="o">+=</span> <span class="s2">&quot;Thus, use it at your own risk.</span><span class="se">\n</span><span class="s2">&quot;</span>
+        <span class="n">description</span> <span class="o">+=</span> <span class="s2">&quot;See </span><span class="si">%s</span><span class="s2"> description and </span><span class="si">%s</span><span class="s2"> description </span><span class="se">\n</span><span class="s2">&quot;</span><span class="o">%</span> \
+                                                <span class="p">(</span> <span class="n">p_model</span><span class="o">.</span><span class="n">name</span><span class="p">,</span> <span class="n">s_model</span><span class="o">.</span><span class="n">name</span> <span class="p">)</span>
+        <span class="n">description</span> <span class="o">+=</span> <span class="s2">&quot;        for details of individual models.&quot;</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">description</span> <span class="o">+=</span> <span class="n">description</span></div></div>
+</pre></div>
+
+          </div>
+        </div>
+      </div>
+      <div class="sphinxsidebar" role="navigation" aria-label="main navigation">
+        <div class="sphinxsidebarwrapper">
+<div id="searchbox" style="display: none" role="search">
+  <h3>Quick search</h3>
+    <form class="search" action="../../../../search.html" method="get">
+      <input type="text" name="q" />
+      <input type="submit" value="Go" />
+      <input type="hidden" name="check_keywords" value="yes" />
+      <input type="hidden" name="area" value="default" />
+    </form>
+</div>
+<script type="text/javascript">$('#searchbox').show(0);</script>
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="related" role="navigation" aria-label="related navigation">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="../../../../genindex.html" title="General Index"
+             >index</a></li>
+        <li class="right" >
+          <a href="../../../../py-modindex.html" title="Python Module Index"
+             >modules</a> |</li>
+        <li class="nav-item nav-item-0"><a href="../../../../index.html">SasView 4.2.0 documentation</a> &raquo;</li>
+          <li class="nav-item nav-item-1"><a href="../../../index.html" >Module code</a> &raquo;</li>
+          <li class="nav-item nav-item-2"><a href="../../../sas.html" >sas</a> &raquo;</li> 
+      </ul>
+    </div>
+    <div class="footer" role="contentinfo">
+        &copy; Copyright 2018, The SasView Project.
+      Created using <a href="http://sphinx-doc.org/">Sphinx</a> 1.4.1.
+    </div>
+  </body>
+</html>

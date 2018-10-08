@@ -1,0 +1,713 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+  "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+    
+    <title>sas.sasgui.perspectives.fitting.fitpanel &mdash; SasView 4.2.0 documentation</title>
+    
+    <link rel="stylesheet" href="../../../../../_static/classic.css" type="text/css" />
+    <link rel="stylesheet" href="../../../../../_static/pygments.css" type="text/css" />
+    
+    <script type="text/javascript">
+      var DOCUMENTATION_OPTIONS = {
+        URL_ROOT:    '../../../../../',
+        VERSION:     '4.2.0',
+        COLLAPSE_INDEX: false,
+        FILE_SUFFIX: '.html',
+        HAS_SOURCE:  true
+      };
+    </script>
+    <script type="text/javascript" src="../../../../../_static/jquery.js"></script>
+    <script type="text/javascript" src="../../../../../_static/underscore.js"></script>
+    <script type="text/javascript" src="../../../../../_static/doctools.js"></script>
+    <script type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.1/MathJax.js?config=TeX-MML-AM_CHTML"></script>
+    <link rel="top" title="SasView 4.2.0 documentation" href="../../../../../index.html" />
+    <link rel="up" title="sas.sasgui.perspectives.fitting" href="../fitting.html" /> 
+  </head>
+  <body role="document">
+    <div class="related" role="navigation" aria-label="related navigation">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="../../../../../genindex.html" title="General Index"
+             accesskey="I">index</a></li>
+        <li class="right" >
+          <a href="../../../../../py-modindex.html" title="Python Module Index"
+             >modules</a> |</li>
+        <li class="nav-item nav-item-0"><a href="../../../../../index.html">SasView 4.2.0 documentation</a> &raquo;</li>
+          <li class="nav-item nav-item-1"><a href="../../../../index.html" >Module code</a> &raquo;</li>
+          <li class="nav-item nav-item-2"><a href="../../../../sas.html" >sas</a> &raquo;</li>
+          <li class="nav-item nav-item-3"><a href="../fitting.html" accesskey="U">sas.sasgui.perspectives.fitting</a> &raquo;</li> 
+      </ul>
+    </div>  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          <div class="body" role="main">
+            
+  <h1>Source code for sas.sasgui.perspectives.fitting.fitpanel</h1><div class="highlight"><pre>
+<span></span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">FitPanel class contains fields allowing to fit  models and  data</span>
+
+<span class="sd">:note: For Fit to be performed the user should check at least one parameter</span>
+<span class="sd">    on fit Panel window.</span>
+
+<span class="sd">&quot;&quot;&quot;</span>
+<span class="kn">import</span> <span class="nn">wx</span>
+<span class="kn">from</span> <span class="nn">wx.aui</span> <span class="kn">import</span> <span class="n">AuiNotebook</span> <span class="k">as</span> <span class="n">nb</span>
+
+<span class="kn">from</span> <span class="nn">sas.sascalc.fit.models</span> <span class="kn">import</span> <span class="n">ModelManager</span>
+
+<span class="kn">from</span> <span class="nn">sas.sasgui.guiframe.panel_base</span> <span class="kn">import</span> <span class="n">PanelBase</span>
+<span class="kn">from</span> <span class="nn">sas.sasgui.guiframe.events</span> <span class="kn">import</span> <span class="n">PanelOnFocusEvent</span><span class="p">,</span> <span class="n">StatusEvent</span>
+<span class="kn">from</span> <span class="nn">sas.sasgui.guiframe.dataFitting</span> <span class="kn">import</span> <span class="n">check_data_validity</span>
+
+
+<span class="kn">from</span> <span class="nn">.</span> <span class="kn">import</span> <span class="n">basepage</span>
+<span class="kn">from</span> <span class="nn">.fitpage</span> <span class="kn">import</span> <span class="n">FitPage</span>
+<span class="kn">from</span> <span class="nn">.simfitpage</span> <span class="kn">import</span> <span class="n">SimultaneousFitPage</span>
+<span class="kn">from</span> <span class="nn">.batchfitpage</span> <span class="kn">import</span> <span class="n">BatchFitPage</span>
+<span class="kn">from</span> <span class="nn">.fitting_widgets</span> <span class="kn">import</span> <span class="n">BatchDataDialog</span>
+
+<span class="n">_BOX_WIDTH</span> <span class="o">=</span> <span class="mi">80</span>
+
+
+<div class="viewcode-block" id="FitPanel"><a class="viewcode-back" href="../../../../../dev/sasview-api/sas.sasgui.perspectives.fitting.html#sas.sasgui.perspectives.fitting.fitpanel.FitPanel">[docs]</a><span class="k">class</span> <span class="nc">FitPanel</span><span class="p">(</span><span class="n">nb</span><span class="p">,</span> <span class="n">PanelBase</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    FitPanel class contains fields allowing to fit  models and  data</span>
+
+<span class="sd">    :note: For Fit to be performed the user should check at least one parameter</span>
+<span class="sd">        on fit Panel window.</span>
+
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="c1"># Internal name for the AUI manager</span>
+    <span class="n">window_name</span> <span class="o">=</span> <span class="s2">&quot;Fit panel&quot;</span>
+    <span class="c1"># Title to appear on top of the window</span>
+    <span class="n">window_caption</span> <span class="o">=</span> <span class="s2">&quot;Fit Panel &quot;</span>
+    <span class="n">CENTER_PANE</span> <span class="o">=</span> <span class="bp">True</span>
+
+    <span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">parent</span><span class="p">,</span> <span class="n">manager</span><span class="o">=</span><span class="bp">None</span><span class="p">,</span> <span class="o">*</span><span class="n">args</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">nb</span><span class="o">.</span><span class="n">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">parent</span><span class="p">,</span> <span class="n">wx</span><span class="o">.</span><span class="n">ID_ANY</span><span class="p">,</span>
+                    <span class="n">style</span><span class="o">=</span><span class="n">wx</span><span class="o">.</span><span class="n">aui</span><span class="o">.</span><span class="n">AUI_NB_WINDOWLIST_BUTTON</span> <span class="o">|</span>
+                    <span class="n">wx</span><span class="o">.</span><span class="n">aui</span><span class="o">.</span><span class="n">AUI_NB_DEFAULT_STYLE</span> <span class="o">|</span>
+                    <span class="n">wx</span><span class="o">.</span><span class="n">CLIP_CHILDREN</span><span class="p">)</span>
+        <span class="n">PanelBase</span><span class="o">.</span><span class="n">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">parent</span><span class="p">)</span>
+        <span class="c1"># self.SetWindowStyleFlag(style=nb.FNB_FANCY_TABS)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_manager</span> <span class="o">=</span> <span class="n">manager</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">parent</span> <span class="o">=</span> <span class="n">parent</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">event_owner</span> <span class="o">=</span> <span class="bp">None</span>
+        <span class="c1"># dictionary of miodel {model class name, model class}</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">menu_mng</span> <span class="o">=</span> <span class="n">ModelManager</span><span class="p">()</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">model_list_box</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">menu_mng</span><span class="o">.</span><span class="n">get_model_list</span><span class="p">()</span>
+        <span class="c1"># pageClosedEvent = nb.EVT_FLATNOTEBOOK_PAGE_CLOSING</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">model_dictionary</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">menu_mng</span><span class="o">.</span><span class="n">get_model_dictionary</span><span class="p">()</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">pageClosedEvent</span> <span class="o">=</span> <span class="n">wx</span><span class="o">.</span><span class="n">aui</span><span class="o">.</span><span class="n">EVT_AUINOTEBOOK_PAGE_CLOSE</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">Bind</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">pageClosedEvent</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">on_close_page</span><span class="p">)</span>
+        <span class="c1"># save the title of the last page tab added</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">fit_page_name</span> <span class="o">=</span> <span class="p">{}</span>
+        <span class="c1"># list of existing fit page</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">opened_pages</span> <span class="o">=</span> <span class="p">{}</span>
+        <span class="c1"># index of fit page</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">fit_page_index</span> <span class="o">=</span> <span class="mi">0</span>
+        <span class="c1"># index of batch page</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">batch_page_index</span> <span class="o">=</span> <span class="mi">0</span>
+        <span class="c1"># page of simultaneous fit</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">sim_page</span> <span class="o">=</span> <span class="bp">None</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">batch_page</span> <span class="o">=</span> <span class="bp">None</span>
+        <span class="c1"># get the state of a page</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">Bind</span><span class="p">(</span><span class="n">basepage</span><span class="o">.</span><span class="n">EVT_PAGE_INFO</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">_onGetstate</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">Bind</span><span class="p">(</span><span class="n">basepage</span><span class="o">.</span><span class="n">EVT_PREVIOUS_STATE</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">_onUndo</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">Bind</span><span class="p">(</span><span class="n">basepage</span><span class="o">.</span><span class="n">EVT_NEXT_STATE</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">_onRedo</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">Bind</span><span class="p">(</span><span class="n">wx</span><span class="o">.</span><span class="n">aui</span><span class="o">.</span><span class="n">EVT_AUINOTEBOOK_PAGE_CHANGED</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">on_page_changing</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">Bind</span><span class="p">(</span><span class="n">wx</span><span class="o">.</span><span class="n">aui</span><span class="o">.</span><span class="n">EVT_AUINOTEBOOK_PAGE_CLOSED</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">on_closed</span><span class="p">)</span>
+
+<div class="viewcode-block" id="FitPanel.on_closed"><a class="viewcode-back" href="../../../../../dev/sasview-api/sas.sasgui.perspectives.fitting.html#sas.sasgui.perspectives.fitting.fitpanel.FitPanel.on_closed">[docs]</a>    <span class="k">def</span> <span class="nf">on_closed</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">event</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">GetPageCount</span><span class="p">()</span> <span class="o">==</span> <span class="mi">0</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">add_empty_page</span><span class="p">()</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">enable_close_button</span><span class="p">()</span></div>
+
+<div class="viewcode-block" id="FitPanel.save_project"><a class="viewcode-back" href="../../../../../dev/sasview-api/sas.sasgui.perspectives.fitting.html#sas.sasgui.perspectives.fitting.fitpanel.FitPanel.save_project">[docs]</a>    <span class="k">def</span> <span class="nf">save_project</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">doc</span><span class="o">=</span><span class="bp">None</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        return an xml node containing state of the panel</span>
+<span class="sd">        that guiframe can write to file</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="c1"># Iterate through all pages and check for batch fitting</span>
+        <span class="n">batch_state</span> <span class="o">=</span> <span class="bp">None</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">sim_page</span> <span class="ow">is</span> <span class="ow">not</span> <span class="bp">None</span><span class="p">:</span>
+            <span class="n">batch_state</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">sim_page</span><span class="o">.</span><span class="n">set_state</span><span class="p">()</span>
+
+        <span class="k">for</span> <span class="n">uid</span><span class="p">,</span> <span class="n">page</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">opened_pages</span><span class="o">.</span><span class="n">iteritems</span><span class="p">():</span>
+            <span class="n">data</span> <span class="o">=</span> <span class="n">page</span><span class="o">.</span><span class="n">get_data</span><span class="p">()</span>
+            <span class="c1"># state must be cloned</span>
+            <span class="n">state</span> <span class="o">=</span> <span class="n">page</span><span class="o">.</span><span class="n">get_state</span><span class="p">()</span><span class="o">.</span><span class="n">clone</span><span class="p">()</span>
+            <span class="c1"># data_list only populated with real data</span>
+            <span class="c1"># Fake object in data from page.get_data() if model is selected</span>
+            <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">page</span><span class="o">.</span><span class="n">data_list</span><span class="p">)</span> <span class="ow">is</span> <span class="ow">not</span> <span class="mi">0</span> <span class="ow">and</span> <span class="n">page</span><span class="o">.</span><span class="n">model</span> <span class="ow">is</span> <span class="ow">not</span> <span class="bp">None</span><span class="p">:</span>
+                <span class="n">new_doc</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_manager</span><span class="o">.</span><span class="n">state_reader</span><span class="o">.</span><span class="n">write_toXML</span><span class="p">(</span><span class="n">data</span><span class="p">,</span>
+                                                                 <span class="n">state</span><span class="p">,</span>
+                                                                 <span class="n">batch_state</span><span class="p">)</span>
+                <span class="c1"># Fit #2 through #n are append to first fit</span>
+                <span class="k">if</span> <span class="n">doc</span> <span class="ow">is</span> <span class="ow">not</span> <span class="bp">None</span> <span class="ow">and</span> <span class="nb">hasattr</span><span class="p">(</span><span class="n">doc</span><span class="p">,</span> <span class="s2">&quot;firstChild&quot;</span><span class="p">):</span>
+                    <span class="c1"># Only append if properly formed new_doc</span>
+                    <span class="k">if</span> <span class="n">new_doc</span> <span class="ow">is</span> <span class="ow">not</span> <span class="bp">None</span> <span class="ow">and</span> <span class="nb">hasattr</span><span class="p">(</span><span class="n">new_doc</span><span class="p">,</span> <span class="s2">&quot;firstChild&quot;</span><span class="p">):</span>
+                        <span class="n">child</span> <span class="o">=</span> <span class="n">new_doc</span><span class="o">.</span><span class="n">firstChild</span><span class="o">.</span><span class="n">firstChild</span>
+                        <span class="n">doc</span><span class="o">.</span><span class="n">firstChild</span><span class="o">.</span><span class="n">appendChild</span><span class="p">(</span><span class="n">child</span><span class="p">)</span>
+                <span class="c1"># First fit defines the main document</span>
+                <span class="k">else</span><span class="p">:</span>
+                    <span class="n">doc</span> <span class="o">=</span> <span class="n">new_doc</span>
+
+        <span class="k">return</span> <span class="n">doc</span></div>
+
+<div class="viewcode-block" id="FitPanel.update_model_list"><a class="viewcode-back" href="../../../../../dev/sasview-api/sas.sasgui.perspectives.fitting.html#sas.sasgui.perspectives.fitting.fitpanel.FitPanel.update_model_list">[docs]</a>    <span class="k">def</span> <span class="nf">update_model_list</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">temp</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">menu_mng</span><span class="o">.</span><span class="n">update</span><span class="p">()</span>
+        <span class="k">if</span> <span class="n">temp</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">model_list_box</span> <span class="o">=</span> <span class="n">temp</span>
+        <span class="k">return</span> <span class="n">temp</span></div>
+
+<div class="viewcode-block" id="FitPanel.reset_pmodel_list"><a class="viewcode-back" href="../../../../../dev/sasview-api/sas.sasgui.perspectives.fitting.html#sas.sasgui.perspectives.fitting.fitpanel.FitPanel.reset_pmodel_list">[docs]</a>    <span class="k">def</span> <span class="nf">reset_pmodel_list</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">model_list_box</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">menu_mng</span><span class="o">.</span><span class="n">plugins_reset</span><span class="p">()</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">model_list_box</span></div>
+
+<div class="viewcode-block" id="FitPanel.get_page_by_id"><a class="viewcode-back" href="../../../../../dev/sasview-api/sas.sasgui.perspectives.fitting.html#sas.sasgui.perspectives.fitting.fitpanel.FitPanel.get_page_by_id">[docs]</a>    <span class="k">def</span> <span class="nf">get_page_by_id</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">uid</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">if</span> <span class="n">uid</span> <span class="ow">not</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">opened_pages</span><span class="p">:</span>
+            <span class="n">msg</span> <span class="o">=</span> <span class="s2">&quot;Fitpanel cannot find ID: </span><span class="si">%s</span><span class="s2"> in self.opened_pages&quot;</span> <span class="o">%</span> <span class="nb">str</span><span class="p">(</span><span class="n">uid</span><span class="p">)</span>
+            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">,</span> <span class="n">msg</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">opened_pages</span><span class="p">[</span><span class="n">uid</span><span class="p">]</span></div>
+
+<div class="viewcode-block" id="FitPanel.on_page_changing"><a class="viewcode-back" href="../../../../../dev/sasview-api/sas.sasgui.perspectives.fitting.html#sas.sasgui.perspectives.fitting.fitpanel.FitPanel.on_page_changing">[docs]</a>    <span class="k">def</span> <span class="nf">on_page_changing</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">event</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        calls the function when the current event handler has exited. avoiding</span>
+<span class="sd">        to call panel on focus on a panel that is currently deleted</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">wx</span><span class="o">.</span><span class="n">CallAfter</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">helper_on_page_change</span><span class="p">)</span></div>
+
+<div class="viewcode-block" id="FitPanel.helper_on_page_change"><a class="viewcode-back" href="../../../../../dev/sasview-api/sas.sasgui.perspectives.fitting.html#sas.sasgui.perspectives.fitting.fitpanel.FitPanel.helper_on_page_change">[docs]</a>    <span class="k">def</span> <span class="nf">helper_on_page_change</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">pos</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">GetSelection</span><span class="p">()</span>
+        <span class="k">if</span> <span class="n">pos</span> <span class="o">!=</span> <span class="o">-</span><span class="mi">1</span><span class="p">:</span>
+            <span class="n">selected_page</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">GetPage</span><span class="p">(</span><span class="n">pos</span><span class="p">)</span>
+            <span class="n">wx</span><span class="o">.</span><span class="n">PostEvent</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_manager</span><span class="o">.</span><span class="n">parent</span><span class="p">,</span>
+                         <span class="n">PanelOnFocusEvent</span><span class="p">(</span><span class="n">panel</span><span class="o">=</span><span class="n">selected_page</span><span class="p">))</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">enable_close_button</span><span class="p">()</span></div>
+
+<div class="viewcode-block" id="FitPanel.on_set_focus"><a class="viewcode-back" href="../../../../../dev/sasview-api/sas.sasgui.perspectives.fitting.html#sas.sasgui.perspectives.fitting.fitpanel.FitPanel.on_set_focus">[docs]</a>    <span class="k">def</span> <span class="nf">on_set_focus</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">event</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">pos</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">GetSelection</span><span class="p">()</span>
+        <span class="k">if</span> <span class="n">pos</span> <span class="o">!=</span> <span class="o">-</span><span class="mi">1</span><span class="p">:</span>
+            <span class="n">selected_page</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">GetPage</span><span class="p">(</span><span class="n">pos</span><span class="p">)</span>
+            <span class="n">wx</span><span class="o">.</span><span class="n">PostEvent</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_manager</span><span class="o">.</span><span class="n">parent</span><span class="p">,</span>
+                         <span class="n">PanelOnFocusEvent</span><span class="p">(</span><span class="n">panel</span><span class="o">=</span><span class="n">selected_page</span><span class="p">))</span></div>
+
+<div class="viewcode-block" id="FitPanel.get_data"><a class="viewcode-back" href="../../../../../dev/sasview-api/sas.sasgui.perspectives.fitting.html#sas.sasgui.perspectives.fitting.fitpanel.FitPanel.get_data">[docs]</a>    <span class="k">def</span> <span class="nf">get_data</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        get the data in the current page</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">pos</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">GetSelection</span><span class="p">()</span>
+        <span class="k">if</span> <span class="n">pos</span> <span class="o">!=</span> <span class="o">-</span><span class="mi">1</span><span class="p">:</span>
+            <span class="n">selected_page</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">GetPage</span><span class="p">(</span><span class="n">pos</span><span class="p">)</span>
+            <span class="k">return</span> <span class="n">selected_page</span><span class="o">.</span><span class="n">get_data</span><span class="p">()</span></div>
+
+<div class="viewcode-block" id="FitPanel.set_model_state"><a class="viewcode-back" href="../../../../../dev/sasview-api/sas.sasgui.perspectives.fitting.html#sas.sasgui.perspectives.fitting.fitpanel.FitPanel.set_model_state">[docs]</a>    <span class="k">def</span> <span class="nf">set_model_state</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">state</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        receive a state to reset the model in the current page</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">pos</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">GetSelection</span><span class="p">()</span>
+        <span class="k">if</span> <span class="n">pos</span> <span class="o">!=</span> <span class="o">-</span><span class="mi">1</span><span class="p">:</span>
+            <span class="n">selected_page</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">GetPage</span><span class="p">(</span><span class="n">pos</span><span class="p">)</span>
+            <span class="n">selected_page</span><span class="o">.</span><span class="n">set_model_state</span><span class="p">(</span><span class="n">state</span><span class="p">)</span></div>
+
+<div class="viewcode-block" id="FitPanel.get_state"><a class="viewcode-back" href="../../../../../dev/sasview-api/sas.sasgui.perspectives.fitting.html#sas.sasgui.perspectives.fitting.fitpanel.FitPanel.get_state">[docs]</a>    <span class="k">def</span> <span class="nf">get_state</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        return the state of the current selected page</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">pos</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">GetSelection</span><span class="p">()</span>
+        <span class="k">if</span> <span class="n">pos</span> <span class="o">!=</span> <span class="o">-</span><span class="mi">1</span><span class="p">:</span>
+            <span class="n">selected_page</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">GetPage</span><span class="p">(</span><span class="n">pos</span><span class="p">)</span>
+            <span class="k">return</span> <span class="n">selected_page</span><span class="o">.</span><span class="n">get_state</span><span class="p">()</span></div>
+
+<div class="viewcode-block" id="FitPanel.close_all"><a class="viewcode-back" href="../../../../../dev/sasview-api/sas.sasgui.perspectives.fitting.html#sas.sasgui.perspectives.fitting.fitpanel.FitPanel.close_all">[docs]</a>    <span class="k">def</span> <span class="nf">close_all</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        remove all pages, used when a svs file is opened</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+
+        <span class="c1"># use while-loop, for-loop will not do the job well.</span>
+        <span class="k">while</span> <span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">GetPageCount</span><span class="p">()</span> <span class="o">&gt;</span> <span class="mi">0</span><span class="p">):</span>
+            <span class="n">page</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">GetPage</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">GetPageCount</span><span class="p">()</span> <span class="o">-</span> <span class="mi">1</span><span class="p">)</span>
+            <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">_manager</span><span class="o">.</span><span class="n">parent</span><span class="o">.</span><span class="n">panel_on_focus</span> <span class="o">==</span> <span class="n">page</span><span class="p">:</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">_manager</span><span class="o">.</span><span class="n">parent</span><span class="o">.</span><span class="n">panel_on_focus</span> <span class="o">=</span> <span class="bp">None</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_close_helper</span><span class="p">(</span><span class="n">selected_page</span><span class="o">=</span><span class="n">page</span><span class="p">)</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">DeletePage</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">GetPageCount</span><span class="p">()</span> <span class="o">-</span> <span class="mi">1</span><span class="p">)</span>
+        <span class="c1"># Clear list of names</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">fit_page_name</span> <span class="o">=</span> <span class="p">{}</span>
+        <span class="c1"># Clear list of opened pages</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">opened_pages</span> <span class="o">=</span> <span class="p">{}</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">fit_page_index</span> <span class="o">=</span> <span class="mi">0</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">batch_page_index</span> <span class="o">=</span> <span class="mi">0</span></div>
+
+<div class="viewcode-block" id="FitPanel.set_state"><a class="viewcode-back" href="../../../../../dev/sasview-api/sas.sasgui.perspectives.fitting.html#sas.sasgui.perspectives.fitting.fitpanel.FitPanel.set_state">[docs]</a>    <span class="k">def</span> <span class="nf">set_state</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">state</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Restore state of the panel</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">page_is_opened</span> <span class="o">=</span> <span class="bp">False</span>
+        <span class="k">if</span> <span class="n">state</span> <span class="ow">is</span> <span class="ow">not</span> <span class="bp">None</span><span class="p">:</span>
+            <span class="k">for</span> <span class="n">uid</span><span class="p">,</span> <span class="n">panel</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">opened_pages</span><span class="o">.</span><span class="n">iteritems</span><span class="p">():</span>
+                <span class="c1"># Don&#39;t return any panel is the exact same page is created</span>
+                <span class="k">if</span> <span class="n">uid</span> <span class="o">==</span> <span class="n">panel</span><span class="o">.</span><span class="n">uid</span> <span class="ow">and</span> <span class="n">panel</span><span class="o">.</span><span class="n">data</span> <span class="o">==</span> <span class="n">state</span><span class="o">.</span><span class="n">data</span><span class="p">:</span>
+                    <span class="c1"># the page is still opened</span>
+                    <span class="n">panel</span><span class="o">.</span><span class="n">reset_page</span><span class="p">(</span><span class="n">state</span><span class="o">=</span><span class="n">state</span><span class="p">)</span>
+                    <span class="n">panel</span><span class="o">.</span><span class="n">save_current_state</span><span class="p">()</span>
+                    <span class="n">page_is_opened</span> <span class="o">=</span> <span class="bp">True</span>
+            <span class="k">if</span> <span class="ow">not</span> <span class="n">page_is_opened</span><span class="p">:</span>
+                <span class="k">if</span> <span class="n">state</span><span class="o">.</span><span class="n">data</span><span class="o">.</span><span class="n">__class__</span><span class="o">.</span><span class="n">__name__</span> <span class="o">!=</span> <span class="s1">&#39;list&#39;</span><span class="p">:</span>
+                    <span class="c1"># To support older state file format</span>
+                    <span class="n">list_data</span> <span class="o">=</span> <span class="p">[</span><span class="n">state</span><span class="o">.</span><span class="n">data</span><span class="p">]</span>
+                <span class="k">else</span><span class="p">:</span>
+                    <span class="c1"># Todo: need new file format for the list</span>
+                    <span class="n">list_data</span> <span class="o">=</span> <span class="n">state</span><span class="o">.</span><span class="n">data</span>
+                <span class="n">panel</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_manager</span><span class="o">.</span><span class="n">add_fit_page</span><span class="p">(</span><span class="n">data</span><span class="o">=</span><span class="n">list_data</span><span class="p">)</span>
+                <span class="c1"># add data associated to the page created</span>
+                <span class="k">if</span> <span class="n">panel</span> <span class="ow">is</span> <span class="ow">not</span> <span class="bp">None</span><span class="p">:</span>
+                    <span class="bp">self</span><span class="o">.</span><span class="n">_manager</span><span class="o">.</span><span class="n">store_data</span><span class="p">(</span><span class="n">uid</span><span class="o">=</span><span class="n">panel</span><span class="o">.</span><span class="n">uid</span><span class="p">,</span>
+                                             <span class="n">data_list</span><span class="o">=</span><span class="n">list_data</span><span class="p">,</span>
+                                             <span class="n">caption</span><span class="o">=</span><span class="n">panel</span><span class="o">.</span><span class="n">window_caption</span><span class="p">)</span>
+                    <span class="n">panel</span><span class="o">.</span><span class="n">reset_page</span><span class="p">(</span><span class="n">state</span><span class="o">=</span><span class="n">state</span><span class="p">)</span>
+                    <span class="n">panel</span><span class="o">.</span><span class="n">save_current_state</span><span class="p">()</span></div>
+
+<div class="viewcode-block" id="FitPanel.clear_panel"><a class="viewcode-back" href="../../../../../dev/sasview-api/sas.sasgui.perspectives.fitting.html#sas.sasgui.perspectives.fitting.fitpanel.FitPanel.clear_panel">[docs]</a>    <span class="k">def</span> <span class="nf">clear_panel</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Clear and close all panels, used by guimanager</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="c1"># close all panels only when svs file opened</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">close_all</span><span class="p">()</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">sim_page</span> <span class="o">=</span> <span class="bp">None</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">batch_page</span> <span class="o">=</span> <span class="bp">None</span></div>
+
+<div class="viewcode-block" id="FitPanel.on_close_page"><a class="viewcode-back" href="../../../../../dev/sasview-api/sas.sasgui.perspectives.fitting.html#sas.sasgui.perspectives.fitting.fitpanel.FitPanel.on_close_page">[docs]</a>    <span class="k">def</span> <span class="nf">on_close_page</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">event</span><span class="o">=</span><span class="bp">None</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        close page and remove all references to the closed page</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">selected_page</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">GetPage</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">GetSelection</span><span class="p">())</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">GetPageCount</span><span class="p">()</span> <span class="o">==</span> <span class="mi">1</span><span class="p">:</span>
+            <span class="k">if</span> <span class="n">selected_page</span><span class="o">.</span><span class="n">get_data</span><span class="p">()</span> <span class="ow">is</span> <span class="ow">not</span> <span class="bp">None</span><span class="p">:</span>
+                <span class="k">if</span> <span class="n">event</span> <span class="ow">is</span> <span class="ow">not</span> <span class="bp">None</span><span class="p">:</span>
+                    <span class="n">event</span><span class="o">.</span><span class="n">Veto</span><span class="p">()</span>
+                <span class="k">return</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_close_helper</span><span class="p">(</span><span class="n">selected_page</span><span class="o">=</span><span class="n">selected_page</span><span class="p">)</span></div>
+
+<div class="viewcode-block" id="FitPanel.close_page_with_data"><a class="viewcode-back" href="../../../../../dev/sasview-api/sas.sasgui.perspectives.fitting.html#sas.sasgui.perspectives.fitting.fitpanel.FitPanel.close_page_with_data">[docs]</a>    <span class="k">def</span> <span class="nf">close_page_with_data</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">deleted_data</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        close a fit page when its data is completely remove from the graph</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">if</span> <span class="n">deleted_data</span> <span class="ow">is</span> <span class="bp">None</span><span class="p">:</span>
+            <span class="k">return</span>
+        <span class="k">for</span> <span class="n">index</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">GetPageCount</span><span class="p">()):</span>
+            <span class="n">selected_page</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">GetPage</span><span class="p">(</span><span class="n">index</span><span class="p">)</span>
+            <span class="k">if</span> <span class="nb">hasattr</span><span class="p">(</span><span class="n">selected_page</span><span class="p">,</span> <span class="s2">&quot;get_data&quot;</span><span class="p">):</span>
+                <span class="n">data</span> <span class="o">=</span> <span class="n">selected_page</span><span class="o">.</span><span class="n">get_data</span><span class="p">()</span>
+
+                <span class="k">if</span> <span class="n">data</span> <span class="ow">is</span> <span class="bp">None</span><span class="p">:</span>
+                    <span class="c1"># the fitpanel exists and only the initial fit page is open</span>
+                    <span class="c1"># with no selected data</span>
+                    <span class="k">return</span>
+                <span class="k">if</span> <span class="n">data</span><span class="o">.</span><span class="n">id</span> <span class="o">==</span> <span class="n">deleted_data</span><span class="o">.</span><span class="n">id</span><span class="p">:</span>
+                    <span class="bp">self</span><span class="o">.</span><span class="n">_close_helper</span><span class="p">(</span><span class="n">selected_page</span><span class="p">)</span>
+                    <span class="bp">self</span><span class="o">.</span><span class="n">DeletePage</span><span class="p">(</span><span class="n">index</span><span class="p">)</span>
+                    <span class="k">break</span></div>
+
+<div class="viewcode-block" id="FitPanel.set_manager"><a class="viewcode-back" href="../../../../../dev/sasview-api/sas.sasgui.perspectives.fitting.html#sas.sasgui.perspectives.fitting.fitpanel.FitPanel.set_manager">[docs]</a>    <span class="k">def</span> <span class="nf">set_manager</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">manager</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        set panel manager</span>
+
+<span class="sd">        :param manager: instance of plugin fitting</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_manager</span> <span class="o">=</span> <span class="n">manager</span>
+        <span class="k">for</span> <span class="n">pos</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">GetPageCount</span><span class="p">()):</span>
+            <span class="n">page</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">GetPage</span><span class="p">(</span><span class="n">pos</span><span class="p">)</span>
+            <span class="k">if</span> <span class="n">page</span> <span class="ow">is</span> <span class="ow">not</span> <span class="bp">None</span><span class="p">:</span>
+                <span class="n">page</span><span class="o">.</span><span class="n">set_manager</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_manager</span><span class="p">)</span></div>
+
+<div class="viewcode-block" id="FitPanel.set_model_list"><a class="viewcode-back" href="../../../../../dev/sasview-api/sas.sasgui.perspectives.fitting.html#sas.sasgui.perspectives.fitting.fitpanel.FitPanel.set_model_list">[docs]</a>    <span class="k">def</span> <span class="nf">set_model_list</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="nb">dict</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        copy a dictionary of model into its own dictionary</span>
+
+<span class="sd">        :param dict: dictionnary made of model name as key and model class</span>
+<span class="sd">            as value</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">model_list_box</span> <span class="o">=</span> <span class="nb">dict</span></div>
+
+<div class="viewcode-block" id="FitPanel.set_model_dictionary"><a class="viewcode-back" href="../../../../../dev/sasview-api/sas.sasgui.perspectives.fitting.html#sas.sasgui.perspectives.fitting.fitpanel.FitPanel.set_model_dictionary">[docs]</a>    <span class="k">def</span> <span class="nf">set_model_dictionary</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">model_dictionary</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        copy a dictionary of model name -&gt; model object</span>
+
+<span class="sd">        :param model_dictionary: dictionary linking model name -&gt; model object</span>
+<span class="sd">        &quot;&quot;&quot;</span></div>
+
+<div class="viewcode-block" id="FitPanel.get_current_page"><a class="viewcode-back" href="../../../../../dev/sasview-api/sas.sasgui.perspectives.fitting.html#sas.sasgui.perspectives.fitting.fitpanel.FitPanel.get_current_page">[docs]</a>    <span class="k">def</span> <span class="nf">get_current_page</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        :return: the current page selected</span>
+
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">GetPage</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">GetSelection</span><span class="p">())</span></div>
+
+<div class="viewcode-block" id="FitPanel.add_sim_page"><a class="viewcode-back" href="../../../../../dev/sasview-api/sas.sasgui.perspectives.fitting.html#sas.sasgui.perspectives.fitting.fitpanel.FitPanel.add_sim_page">[docs]</a>    <span class="k">def</span> <span class="nf">add_sim_page</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">caption</span><span class="o">=</span><span class="s2">&quot;Const &amp; Simul Fit&quot;</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Add the simultaneous fit page</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">page_finder</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_manager</span><span class="o">.</span><span class="n">get_page_finder</span><span class="p">()</span>
+        <span class="k">if</span> <span class="n">caption</span> <span class="o">==</span> <span class="s2">&quot;Const &amp; Simul Fit&quot;</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">sim_page</span> <span class="o">=</span> <span class="n">SimultaneousFitPage</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">page_finder</span><span class="o">=</span><span class="n">page_finder</span><span class="p">,</span>
+                                                 <span class="nb">id</span><span class="o">=</span><span class="n">wx</span><span class="o">.</span><span class="n">ID_ANY</span><span class="p">,</span> <span class="n">batch_on</span><span class="o">=</span><span class="bp">False</span><span class="p">)</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">sim_page</span><span class="o">.</span><span class="n">window_caption</span> <span class="o">=</span> <span class="n">caption</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">sim_page</span><span class="o">.</span><span class="n">window_name</span> <span class="o">=</span> <span class="n">caption</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">sim_page</span><span class="o">.</span><span class="n">uid</span> <span class="o">=</span> <span class="n">wx</span><span class="o">.</span><span class="n">NewId</span><span class="p">()</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">AddPage</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">sim_page</span><span class="p">,</span> <span class="n">caption</span><span class="p">,</span> <span class="bp">True</span><span class="p">)</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">sim_page</span><span class="o">.</span><span class="n">set_manager</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_manager</span><span class="p">)</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">enable_close_button</span><span class="p">()</span>
+            <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">sim_page</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">batch_page</span> <span class="o">=</span> <span class="n">SimultaneousFitPage</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">batch_on</span><span class="o">=</span><span class="bp">True</span><span class="p">,</span>
+                                                  <span class="n">page_finder</span><span class="o">=</span><span class="n">page_finder</span><span class="p">)</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">batch_page</span><span class="o">.</span><span class="n">window_caption</span> <span class="o">=</span> <span class="n">caption</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">batch_page</span><span class="o">.</span><span class="n">window_name</span> <span class="o">=</span> <span class="n">caption</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">batch_page</span><span class="o">.</span><span class="n">uid</span> <span class="o">=</span> <span class="n">wx</span><span class="o">.</span><span class="n">NewId</span><span class="p">()</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">AddPage</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">batch_page</span><span class="p">,</span> <span class="n">caption</span><span class="p">,</span> <span class="bp">True</span><span class="p">)</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">batch_page</span><span class="o">.</span><span class="n">set_manager</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_manager</span><span class="p">)</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">enable_close_button</span><span class="p">()</span>
+            <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">batch_page</span></div>
+
+<div class="viewcode-block" id="FitPanel.add_empty_page"><a class="viewcode-back" href="../../../../../dev/sasview-api/sas.sasgui.perspectives.fitting.html#sas.sasgui.perspectives.fitting.fitpanel.FitPanel.add_empty_page">[docs]</a>    <span class="k">def</span> <span class="nf">add_empty_page</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        add an empty page</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">batch_on</span><span class="p">:</span>
+            <span class="n">panel</span> <span class="o">=</span> <span class="n">BatchFitPage</span><span class="p">(</span><span class="n">parent</span><span class="o">=</span><span class="bp">self</span><span class="p">)</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">batch_page_index</span> <span class="o">+=</span> <span class="mi">1</span>
+            <span class="n">caption</span> <span class="o">=</span> <span class="s2">&quot;BatchPage&quot;</span> <span class="o">+</span> <span class="nb">str</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">batch_page_index</span><span class="p">)</span>
+            <span class="n">panel</span><span class="o">.</span><span class="n">set_index_model</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">batch_page_index</span><span class="p">)</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="c1"># Increment index of fit page</span>
+            <span class="n">panel</span> <span class="o">=</span> <span class="n">FitPage</span><span class="p">(</span><span class="n">parent</span><span class="o">=</span><span class="bp">self</span><span class="p">)</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">fit_page_index</span> <span class="o">+=</span> <span class="mi">1</span>
+            <span class="n">caption</span> <span class="o">=</span> <span class="s2">&quot;FitPage&quot;</span> <span class="o">+</span> <span class="nb">str</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">fit_page_index</span><span class="p">)</span>
+            <span class="n">panel</span><span class="o">.</span><span class="n">set_index_model</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">fit_page_index</span><span class="p">)</span>
+        <span class="n">panel</span><span class="o">.</span><span class="n">batch_on</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">batch_on</span>
+        <span class="n">panel</span><span class="o">.</span><span class="n">_set_save_flag</span><span class="p">(</span><span class="ow">not</span> <span class="n">panel</span><span class="o">.</span><span class="n">batch_on</span><span class="p">)</span>
+        <span class="n">panel</span><span class="o">.</span><span class="n">set_model_dictionary</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">model_dictionary</span><span class="p">)</span>
+        <span class="n">panel</span><span class="o">.</span><span class="n">populate_box</span><span class="p">(</span><span class="n">model_list_box</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">model_list_box</span><span class="p">)</span>
+        <span class="n">panel</span><span class="o">.</span><span class="n">formfactor_combo_init</span><span class="p">()</span>
+        <span class="n">panel</span><span class="o">.</span><span class="n">set_manager</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_manager</span><span class="p">)</span>
+        <span class="n">panel</span><span class="o">.</span><span class="n">window_caption</span> <span class="o">=</span> <span class="n">caption</span>
+        <span class="n">panel</span><span class="o">.</span><span class="n">window_name</span> <span class="o">=</span> <span class="n">caption</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">AddPage</span><span class="p">(</span><span class="n">panel</span><span class="p">,</span> <span class="n">caption</span><span class="p">,</span> <span class="n">select</span><span class="o">=</span><span class="bp">True</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">opened_pages</span><span class="p">[</span><span class="n">panel</span><span class="o">.</span><span class="n">uid</span><span class="p">]</span> <span class="o">=</span> <span class="n">panel</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_manager</span><span class="o">.</span><span class="n">create_fit_problem</span><span class="p">(</span><span class="n">panel</span><span class="o">.</span><span class="n">uid</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_manager</span><span class="o">.</span><span class="n">page_finder</span><span class="p">[</span><span class="n">panel</span><span class="o">.</span><span class="n">uid</span><span class="p">]</span><span class="o">.</span><span class="n">add_data</span><span class="p">(</span><span class="n">panel</span><span class="o">.</span><span class="n">get_data</span><span class="p">())</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">enable_close_button</span><span class="p">()</span>
+        <span class="n">panel</span><span class="o">.</span><span class="n">on_set_focus</span><span class="p">(</span><span class="bp">None</span><span class="p">)</span>
+        <span class="k">return</span> <span class="n">panel</span></div>
+
+<div class="viewcode-block" id="FitPanel.enable_close_button"><a class="viewcode-back" href="../../../../../dev/sasview-api/sas.sasgui.perspectives.fitting.html#sas.sasgui.perspectives.fitting.fitpanel.FitPanel.enable_close_button">[docs]</a>    <span class="k">def</span> <span class="nf">enable_close_button</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        display the close button on tab for more than 1 tabs else remove the</span>
+<span class="sd">        close button</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">GetPageCount</span><span class="p">()</span> <span class="o">&lt;=</span> <span class="mi">1</span><span class="p">:</span>
+            <span class="n">style</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">GetWindowStyleFlag</span><span class="p">()</span>
+            <span class="n">flag</span> <span class="o">=</span> <span class="n">wx</span><span class="o">.</span><span class="n">aui</span><span class="o">.</span><span class="n">AUI_NB_CLOSE_ON_ACTIVE_TAB</span>
+            <span class="k">if</span> <span class="n">style</span> <span class="o">&amp;</span> <span class="n">wx</span><span class="o">.</span><span class="n">aui</span><span class="o">.</span><span class="n">AUI_NB_CLOSE_ON_ACTIVE_TAB</span> <span class="o">==</span> <span class="n">flag</span><span class="p">:</span>
+                <span class="n">style</span> <span class="o">=</span> <span class="n">style</span> <span class="o">&amp;</span> <span class="o">~</span><span class="n">wx</span><span class="o">.</span><span class="n">aui</span><span class="o">.</span><span class="n">AUI_NB_CLOSE_ON_ACTIVE_TAB</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">SetWindowStyle</span><span class="p">(</span><span class="n">style</span><span class="p">)</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">style</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">GetWindowStyleFlag</span><span class="p">()</span>
+            <span class="n">flag</span> <span class="o">=</span> <span class="n">wx</span><span class="o">.</span><span class="n">aui</span><span class="o">.</span><span class="n">AUI_NB_CLOSE_ON_ACTIVE_TAB</span>
+            <span class="k">if</span> <span class="n">style</span> <span class="o">&amp;</span> <span class="n">wx</span><span class="o">.</span><span class="n">aui</span><span class="o">.</span><span class="n">AUI_NB_CLOSE_ON_ACTIVE_TAB</span> <span class="o">!=</span> <span class="n">flag</span><span class="p">:</span>
+                <span class="n">style</span> <span class="o">|=</span> <span class="n">wx</span><span class="o">.</span><span class="n">aui</span><span class="o">.</span><span class="n">AUI_NB_CLOSE_ON_ACTIVE_TAB</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">SetWindowStyle</span><span class="p">(</span><span class="n">style</span><span class="p">)</span></div>
+
+<div class="viewcode-block" id="FitPanel.delete_data"><a class="viewcode-back" href="../../../../../dev/sasview-api/sas.sasgui.perspectives.fitting.html#sas.sasgui.perspectives.fitting.fitpanel.FitPanel.delete_data">[docs]</a>    <span class="k">def</span> <span class="nf">delete_data</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">data</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Delete the given data</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">if</span> <span class="n">data</span><span class="o">.</span><span class="n">__class__</span><span class="o">.</span><span class="n">__name__</span> <span class="o">!=</span> <span class="s2">&quot;list&quot;</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">,</span> <span class="s2">&quot;Fitpanel delete_data expect list of id&quot;</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="k">for</span> <span class="n">page</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">opened_pages</span><span class="o">.</span><span class="n">values</span><span class="p">():</span>
+                <span class="n">pos</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">GetPageIndex</span><span class="p">(</span><span class="n">page</span><span class="p">)</span>
+                <span class="n">temp_data</span> <span class="o">=</span> <span class="n">page</span><span class="o">.</span><span class="n">get_data</span><span class="p">()</span>
+                <span class="k">if</span> <span class="n">temp_data</span> <span class="ow">is</span> <span class="ow">not</span> <span class="bp">None</span> <span class="ow">and</span> <span class="n">temp_data</span><span class="o">.</span><span class="n">id</span> <span class="ow">in</span> <span class="n">data</span><span class="p">:</span>
+                    <span class="bp">self</span><span class="o">.</span><span class="n">close_page_with_data</span><span class="p">(</span><span class="n">temp_data</span><span class="p">)</span>
+            <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">sim_page</span> <span class="ow">is</span> <span class="ow">not</span> <span class="bp">None</span><span class="p">:</span>
+                <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">sim_page</span><span class="o">.</span><span class="n">model_list</span><span class="p">)</span> <span class="o">==</span> <span class="mi">0</span><span class="p">:</span>
+                    <span class="n">pos</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">GetPageIndex</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">sim_page</span><span class="p">)</span>
+                    <span class="bp">self</span><span class="o">.</span><span class="n">SetSelection</span><span class="p">(</span><span class="n">pos</span><span class="p">)</span>
+                    <span class="bp">self</span><span class="o">.</span><span class="n">on_close_page</span><span class="p">(</span><span class="n">event</span><span class="o">=</span><span class="bp">None</span><span class="p">)</span>
+                    <span class="bp">self</span><span class="o">.</span><span class="n">DeletePage</span><span class="p">(</span><span class="n">pos</span><span class="p">)</span>
+                    <span class="bp">self</span><span class="o">.</span><span class="n">sim_page</span> <span class="o">=</span> <span class="bp">None</span>
+                    <span class="bp">self</span><span class="o">.</span><span class="n">batch_on</span> <span class="o">=</span> <span class="bp">False</span>
+            <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">GetPageCount</span><span class="p">()</span> <span class="o">==</span> <span class="mi">0</span><span class="p">:</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">_manager</span><span class="o">.</span><span class="n">on_add_new_page</span><span class="p">(</span><span class="n">event</span><span class="o">=</span><span class="bp">None</span><span class="p">)</span></div>
+
+<div class="viewcode-block" id="FitPanel.set_data_on_batch_mode"><a class="viewcode-back" href="../../../../../dev/sasview-api/sas.sasgui.perspectives.fitting.html#sas.sasgui.perspectives.fitting.fitpanel.FitPanel.set_data_on_batch_mode">[docs]</a>    <span class="k">def</span> <span class="nf">set_data_on_batch_mode</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">data_list</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Add all data to a single tab when the application is on Batch mode.</span>
+<span class="sd">        However all data in the set of data must be either 1D or 2D type.</span>
+<span class="sd">        This method presents option to select the data type before creating a</span>
+<span class="sd">        tab.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">data_1d_list</span> <span class="o">=</span> <span class="p">[]</span>
+        <span class="n">data_2d_list</span> <span class="o">=</span> <span class="p">[]</span>
+        <span class="n">group_id_1d</span> <span class="o">=</span> <span class="n">wx</span><span class="o">.</span><span class="n">NewId</span><span class="p">()</span>
+        <span class="c1"># separate data into data1d and data2d list</span>
+        <span class="k">for</span> <span class="n">data</span> <span class="ow">in</span> <span class="n">data_list</span><span class="p">:</span>
+            <span class="k">if</span> <span class="n">data</span><span class="o">.</span><span class="n">__class__</span><span class="o">.</span><span class="n">__name__</span> <span class="o">==</span> <span class="s2">&quot;Data1D&quot;</span><span class="p">:</span>
+                <span class="n">data</span><span class="o">.</span><span class="n">group_id</span> <span class="o">=</span> <span class="n">group_id_1d</span>
+                <span class="n">data_1d_list</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">data</span><span class="p">)</span>
+            <span class="k">if</span> <span class="n">data</span><span class="o">.</span><span class="n">__class__</span><span class="o">.</span><span class="n">__name__</span> <span class="o">==</span> <span class="s2">&quot;Data2D&quot;</span><span class="p">:</span>
+                <span class="n">data</span><span class="o">.</span><span class="n">group_id</span> <span class="o">=</span> <span class="n">wx</span><span class="o">.</span><span class="n">NewId</span><span class="p">()</span>
+                <span class="n">data_2d_list</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">data</span><span class="p">)</span>
+        <span class="n">page</span> <span class="o">=</span> <span class="bp">None</span>
+        <span class="k">for</span> <span class="n">p</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">opened_pages</span><span class="o">.</span><span class="n">values</span><span class="p">():</span>
+            <span class="c1"># check if there is an empty page to fill up</span>
+            <span class="k">if</span> <span class="ow">not</span> <span class="n">check_data_validity</span><span class="p">(</span><span class="n">p</span><span class="o">.</span><span class="n">get_data</span><span class="p">())</span> <span class="ow">and</span> <span class="n">p</span><span class="o">.</span><span class="n">batch_on</span><span class="p">:</span>
+
+                <span class="c1"># make sure data get placed in 1D empty tab if data is 1D</span>
+                <span class="c1"># else data get place on 2D tab empty tab</span>
+                <span class="n">enable2D</span> <span class="o">=</span> <span class="n">p</span><span class="o">.</span><span class="n">get_view_mode</span><span class="p">()</span>
+                <span class="k">if</span> <span class="p">(</span><span class="n">data</span><span class="o">.</span><span class="n">__class__</span><span class="o">.</span><span class="n">__name__</span> <span class="o">==</span> <span class="s2">&quot;Data2D&quot;</span> <span class="ow">and</span> <span class="n">enable2D</span><span class="p">)</span>\
+                <span class="ow">or</span> <span class="p">(</span><span class="n">data</span><span class="o">.</span><span class="n">__class__</span><span class="o">.</span><span class="n">__name__</span> <span class="o">==</span> <span class="s2">&quot;Data1D&quot;</span> <span class="ow">and</span> <span class="ow">not</span> <span class="n">enable2D</span><span class="p">):</span>
+                    <span class="n">page</span> <span class="o">=</span> <span class="n">p</span>
+                    <span class="k">break</span>
+        <span class="k">if</span> <span class="n">data_1d_list</span> <span class="ow">and</span> <span class="n">data_2d_list</span><span class="p">:</span>
+            <span class="c1"># need to warning the user that this batch is a special case</span>
+            <span class="n">dlg</span> <span class="o">=</span> <span class="n">BatchDataDialog</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span>
+            <span class="k">if</span> <span class="n">dlg</span><span class="o">.</span><span class="n">ShowModal</span><span class="p">()</span> <span class="o">==</span> <span class="n">wx</span><span class="o">.</span><span class="n">ID_OK</span><span class="p">:</span>
+                <span class="n">data_type</span> <span class="o">=</span> <span class="n">dlg</span><span class="o">.</span><span class="n">get_data</span><span class="p">()</span>
+                <span class="n">dlg</span><span class="o">.</span><span class="n">Destroy</span><span class="p">()</span>
+                <span class="k">if</span> <span class="n">page</span> <span class="ow">is</span> <span class="bp">None</span><span class="p">:</span>
+                    <span class="n">page</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">add_empty_page</span><span class="p">()</span>
+                <span class="k">if</span> <span class="n">data_type</span> <span class="o">==</span> <span class="mi">1</span><span class="p">:</span>
+                    <span class="c1"># user has selected only data1D</span>
+                    <span class="n">page</span><span class="o">.</span><span class="n">fill_data_combobox</span><span class="p">(</span><span class="n">data_1d_list</span><span class="p">)</span>
+                <span class="k">elif</span> <span class="n">data_type</span> <span class="o">==</span> <span class="mi">2</span><span class="p">:</span>
+                    <span class="n">page</span><span class="o">.</span><span class="n">fill_data_combobox</span><span class="p">(</span><span class="n">data_2d_list</span><span class="p">)</span>
+            <span class="k">else</span><span class="p">:</span>
+                <span class="c1"># the batch analysis is canceled</span>
+                <span class="n">dlg</span><span class="o">.</span><span class="n">Destroy</span><span class="p">()</span>
+                <span class="k">return</span> <span class="bp">None</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="k">if</span> <span class="n">page</span> <span class="ow">is</span> <span class="bp">None</span><span class="p">:</span>
+                <span class="n">page</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">add_empty_page</span><span class="p">()</span>
+            <span class="k">if</span> <span class="n">data_1d_list</span> <span class="ow">and</span> <span class="ow">not</span> <span class="n">data_2d_list</span><span class="p">:</span>
+                <span class="c1"># only on type of data</span>
+                <span class="n">page</span><span class="o">.</span><span class="n">fill_data_combobox</span><span class="p">(</span><span class="n">data_1d_list</span><span class="p">)</span>
+            <span class="k">elif</span> <span class="ow">not</span> <span class="n">data_1d_list</span> <span class="ow">and</span> <span class="n">data_2d_list</span><span class="p">:</span>
+                <span class="n">page</span><span class="o">.</span><span class="n">fill_data_combobox</span><span class="p">(</span><span class="n">data_2d_list</span><span class="p">)</span>
+
+        <span class="n">pos</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">GetPageIndex</span><span class="p">(</span><span class="n">page</span><span class="p">)</span>
+        <span class="n">page</span><span class="o">.</span><span class="n">batch_on</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">batch_on</span>
+        <span class="n">page</span><span class="o">.</span><span class="n">_set_save_flag</span><span class="p">(</span><span class="ow">not</span> <span class="n">page</span><span class="o">.</span><span class="n">batch_on</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">SetSelection</span><span class="p">(</span><span class="n">pos</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">opened_pages</span><span class="p">[</span><span class="n">page</span><span class="o">.</span><span class="n">uid</span><span class="p">]</span> <span class="o">=</span> <span class="n">page</span>
+        <span class="k">return</span> <span class="n">page</span></div>
+
+<div class="viewcode-block" id="FitPanel.set_data"><a class="viewcode-back" href="../../../../../dev/sasview-api/sas.sasgui.perspectives.fitting.html#sas.sasgui.perspectives.fitting.fitpanel.FitPanel.set_data">[docs]</a>    <span class="k">def</span> <span class="nf">set_data</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">data_list</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Add a fitting page on the notebook contained by fitpanel</span>
+
+<span class="sd">        :param data_list: data to fit</span>
+
+<span class="sd">        :return panel : page just added for further used.</span>
+<span class="sd">        is used by fitting module</span>
+
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="n">data_list</span><span class="p">:</span>
+            <span class="k">return</span> <span class="bp">None</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">batch_on</span><span class="p">:</span>
+            <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">set_data_on_batch_mode</span><span class="p">(</span><span class="n">data_list</span><span class="p">)</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">data</span> <span class="o">=</span> <span class="bp">None</span>
+            <span class="k">try</span><span class="p">:</span>
+                <span class="n">data</span> <span class="o">=</span> <span class="n">data_list</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
+            <span class="k">except</span> <span class="ne">Exception</span><span class="p">:</span>
+                <span class="c1"># for &#39;fitv&#39; files</span>
+                <span class="n">data_list</span> <span class="o">=</span> <span class="p">[</span><span class="n">data</span><span class="p">]</span>
+                <span class="n">data</span> <span class="o">=</span> <span class="n">data_list</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
+
+            <span class="k">if</span> <span class="n">data</span> <span class="ow">is</span> <span class="bp">None</span><span class="p">:</span>
+                <span class="k">return</span> <span class="bp">None</span>
+        <span class="n">focused_page</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">GetPage</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">GetSelection</span><span class="p">())</span>
+        <span class="k">for</span> <span class="n">page</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">opened_pages</span><span class="o">.</span><span class="n">values</span><span class="p">():</span>
+            <span class="c1"># check if the selected data existing in the fitpanel</span>
+            <span class="n">pos</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">GetPageIndex</span><span class="p">(</span><span class="n">page</span><span class="p">)</span>
+            <span class="k">if</span> <span class="ow">not</span> <span class="n">check_data_validity</span><span class="p">(</span><span class="n">page</span><span class="o">.</span><span class="n">get_data</span><span class="p">())</span> <span class="ow">and</span> <span class="ow">not</span> <span class="n">page</span><span class="o">.</span><span class="n">batch_on</span><span class="p">:</span>
+                <span class="k">if</span> <span class="n">page</span><span class="o">.</span><span class="n">model</span> <span class="ow">is</span> <span class="ow">not</span> <span class="bp">None</span> <span class="ow">and</span> <span class="n">page</span> <span class="o">!=</span> <span class="n">focused_page</span><span class="p">:</span>
+                    <span class="c1"># Page has an active theory and is in background - don&#39;t</span>
+                    <span class="c1"># send data here.</span>
+                    <span class="k">continue</span>
+                <span class="c1"># make sure data get placed in 1D empty tab if data is 1D</span>
+                <span class="c1"># else data get place on 2D tab empty tab</span>
+                <span class="n">enable2D</span> <span class="o">=</span> <span class="n">page</span><span class="o">.</span><span class="n">get_view_mode</span><span class="p">()</span>
+                <span class="k">if</span> <span class="p">(</span><span class="n">data</span><span class="o">.</span><span class="n">__class__</span><span class="o">.</span><span class="n">__name__</span> <span class="o">==</span> <span class="s2">&quot;Data2D&quot;</span> <span class="ow">and</span> <span class="n">enable2D</span><span class="p">)</span>\
+                   <span class="ow">or</span> <span class="p">(</span><span class="n">data</span><span class="o">.</span><span class="n">__class__</span><span class="o">.</span><span class="n">__name__</span> <span class="o">==</span> <span class="s2">&quot;Data1D&quot;</span> <span class="ow">and</span> <span class="ow">not</span> <span class="n">enable2D</span><span class="p">):</span>
+                    <span class="n">page</span><span class="o">.</span><span class="n">batch_on</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">batch_on</span>
+                    <span class="n">page</span><span class="o">.</span><span class="n">_set_save_flag</span><span class="p">(</span><span class="ow">not</span> <span class="n">page</span><span class="o">.</span><span class="n">batch_on</span><span class="p">)</span>
+                    <span class="n">page</span><span class="o">.</span><span class="n">fill_data_combobox</span><span class="p">(</span><span class="n">data_list</span><span class="p">)</span>
+                    <span class="c1"># caption = &quot;FitPage&quot; + str(self.fit_page_index)</span>
+                    <span class="bp">self</span><span class="o">.</span><span class="n">SetPageText</span><span class="p">(</span><span class="n">pos</span><span class="p">,</span> <span class="n">page</span><span class="o">.</span><span class="n">window_caption</span><span class="p">)</span>
+                    <span class="bp">self</span><span class="o">.</span><span class="n">SetSelection</span><span class="p">(</span><span class="n">pos</span><span class="p">)</span>
+                    <span class="k">return</span> <span class="n">page</span>
+        <span class="c1"># create new page and add data</span>
+        <span class="n">page</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">add_empty_page</span><span class="p">()</span>
+        <span class="n">pos</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">GetPageIndex</span><span class="p">(</span><span class="n">page</span><span class="p">)</span>
+        <span class="n">page</span><span class="o">.</span><span class="n">fill_data_combobox</span><span class="p">(</span><span class="n">data_list</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">opened_pages</span><span class="p">[</span><span class="n">page</span><span class="o">.</span><span class="n">uid</span><span class="p">]</span> <span class="o">=</span> <span class="n">page</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">SetSelection</span><span class="p">(</span><span class="n">pos</span><span class="p">)</span>
+        <span class="k">return</span> <span class="n">page</span></div>
+
+    <span class="k">def</span> <span class="nf">_onGetstate</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">event</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        copy the state of a page</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">page</span> <span class="o">=</span> <span class="n">event</span><span class="o">.</span><span class="n">page</span>
+        <span class="k">if</span> <span class="n">page</span><span class="o">.</span><span class="n">uid</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">fit_page_name</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">fit_page_name</span><span class="p">[</span><span class="n">page</span><span class="o">.</span><span class="n">uid</span><span class="p">]</span><span class="o">.</span><span class="n">appendItem</span><span class="p">(</span><span class="n">page</span><span class="o">.</span><span class="n">createMemento</span><span class="p">())</span>
+
+    <span class="k">def</span> <span class="nf">_onUndo</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">event</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        return the previous state of a given page is available</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">page</span> <span class="o">=</span> <span class="n">event</span><span class="o">.</span><span class="n">page</span>
+        <span class="k">if</span> <span class="n">page</span><span class="o">.</span><span class="n">uid</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">fit_page_name</span><span class="p">:</span>
+            <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">fit_page_name</span><span class="p">[</span><span class="n">page</span><span class="o">.</span><span class="n">uid</span><span class="p">]</span><span class="o">.</span><span class="n">getCurrentPosition</span><span class="p">()</span> <span class="o">==</span> <span class="mi">0</span><span class="p">:</span>
+                <span class="n">state</span> <span class="o">=</span> <span class="bp">None</span>
+            <span class="k">else</span><span class="p">:</span>
+                <span class="n">state</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">fit_page_name</span><span class="p">[</span><span class="n">page</span><span class="o">.</span><span class="n">uid</span><span class="p">]</span><span class="o">.</span><span class="n">getPreviousItem</span><span class="p">()</span>
+                <span class="n">page</span><span class="o">.</span><span class="n">_redo</span><span class="o">.</span><span class="n">Enable</span><span class="p">(</span><span class="bp">True</span><span class="p">)</span>
+            <span class="n">page</span><span class="o">.</span><span class="n">reset_page</span><span class="p">(</span><span class="n">state</span><span class="p">)</span>
+
+    <span class="k">def</span> <span class="nf">_onRedo</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">event</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        return the next state available</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">page</span> <span class="o">=</span> <span class="n">event</span><span class="o">.</span><span class="n">page</span>
+        <span class="k">if</span> <span class="n">page</span><span class="o">.</span><span class="n">uid</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">fit_page_name</span><span class="p">:</span>
+            <span class="n">length</span> <span class="o">=</span> <span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">fit_page_name</span><span class="p">[</span><span class="n">page</span><span class="o">.</span><span class="n">uid</span><span class="p">])</span>
+            <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">fit_page_name</span><span class="p">[</span><span class="n">page</span><span class="o">.</span><span class="n">uid</span><span class="p">]</span><span class="o">.</span><span class="n">getCurrentPosition</span><span class="p">()</span> <span class="o">==</span> <span class="n">length</span> <span class="o">-</span> <span class="mi">1</span><span class="p">:</span>
+                <span class="n">state</span> <span class="o">=</span> <span class="bp">None</span>
+                <span class="n">page</span><span class="o">.</span><span class="n">_redo</span><span class="o">.</span><span class="n">Enable</span><span class="p">(</span><span class="bp">False</span><span class="p">)</span>
+                <span class="n">page</span><span class="o">.</span><span class="n">_redo</span><span class="o">.</span><span class="n">Enable</span><span class="p">(</span><span class="bp">True</span><span class="p">)</span>
+            <span class="k">else</span><span class="p">:</span>
+                <span class="n">state</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">fit_page_name</span><span class="p">[</span><span class="n">page</span><span class="o">.</span><span class="n">uid</span><span class="p">]</span><span class="o">.</span><span class="n">getNextItem</span><span class="p">()</span>
+            <span class="n">page</span><span class="o">.</span><span class="n">reset_page</span><span class="p">(</span><span class="n">state</span><span class="p">)</span>
+
+    <span class="k">def</span> <span class="nf">_close_helper</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">selected_page</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Delete the given page from the notebook</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="c1"># remove hint page</span>
+        <span class="c1"># if selected_page == self.hint_page:</span>
+        <span class="c1">#    return</span>
+        <span class="c1"># removing sim_page</span>
+        <span class="k">if</span> <span class="n">selected_page</span> <span class="o">==</span> <span class="bp">self</span><span class="o">.</span><span class="n">sim_page</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_manager</span><span class="o">.</span><span class="n">sim_page</span> <span class="o">=</span> <span class="bp">None</span>
+            <span class="k">return</span>
+        <span class="k">if</span> <span class="n">selected_page</span> <span class="o">==</span> <span class="bp">self</span><span class="o">.</span><span class="n">batch_page</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_manager</span><span class="o">.</span><span class="n">batch_page</span> <span class="o">=</span> <span class="bp">None</span>
+            <span class="k">return</span>
+        <span class="c1"># closing other pages</span>
+        <span class="n">state</span> <span class="o">=</span> <span class="n">selected_page</span><span class="o">.</span><span class="n">createMemento</span><span class="p">()</span>
+        <span class="n">page_finder</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_manager</span><span class="o">.</span><span class="n">get_page_finder</span><span class="p">()</span>
+        <span class="c1"># removing fit page</span>
+        <span class="n">data</span> <span class="o">=</span> <span class="n">selected_page</span><span class="o">.</span><span class="n">get_data</span><span class="p">()</span>
+        <span class="c1"># Don&#39; t remove plot for 2D</span>
+        <span class="n">flag</span> <span class="o">=</span> <span class="bp">True</span>
+        <span class="k">if</span> <span class="n">data</span><span class="o">.</span><span class="n">__class__</span><span class="o">.</span><span class="n">__name__</span> <span class="o">==</span> <span class="s1">&#39;Data2D&#39;</span><span class="p">:</span>
+            <span class="n">flag</span> <span class="o">=</span> <span class="bp">False</span>
+        <span class="k">if</span> <span class="n">selected_page</span> <span class="ow">in</span> <span class="n">page_finder</span><span class="p">:</span>
+            <span class="c1"># Delete the name of the page into the list of open page</span>
+            <span class="k">for</span> <span class="n">uid</span><span class="p">,</span> <span class="nb">list</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">opened_pages</span><span class="o">.</span><span class="n">iteritems</span><span class="p">():</span>
+                <span class="c1"># Don&#39;t return any panel is the exact same page is created</span>
+                <span class="k">if</span> <span class="n">flag</span> <span class="ow">and</span> <span class="n">selected_page</span><span class="o">.</span><span class="n">uid</span> <span class="o">==</span> <span class="n">uid</span><span class="p">:</span>
+                    <span class="bp">self</span><span class="o">.</span><span class="n">_manager</span><span class="o">.</span><span class="n">remove_plot</span><span class="p">(</span><span class="n">uid</span><span class="p">,</span> <span class="n">theory</span><span class="o">=</span><span class="bp">False</span><span class="p">)</span>
+                    <span class="k">break</span>
+            <span class="k">del</span> <span class="n">page_finder</span><span class="p">[</span><span class="n">selected_page</span><span class="p">]</span>
+
+        <span class="c1"># Delete the name of the page into the list of open page</span>
+        <span class="k">for</span> <span class="n">uid</span><span class="p">,</span> <span class="nb">list</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">opened_pages</span><span class="o">.</span><span class="n">iteritems</span><span class="p">():</span>
+            <span class="c1"># Don&#39;t return any panel is the exact same page is created</span>
+            <span class="k">if</span> <span class="n">selected_page</span><span class="o">.</span><span class="n">uid</span> <span class="o">==</span> <span class="n">uid</span><span class="p">:</span>
+                <span class="k">del</span> <span class="bp">self</span><span class="o">.</span><span class="n">opened_pages</span><span class="p">[</span><span class="n">selected_page</span><span class="o">.</span><span class="n">uid</span><span class="p">]</span>
+                <span class="k">break</span>
+        <span class="c1"># remove the check box link to the model name of the selected_page</span>
+        <span class="k">try</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">sim_page</span><span class="o">.</span><span class="n">draw_page</span><span class="p">()</span>
+        <span class="k">except</span><span class="p">:</span>
+            <span class="c1"># that page is already deleted no need to remove check box on</span>
+            <span class="c1"># non existing page</span>
+            <span class="k">pass</span>
+        <span class="k">try</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">batch_page</span><span class="o">.</span><span class="n">draw_page</span><span class="p">()</span>
+        <span class="k">except</span><span class="p">:</span>
+            <span class="c1"># that page is already deleted no need to remove check box on</span>
+            <span class="c1"># non existing page</span>
+            <span class="k">pass</span></div>
+</pre></div>
+
+          </div>
+        </div>
+      </div>
+      <div class="sphinxsidebar" role="navigation" aria-label="main navigation">
+        <div class="sphinxsidebarwrapper">
+<div id="searchbox" style="display: none" role="search">
+  <h3>Quick search</h3>
+    <form class="search" action="../../../../../search.html" method="get">
+      <input type="text" name="q" />
+      <input type="submit" value="Go" />
+      <input type="hidden" name="check_keywords" value="yes" />
+      <input type="hidden" name="area" value="default" />
+    </form>
+</div>
+<script type="text/javascript">$('#searchbox').show(0);</script>
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="related" role="navigation" aria-label="related navigation">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="../../../../../genindex.html" title="General Index"
+             >index</a></li>
+        <li class="right" >
+          <a href="../../../../../py-modindex.html" title="Python Module Index"
+             >modules</a> |</li>
+        <li class="nav-item nav-item-0"><a href="../../../../../index.html">SasView 4.2.0 documentation</a> &raquo;</li>
+          <li class="nav-item nav-item-1"><a href="../../../../index.html" >Module code</a> &raquo;</li>
+          <li class="nav-item nav-item-2"><a href="../../../../sas.html" >sas</a> &raquo;</li>
+          <li class="nav-item nav-item-3"><a href="../fitting.html" >sas.sasgui.perspectives.fitting</a> &raquo;</li> 
+      </ul>
+    </div>
+    <div class="footer" role="contentinfo">
+        &copy; Copyright 2018, The SasView Project.
+      Created using <a href="http://sphinx-doc.org/">Sphinx</a> 1.4.1.
+    </div>
+  </body>
+</html>

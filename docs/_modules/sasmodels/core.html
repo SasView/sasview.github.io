@@ -1,0 +1,464 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+  "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+    
+    <title>sasmodels.core &mdash; SasView 4.2.0 documentation</title>
+    
+    <link rel="stylesheet" href="../../_static/classic.css" type="text/css" />
+    <link rel="stylesheet" href="../../_static/pygments.css" type="text/css" />
+    
+    <script type="text/javascript">
+      var DOCUMENTATION_OPTIONS = {
+        URL_ROOT:    '../../',
+        VERSION:     '4.2.0',
+        COLLAPSE_INDEX: false,
+        FILE_SUFFIX: '.html',
+        HAS_SOURCE:  true
+      };
+    </script>
+    <script type="text/javascript" src="../../_static/jquery.js"></script>
+    <script type="text/javascript" src="../../_static/underscore.js"></script>
+    <script type="text/javascript" src="../../_static/doctools.js"></script>
+    <script type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.1/MathJax.js?config=TeX-MML-AM_CHTML"></script>
+    <link rel="top" title="SasView 4.2.0 documentation" href="../../index.html" />
+    <link rel="up" title="sasmodels" href="../sasmodels.html" /> 
+  </head>
+  <body role="document">
+    <div class="related" role="navigation" aria-label="related navigation">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="../../genindex.html" title="General Index"
+             accesskey="I">index</a></li>
+        <li class="right" >
+          <a href="../../py-modindex.html" title="Python Module Index"
+             >modules</a> |</li>
+        <li class="nav-item nav-item-0"><a href="../../index.html">SasView 4.2.0 documentation</a> &raquo;</li>
+          <li class="nav-item nav-item-1"><a href="../index.html" >Module code</a> &raquo;</li>
+          <li class="nav-item nav-item-2"><a href="../sasmodels.html" accesskey="U">sasmodels</a> &raquo;</li> 
+      </ul>
+    </div>  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          <div class="body" role="main">
+            
+  <h1>Source code for sasmodels.core</h1><div class="highlight"><pre>
+<span></span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">Core model handling routines.</span>
+<span class="sd">&quot;&quot;&quot;</span>
+<span class="kn">from</span> <span class="nn">__future__</span> <span class="kn">import</span> <span class="n">print_function</span>
+
+<span class="n">__all__</span> <span class="o">=</span> <span class="p">[</span>
+    <span class="s2">&quot;list_models&quot;</span><span class="p">,</span> <span class="s2">&quot;load_model&quot;</span><span class="p">,</span> <span class="s2">&quot;load_model_info&quot;</span><span class="p">,</span>
+    <span class="s2">&quot;build_model&quot;</span><span class="p">,</span> <span class="s2">&quot;precompile_dlls&quot;</span><span class="p">,</span>
+    <span class="p">]</span>
+
+<span class="kn">import</span> <span class="nn">os</span>
+<span class="kn">from</span> <span class="nn">os.path</span> <span class="kn">import</span> <span class="n">basename</span><span class="p">,</span> <span class="n">join</span> <span class="k">as</span> <span class="n">joinpath</span>
+<span class="kn">from</span> <span class="nn">glob</span> <span class="kn">import</span> <span class="n">glob</span>
+<span class="kn">import</span> <span class="nn">re</span>
+
+<span class="kn">import</span> <span class="nn">numpy</span> <span class="kn">as</span> <span class="nn">np</span> <span class="c1"># type: ignore</span>
+
+<span class="kn">from</span> <span class="nn">.</span> <span class="kn">import</span> <span class="n">generate</span>
+<span class="kn">from</span> <span class="nn">.</span> <span class="kn">import</span> <span class="n">modelinfo</span>
+<span class="kn">from</span> <span class="nn">.</span> <span class="kn">import</span> <span class="n">product</span>
+<span class="kn">from</span> <span class="nn">.</span> <span class="kn">import</span> <span class="n">mixture</span>
+<span class="kn">from</span> <span class="nn">.</span> <span class="kn">import</span> <span class="n">kernelpy</span>
+<span class="kn">from</span> <span class="nn">.</span> <span class="kn">import</span> <span class="n">kernelcl</span>
+<span class="kn">from</span> <span class="nn">.</span> <span class="kn">import</span> <span class="n">kerneldll</span>
+<span class="kn">from</span> <span class="nn">.</span> <span class="kn">import</span> <span class="n">custom</span>
+
+<span class="c1"># pylint: disable=unused-import</span>
+<span class="k">try</span><span class="p">:</span>
+    <span class="kn">from</span> <span class="nn">typing</span> <span class="kn">import</span> <span class="n">List</span><span class="p">,</span> <span class="n">Union</span><span class="p">,</span> <span class="n">Optional</span><span class="p">,</span> <span class="n">Any</span>
+    <span class="kn">from</span> <span class="nn">.kernel</span> <span class="kn">import</span> <span class="n">KernelModel</span>
+    <span class="kn">from</span> <span class="nn">.modelinfo</span> <span class="kn">import</span> <span class="n">ModelInfo</span>
+<span class="k">except</span> <span class="ne">ImportError</span><span class="p">:</span>
+    <span class="k">pass</span>
+<span class="c1"># pylint: enable=unused-import</span>
+
+<span class="n">CUSTOM_MODEL_PATH</span> <span class="o">=</span> <span class="n">os</span><span class="o">.</span><span class="n">environ</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">&#39;SAS_MODELPATH&#39;</span><span class="p">,</span> <span class="s2">&quot;&quot;</span><span class="p">)</span>
+<span class="k">if</span> <span class="n">CUSTOM_MODEL_PATH</span> <span class="o">==</span> <span class="s2">&quot;&quot;</span><span class="p">:</span>
+    <span class="n">CUSTOM_MODEL_PATH</span> <span class="o">=</span> <span class="n">joinpath</span><span class="p">(</span><span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">expanduser</span><span class="p">(</span><span class="s2">&quot;~&quot;</span><span class="p">),</span> <span class="s2">&quot;.sasmodels&quot;</span><span class="p">,</span> <span class="s2">&quot;custom_models&quot;</span><span class="p">)</span>
+    <span class="c1">#if not os.path.isdir(CUSTOM_MODEL_PATH):</span>
+    <span class="c1">#    os.makedirs(CUSTOM_MODEL_PATH)</span>
+
+<span class="c1"># TODO: refactor composite model support</span>
+<span class="c1"># The current load_model_info/build_model does not reuse existing model</span>
+<span class="c1"># definitions when loading a composite model, instead reloading and</span>
+<span class="c1"># rebuilding the kernel for each component model in the expression.  This</span>
+<span class="c1"># is fine in a scripting environment where the model is built when the script</span>
+<span class="c1"># starts and is thrown away when the script ends, but may not be the best</span>
+<span class="c1"># solution in a long-lived application.  This affects the following functions:</span>
+<span class="c1">#</span>
+<span class="c1">#    load_model</span>
+<span class="c1">#    load_model_info</span>
+<span class="c1">#    build_model</span>
+
+<span class="n">KINDS</span> <span class="o">=</span> <span class="p">(</span><span class="s2">&quot;all&quot;</span><span class="p">,</span> <span class="s2">&quot;py&quot;</span><span class="p">,</span> <span class="s2">&quot;c&quot;</span><span class="p">,</span> <span class="s2">&quot;double&quot;</span><span class="p">,</span> <span class="s2">&quot;single&quot;</span><span class="p">,</span> <span class="s2">&quot;opencl&quot;</span><span class="p">,</span> <span class="s2">&quot;1d&quot;</span><span class="p">,</span> <span class="s2">&quot;2d&quot;</span><span class="p">,</span>
+         <span class="s2">&quot;nonmagnetic&quot;</span><span class="p">,</span> <span class="s2">&quot;magnetic&quot;</span><span class="p">)</span>
+<div class="viewcode-block" id="list_models"><a class="viewcode-back" href="../../dev/sasmodels-api/sasmodels.html#sasmodels.core.list_models">[docs]</a><span class="k">def</span> <span class="nf">list_models</span><span class="p">(</span><span class="n">kind</span><span class="o">=</span><span class="bp">None</span><span class="p">):</span>
+    <span class="c1"># type: (str) -&gt; List[str]</span>
+    <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Return the list of available models on the model path.</span>
+
+<span class="sd">    *kind* can be one of the following:</span>
+
+<span class="sd">        * all: all models</span>
+<span class="sd">        * py: python models only</span>
+<span class="sd">        * c: compiled models only</span>
+<span class="sd">        * single: models which support single precision</span>
+<span class="sd">        * double: models which require double precision</span>
+<span class="sd">        * opencl: controls if OpenCL is supperessed</span>
+<span class="sd">        * 1d: models which are 1D only, or 2D using abs(q)</span>
+<span class="sd">        * 2d: models which can be 2D</span>
+<span class="sd">        * magnetic: models with an sld</span>
+<span class="sd">        * nommagnetic: models without an sld</span>
+
+<span class="sd">    For multiple conditions, combine with plus.  For example, *c+single+2d*</span>
+<span class="sd">    would return all oriented models implemented in C which can be computed</span>
+<span class="sd">    accurately with single precision arithmetic.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="k">if</span> <span class="n">kind</span> <span class="ow">and</span> <span class="nb">any</span><span class="p">(</span><span class="n">k</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">KINDS</span> <span class="k">for</span> <span class="n">k</span> <span class="ow">in</span> <span class="n">kind</span><span class="o">.</span><span class="n">split</span><span class="p">(</span><span class="s1">&#39;+&#39;</span><span class="p">)):</span>
+        <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s2">&quot;kind not in &quot;</span> <span class="o">+</span> <span class="s2">&quot;, &quot;</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">KINDS</span><span class="p">))</span>
+    <span class="n">files</span> <span class="o">=</span> <span class="nb">sorted</span><span class="p">(</span><span class="n">glob</span><span class="p">(</span><span class="n">joinpath</span><span class="p">(</span><span class="n">generate</span><span class="o">.</span><span class="n">MODEL_PATH</span><span class="p">,</span> <span class="s2">&quot;[a-zA-Z]*.py&quot;</span><span class="p">)))</span>
+    <span class="n">available_models</span> <span class="o">=</span> <span class="p">[</span><span class="n">basename</span><span class="p">(</span><span class="n">f</span><span class="p">)[:</span><span class="o">-</span><span class="mi">3</span><span class="p">]</span> <span class="k">for</span> <span class="n">f</span> <span class="ow">in</span> <span class="n">files</span><span class="p">]</span>
+    <span class="k">if</span> <span class="n">kind</span> <span class="ow">and</span> <span class="s1">&#39;+&#39;</span> <span class="ow">in</span> <span class="n">kind</span><span class="p">:</span>
+        <span class="n">all_kinds</span> <span class="o">=</span> <span class="n">kind</span><span class="o">.</span><span class="n">split</span><span class="p">(</span><span class="s1">&#39;+&#39;</span><span class="p">)</span>
+        <span class="n">condition</span> <span class="o">=</span> <span class="k">lambda</span> <span class="n">name</span><span class="p">:</span> <span class="nb">all</span><span class="p">(</span><span class="n">_matches</span><span class="p">(</span><span class="n">name</span><span class="p">,</span> <span class="n">k</span><span class="p">)</span> <span class="k">for</span> <span class="n">k</span> <span class="ow">in</span> <span class="n">all_kinds</span><span class="p">)</span>
+    <span class="k">else</span><span class="p">:</span>
+        <span class="n">condition</span> <span class="o">=</span> <span class="k">lambda</span> <span class="n">name</span><span class="p">:</span> <span class="n">_matches</span><span class="p">(</span><span class="n">name</span><span class="p">,</span> <span class="n">kind</span><span class="p">)</span>
+    <span class="n">selected</span> <span class="o">=</span> <span class="p">[</span><span class="n">name</span> <span class="k">for</span> <span class="n">name</span> <span class="ow">in</span> <span class="n">available_models</span> <span class="k">if</span> <span class="n">condition</span><span class="p">(</span><span class="n">name</span><span class="p">)]</span>
+
+    <span class="k">return</span> <span class="n">selected</span></div>
+
+<span class="k">def</span> <span class="nf">_matches</span><span class="p">(</span><span class="n">name</span><span class="p">,</span> <span class="n">kind</span><span class="p">):</span>
+    <span class="k">if</span> <span class="n">kind</span> <span class="ow">is</span> <span class="bp">None</span> <span class="ow">or</span> <span class="n">kind</span> <span class="o">==</span> <span class="s2">&quot;all&quot;</span><span class="p">:</span>
+        <span class="k">return</span> <span class="bp">True</span>
+    <span class="n">info</span> <span class="o">=</span> <span class="n">load_model_info</span><span class="p">(</span><span class="n">name</span><span class="p">)</span>
+    <span class="n">pars</span> <span class="o">=</span> <span class="n">info</span><span class="o">.</span><span class="n">parameters</span><span class="o">.</span><span class="n">kernel_parameters</span>
+    <span class="k">if</span> <span class="n">kind</span> <span class="o">==</span> <span class="s2">&quot;py&quot;</span> <span class="ow">and</span> <span class="nb">callable</span><span class="p">(</span><span class="n">info</span><span class="o">.</span><span class="n">Iq</span><span class="p">):</span>
+        <span class="k">return</span> <span class="bp">True</span>
+    <span class="k">elif</span> <span class="n">kind</span> <span class="o">==</span> <span class="s2">&quot;c&quot;</span> <span class="ow">and</span> <span class="ow">not</span> <span class="nb">callable</span><span class="p">(</span><span class="n">info</span><span class="o">.</span><span class="n">Iq</span><span class="p">):</span>
+        <span class="k">return</span> <span class="bp">True</span>
+    <span class="k">elif</span> <span class="n">kind</span> <span class="o">==</span> <span class="s2">&quot;double&quot;</span> <span class="ow">and</span> <span class="ow">not</span> <span class="n">info</span><span class="o">.</span><span class="n">single</span><span class="p">:</span>
+        <span class="k">return</span> <span class="bp">True</span>
+    <span class="k">elif</span> <span class="n">kind</span> <span class="o">==</span> <span class="s2">&quot;single&quot;</span> <span class="ow">and</span> <span class="n">info</span><span class="o">.</span><span class="n">single</span><span class="p">:</span>
+        <span class="k">return</span> <span class="bp">True</span>
+    <span class="k">elif</span> <span class="n">kind</span> <span class="o">==</span> <span class="s2">&quot;opencl&quot;</span> <span class="ow">and</span> <span class="n">info</span><span class="o">.</span><span class="n">opencl</span><span class="p">:</span>
+        <span class="k">return</span> <span class="bp">True</span>
+    <span class="k">elif</span> <span class="n">kind</span> <span class="o">==</span> <span class="s2">&quot;2d&quot;</span> <span class="ow">and</span> <span class="nb">any</span><span class="p">(</span><span class="n">p</span><span class="o">.</span><span class="n">type</span> <span class="o">==</span> <span class="s1">&#39;orientation&#39;</span> <span class="k">for</span> <span class="n">p</span> <span class="ow">in</span> <span class="n">pars</span><span class="p">):</span>
+        <span class="k">return</span> <span class="bp">True</span>
+    <span class="k">elif</span> <span class="n">kind</span> <span class="o">==</span> <span class="s2">&quot;1d&quot;</span> <span class="ow">and</span> <span class="nb">all</span><span class="p">(</span><span class="n">p</span><span class="o">.</span><span class="n">type</span> <span class="o">!=</span> <span class="s1">&#39;orientation&#39;</span> <span class="k">for</span> <span class="n">p</span> <span class="ow">in</span> <span class="n">pars</span><span class="p">):</span>
+        <span class="k">return</span> <span class="bp">True</span>
+    <span class="k">elif</span> <span class="n">kind</span> <span class="o">==</span> <span class="s2">&quot;magnetic&quot;</span> <span class="ow">and</span> <span class="nb">any</span><span class="p">(</span><span class="n">p</span><span class="o">.</span><span class="n">type</span> <span class="o">==</span> <span class="s1">&#39;sld&#39;</span> <span class="k">for</span> <span class="n">p</span> <span class="ow">in</span> <span class="n">pars</span><span class="p">):</span>
+        <span class="k">return</span> <span class="bp">True</span>
+    <span class="k">elif</span> <span class="n">kind</span> <span class="o">==</span> <span class="s2">&quot;nonmagnetic&quot;</span> <span class="ow">and</span> <span class="nb">any</span><span class="p">(</span><span class="n">p</span><span class="o">.</span><span class="n">type</span> <span class="o">!=</span> <span class="s1">&#39;sld&#39;</span> <span class="k">for</span> <span class="n">p</span> <span class="ow">in</span> <span class="n">pars</span><span class="p">):</span>
+        <span class="k">return</span> <span class="bp">True</span>
+    <span class="k">return</span> <span class="bp">False</span>
+
+<div class="viewcode-block" id="load_model"><a class="viewcode-back" href="../../dev/sasmodels-api/sasmodels.html#sasmodels.core.load_model">[docs]</a><span class="k">def</span> <span class="nf">load_model</span><span class="p">(</span><span class="n">model_name</span><span class="p">,</span> <span class="n">dtype</span><span class="o">=</span><span class="bp">None</span><span class="p">,</span> <span class="n">platform</span><span class="o">=</span><span class="s1">&#39;ocl&#39;</span><span class="p">):</span>
+    <span class="c1"># type: (str, str, str) -&gt; KernelModel</span>
+    <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Load model info and build model.</span>
+
+<span class="sd">    *model_name* is the name of the model, or perhaps a model expression</span>
+<span class="sd">    such as sphere*hardsphere or sphere+cylinder.</span>
+
+<span class="sd">    *dtype* and *platform* are given by :func:`build_model`.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="k">return</span> <span class="n">build_model</span><span class="p">(</span><span class="n">load_model_info</span><span class="p">(</span><span class="n">model_name</span><span class="p">),</span>
+                       <span class="n">dtype</span><span class="o">=</span><span class="n">dtype</span><span class="p">,</span> <span class="n">platform</span><span class="o">=</span><span class="n">platform</span><span class="p">)</span></div>
+
+<div class="viewcode-block" id="load_model_info"><a class="viewcode-back" href="../../dev/sasmodels-api/sasmodels.html#sasmodels.core.load_model_info">[docs]</a><span class="k">def</span> <span class="nf">load_model_info</span><span class="p">(</span><span class="n">model_string</span><span class="p">):</span>
+    <span class="c1"># type: (str) -&gt; modelinfo.ModelInfo</span>
+    <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Load a model definition given the model name.</span>
+
+<span class="sd">    *model_string* is the name of the model, or perhaps a model expression</span>
+<span class="sd">    such as sphere*cylinder or sphere+cylinder. Use &#39;@&#39; for a structure</span>
+<span class="sd">    factor product, e.g. sphere@hardsphere. Custom models can be specified by</span>
+<span class="sd">    prefixing the model name with &#39;custom.&#39;, e.g. &#39;custom.MyModel+sphere&#39;.</span>
+
+<span class="sd">    This returns a handle to the module defining the model.  This can be</span>
+<span class="sd">    used with functions in generate to build the docs or extract model info.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="k">if</span> <span class="s2">&quot;+&quot;</span> <span class="ow">in</span> <span class="n">model_string</span><span class="p">:</span>
+        <span class="n">parts</span> <span class="o">=</span> <span class="p">[</span><span class="n">load_model_info</span><span class="p">(</span><span class="n">part</span><span class="p">)</span>
+                 <span class="k">for</span> <span class="n">part</span> <span class="ow">in</span> <span class="n">model_string</span><span class="o">.</span><span class="n">split</span><span class="p">(</span><span class="s2">&quot;+&quot;</span><span class="p">)]</span>
+        <span class="k">return</span> <span class="n">mixture</span><span class="o">.</span><span class="n">make_mixture_info</span><span class="p">(</span><span class="n">parts</span><span class="p">,</span> <span class="n">operation</span><span class="o">=</span><span class="s1">&#39;+&#39;</span><span class="p">)</span>
+    <span class="k">elif</span> <span class="s2">&quot;*&quot;</span> <span class="ow">in</span> <span class="n">model_string</span><span class="p">:</span>
+        <span class="n">parts</span> <span class="o">=</span> <span class="p">[</span><span class="n">load_model_info</span><span class="p">(</span><span class="n">part</span><span class="p">)</span>
+                 <span class="k">for</span> <span class="n">part</span> <span class="ow">in</span> <span class="n">model_string</span><span class="o">.</span><span class="n">split</span><span class="p">(</span><span class="s2">&quot;*&quot;</span><span class="p">)]</span>
+        <span class="k">return</span> <span class="n">mixture</span><span class="o">.</span><span class="n">make_mixture_info</span><span class="p">(</span><span class="n">parts</span><span class="p">,</span> <span class="n">operation</span><span class="o">=</span><span class="s1">&#39;*&#39;</span><span class="p">)</span>
+    <span class="k">elif</span> <span class="s2">&quot;@&quot;</span> <span class="ow">in</span> <span class="n">model_string</span><span class="p">:</span>
+        <span class="n">p_info</span><span class="p">,</span> <span class="n">q_info</span> <span class="o">=</span> <span class="p">[</span><span class="n">load_model_info</span><span class="p">(</span><span class="n">part</span><span class="p">)</span>
+                          <span class="k">for</span> <span class="n">part</span> <span class="ow">in</span> <span class="n">model_string</span><span class="o">.</span><span class="n">split</span><span class="p">(</span><span class="s2">&quot;@&quot;</span><span class="p">)]</span>
+        <span class="k">return</span> <span class="n">product</span><span class="o">.</span><span class="n">make_product_info</span><span class="p">(</span><span class="n">p_info</span><span class="p">,</span> <span class="n">q_info</span><span class="p">)</span>
+    <span class="c1"># We are now dealing with a pure model</span>
+    <span class="k">elif</span> <span class="s2">&quot;custom.&quot;</span> <span class="ow">in</span> <span class="n">model_string</span><span class="p">:</span>
+        <span class="n">pattern</span> <span class="o">=</span> <span class="s2">&quot;custom.([A-Za-z0-9_-]+)&quot;</span>
+        <span class="n">result</span> <span class="o">=</span> <span class="n">re</span><span class="o">.</span><span class="n">match</span><span class="p">(</span><span class="n">pattern</span><span class="p">,</span> <span class="n">model_string</span><span class="p">)</span>
+        <span class="k">if</span> <span class="n">result</span> <span class="ow">is</span> <span class="bp">None</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s2">&quot;Model name in invalid format: &quot;</span> <span class="o">+</span> <span class="n">model_string</span><span class="p">)</span>
+        <span class="n">model_name</span> <span class="o">=</span> <span class="n">result</span><span class="o">.</span><span class="n">group</span><span class="p">(</span><span class="mi">1</span><span class="p">)</span>
+        <span class="c1"># Use ModelName to find the path to the custom model file</span>
+        <span class="n">model_path</span> <span class="o">=</span> <span class="n">joinpath</span><span class="p">(</span><span class="n">CUSTOM_MODEL_PATH</span><span class="p">,</span> <span class="n">model_name</span> <span class="o">+</span> <span class="s2">&quot;.py&quot;</span><span class="p">)</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">isfile</span><span class="p">(</span><span class="n">model_path</span><span class="p">):</span>
+            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s2">&quot;The model file {} doesn&#39;t exist&quot;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">model_path</span><span class="p">))</span>
+        <span class="n">kernel_module</span> <span class="o">=</span> <span class="n">custom</span><span class="o">.</span><span class="n">load_custom_kernel_module</span><span class="p">(</span><span class="n">model_path</span><span class="p">)</span>
+        <span class="k">return</span> <span class="n">modelinfo</span><span class="o">.</span><span class="n">make_model_info</span><span class="p">(</span><span class="n">kernel_module</span><span class="p">)</span>
+    <span class="n">kernel_module</span> <span class="o">=</span> <span class="n">generate</span><span class="o">.</span><span class="n">load_kernel_module</span><span class="p">(</span><span class="n">model_string</span><span class="p">)</span>
+    <span class="k">return</span> <span class="n">modelinfo</span><span class="o">.</span><span class="n">make_model_info</span><span class="p">(</span><span class="n">kernel_module</span><span class="p">)</span></div>
+
+
+<div class="viewcode-block" id="build_model"><a class="viewcode-back" href="../../dev/sasmodels-api/sasmodels.html#sasmodels.core.build_model">[docs]</a><span class="k">def</span> <span class="nf">build_model</span><span class="p">(</span><span class="n">model_info</span><span class="p">,</span> <span class="n">dtype</span><span class="o">=</span><span class="bp">None</span><span class="p">,</span> <span class="n">platform</span><span class="o">=</span><span class="s2">&quot;ocl&quot;</span><span class="p">):</span>
+    <span class="c1"># type: (modelinfo.ModelInfo, str, str) -&gt; KernelModel</span>
+    <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Prepare the model for the default execution platform.</span>
+
+<span class="sd">    This will return an OpenCL model, a DLL model or a python model depending</span>
+<span class="sd">    on the model and the computing platform.</span>
+
+<span class="sd">    *model_info* is the model definition structure returned from</span>
+<span class="sd">    :func:`load_model_info`.</span>
+
+<span class="sd">    *dtype* indicates whether the model should use single or double precision</span>
+<span class="sd">    for the calculation.  Choices are &#39;single&#39;, &#39;double&#39;, &#39;quad&#39;, &#39;half&#39;,</span>
+<span class="sd">    or &#39;fast&#39;.  If *dtype* ends with &#39;!&#39;, then force the use of the DLL rather</span>
+<span class="sd">    than OpenCL for the calculation.</span>
+
+<span class="sd">    *platform* should be &quot;dll&quot; to force the dll to be used for C models,</span>
+<span class="sd">    otherwise it uses the default &quot;ocl&quot;.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">composition</span> <span class="o">=</span> <span class="n">model_info</span><span class="o">.</span><span class="n">composition</span>
+    <span class="k">if</span> <span class="n">composition</span> <span class="ow">is</span> <span class="ow">not</span> <span class="bp">None</span><span class="p">:</span>
+        <span class="n">composition_type</span><span class="p">,</span> <span class="n">parts</span> <span class="o">=</span> <span class="n">composition</span>
+        <span class="n">models</span> <span class="o">=</span> <span class="p">[</span><span class="n">build_model</span><span class="p">(</span><span class="n">p</span><span class="p">,</span> <span class="n">dtype</span><span class="o">=</span><span class="n">dtype</span><span class="p">,</span> <span class="n">platform</span><span class="o">=</span><span class="n">platform</span><span class="p">)</span> <span class="k">for</span> <span class="n">p</span> <span class="ow">in</span> <span class="n">parts</span><span class="p">]</span>
+        <span class="k">if</span> <span class="n">composition_type</span> <span class="o">==</span> <span class="s1">&#39;mixture&#39;</span><span class="p">:</span>
+            <span class="k">return</span> <span class="n">mixture</span><span class="o">.</span><span class="n">MixtureModel</span><span class="p">(</span><span class="n">model_info</span><span class="p">,</span> <span class="n">models</span><span class="p">)</span>
+        <span class="k">elif</span> <span class="n">composition_type</span> <span class="o">==</span> <span class="s1">&#39;product&#39;</span><span class="p">:</span>
+            <span class="n">P</span><span class="p">,</span> <span class="n">S</span> <span class="o">=</span> <span class="n">models</span>
+            <span class="k">return</span> <span class="n">product</span><span class="o">.</span><span class="n">ProductModel</span><span class="p">(</span><span class="n">model_info</span><span class="p">,</span> <span class="n">P</span><span class="p">,</span> <span class="n">S</span><span class="p">)</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s1">&#39;unknown mixture type </span><span class="si">%s</span><span class="s1">&#39;</span><span class="o">%</span><span class="n">composition_type</span><span class="p">)</span>
+
+    <span class="c1"># If it is a python model, return it immediately</span>
+    <span class="k">if</span> <span class="nb">callable</span><span class="p">(</span><span class="n">model_info</span><span class="o">.</span><span class="n">Iq</span><span class="p">):</span>
+        <span class="k">return</span> <span class="n">kernelpy</span><span class="o">.</span><span class="n">PyModel</span><span class="p">(</span><span class="n">model_info</span><span class="p">)</span>
+
+    <span class="n">numpy_dtype</span><span class="p">,</span> <span class="n">fast</span><span class="p">,</span> <span class="n">platform</span> <span class="o">=</span> <span class="n">parse_dtype</span><span class="p">(</span><span class="n">model_info</span><span class="p">,</span> <span class="n">dtype</span><span class="p">,</span> <span class="n">platform</span><span class="p">)</span>
+
+    <span class="n">source</span> <span class="o">=</span> <span class="n">generate</span><span class="o">.</span><span class="n">make_source</span><span class="p">(</span><span class="n">model_info</span><span class="p">)</span>
+    <span class="k">if</span> <span class="n">platform</span> <span class="o">==</span> <span class="s2">&quot;dll&quot;</span><span class="p">:</span>
+        <span class="c1">#print(&quot;building dll&quot;, numpy_dtype)</span>
+        <span class="k">return</span> <span class="n">kerneldll</span><span class="o">.</span><span class="n">load_dll</span><span class="p">(</span><span class="n">source</span><span class="p">[</span><span class="s1">&#39;dll&#39;</span><span class="p">],</span> <span class="n">model_info</span><span class="p">,</span> <span class="n">numpy_dtype</span><span class="p">)</span>
+    <span class="k">else</span><span class="p">:</span>
+        <span class="c1">#print(&quot;building ocl&quot;, numpy_dtype)</span>
+        <span class="k">return</span> <span class="n">kernelcl</span><span class="o">.</span><span class="n">GpuModel</span><span class="p">(</span><span class="n">source</span><span class="p">,</span> <span class="n">model_info</span><span class="p">,</span> <span class="n">numpy_dtype</span><span class="p">,</span> <span class="n">fast</span><span class="o">=</span><span class="n">fast</span><span class="p">)</span></div>
+
+<div class="viewcode-block" id="precompile_dlls"><a class="viewcode-back" href="../../dev/sasmodels-api/sasmodels.html#sasmodels.core.precompile_dlls">[docs]</a><span class="k">def</span> <span class="nf">precompile_dlls</span><span class="p">(</span><span class="n">path</span><span class="p">,</span> <span class="n">dtype</span><span class="o">=</span><span class="s2">&quot;double&quot;</span><span class="p">):</span>
+    <span class="c1"># type: (str, str) -&gt; List[str]</span>
+    <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Precompile the dlls for all builtin models, returning a list of dll paths.</span>
+
+<span class="sd">    *path* is the directory in which to save the dlls.  It will be created if</span>
+<span class="sd">    it does not already exist.</span>
+
+<span class="sd">    This can be used when build the windows distribution of sasmodels</span>
+<span class="sd">    which may be missing the OpenCL driver and the dll compiler.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">numpy_dtype</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">dtype</span><span class="p">(</span><span class="n">dtype</span><span class="p">)</span>
+    <span class="k">if</span> <span class="ow">not</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">exists</span><span class="p">(</span><span class="n">path</span><span class="p">):</span>
+        <span class="n">os</span><span class="o">.</span><span class="n">makedirs</span><span class="p">(</span><span class="n">path</span><span class="p">)</span>
+    <span class="n">compiled_dlls</span> <span class="o">=</span> <span class="p">[]</span>
+    <span class="k">for</span> <span class="n">model_name</span> <span class="ow">in</span> <span class="n">list_models</span><span class="p">():</span>
+        <span class="n">model_info</span> <span class="o">=</span> <span class="n">load_model_info</span><span class="p">(</span><span class="n">model_name</span><span class="p">)</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="nb">callable</span><span class="p">(</span><span class="n">model_info</span><span class="o">.</span><span class="n">Iq</span><span class="p">):</span>
+            <span class="n">source</span> <span class="o">=</span> <span class="n">generate</span><span class="o">.</span><span class="n">make_source</span><span class="p">(</span><span class="n">model_info</span><span class="p">)[</span><span class="s1">&#39;dll&#39;</span><span class="p">]</span>
+            <span class="n">old_path</span> <span class="o">=</span> <span class="n">kerneldll</span><span class="o">.</span><span class="n">SAS_DLL_PATH</span>
+            <span class="k">try</span><span class="p">:</span>
+                <span class="n">kerneldll</span><span class="o">.</span><span class="n">SAS_DLL_PATH</span> <span class="o">=</span> <span class="n">path</span>
+                <span class="n">dll</span> <span class="o">=</span> <span class="n">kerneldll</span><span class="o">.</span><span class="n">make_dll</span><span class="p">(</span><span class="n">source</span><span class="p">,</span> <span class="n">model_info</span><span class="p">,</span> <span class="n">dtype</span><span class="o">=</span><span class="n">numpy_dtype</span><span class="p">)</span>
+            <span class="k">finally</span><span class="p">:</span>
+                <span class="n">kerneldll</span><span class="o">.</span><span class="n">SAS_DLL_PATH</span> <span class="o">=</span> <span class="n">old_path</span>
+            <span class="n">compiled_dlls</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">dll</span><span class="p">)</span>
+    <span class="k">return</span> <span class="n">compiled_dlls</span></div>
+
+<span class="k">def</span> <span class="nf">parse_dtype</span><span class="p">(</span><span class="n">model_info</span><span class="p">,</span> <span class="n">dtype</span><span class="o">=</span><span class="bp">None</span><span class="p">,</span> <span class="n">platform</span><span class="o">=</span><span class="bp">None</span><span class="p">):</span>
+    <span class="c1"># type: (ModelInfo, str, str) -&gt; (np.dtype, bool, str)</span>
+    <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Interpret dtype string, returning np.dtype and fast flag.</span>
+
+<span class="sd">    Possible types include &#39;half&#39;, &#39;single&#39;, &#39;double&#39; and &#39;quad&#39;.  If the</span>
+<span class="sd">    type is &#39;fast&#39;, then this is equivalent to dtype &#39;single&#39; but using</span>
+<span class="sd">    fast native functions rather than those with the precision level</span>
+<span class="sd">    guaranteed by the OpenCL standard.  &#39;default&#39; will choose the appropriate</span>
+<span class="sd">    default for the model and platform.</span>
+
+<span class="sd">    Platform preference can be specfied (&quot;ocl&quot; vs &quot;dll&quot;), with the default</span>
+<span class="sd">    being OpenCL if it is availabe.  If the dtype name ends with &#39;!&#39; then</span>
+<span class="sd">    platform is forced to be DLL rather than OpenCL.</span>
+
+<span class="sd">    This routine ignores the preferences within the model definition.  This</span>
+<span class="sd">    is by design.  It allows us to test models in single precision even when</span>
+<span class="sd">    we have flagged them as requiring double precision so we can easily check</span>
+<span class="sd">    the performance on different platforms without having to change the model</span>
+<span class="sd">    definition.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="c1"># Assign default platform, overriding ocl with dll if OpenCL is unavailable</span>
+    <span class="c1"># If opencl=False OpenCL is switched off</span>
+
+    <span class="k">if</span> <span class="n">platform</span> <span class="ow">is</span> <span class="bp">None</span><span class="p">:</span>
+        <span class="n">platform</span> <span class="o">=</span> <span class="s2">&quot;ocl&quot;</span>
+    <span class="k">if</span> <span class="ow">not</span> <span class="n">kernelcl</span><span class="o">.</span><span class="n">use_opencl</span><span class="p">()</span> <span class="ow">or</span> <span class="ow">not</span> <span class="n">model_info</span><span class="o">.</span><span class="n">opencl</span><span class="p">:</span>
+        <span class="n">platform</span> <span class="o">=</span> <span class="s2">&quot;dll&quot;</span>
+
+    <span class="c1"># Check if type indicates dll regardless of which platform is given</span>
+    <span class="k">if</span> <span class="n">dtype</span> <span class="ow">is</span> <span class="ow">not</span> <span class="bp">None</span> <span class="ow">and</span> <span class="n">dtype</span><span class="o">.</span><span class="n">endswith</span><span class="p">(</span><span class="s1">&#39;!&#39;</span><span class="p">):</span>
+        <span class="n">platform</span> <span class="o">=</span> <span class="s2">&quot;dll&quot;</span>
+        <span class="n">dtype</span> <span class="o">=</span> <span class="n">dtype</span><span class="p">[:</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span>
+
+    <span class="c1"># Convert special type names &quot;half&quot;, &quot;fast&quot;, and &quot;quad&quot;</span>
+    <span class="n">fast</span> <span class="o">=</span> <span class="p">(</span><span class="n">dtype</span> <span class="o">==</span> <span class="s2">&quot;fast&quot;</span><span class="p">)</span>
+    <span class="k">if</span> <span class="n">fast</span><span class="p">:</span>
+        <span class="n">dtype</span> <span class="o">=</span> <span class="s2">&quot;single&quot;</span>
+    <span class="k">elif</span> <span class="n">dtype</span> <span class="o">==</span> <span class="s2">&quot;quad&quot;</span><span class="p">:</span>
+        <span class="n">dtype</span> <span class="o">=</span> <span class="s2">&quot;longdouble&quot;</span>
+    <span class="k">elif</span> <span class="n">dtype</span> <span class="o">==</span> <span class="s2">&quot;half&quot;</span><span class="p">:</span>
+        <span class="n">dtype</span> <span class="o">=</span> <span class="s2">&quot;float16&quot;</span>
+
+    <span class="c1"># Convert dtype string to numpy dtype.</span>
+    <span class="k">if</span> <span class="n">dtype</span> <span class="ow">is</span> <span class="bp">None</span> <span class="ow">or</span> <span class="n">dtype</span> <span class="o">==</span> <span class="s2">&quot;default&quot;</span><span class="p">:</span>
+        <span class="n">numpy_dtype</span> <span class="o">=</span> <span class="p">(</span><span class="n">generate</span><span class="o">.</span><span class="n">F32</span> <span class="k">if</span> <span class="n">platform</span> <span class="o">==</span> <span class="s2">&quot;ocl&quot;</span> <span class="ow">and</span> <span class="n">model_info</span><span class="o">.</span><span class="n">single</span>
+                       <span class="k">else</span> <span class="n">generate</span><span class="o">.</span><span class="n">F64</span><span class="p">)</span>
+    <span class="k">else</span><span class="p">:</span>
+        <span class="n">numpy_dtype</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">dtype</span><span class="p">(</span><span class="n">dtype</span><span class="p">)</span>
+
+    <span class="c1"># Make sure that the type is supported by opencl, otherwise use dll</span>
+    <span class="k">if</span> <span class="n">platform</span> <span class="o">==</span> <span class="s2">&quot;ocl&quot;</span><span class="p">:</span>
+        <span class="n">env</span> <span class="o">=</span> <span class="n">kernelcl</span><span class="o">.</span><span class="n">environment</span><span class="p">()</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="n">env</span><span class="o">.</span><span class="n">has_type</span><span class="p">(</span><span class="n">numpy_dtype</span><span class="p">):</span>
+            <span class="n">platform</span> <span class="o">=</span> <span class="s2">&quot;dll&quot;</span>
+            <span class="k">if</span> <span class="n">dtype</span> <span class="ow">is</span> <span class="bp">None</span><span class="p">:</span>
+                <span class="n">numpy_dtype</span> <span class="o">=</span> <span class="n">generate</span><span class="o">.</span><span class="n">F64</span>
+
+    <span class="k">return</span> <span class="n">numpy_dtype</span><span class="p">,</span> <span class="n">fast</span><span class="p">,</span> <span class="n">platform</span>
+
+<span class="k">def</span> <span class="nf">list_models_main</span><span class="p">():</span>
+    <span class="c1"># type: () -&gt; None</span>
+    <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Run list_models as a main program.  See :func:`list_models` for the</span>
+<span class="sd">    kinds of models that can be requested on the command line.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="kn">import</span> <span class="nn">sys</span>
+    <span class="n">kind</span> <span class="o">=</span> <span class="n">sys</span><span class="o">.</span><span class="n">argv</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span> <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">sys</span><span class="o">.</span><span class="n">argv</span><span class="p">)</span> <span class="o">&gt;</span> <span class="mi">1</span> <span class="k">else</span> <span class="s2">&quot;all&quot;</span>
+    <span class="k">print</span><span class="p">(</span><span class="s2">&quot;</span><span class="se">\n</span><span class="s2">&quot;</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">list_models</span><span class="p">(</span><span class="n">kind</span><span class="p">)))</span>
+
+<span class="k">def</span> <span class="nf">test_composite_order</span><span class="p">():</span>
+    <span class="k">def</span> <span class="nf">test_models</span><span class="p">(</span><span class="n">fst</span><span class="p">,</span> <span class="n">snd</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Confirm that two models produce the same parameters&quot;&quot;&quot;</span>
+        <span class="n">fst</span> <span class="o">=</span> <span class="n">load_model</span><span class="p">(</span><span class="n">fst</span><span class="p">)</span>
+        <span class="n">snd</span> <span class="o">=</span> <span class="n">load_model</span><span class="p">(</span><span class="n">snd</span><span class="p">)</span>
+        <span class="c1"># Un-disambiguate parameter names so that we can check if the same</span>
+        <span class="c1"># parameters are in a pair of composite models. Since each parameter in</span>
+        <span class="c1"># the mixture model is tagged as e.g., A_sld, we ought to use a</span>
+        <span class="c1"># regex subsitution s/^[A-Z]+_/_/, but removing all uppercase letters</span>
+        <span class="c1"># is good enough.</span>
+        <span class="n">fst</span> <span class="o">=</span> <span class="p">[[</span><span class="n">x</span> <span class="k">for</span> <span class="n">x</span> <span class="ow">in</span> <span class="n">p</span><span class="o">.</span><span class="n">name</span> <span class="k">if</span> <span class="n">x</span> <span class="o">==</span> <span class="n">x</span><span class="o">.</span><span class="n">lower</span><span class="p">()]</span> <span class="k">for</span> <span class="n">p</span> <span class="ow">in</span> <span class="n">fst</span><span class="o">.</span><span class="n">info</span><span class="o">.</span><span class="n">parameters</span><span class="o">.</span><span class="n">kernel_parameters</span><span class="p">]</span>
+        <span class="n">snd</span> <span class="o">=</span> <span class="p">[[</span><span class="n">x</span> <span class="k">for</span> <span class="n">x</span> <span class="ow">in</span> <span class="n">p</span><span class="o">.</span><span class="n">name</span> <span class="k">if</span> <span class="n">x</span> <span class="o">==</span> <span class="n">x</span><span class="o">.</span><span class="n">lower</span><span class="p">()]</span> <span class="k">for</span> <span class="n">p</span> <span class="ow">in</span> <span class="n">snd</span><span class="o">.</span><span class="n">info</span><span class="o">.</span><span class="n">parameters</span><span class="o">.</span><span class="n">kernel_parameters</span><span class="p">]</span>
+        <span class="k">assert</span> <span class="nb">sorted</span><span class="p">(</span><span class="n">fst</span><span class="p">)</span> <span class="o">==</span> <span class="nb">sorted</span><span class="p">(</span><span class="n">snd</span><span class="p">),</span> <span class="s2">&quot;{} != {}&quot;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">fst</span><span class="p">,</span> <span class="n">snd</span><span class="p">)</span>
+
+    <span class="k">def</span> <span class="nf">build_test</span><span class="p">(</span><span class="n">first</span><span class="p">,</span> <span class="n">second</span><span class="p">):</span>
+        <span class="n">test</span> <span class="o">=</span> <span class="k">lambda</span> <span class="n">description</span><span class="p">:</span> <span class="n">test_models</span><span class="p">(</span><span class="n">first</span><span class="p">,</span> <span class="n">second</span><span class="p">)</span>
+        <span class="n">description</span> <span class="o">=</span> <span class="n">first</span> <span class="o">+</span> <span class="s2">&quot; vs. &quot;</span> <span class="o">+</span> <span class="n">second</span>
+        <span class="k">return</span> <span class="n">test</span><span class="p">,</span> <span class="n">description</span>
+
+    <span class="k">yield</span> <span class="n">build_test</span><span class="p">(</span>
+        <span class="s2">&quot;cylinder+sphere&quot;</span><span class="p">,</span>
+        <span class="s2">&quot;sphere+cylinder&quot;</span><span class="p">)</span>
+    <span class="k">yield</span> <span class="n">build_test</span><span class="p">(</span>
+        <span class="s2">&quot;cylinder*sphere&quot;</span><span class="p">,</span>
+        <span class="s2">&quot;sphere*cylinder&quot;</span><span class="p">)</span>
+    <span class="k">yield</span> <span class="n">build_test</span><span class="p">(</span>
+        <span class="s2">&quot;cylinder@hardsphere*sphere&quot;</span><span class="p">,</span>
+        <span class="s2">&quot;sphere*cylinder@hardsphere&quot;</span><span class="p">)</span>
+    <span class="k">yield</span> <span class="n">build_test</span><span class="p">(</span>
+        <span class="s2">&quot;barbell+sphere*cylinder@hardsphere&quot;</span><span class="p">,</span>
+        <span class="s2">&quot;sphere*cylinder@hardsphere+barbell&quot;</span><span class="p">)</span>
+    <span class="k">yield</span> <span class="n">build_test</span><span class="p">(</span>
+        <span class="s2">&quot;barbell+cylinder@hardsphere*sphere&quot;</span><span class="p">,</span>
+        <span class="s2">&quot;cylinder@hardsphere*sphere+barbell&quot;</span><span class="p">)</span>
+    <span class="k">yield</span> <span class="n">build_test</span><span class="p">(</span>
+        <span class="s2">&quot;barbell+sphere*cylinder@hardsphere&quot;</span><span class="p">,</span>
+        <span class="s2">&quot;barbell+cylinder@hardsphere*sphere&quot;</span><span class="p">)</span>
+    <span class="k">yield</span> <span class="n">build_test</span><span class="p">(</span>
+        <span class="s2">&quot;sphere*cylinder@hardsphere+barbell&quot;</span><span class="p">,</span>
+        <span class="s2">&quot;cylinder@hardsphere*sphere+barbell&quot;</span><span class="p">)</span>
+    <span class="k">yield</span> <span class="n">build_test</span><span class="p">(</span>
+        <span class="s2">&quot;barbell+sphere*cylinder@hardsphere&quot;</span><span class="p">,</span>
+        <span class="s2">&quot;cylinder@hardsphere*sphere+barbell&quot;</span><span class="p">)</span>
+    <span class="k">yield</span> <span class="n">build_test</span><span class="p">(</span>
+        <span class="s2">&quot;barbell+cylinder@hardsphere*sphere&quot;</span><span class="p">,</span>
+        <span class="s2">&quot;sphere*cylinder@hardsphere+barbell&quot;</span><span class="p">)</span>
+
+<span class="k">def</span> <span class="nf">test_composite</span><span class="p">():</span>
+    <span class="c1"># type: () -&gt; None</span>
+    <span class="sd">&quot;&quot;&quot;Check that model load works&quot;&quot;&quot;</span>
+    <span class="c1">#Test the the model produces the parameters that we would expect</span>
+    <span class="n">model</span> <span class="o">=</span> <span class="n">load_model</span><span class="p">(</span><span class="s2">&quot;cylinder@hardsphere*sphere&quot;</span><span class="p">)</span>
+    <span class="n">actual</span> <span class="o">=</span> <span class="p">[</span><span class="n">p</span><span class="o">.</span><span class="n">name</span> <span class="k">for</span> <span class="n">p</span> <span class="ow">in</span> <span class="n">model</span><span class="o">.</span><span class="n">info</span><span class="o">.</span><span class="n">parameters</span><span class="o">.</span><span class="n">kernel_parameters</span><span class="p">]</span>
+    <span class="n">target</span> <span class="o">=</span> <span class="p">(</span><span class="s2">&quot;sld sld_solvent radius length theta phi volfraction&quot;</span>
+              <span class="s2">&quot; A_sld A_sld_solvent A_radius&quot;</span><span class="p">)</span><span class="o">.</span><span class="n">split</span><span class="p">()</span>
+    <span class="k">assert</span> <span class="n">target</span> <span class="o">==</span> <span class="n">actual</span><span class="p">,</span> <span class="s2">&quot;</span><span class="si">%s</span><span class="s2"> != </span><span class="si">%s</span><span class="s2">&quot;</span><span class="o">%</span><span class="p">(</span><span class="n">target</span><span class="p">,</span> <span class="n">actual</span><span class="p">)</span>
+
+<span class="k">if</span> <span class="n">__name__</span> <span class="o">==</span> <span class="s2">&quot;__main__&quot;</span><span class="p">:</span>
+    <span class="n">list_models_main</span><span class="p">()</span>
+</pre></div>
+
+          </div>
+        </div>
+      </div>
+      <div class="sphinxsidebar" role="navigation" aria-label="main navigation">
+        <div class="sphinxsidebarwrapper">
+<div id="searchbox" style="display: none" role="search">
+  <h3>Quick search</h3>
+    <form class="search" action="../../search.html" method="get">
+      <input type="text" name="q" />
+      <input type="submit" value="Go" />
+      <input type="hidden" name="check_keywords" value="yes" />
+      <input type="hidden" name="area" value="default" />
+    </form>
+</div>
+<script type="text/javascript">$('#searchbox').show(0);</script>
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="related" role="navigation" aria-label="related navigation">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="../../genindex.html" title="General Index"
+             >index</a></li>
+        <li class="right" >
+          <a href="../../py-modindex.html" title="Python Module Index"
+             >modules</a> |</li>
+        <li class="nav-item nav-item-0"><a href="../../index.html">SasView 4.2.0 documentation</a> &raquo;</li>
+          <li class="nav-item nav-item-1"><a href="../index.html" >Module code</a> &raquo;</li>
+          <li class="nav-item nav-item-2"><a href="../sasmodels.html" >sasmodels</a> &raquo;</li> 
+      </ul>
+    </div>
+    <div class="footer" role="contentinfo">
+        &copy; Copyright 2018, The SasView Project.
+      Created using <a href="http://sphinx-doc.org/">Sphinx</a> 1.4.1.
+    </div>
+  </body>
+</html>

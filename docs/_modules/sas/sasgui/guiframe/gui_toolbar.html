@@ -1,0 +1,373 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+  "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+    
+    <title>sas.sasgui.guiframe.gui_toolbar &mdash; SasView 4.2.0 documentation</title>
+    
+    <link rel="stylesheet" href="../../../../_static/classic.css" type="text/css" />
+    <link rel="stylesheet" href="../../../../_static/pygments.css" type="text/css" />
+    
+    <script type="text/javascript">
+      var DOCUMENTATION_OPTIONS = {
+        URL_ROOT:    '../../../../',
+        VERSION:     '4.2.0',
+        COLLAPSE_INDEX: false,
+        FILE_SUFFIX: '.html',
+        HAS_SOURCE:  true
+      };
+    </script>
+    <script type="text/javascript" src="../../../../_static/jquery.js"></script>
+    <script type="text/javascript" src="../../../../_static/underscore.js"></script>
+    <script type="text/javascript" src="../../../../_static/doctools.js"></script>
+    <script type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.1/MathJax.js?config=TeX-MML-AM_CHTML"></script>
+    <link rel="top" title="SasView 4.2.0 documentation" href="../../../../index.html" />
+    <link rel="up" title="sas.sasgui.guiframe" href="../guiframe.html" /> 
+  </head>
+  <body role="document">
+    <div class="related" role="navigation" aria-label="related navigation">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="../../../../genindex.html" title="General Index"
+             accesskey="I">index</a></li>
+        <li class="right" >
+          <a href="../../../../py-modindex.html" title="Python Module Index"
+             >modules</a> |</li>
+        <li class="nav-item nav-item-0"><a href="../../../../index.html">SasView 4.2.0 documentation</a> &raquo;</li>
+          <li class="nav-item nav-item-1"><a href="../../../index.html" >Module code</a> &raquo;</li>
+          <li class="nav-item nav-item-2"><a href="../../../sas.html" >sas</a> &raquo;</li>
+          <li class="nav-item nav-item-3"><a href="../guiframe.html" accesskey="U">sas.sasgui.guiframe</a> &raquo;</li> 
+      </ul>
+    </div>  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          <div class="body" role="main">
+            
+  <h1>Source code for sas.sasgui.guiframe.gui_toolbar</h1><div class="highlight"><pre>
+<span></span>
+<span class="kn">import</span> <span class="nn">wx</span>
+<span class="kn">import</span> <span class="nn">os</span>
+<span class="kn">from</span> <span class="nn">wx</span> <span class="kn">import</span> <span class="n">ToolBar</span> <span class="k">as</span> <span class="n">Tbar</span>
+<span class="kn">from</span> <span class="nn">wx.lib.platebtn</span> <span class="kn">import</span> <span class="n">PlateButton</span>
+<span class="kn">from</span> <span class="nn">sas.sasgui.guiframe.gui_style</span> <span class="kn">import</span> <span class="n">GUIFRAME_ID</span>
+<span class="kn">from</span> <span class="nn">sas.sasgui.guiframe.gui_style</span> <span class="kn">import</span> <span class="n">GUIFRAME_ICON</span>
+<span class="kn">from</span> <span class="nn">wx.lib.platebtn</span> <span class="kn">import</span> <span class="n">PB_STYLE_DEFAULT</span><span class="p">,</span> <span class="n">PB_STYLE_DROPARROW</span><span class="p">,</span><span class="n">PB_STYLE_NOBG</span>
+<span class="c1">#Control panel width </span>
+<span class="kn">import</span> <span class="nn">sys</span>
+<span class="k">if</span> <span class="n">sys</span><span class="o">.</span><span class="n">platform</span><span class="o">.</span><span class="n">count</span><span class="p">(</span><span class="s2">&quot;darwin&quot;</span><span class="p">)</span><span class="o">==</span><span class="mi">0</span><span class="p">:</span>
+    <span class="n">FONT_VARIANT</span> <span class="o">=</span> <span class="mi">0</span>
+    <span class="n">NAME_BOX</span> <span class="o">=</span> <span class="n">wx</span><span class="o">.</span><span class="n">DefaultSize</span>
+    <span class="n">TB_H</span> <span class="o">=</span> <span class="mi">21</span>
+    <span class="n">IS_MAC</span> <span class="o">=</span> <span class="bp">False</span>
+<span class="k">else</span><span class="p">:</span>
+    <span class="n">FONT_VARIANT</span> <span class="o">=</span> <span class="mi">1</span>
+    <span class="n">NAME_BOX</span> <span class="o">=</span> <span class="p">(</span><span class="mi">200</span><span class="p">,</span> <span class="mi">25</span><span class="p">)</span>
+    <span class="n">TB_H</span> <span class="o">=</span> <span class="mi">25</span>
+    <span class="n">IS_MAC</span> <span class="o">=</span> <span class="bp">True</span>
+
+<div class="viewcode-block" id="clear_image"><a class="viewcode-back" href="../../../../dev/sasview-api/sas.sasgui.guiframe.html#sas.sasgui.guiframe.gui_toolbar.clear_image">[docs]</a><span class="k">def</span> <span class="nf">clear_image</span><span class="p">(</span><span class="n">image</span><span class="p">):</span>
+    <span class="n">w</span><span class="p">,</span> <span class="n">h</span> <span class="o">=</span> <span class="n">image</span><span class="o">.</span><span class="n">GetSize</span><span class="p">()</span>
+    <span class="n">factor</span> <span class="o">=</span> <span class="mi">155</span>
+    <span class="n">compress</span> <span class="o">=</span> <span class="k">lambda</span> <span class="n">x</span><span class="p">:</span> <span class="nb">int</span><span class="p">(</span><span class="n">x</span> <span class="o">*</span> <span class="n">factor</span><span class="o">/</span><span class="mf">255.</span><span class="p">)</span> <span class="o">+</span> <span class="n">factor</span>
+    <span class="k">for</span> <span class="n">y</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">h</span><span class="p">):</span>
+        <span class="k">for</span> <span class="n">x</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">w</span><span class="p">):</span>
+            <span class="n">grey</span> <span class="o">=</span> <span class="n">compress</span><span class="p">(</span><span class="n">image</span><span class="o">.</span><span class="n">GetGreen</span><span class="p">(</span><span class="n">x</span><span class="p">,</span> <span class="n">y</span><span class="p">))</span>
+            <span class="n">image</span><span class="o">.</span><span class="n">SetRGB</span><span class="p">(</span><span class="n">x</span><span class="p">,</span> <span class="n">y</span><span class="p">,</span> <span class="n">grey</span><span class="p">,</span> <span class="n">grey</span><span class="p">,</span> <span class="n">grey</span><span class="p">)</span>
+    <span class="k">if</span> <span class="n">image</span><span class="o">.</span><span class="n">HasAlpha</span><span class="p">():</span>
+        <span class="n">image</span><span class="o">.</span><span class="n">ConvertAlphaToMask</span><span class="p">()</span>
+    <span class="k">return</span> <span class="n">image</span></div>
+
+<div class="viewcode-block" id="GUIToolBar"><a class="viewcode-back" href="../../../../dev/sasview-api/sas.sasgui.guiframe.html#sas.sasgui.guiframe.gui_toolbar.GUIToolBar">[docs]</a><span class="k">class</span> <span class="nc">GUIToolBar</span><span class="p">(</span><span class="n">Tbar</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Implement toolbar for guiframe</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">ID_BOOKMARK</span> <span class="o">=</span> <span class="n">wx</span><span class="o">.</span><span class="n">NewId</span><span class="p">()</span>
+    <span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">parent</span><span class="p">,</span>  <span class="o">*</span><span class="n">args</span><span class="p">,</span> <span class="o">**</span><span class="n">kwds</span><span class="p">):</span>
+        <span class="n">Tbar</span><span class="o">.</span><span class="n">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">parent</span><span class="p">,</span>  <span class="o">*</span><span class="n">args</span><span class="p">,</span> <span class="o">**</span><span class="n">kwds</span><span class="p">)</span>
+        <span class="c1">#Set window&#39;s font size </span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">SetWindowVariant</span><span class="p">(</span><span class="n">variant</span><span class="o">=</span><span class="n">FONT_VARIANT</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">parent</span> <span class="o">=</span> <span class="n">parent</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_bookmark_menu</span> <span class="o">=</span> <span class="bp">None</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_bookmark_bt</span> <span class="o">=</span> <span class="bp">None</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">do_layout</span><span class="p">()</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">on_bind_button</span><span class="p">()</span>
+       
+<div class="viewcode-block" id="GUIToolBar.do_layout"><a class="viewcode-back" href="../../../../dev/sasview-api/sas.sasgui.guiframe.html#sas.sasgui.guiframe.gui_toolbar.GUIToolBar.do_layout">[docs]</a>    <span class="k">def</span> <span class="nf">do_layout</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">t_size</span> <span class="o">=</span> <span class="n">TB_H</span>       
+        <span class="n">tbar_size</span> <span class="o">=</span> <span class="p">(</span><span class="n">t_size</span><span class="p">,</span> <span class="n">t_size</span><span class="p">)</span>
+        <span class="n">button_type</span> <span class="o">=</span>  <span class="n">wx</span><span class="o">.</span><span class="n">ITEM_NORMAL</span>
+
+        <span class="n">reset_im</span> <span class="o">=</span> <span class="n">GUIFRAME_ICON</span><span class="o">.</span><span class="n">RESET_ICON</span>
+        <span class="n">reset_im</span><span class="o">.</span><span class="n">Rescale</span><span class="p">(</span><span class="n">tbar_size</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span> <span class="n">tbar_size</span><span class="p">[</span><span class="mi">1</span><span class="p">],</span> <span class="n">wx</span><span class="o">.</span><span class="n">IMAGE_QUALITY_HIGH</span><span class="p">)</span>
+        <span class="n">reset_bmp</span> <span class="o">=</span> <span class="n">reset_im</span><span class="o">.</span><span class="n">ConvertToBitmap</span><span class="p">()</span>
+        <span class="c1">#disable_reset_bmp = clear_image(reset_im).ConvertToBitmap()</span>
+        <span class="n">disable_reset_bmp</span> <span class="o">=</span> <span class="n">wx</span><span class="o">.</span><span class="n">NullBitmap</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">AddLabelTool</span><span class="p">(</span><span class="n">GUIFRAME_ID</span><span class="o">.</span><span class="n">RESET_ID</span><span class="p">,</span> <span class="s1">&#39;Reset&#39;</span><span class="p">,</span> <span class="n">reset_bmp</span><span class="p">,</span>
+                   <span class="n">disable_reset_bmp</span><span class="p">,</span> <span class="n">button_type</span><span class="p">,</span><span class="s1">&#39;Reset&#39;</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">AddSeparator</span><span class="p">()</span>
+        <span class="n">save_im</span> <span class="o">=</span> <span class="n">GUIFRAME_ICON</span><span class="o">.</span><span class="n">SAVE_ICON</span>
+        <span class="n">save_im</span><span class="o">.</span><span class="n">Rescale</span><span class="p">(</span><span class="n">tbar_size</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span> <span class="n">tbar_size</span><span class="p">[</span><span class="mi">1</span><span class="p">],</span> <span class="n">wx</span><span class="o">.</span><span class="n">IMAGE_QUALITY_HIGH</span><span class="p">)</span>
+        <span class="n">save_bmp</span> <span class="o">=</span> <span class="n">save_im</span><span class="o">.</span><span class="n">ConvertToBitmap</span><span class="p">()</span>
+        <span class="n">disable_save_bmp</span> <span class="o">=</span> <span class="n">wx</span><span class="o">.</span><span class="n">NullBitmap</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">AddLabelTool</span><span class="p">(</span><span class="n">GUIFRAME_ID</span><span class="o">.</span><span class="n">SAVE_ID</span><span class="p">,</span> <span class="s1">&#39;Save&#39;</span><span class="p">,</span> <span class="n">save_bmp</span><span class="p">,</span>
+                   <span class="n">disable_save_bmp</span><span class="p">,</span> <span class="n">button_type</span><span class="p">,</span><span class="s1">&#39;Save&#39;</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">AddSeparator</span><span class="p">()</span>
+        <span class="n">report_im</span> <span class="o">=</span> <span class="n">GUIFRAME_ICON</span><span class="o">.</span><span class="n">REPORT_ICON</span>
+        <span class="n">report_im</span><span class="o">.</span><span class="n">Rescale</span><span class="p">(</span><span class="n">tbar_size</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span> <span class="n">tbar_size</span><span class="p">[</span><span class="mi">1</span><span class="p">],</span> <span class="n">wx</span><span class="o">.</span><span class="n">IMAGE_QUALITY_HIGH</span><span class="p">)</span>
+        <span class="n">report_bmp</span> <span class="o">=</span> <span class="n">report_im</span><span class="o">.</span><span class="n">ConvertToBitmap</span><span class="p">()</span>
+        <span class="c1">#disable_report_bmp = clear_image(report_im).ConvertToBitmap()</span>
+        <span class="n">disable_report_bmp</span> <span class="o">=</span> <span class="n">wx</span><span class="o">.</span><span class="n">NullBitmap</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">AddLabelTool</span><span class="p">(</span><span class="n">GUIFRAME_ID</span><span class="o">.</span><span class="n">PREVIEW_ID</span><span class="p">,</span> <span class="s1">&#39;Report&#39;</span><span class="p">,</span> <span class="n">report_bmp</span><span class="p">,</span>
+                   <span class="n">disable_report_bmp</span><span class="p">,</span> <span class="n">button_type</span><span class="p">,</span><span class="s1">&#39;Report&#39;</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">AddSeparator</span><span class="p">()</span>
+        <span class="n">undo_im</span> <span class="o">=</span> <span class="n">GUIFRAME_ICON</span><span class="o">.</span><span class="n">UNDO_ICON</span>
+        <span class="n">undo_im</span><span class="o">.</span><span class="n">Rescale</span><span class="p">(</span><span class="n">tbar_size</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span> <span class="n">tbar_size</span><span class="p">[</span><span class="mi">1</span><span class="p">],</span> <span class="n">wx</span><span class="o">.</span><span class="n">IMAGE_QUALITY_HIGH</span><span class="p">)</span>
+        <span class="n">undo_bmp</span> <span class="o">=</span> <span class="n">undo_im</span><span class="o">.</span><span class="n">ConvertToBitmap</span><span class="p">()</span>
+        <span class="n">disable_undo_bmp</span> <span class="o">=</span> <span class="n">wx</span><span class="o">.</span><span class="n">NullBitmap</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">AddLabelTool</span><span class="p">(</span><span class="n">GUIFRAME_ID</span><span class="o">.</span><span class="n">UNDO_ID</span><span class="p">,</span> <span class="s1">&#39;Undo&#39;</span><span class="p">,</span> <span class="n">undo_bmp</span><span class="p">,</span>
+                          <span class="n">disable_undo_bmp</span><span class="p">,</span> <span class="n">button_type</span><span class="p">,</span><span class="s1">&#39;Undo&#39;</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">AddSeparator</span><span class="p">()</span>
+        <span class="n">redo_im</span> <span class="o">=</span> <span class="n">GUIFRAME_ICON</span><span class="o">.</span><span class="n">REDO_ICON</span>
+        <span class="n">redo_im</span><span class="o">.</span><span class="n">Rescale</span><span class="p">(</span><span class="n">tbar_size</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span> <span class="n">tbar_size</span><span class="p">[</span><span class="mi">1</span><span class="p">],</span> <span class="n">wx</span><span class="o">.</span><span class="n">IMAGE_QUALITY_HIGH</span><span class="p">)</span>
+        <span class="n">redo_bmp</span> <span class="o">=</span> <span class="n">redo_im</span><span class="o">.</span><span class="n">ConvertToBitmap</span><span class="p">()</span>
+        <span class="n">disable_redo_bmp</span> <span class="o">=</span> <span class="n">wx</span><span class="o">.</span><span class="n">NullBitmap</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">AddLabelTool</span><span class="p">(</span><span class="n">GUIFRAME_ID</span><span class="o">.</span><span class="n">REDO_ID</span><span class="p">,</span> <span class="s1">&#39;Redo&#39;</span><span class="p">,</span> <span class="n">redo_bmp</span><span class="p">,</span>
+                          <span class="n">disable_redo_bmp</span><span class="p">,</span> <span class="n">button_type</span><span class="p">,</span><span class="s1">&#39;Redo&#39;</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">AddSeparator</span><span class="p">()</span>
+        <span class="n">copy_im</span> <span class="o">=</span> <span class="n">GUIFRAME_ICON</span><span class="o">.</span><span class="n">COPY_ICON</span>
+        <span class="n">copy_im</span><span class="o">.</span><span class="n">Rescale</span><span class="p">(</span><span class="n">tbar_size</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span> <span class="n">tbar_size</span><span class="p">[</span><span class="mi">1</span><span class="p">],</span> <span class="n">wx</span><span class="o">.</span><span class="n">IMAGE_QUALITY_HIGH</span><span class="p">)</span>
+        <span class="n">copy_bmp</span> <span class="o">=</span> <span class="n">copy_im</span><span class="o">.</span><span class="n">ConvertToBitmap</span><span class="p">()</span>
+        <span class="n">disable_copy_bmp</span> <span class="o">=</span> <span class="n">wx</span><span class="o">.</span><span class="n">NullBitmap</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">AddLabelTool</span><span class="p">(</span><span class="n">GUIFRAME_ID</span><span class="o">.</span><span class="n">COPY_ID</span><span class="p">,</span> <span class="s1">&#39;Copy&#39;</span><span class="p">,</span> <span class="n">copy_bmp</span><span class="p">,</span>
+                          <span class="n">disable_copy_bmp</span><span class="p">,</span> <span class="n">button_type</span><span class="p">,</span><span class="s1">&#39;Copy parameter values&#39;</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">AddSeparator</span><span class="p">()</span>
+        <span class="n">paste_im</span> <span class="o">=</span> <span class="n">GUIFRAME_ICON</span><span class="o">.</span><span class="n">PASTE_ICON</span>
+        <span class="n">paste_im</span><span class="o">.</span><span class="n">Rescale</span><span class="p">(</span><span class="n">tbar_size</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span> <span class="n">tbar_size</span><span class="p">[</span><span class="mi">1</span><span class="p">],</span> <span class="n">wx</span><span class="o">.</span><span class="n">IMAGE_QUALITY_HIGH</span><span class="p">)</span>
+        <span class="n">paste_bmp</span> <span class="o">=</span> <span class="n">paste_im</span><span class="o">.</span><span class="n">ConvertToBitmap</span><span class="p">()</span>
+        <span class="n">disable_paste_bmp</span> <span class="o">=</span> <span class="n">wx</span><span class="o">.</span><span class="n">NullBitmap</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">AddLabelTool</span><span class="p">(</span><span class="n">GUIFRAME_ID</span><span class="o">.</span><span class="n">PASTE_ID</span><span class="p">,</span> <span class="s1">&#39;Paste&#39;</span><span class="p">,</span> <span class="n">paste_bmp</span><span class="p">,</span>
+                          <span class="n">disable_paste_bmp</span><span class="p">,</span> <span class="n">button_type</span><span class="p">,</span><span class="s1">&#39;Paste parameter values&#39;</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">AddSeparator</span><span class="p">()</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_bookmark_bt</span> <span class="o">=</span> <span class="n">PlateButton</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="o">-</span><span class="mi">1</span><span class="p">,</span> <span class="s1">&#39;Bookmarks&#39;</span><span class="p">,</span>
+                        <span class="n">GUIFRAME_ICON</span><span class="o">.</span><span class="n">BOOKMARK_ICON</span><span class="o">.</span><span class="n">ConvertToBitmap</span><span class="p">(),</span> 
+                        <span class="n">style</span><span class="o">=</span><span class="n">PB_STYLE_DEFAULT</span><span class="o">|</span><span class="n">PB_STYLE_DROPARROW</span><span class="o">|</span><span class="n">PB_STYLE_NOBG</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_bookmark_bt</span><span class="o">.</span><span class="n">SetWindowVariant</span><span class="p">(</span><span class="n">FONT_VARIANT</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_bookmark_bt</span><span class="o">.</span><span class="n">Disable</span><span class="p">()</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_bookmark_menu</span> <span class="o">=</span> <span class="n">wx</span><span class="o">.</span><span class="n">Menu</span><span class="p">()</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">add_bookmark_default</span><span class="p">()</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_bookmark_bt</span><span class="o">.</span><span class="n">SetMenu</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_bookmark_menu</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">AddControl</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_bookmark_bt</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">SetToolBitmapSize</span><span class="p">(</span><span class="n">tbar_size</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">AddSeparator</span><span class="p">()</span>
+        <span class="c1">#add button for the panel on focus</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">button_panel</span> <span class="o">=</span> <span class="n">wx</span><span class="o">.</span><span class="n">StaticText</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="o">-</span><span class="mi">1</span><span class="p">,</span> <span class="s1">&#39;No Panel&#39;</span><span class="p">,</span> 
+                                          <span class="n">pos</span><span class="o">=</span><span class="n">wx</span><span class="o">.</span><span class="n">DefaultPosition</span><span class="p">,</span> 
+                                          <span class="n">size</span><span class="o">=</span><span class="n">NAME_BOX</span><span class="p">,</span>
+                                          <span class="n">style</span><span class="o">=</span><span class="n">wx</span><span class="o">.</span><span class="n">SUNKEN_BORDER</span><span class="o">|</span><span class="n">wx</span><span class="o">.</span><span class="n">ALIGN_LEFT</span><span class="p">)</span>
+        <span class="n">button_panel_font</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">button_panel</span><span class="o">.</span><span class="n">GetFont</span><span class="p">()</span>
+        <span class="n">button_panel_font</span><span class="o">.</span><span class="n">SetWeight</span><span class="p">(</span><span class="n">wx</span><span class="o">.</span><span class="n">BOLD</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">button_panel</span><span class="o">.</span><span class="n">SetFont</span><span class="p">(</span><span class="n">button_panel_font</span><span class="p">)</span>
+        <span class="n">hint</span> <span class="o">=</span> <span class="s1">&#39;Control Panel on Focus&#39;</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">button_panel</span><span class="o">.</span><span class="n">SetToolTipString</span><span class="p">(</span><span class="n">hint</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">AddControl</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">button_panel</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">AddSeparator</span><span class="p">()</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">Realize</span><span class="p">()</span></div>
+    
+<div class="viewcode-block" id="GUIToolBar.add_bookmark_default"><a class="viewcode-back" href="../../../../dev/sasview-api/sas.sasgui.guiframe.html#sas.sasgui.guiframe.gui_toolbar.GUIToolBar.add_bookmark_default">[docs]</a>    <span class="k">def</span> <span class="nf">add_bookmark_default</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>   
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Add default items in bookmark menu</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_bookmark_menu</span><span class="o">.</span><span class="n">Append</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">ID_BOOKMARK</span><span class="p">,</span> <span class="s1">&#39;Bookmark This Page State&#39;</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_bookmark_menu</span><span class="o">.</span><span class="n">AppendSeparator</span><span class="p">()</span>
+        <span class="n">wx</span><span class="o">.</span><span class="n">EVT_MENU</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">ID_BOOKMARK</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">on_bookmark</span><span class="p">)</span></div>
+   
+<div class="viewcode-block" id="GUIToolBar.on_bind_button"><a class="viewcode-back" href="../../../../dev/sasview-api/sas.sasgui.guiframe.html#sas.sasgui.guiframe.gui_toolbar.GUIToolBar.on_bind_button">[docs]</a>    <span class="k">def</span> <span class="nf">on_bind_button</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Bind the buttons</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">parent</span> <span class="ow">is</span> <span class="ow">not</span> <span class="bp">None</span><span class="p">:</span>
+            
+            <span class="bp">self</span><span class="o">.</span><span class="n">parent</span><span class="o">.</span><span class="n">Bind</span><span class="p">(</span><span class="n">wx</span><span class="o">.</span><span class="n">EVT_TOOL</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">parent</span><span class="o">.</span><span class="n">on_redo_panel</span><span class="p">,</span>
+                             <span class="nb">id</span><span class="o">=</span><span class="n">GUIFRAME_ID</span><span class="o">.</span><span class="n">REDO_ID</span><span class="p">)</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">parent</span><span class="o">.</span><span class="n">Bind</span><span class="p">(</span><span class="n">wx</span><span class="o">.</span><span class="n">EVT_TOOL</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">parent</span><span class="o">.</span><span class="n">on_undo_panel</span><span class="p">,</span>
+                             <span class="nb">id</span><span class="o">=</span><span class="n">GUIFRAME_ID</span><span class="o">.</span><span class="n">UNDO_ID</span><span class="p">)</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">parent</span><span class="o">.</span><span class="n">Bind</span><span class="p">(</span><span class="n">wx</span><span class="o">.</span><span class="n">EVT_TOOL</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">parent</span><span class="o">.</span><span class="n">on_copy_panel</span><span class="p">,</span>
+                             <span class="nb">id</span><span class="o">=</span><span class="n">GUIFRAME_ID</span><span class="o">.</span><span class="n">COPY_ID</span><span class="p">)</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">parent</span><span class="o">.</span><span class="n">Bind</span><span class="p">(</span><span class="n">wx</span><span class="o">.</span><span class="n">EVT_TOOL</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">parent</span><span class="o">.</span><span class="n">on_paste_panel</span><span class="p">,</span>
+                             <span class="nb">id</span><span class="o">=</span><span class="n">GUIFRAME_ID</span><span class="o">.</span><span class="n">PASTE_ID</span><span class="p">)</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">parent</span><span class="o">.</span><span class="n">Bind</span><span class="p">(</span><span class="n">wx</span><span class="o">.</span><span class="n">EVT_TOOL</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">parent</span><span class="o">.</span><span class="n">on_reset_panel</span><span class="p">,</span>
+                             <span class="nb">id</span><span class="o">=</span><span class="n">GUIFRAME_ID</span><span class="o">.</span><span class="n">RESET_ID</span><span class="p">)</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">parent</span><span class="o">.</span><span class="n">Bind</span><span class="p">(</span><span class="n">wx</span><span class="o">.</span><span class="n">EVT_TOOL</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">parent</span><span class="o">.</span><span class="n">on_save_panel</span><span class="p">,</span>
+                             <span class="nb">id</span><span class="o">=</span><span class="n">GUIFRAME_ID</span><span class="o">.</span><span class="n">SAVE_ID</span><span class="p">)</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">parent</span><span class="o">.</span><span class="n">Bind</span><span class="p">(</span><span class="n">wx</span><span class="o">.</span><span class="n">EVT_TOOL</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">parent</span><span class="o">.</span><span class="n">on_preview_panel</span><span class="p">,</span>
+                             <span class="nb">id</span><span class="o">=</span><span class="n">GUIFRAME_ID</span><span class="o">.</span><span class="n">PREVIEW_ID</span><span class="p">)</span></div>
+            <span class="c1">#self.parent.Bind(wx.EVT_TOOL, self.parent.on_print_panel,</span>
+            <span class="c1">#                 id=GUIFRAME_ID.PRINT_ID)</span>
+            
+<div class="viewcode-block" id="GUIToolBar.update_button"><a class="viewcode-back" href="../../../../dev/sasview-api/sas.sasgui.guiframe.html#sas.sasgui.guiframe.gui_toolbar.GUIToolBar.update_button">[docs]</a>    <span class="k">def</span> <span class="nf">update_button</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">application_name</span><span class="o">=</span><span class="s1">&#39;&#39;</span><span class="p">,</span> <span class="n">panel_name</span><span class="o">=</span><span class="s1">&#39;&#39;</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="c1">#self.button_application.SetLabel(str(application_name))</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">button_panel</span><span class="o">.</span><span class="n">SetLabel</span><span class="p">(</span><span class="nb">str</span><span class="p">(</span><span class="n">panel_name</span><span class="p">))</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">button_panel</span><span class="o">.</span><span class="n">SetToolTipString</span><span class="p">(</span><span class="nb">str</span><span class="p">(</span><span class="n">panel_name</span><span class="p">))</span></div>
+        
+<div class="viewcode-block" id="GUIToolBar.update_toolbar"><a class="viewcode-back" href="../../../../dev/sasview-api/sas.sasgui.guiframe.html#sas.sasgui.guiframe.gui_toolbar.GUIToolBar.update_toolbar">[docs]</a>    <span class="k">def</span> <span class="nf">update_toolbar</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">panel</span><span class="o">=</span><span class="bp">None</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">if</span> <span class="n">panel</span> <span class="ow">is</span> <span class="bp">None</span><span class="p">:</span>
+            <span class="c1">#self.EnableTool(GUIFRAME_ID.PRINT_ID, False)</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">EnableTool</span><span class="p">(</span><span class="n">GUIFRAME_ID</span><span class="o">.</span><span class="n">UNDO_ID</span><span class="p">,</span><span class="bp">False</span><span class="p">)</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">EnableTool</span><span class="p">(</span><span class="n">GUIFRAME_ID</span><span class="o">.</span><span class="n">REDO_ID</span><span class="p">,</span> <span class="bp">False</span><span class="p">)</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">EnableTool</span><span class="p">(</span><span class="n">GUIFRAME_ID</span><span class="o">.</span><span class="n">COPY_ID</span><span class="p">,</span><span class="bp">False</span><span class="p">)</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">EnableTool</span><span class="p">(</span><span class="n">GUIFRAME_ID</span><span class="o">.</span><span class="n">PASTE_ID</span><span class="p">,</span> <span class="bp">False</span><span class="p">)</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">EnableTool</span><span class="p">(</span><span class="n">GUIFRAME_ID</span><span class="o">.</span><span class="n">PREVIEW_ID</span><span class="p">,</span> <span class="bp">False</span><span class="p">)</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">EnableTool</span><span class="p">(</span><span class="n">GUIFRAME_ID</span><span class="o">.</span><span class="n">RESET_ID</span><span class="p">,</span> <span class="bp">False</span><span class="p">)</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">EnableTool</span><span class="p">(</span><span class="n">GUIFRAME_ID</span><span class="o">.</span><span class="n">SAVE_ID</span><span class="p">,</span> <span class="bp">False</span><span class="p">)</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_bookmark_bt</span><span class="o">.</span><span class="n">Disable</span><span class="p">()</span>
+            
+        <span class="k">else</span><span class="p">:</span>
+            <span class="c1">#self.EnableTool(GUIFRAME_ID.PRINT_ID, panel.get_print_flag())</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">EnableTool</span><span class="p">(</span><span class="n">GUIFRAME_ID</span><span class="o">.</span><span class="n">UNDO_ID</span><span class="p">,</span> <span class="n">panel</span><span class="o">.</span><span class="n">get_undo_flag</span><span class="p">())</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">EnableTool</span><span class="p">(</span><span class="n">GUIFRAME_ID</span><span class="o">.</span><span class="n">REDO_ID</span><span class="p">,</span> <span class="n">panel</span><span class="o">.</span><span class="n">get_redo_flag</span><span class="p">())</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">EnableTool</span><span class="p">(</span><span class="n">GUIFRAME_ID</span><span class="o">.</span><span class="n">COPY_ID</span><span class="p">,</span> <span class="n">panel</span><span class="o">.</span><span class="n">get_copy_flag</span><span class="p">())</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">EnableTool</span><span class="p">(</span><span class="n">GUIFRAME_ID</span><span class="o">.</span><span class="n">PASTE_ID</span><span class="p">,</span> <span class="n">panel</span><span class="o">.</span><span class="n">get_paste_flag</span><span class="p">())</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">EnableTool</span><span class="p">(</span><span class="n">GUIFRAME_ID</span><span class="o">.</span><span class="n">PREVIEW_ID</span><span class="p">,</span> <span class="n">panel</span><span class="o">.</span><span class="n">get_preview_flag</span><span class="p">())</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">EnableTool</span><span class="p">(</span><span class="n">GUIFRAME_ID</span><span class="o">.</span><span class="n">RESET_ID</span><span class="p">,</span> <span class="n">panel</span><span class="o">.</span><span class="n">get_reset_flag</span><span class="p">())</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">EnableTool</span><span class="p">(</span><span class="n">GUIFRAME_ID</span><span class="o">.</span><span class="n">SAVE_ID</span><span class="p">,</span> <span class="n">panel</span><span class="o">.</span><span class="n">get_save_flag</span><span class="p">())</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_bookmark_bt</span><span class="o">.</span><span class="n">Enable</span><span class="p">(</span><span class="n">panel</span><span class="o">.</span><span class="n">get_bookmark_flag</span><span class="p">())</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">Realize</span><span class="p">()</span></div>
+        
+<div class="viewcode-block" id="GUIToolBar.enable_undo"><a class="viewcode-back" href="../../../../dev/sasview-api/sas.sasgui.guiframe.html#sas.sasgui.guiframe.gui_toolbar.GUIToolBar.enable_undo">[docs]</a>    <span class="k">def</span> <span class="nf">enable_undo</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">panel</span><span class="p">):</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">EnableTool</span><span class="p">(</span><span class="n">GUIFRAME_ID</span><span class="o">.</span><span class="n">UNDO_ID</span><span class="p">,</span> <span class="n">panel</span><span class="o">.</span><span class="n">get_undo_flag</span><span class="p">())</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">Realize</span><span class="p">()</span></div>
+        
+<div class="viewcode-block" id="GUIToolBar.enable_redo"><a class="viewcode-back" href="../../../../dev/sasview-api/sas.sasgui.guiframe.html#sas.sasgui.guiframe.gui_toolbar.GUIToolBar.enable_redo">[docs]</a>    <span class="k">def</span> <span class="nf">enable_redo</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">panel</span><span class="p">):</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">EnableTool</span><span class="p">(</span><span class="n">GUIFRAME_ID</span><span class="o">.</span><span class="n">REDO_ID</span><span class="p">,</span> <span class="n">panel</span><span class="o">.</span><span class="n">get_redo_flag</span><span class="p">())</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">Realize</span><span class="p">()</span></div>
+        
+<div class="viewcode-block" id="GUIToolBar.enable_copy"><a class="viewcode-back" href="../../../../dev/sasview-api/sas.sasgui.guiframe.html#sas.sasgui.guiframe.gui_toolbar.GUIToolBar.enable_copy">[docs]</a>    <span class="k">def</span> <span class="nf">enable_copy</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">panel</span><span class="p">):</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">EnableTool</span><span class="p">(</span><span class="n">GUIFRAME_ID</span><span class="o">.</span><span class="n">COPY_ID</span><span class="p">,</span> <span class="n">panel</span><span class="o">.</span><span class="n">get_copy_flag</span><span class="p">())</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">Realize</span><span class="p">()</span></div>
+        
+<div class="viewcode-block" id="GUIToolBar.enable_paste"><a class="viewcode-back" href="../../../../dev/sasview-api/sas.sasgui.guiframe.html#sas.sasgui.guiframe.gui_toolbar.GUIToolBar.enable_paste">[docs]</a>    <span class="k">def</span> <span class="nf">enable_paste</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">panel</span><span class="p">):</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">EnableTool</span><span class="p">(</span><span class="n">GUIFRAME_ID</span><span class="o">.</span><span class="n">PASTE_ID</span><span class="p">,</span> <span class="n">panel</span><span class="o">.</span><span class="n">get_paste_flag</span><span class="p">())</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">Realize</span><span class="p">()</span> </div>
+            
+<div class="viewcode-block" id="GUIToolBar.enable_print"><a class="viewcode-back" href="../../../../dev/sasview-api/sas.sasgui.guiframe.html#sas.sasgui.guiframe.gui_toolbar.GUIToolBar.enable_print">[docs]</a>    <span class="k">def</span> <span class="nf">enable_print</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">panel</span><span class="p">):</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">EnableTool</span><span class="p">(</span><span class="n">GUIFRAME_ID</span><span class="o">.</span><span class="n">PRINT_ID</span><span class="p">,</span> <span class="n">panel</span><span class="o">.</span><span class="n">get_print_flag</span><span class="p">())</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">Realize</span><span class="p">()</span></div>
+    
+<div class="viewcode-block" id="GUIToolBar.enable_zoom"><a class="viewcode-back" href="../../../../dev/sasview-api/sas.sasgui.guiframe.html#sas.sasgui.guiframe.gui_toolbar.GUIToolBar.enable_zoom">[docs]</a>    <span class="k">def</span> <span class="nf">enable_zoom</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">panel</span><span class="p">):</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">EnableTool</span><span class="p">(</span><span class="n">GUIFRAME_ID</span><span class="o">.</span><span class="n">ZOOM_ID</span><span class="p">,</span> <span class="n">panel</span><span class="o">.</span><span class="n">get_zoom_flag</span><span class="p">())</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">Realize</span><span class="p">()</span></div>
+        
+<div class="viewcode-block" id="GUIToolBar.enable_zoom_in"><a class="viewcode-back" href="../../../../dev/sasview-api/sas.sasgui.guiframe.html#sas.sasgui.guiframe.gui_toolbar.GUIToolBar.enable_zoom_in">[docs]</a>    <span class="k">def</span> <span class="nf">enable_zoom_in</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">panel</span><span class="p">):</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">EnableTool</span><span class="p">(</span><span class="n">GUIFRAME_ID</span><span class="o">.</span><span class="n">ZOOM_IN_ID</span><span class="p">,</span> <span class="n">panel</span><span class="o">.</span><span class="n">get_zoom_in_flag</span><span class="p">())</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">Realize</span><span class="p">()</span></div>
+        
+<div class="viewcode-block" id="GUIToolBar.enable_zoom_out"><a class="viewcode-back" href="../../../../dev/sasview-api/sas.sasgui.guiframe.html#sas.sasgui.guiframe.gui_toolbar.GUIToolBar.enable_zoom_out">[docs]</a>    <span class="k">def</span> <span class="nf">enable_zoom_out</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">panel</span><span class="p">):</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">EnableTool</span><span class="p">(</span><span class="n">GUIFRAME_ID</span><span class="o">.</span><span class="n">ZOOM_OUT_ID</span><span class="p">,</span> <span class="n">panel</span><span class="o">.</span><span class="n">get_zoom_out_flag</span><span class="p">())</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">Realize</span><span class="p">()</span></div>
+        
+<div class="viewcode-block" id="GUIToolBar.enable_bookmark"><a class="viewcode-back" href="../../../../dev/sasview-api/sas.sasgui.guiframe.html#sas.sasgui.guiframe.gui_toolbar.GUIToolBar.enable_bookmark">[docs]</a>    <span class="k">def</span> <span class="nf">enable_bookmark</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">panel</span><span class="p">):</span>
+        <span class="n">flag</span> <span class="o">=</span>  <span class="n">panel</span><span class="o">.</span><span class="n">get_bookmark_flag</span><span class="p">()</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_bookmark_bt</span><span class="o">.</span><span class="n">Enable</span><span class="p">(</span><span class="n">flag</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">Realize</span><span class="p">()</span></div>
+        
+<div class="viewcode-block" id="GUIToolBar.enable_save"><a class="viewcode-back" href="../../../../dev/sasview-api/sas.sasgui.guiframe.html#sas.sasgui.guiframe.gui_toolbar.GUIToolBar.enable_save">[docs]</a>    <span class="k">def</span> <span class="nf">enable_save</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">panel</span><span class="p">):</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">EnableTool</span><span class="p">(</span><span class="n">GUIFRAME_ID</span><span class="o">.</span><span class="n">SAVE_ID</span><span class="p">,</span> <span class="n">panel</span><span class="o">.</span><span class="n">get_save_flag</span><span class="p">())</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">Realize</span><span class="p">()</span></div>
+        
+<div class="viewcode-block" id="GUIToolBar.enable_reset"><a class="viewcode-back" href="../../../../dev/sasview-api/sas.sasgui.guiframe.html#sas.sasgui.guiframe.gui_toolbar.GUIToolBar.enable_reset">[docs]</a>    <span class="k">def</span> <span class="nf">enable_reset</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">panel</span><span class="p">):</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">EnableTool</span><span class="p">(</span><span class="n">GUIFRAME_ID</span><span class="o">.</span><span class="n">RESET_ID</span><span class="p">,</span> <span class="n">panel</span><span class="o">.</span><span class="n">get_reset_flag</span><span class="p">())</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">Realize</span><span class="p">()</span></div>
+    
+<div class="viewcode-block" id="GUIToolBar.enable_preview"><a class="viewcode-back" href="../../../../dev/sasview-api/sas.sasgui.guiframe.html#sas.sasgui.guiframe.gui_toolbar.GUIToolBar.enable_preview">[docs]</a>    <span class="k">def</span> <span class="nf">enable_preview</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">panel</span><span class="p">):</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">EnableTool</span><span class="p">(</span><span class="n">GUIFRAME_ID</span><span class="o">.</span><span class="n">PREVIEW_ID</span><span class="p">,</span> <span class="n">panel</span><span class="o">.</span><span class="n">get_preview_flag</span><span class="p">())</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">Realize</span><span class="p">()</span></div>
+    
+<div class="viewcode-block" id="GUIToolBar.on_bookmark"><a class="viewcode-back" href="../../../../dev/sasview-api/sas.sasgui.guiframe.html#sas.sasgui.guiframe.gui_toolbar.GUIToolBar.on_bookmark">[docs]</a>    <span class="k">def</span> <span class="nf">on_bookmark</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">event</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        add book mark</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">parent</span> <span class="ow">is</span> <span class="ow">not</span> <span class="bp">None</span><span class="p">:</span>
+           <span class="bp">self</span><span class="o">.</span><span class="n">parent</span><span class="o">.</span><span class="n">on_bookmark_panel</span><span class="p">(</span><span class="n">event</span><span class="p">)</span></div>
+           
+<div class="viewcode-block" id="GUIToolBar.append_bookmark"><a class="viewcode-back" href="../../../../dev/sasview-api/sas.sasgui.guiframe.html#sas.sasgui.guiframe.gui_toolbar.GUIToolBar.append_bookmark">[docs]</a>    <span class="k">def</span> <span class="nf">append_bookmark</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">event</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        receive item to append on the toolbar button bookmark</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">title</span> <span class="o">=</span> <span class="n">event</span><span class="o">.</span><span class="n">title</span>
+        <span class="n">hint</span> <span class="o">=</span> <span class="n">event</span><span class="o">.</span><span class="n">hint</span>
+        <span class="n">handler</span> <span class="o">=</span> <span class="n">event</span><span class="o">.</span><span class="n">handler</span>
+        <span class="nb">id</span> <span class="o">=</span> <span class="n">wx</span><span class="o">.</span><span class="n">NewId</span><span class="p">()</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_bookmark_menu</span><span class="o">.</span><span class="n">Append</span><span class="p">(</span><span class="nb">id</span><span class="p">,</span> <span class="nb">str</span><span class="p">(</span><span class="n">title</span><span class="p">),</span> <span class="nb">str</span><span class="p">(</span><span class="n">hint</span><span class="p">))</span>
+        <span class="n">wx</span><span class="o">.</span><span class="n">EVT_MENU</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="nb">id</span><span class="p">,</span> <span class="n">handler</span><span class="p">)</span></div>
+   
+<div class="viewcode-block" id="GUIToolBar.remove_bookmark_item"><a class="viewcode-back" href="../../../../dev/sasview-api/sas.sasgui.guiframe.html#sas.sasgui.guiframe.gui_toolbar.GUIToolBar.remove_bookmark_item">[docs]</a>    <span class="k">def</span> <span class="nf">remove_bookmark_item</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">item</span><span class="p">):</span>   
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Remove a bookmark item</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_bookmark_menu</span><span class="o">.</span><span class="n">DestroyItem</span><span class="p">(</span><span class="n">item</span><span class="p">)</span></div>
+        
+<div class="viewcode-block" id="GUIToolBar.get_bookmark_items"><a class="viewcode-back" href="../../../../dev/sasview-api/sas.sasgui.guiframe.html#sas.sasgui.guiframe.gui_toolbar.GUIToolBar.get_bookmark_items">[docs]</a>    <span class="k">def</span> <span class="nf">get_bookmark_items</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Get bookmark menu items</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_bookmark_menu</span><span class="o">.</span><span class="n">GetMenuItems</span><span class="p">()</span></div>
+    
+<div class="viewcode-block" id="GUIToolBar.append_bookmark_item"><a class="viewcode-back" href="../../../../dev/sasview-api/sas.sasgui.guiframe.html#sas.sasgui.guiframe.gui_toolbar.GUIToolBar.append_bookmark_item">[docs]</a>    <span class="k">def</span> <span class="nf">append_bookmark_item</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="nb">id</span><span class="p">,</span> <span class="n">label</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Append a item in bookmark</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_bookmark_menu</span><span class="o">.</span><span class="n">Append</span><span class="p">(</span><span class="nb">id</span><span class="p">,</span> <span class="n">label</span><span class="p">)</span></div></div>
+</pre></div>
+
+          </div>
+        </div>
+      </div>
+      <div class="sphinxsidebar" role="navigation" aria-label="main navigation">
+        <div class="sphinxsidebarwrapper">
+<div id="searchbox" style="display: none" role="search">
+  <h3>Quick search</h3>
+    <form class="search" action="../../../../search.html" method="get">
+      <input type="text" name="q" />
+      <input type="submit" value="Go" />
+      <input type="hidden" name="check_keywords" value="yes" />
+      <input type="hidden" name="area" value="default" />
+    </form>
+</div>
+<script type="text/javascript">$('#searchbox').show(0);</script>
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="related" role="navigation" aria-label="related navigation">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="../../../../genindex.html" title="General Index"
+             >index</a></li>
+        <li class="right" >
+          <a href="../../../../py-modindex.html" title="Python Module Index"
+             >modules</a> |</li>
+        <li class="nav-item nav-item-0"><a href="../../../../index.html">SasView 4.2.0 documentation</a> &raquo;</li>
+          <li class="nav-item nav-item-1"><a href="../../../index.html" >Module code</a> &raquo;</li>
+          <li class="nav-item nav-item-2"><a href="../../../sas.html" >sas</a> &raquo;</li>
+          <li class="nav-item nav-item-3"><a href="../guiframe.html" >sas.sasgui.guiframe</a> &raquo;</li> 
+      </ul>
+    </div>
+    <div class="footer" role="contentinfo">
+        &copy; Copyright 2018, The SasView Project.
+      Created using <a href="http://sphinx-doc.org/">Sphinx</a> 1.4.1.
+    </div>
+  </body>
+</html>

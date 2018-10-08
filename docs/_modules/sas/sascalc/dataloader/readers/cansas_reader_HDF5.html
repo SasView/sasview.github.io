@@ -1,0 +1,682 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+  "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+    
+    <title>sas.sascalc.dataloader.readers.cansas_reader_HDF5 &mdash; SasView 4.2.0 documentation</title>
+    
+    <link rel="stylesheet" href="../../../../../_static/classic.css" type="text/css" />
+    <link rel="stylesheet" href="../../../../../_static/pygments.css" type="text/css" />
+    
+    <script type="text/javascript">
+      var DOCUMENTATION_OPTIONS = {
+        URL_ROOT:    '../../../../../',
+        VERSION:     '4.2.0',
+        COLLAPSE_INDEX: false,
+        FILE_SUFFIX: '.html',
+        HAS_SOURCE:  true
+      };
+    </script>
+    <script type="text/javascript" src="../../../../../_static/jquery.js"></script>
+    <script type="text/javascript" src="../../../../../_static/underscore.js"></script>
+    <script type="text/javascript" src="../../../../../_static/doctools.js"></script>
+    <script type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.1/MathJax.js?config=TeX-MML-AM_CHTML"></script>
+    <link rel="top" title="SasView 4.2.0 documentation" href="../../../../../index.html" />
+    <link rel="up" title="sas" href="../../../../sas.html" /> 
+  </head>
+  <body role="document">
+    <div class="related" role="navigation" aria-label="related navigation">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="../../../../../genindex.html" title="General Index"
+             accesskey="I">index</a></li>
+        <li class="right" >
+          <a href="../../../../../py-modindex.html" title="Python Module Index"
+             >modules</a> |</li>
+        <li class="nav-item nav-item-0"><a href="../../../../../index.html">SasView 4.2.0 documentation</a> &raquo;</li>
+          <li class="nav-item nav-item-1"><a href="../../../../index.html" >Module code</a> &raquo;</li>
+          <li class="nav-item nav-item-2"><a href="../../../../sas.html" accesskey="U">sas</a> &raquo;</li> 
+      </ul>
+    </div>  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          <div class="body" role="main">
+            
+  <h1>Source code for sas.sascalc.dataloader.readers.cansas_reader_HDF5</h1><div class="highlight"><pre>
+<span></span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    CanSAS 2D data reader for reading HDF5 formatted CanSAS files.</span>
+<span class="sd">&quot;&quot;&quot;</span>
+
+<span class="kn">import</span> <span class="nn">h5py</span>
+<span class="kn">import</span> <span class="nn">numpy</span> <span class="kn">as</span> <span class="nn">np</span>
+<span class="kn">import</span> <span class="nn">re</span>
+<span class="kn">import</span> <span class="nn">os</span>
+<span class="kn">import</span> <span class="nn">sys</span>
+
+<span class="kn">from</span> <span class="nn">..data_info</span> <span class="kn">import</span> <span class="n">plottable_1D</span><span class="p">,</span> <span class="n">plottable_2D</span><span class="p">,</span>\
+    <span class="n">Data1D</span><span class="p">,</span> <span class="n">Data2D</span><span class="p">,</span> <span class="n">DataInfo</span><span class="p">,</span> <span class="n">Process</span><span class="p">,</span> <span class="n">Aperture</span><span class="p">,</span> <span class="n">Collimation</span><span class="p">,</span> \
+    <span class="n">TransmissionSpectrum</span><span class="p">,</span> <span class="n">Detector</span>
+<span class="kn">from</span> <span class="nn">..data_info</span> <span class="kn">import</span> <span class="n">combine_data_info_with_plottable</span>
+<span class="kn">from</span> <span class="nn">..loader_exceptions</span> <span class="kn">import</span> <span class="n">FileContentsException</span><span class="p">,</span> <span class="n">DefaultReaderException</span>
+<span class="kn">from</span> <span class="nn">..file_reader_base_class</span> <span class="kn">import</span> <span class="n">FileReader</span><span class="p">,</span> <span class="n">decode</span>
+
+<div class="viewcode-block" id="h5attr"><a class="viewcode-back" href="../../../../../dev/sasview-api/sas.sascalc.dataloader.readers.html#sas.sascalc.dataloader.readers.cansas_reader_HDF5.h5attr">[docs]</a><span class="k">def</span> <span class="nf">h5attr</span><span class="p">(</span><span class="n">node</span><span class="p">,</span> <span class="n">key</span><span class="p">,</span> <span class="n">default</span><span class="o">=</span><span class="bp">None</span><span class="p">):</span>
+    <span class="k">return</span> <span class="n">decode</span><span class="p">(</span><span class="n">node</span><span class="o">.</span><span class="n">attrs</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="n">key</span><span class="p">,</span> <span class="n">default</span><span class="p">))</span></div>
+
+<div class="viewcode-block" id="Reader"><a class="viewcode-back" href="../../../../../dev/sasview-api/sas.sascalc.dataloader.readers.html#sas.sascalc.dataloader.readers.cansas_reader_HDF5.Reader">[docs]</a><span class="k">class</span> <span class="nc">Reader</span><span class="p">(</span><span class="n">FileReader</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    A class for reading in CanSAS v2.0 data files. The existing iteration opens</span>
+<span class="sd">    Mantid generated HDF5 formatted files with file extension .h5/.H5. Any</span>
+<span class="sd">    number of data sets may be present within the file and any dimensionality</span>
+<span class="sd">    of data may be used. Currently 1D and 2D SAS data sets are supported, but</span>
+<span class="sd">    future implementations will include 1D and 2D SESANS data.</span>
+
+<span class="sd">    Any number of SASdata sets may be present in a SASentry and the data within</span>
+<span class="sd">    can be either 1D I(Q) or 2D I(Qx, Qy).</span>
+
+<span class="sd">    Also supports reading NXcanSAS formatted HDF5 files</span>
+
+<span class="sd">    :Dependencies:</span>
+<span class="sd">        The CanSAS HDF5 reader requires h5py =&gt; v2.5.0 or later.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+
+    <span class="c1"># CanSAS version</span>
+    <span class="n">cansas_version</span> <span class="o">=</span> <span class="mf">2.0</span>
+    <span class="c1"># Logged warnings or messages</span>
+    <span class="n">logging</span> <span class="o">=</span> <span class="bp">None</span>
+    <span class="c1"># List of errors for the current data set</span>
+    <span class="n">errors</span> <span class="o">=</span> <span class="bp">None</span>
+    <span class="c1"># Raw file contents to be processed</span>
+    <span class="n">raw_data</span> <span class="o">=</span> <span class="bp">None</span>
+    <span class="c1"># List of plottable1D objects that should be linked to the current_datainfo</span>
+    <span class="n">data1d</span> <span class="o">=</span> <span class="bp">None</span>
+    <span class="c1"># List of plottable2D objects that should be linked to the current_datainfo</span>
+    <span class="n">data2d</span> <span class="o">=</span> <span class="bp">None</span>
+    <span class="c1"># Data type name</span>
+    <span class="n">type_name</span> <span class="o">=</span> <span class="s2">&quot;CanSAS 2.0&quot;</span>
+    <span class="c1"># Wildcards</span>
+    <span class="nb">type</span> <span class="o">=</span> <span class="p">[</span><span class="s2">&quot;CanSAS 2.0 HDF5 Files (*.h5)|*.h5&quot;</span><span class="p">]</span>
+    <span class="c1"># List of allowed extensions</span>
+    <span class="n">ext</span> <span class="o">=</span> <span class="p">[</span><span class="s1">&#39;.h5&#39;</span><span class="p">,</span> <span class="s1">&#39;.H5&#39;</span><span class="p">]</span>
+    <span class="c1"># Flag to bypass extension check</span>
+    <span class="n">allow_all</span> <span class="o">=</span> <span class="bp">True</span>
+
+<div class="viewcode-block" id="Reader.get_file_contents"><a class="viewcode-back" href="../../../../../dev/sasview-api/sas.sascalc.dataloader.readers.html#sas.sascalc.dataloader.readers.cansas_reader_HDF5.Reader.get_file_contents">[docs]</a>    <span class="k">def</span> <span class="nf">get_file_contents</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        This is the general read method that all SasView data_loaders must have.</span>
+
+<span class="sd">        :param filename: A path for an HDF5 formatted CanSAS 2D data file.</span>
+<span class="sd">        :return: List of Data1D/2D objects and/or a list of errors.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="c1"># Reinitialize when loading a new data file to reset all class variables</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">reset_state</span><span class="p">()</span>
+
+        <span class="n">filename</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">f_open</span><span class="o">.</span><span class="n">name</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">f_open</span><span class="o">.</span><span class="n">close</span><span class="p">()</span> <span class="c1"># IO handled by h5py</span>
+
+        <span class="c1"># Check that the file exists</span>
+        <span class="k">if</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">isfile</span><span class="p">(</span><span class="n">filename</span><span class="p">):</span>
+            <span class="n">basename</span> <span class="o">=</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">basename</span><span class="p">(</span><span class="n">filename</span><span class="p">)</span>
+            <span class="n">_</span><span class="p">,</span> <span class="n">extension</span> <span class="o">=</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">splitext</span><span class="p">(</span><span class="n">basename</span><span class="p">)</span>
+            <span class="c1"># If the file type is not allowed, return empty list</span>
+            <span class="k">if</span> <span class="n">extension</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">ext</span> <span class="ow">or</span> <span class="bp">self</span><span class="o">.</span><span class="n">allow_all</span><span class="p">:</span>
+                <span class="c1"># Load the data file</span>
+                <span class="k">try</span><span class="p">:</span>
+                    <span class="bp">self</span><span class="o">.</span><span class="n">raw_data</span> <span class="o">=</span> <span class="n">h5py</span><span class="o">.</span><span class="n">File</span><span class="p">(</span><span class="n">filename</span><span class="p">,</span> <span class="s1">&#39;r&#39;</span><span class="p">)</span>
+                <span class="k">except</span> <span class="ne">Exception</span> <span class="k">as</span> <span class="n">e</span><span class="p">:</span>
+                    <span class="k">if</span> <span class="n">extension</span> <span class="ow">not</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">ext</span><span class="p">:</span>
+                        <span class="n">msg</span> <span class="o">=</span> <span class="s2">&quot;CanSAS2.0 HDF5 Reader could not load file {}&quot;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">basename</span> <span class="o">+</span> <span class="n">extension</span><span class="p">)</span>
+                        <span class="k">raise</span> <span class="n">DefaultReaderException</span><span class="p">(</span><span class="n">msg</span><span class="p">)</span>
+                    <span class="k">raise</span> <span class="n">FileContentsException</span><span class="p">(</span><span class="n">e</span><span class="o">.</span><span class="n">message</span><span class="p">)</span>
+                <span class="k">try</span><span class="p">:</span>
+                    <span class="c1"># Read in all child elements of top level SASroot</span>
+                    <span class="bp">self</span><span class="o">.</span><span class="n">read_children</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">raw_data</span><span class="p">,</span> <span class="p">[])</span>
+                    <span class="c1"># Add the last data set to the list of outputs</span>
+                    <span class="bp">self</span><span class="o">.</span><span class="n">add_data_set</span><span class="p">()</span>
+                <span class="k">except</span> <span class="ne">Exception</span> <span class="k">as</span> <span class="n">exc</span><span class="p">:</span>
+                    <span class="k">raise</span> <span class="n">FileContentsException</span><span class="p">(</span><span class="n">exc</span><span class="o">.</span><span class="n">message</span><span class="p">)</span>
+                <span class="k">finally</span><span class="p">:</span>
+                    <span class="c1"># Close the data file</span>
+                    <span class="bp">self</span><span class="o">.</span><span class="n">raw_data</span><span class="o">.</span><span class="n">close</span><span class="p">()</span>
+
+                <span class="k">for</span> <span class="n">dataset</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">output</span><span class="p">:</span>
+                    <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">dataset</span><span class="p">,</span> <span class="n">Data1D</span><span class="p">):</span>
+                        <span class="k">if</span> <span class="n">dataset</span><span class="o">.</span><span class="n">x</span><span class="o">.</span><span class="n">size</span> <span class="o">&lt;</span> <span class="mi">5</span><span class="p">:</span>
+                            <span class="bp">self</span><span class="o">.</span><span class="n">output</span> <span class="o">=</span> <span class="p">[]</span>
+                            <span class="k">raise</span> <span class="n">FileContentsException</span><span class="p">(</span><span class="s2">&quot;Fewer than 5 data points found.&quot;</span><span class="p">)</span></div>
+
+<div class="viewcode-block" id="Reader.reset_state"><a class="viewcode-back" href="../../../../../dev/sasview-api/sas.sascalc.dataloader.readers.html#sas.sascalc.dataloader.readers.cansas_reader_HDF5.Reader.reset_state">[docs]</a>    <span class="k">def</span> <span class="nf">reset_state</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Create the reader object and define initial states for class variables</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="nb">super</span><span class="p">(</span><span class="n">Reader</span><span class="p">,</span> <span class="bp">self</span><span class="p">)</span><span class="o">.</span><span class="n">reset_state</span><span class="p">()</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">data1d</span> <span class="o">=</span> <span class="p">[]</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">data2d</span> <span class="o">=</span> <span class="p">[]</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">raw_data</span> <span class="o">=</span> <span class="bp">None</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">errors</span> <span class="o">=</span> <span class="nb">set</span><span class="p">()</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">logging</span> <span class="o">=</span> <span class="p">[]</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">parent_class</span> <span class="o">=</span> <span class="s1">u&#39;&#39;</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">detector</span> <span class="o">=</span> <span class="n">Detector</span><span class="p">()</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">collimation</span> <span class="o">=</span> <span class="n">Collimation</span><span class="p">()</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">aperture</span> <span class="o">=</span> <span class="n">Aperture</span><span class="p">()</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">process</span> <span class="o">=</span> <span class="n">Process</span><span class="p">()</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">trans_spectrum</span> <span class="o">=</span> <span class="n">TransmissionSpectrum</span><span class="p">()</span></div>
+
+<div class="viewcode-block" id="Reader.read_children"><a class="viewcode-back" href="../../../../../dev/sasview-api/sas.sascalc.dataloader.readers.html#sas.sascalc.dataloader.readers.cansas_reader_HDF5.Reader.read_children">[docs]</a>    <span class="k">def</span> <span class="nf">read_children</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">data</span><span class="p">,</span> <span class="n">parent_list</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        A recursive method for stepping through the hierarchical data file.</span>
+
+<span class="sd">        :param data: h5py Group object of any kind</span>
+<span class="sd">        :param parent: h5py Group parent name</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+
+        <span class="c1"># Loop through each element of the parent and process accordingly</span>
+        <span class="k">for</span> <span class="n">key</span> <span class="ow">in</span> <span class="n">data</span><span class="o">.</span><span class="n">keys</span><span class="p">():</span>
+            <span class="c1"># Get all information for the current key</span>
+            <span class="n">value</span> <span class="o">=</span> <span class="n">data</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="n">key</span><span class="p">)</span>
+            <span class="n">class_name</span> <span class="o">=</span> <span class="n">h5attr</span><span class="p">(</span><span class="n">value</span><span class="p">,</span> <span class="s1">u&#39;canSAS_class&#39;</span><span class="p">)</span>
+            <span class="k">if</span> <span class="n">class_name</span> <span class="ow">is</span> <span class="bp">None</span><span class="p">:</span>
+                <span class="n">class_name</span> <span class="o">=</span> <span class="n">h5attr</span><span class="p">(</span><span class="n">value</span><span class="p">,</span> <span class="s1">u&#39;NX_class&#39;</span><span class="p">)</span>
+            <span class="k">if</span> <span class="n">class_name</span> <span class="ow">is</span> <span class="ow">not</span> <span class="bp">None</span><span class="p">:</span>
+                <span class="n">class_prog</span> <span class="o">=</span> <span class="n">re</span><span class="o">.</span><span class="n">compile</span><span class="p">(</span><span class="n">class_name</span><span class="p">)</span>
+            <span class="k">else</span><span class="p">:</span>
+                <span class="n">class_prog</span> <span class="o">=</span> <span class="n">re</span><span class="o">.</span><span class="n">compile</span><span class="p">(</span><span class="n">value</span><span class="o">.</span><span class="n">name</span><span class="p">)</span>
+
+            <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">value</span><span class="p">,</span> <span class="n">h5py</span><span class="o">.</span><span class="n">Group</span><span class="p">):</span>
+                <span class="c1"># Set parent class before recursion</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">parent_class</span> <span class="o">=</span> <span class="n">class_name</span>
+                <span class="n">parent_list</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">key</span><span class="p">)</span>
+                <span class="c1"># If a new sasentry, store the current data sets and create</span>
+                <span class="c1"># a fresh Data1D/2D object</span>
+                <span class="k">if</span> <span class="n">class_prog</span><span class="o">.</span><span class="n">match</span><span class="p">(</span><span class="s1">u&#39;SASentry&#39;</span><span class="p">):</span>
+                    <span class="bp">self</span><span class="o">.</span><span class="n">add_data_set</span><span class="p">(</span><span class="n">key</span><span class="p">)</span>
+                <span class="k">elif</span> <span class="n">class_prog</span><span class="o">.</span><span class="n">match</span><span class="p">(</span><span class="s1">u&#39;SASdata&#39;</span><span class="p">):</span>
+                    <span class="bp">self</span><span class="o">.</span><span class="n">_initialize_new_data_set</span><span class="p">(</span><span class="n">parent_list</span><span class="p">)</span>
+                <span class="c1"># Recursion step to access data within the group</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">read_children</span><span class="p">(</span><span class="n">value</span><span class="p">,</span> <span class="n">parent_list</span><span class="p">)</span>
+                <span class="c1"># Reset parent class when returning from recursive method</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">parent_class</span> <span class="o">=</span> <span class="n">class_name</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">add_intermediate</span><span class="p">()</span>
+                <span class="n">parent_list</span><span class="o">.</span><span class="n">remove</span><span class="p">(</span><span class="n">key</span><span class="p">)</span>
+
+            <span class="k">elif</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">value</span><span class="p">,</span> <span class="n">h5py</span><span class="o">.</span><span class="n">Dataset</span><span class="p">):</span>
+                <span class="c1"># If this is a dataset, store the data appropriately</span>
+                <span class="n">data_set</span> <span class="o">=</span> <span class="n">data</span><span class="p">[</span><span class="n">key</span><span class="p">][:]</span>
+                <span class="n">unit</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_get_unit</span><span class="p">(</span><span class="n">value</span><span class="p">)</span>
+
+                <span class="c1"># I and Q Data</span>
+                <span class="k">if</span> <span class="n">key</span> <span class="o">==</span> <span class="s1">u&#39;I&#39;</span><span class="p">:</span>
+                    <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">current_dataset</span><span class="p">,</span> <span class="n">plottable_2D</span><span class="p">):</span>
+                        <span class="bp">self</span><span class="o">.</span><span class="n">current_dataset</span><span class="o">.</span><span class="n">data</span> <span class="o">=</span> <span class="n">data_set</span>
+                        <span class="bp">self</span><span class="o">.</span><span class="n">current_dataset</span><span class="o">.</span><span class="n">zaxis</span><span class="p">(</span><span class="s2">&quot;Intensity&quot;</span><span class="p">,</span> <span class="n">unit</span><span class="p">)</span>
+                    <span class="k">else</span><span class="p">:</span>
+                        <span class="bp">self</span><span class="o">.</span><span class="n">current_dataset</span><span class="o">.</span><span class="n">y</span> <span class="o">=</span> <span class="n">data_set</span><span class="o">.</span><span class="n">flatten</span><span class="p">()</span>
+                        <span class="bp">self</span><span class="o">.</span><span class="n">current_dataset</span><span class="o">.</span><span class="n">yaxis</span><span class="p">(</span><span class="s2">&quot;Intensity&quot;</span><span class="p">,</span> <span class="n">unit</span><span class="p">)</span>
+                    <span class="k">continue</span>
+                <span class="k">elif</span> <span class="n">key</span> <span class="o">==</span> <span class="s1">u&#39;Idev&#39;</span><span class="p">:</span>
+                    <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">current_dataset</span><span class="p">,</span> <span class="n">plottable_2D</span><span class="p">):</span>
+                        <span class="bp">self</span><span class="o">.</span><span class="n">current_dataset</span><span class="o">.</span><span class="n">err_data</span> <span class="o">=</span> <span class="n">data_set</span><span class="o">.</span><span class="n">flatten</span><span class="p">()</span>
+                    <span class="k">else</span><span class="p">:</span>
+                        <span class="bp">self</span><span class="o">.</span><span class="n">current_dataset</span><span class="o">.</span><span class="n">dy</span> <span class="o">=</span> <span class="n">data_set</span><span class="o">.</span><span class="n">flatten</span><span class="p">()</span>
+                    <span class="k">continue</span>
+                <span class="k">elif</span> <span class="n">key</span> <span class="o">==</span> <span class="s1">u&#39;Q&#39;</span><span class="p">:</span>
+                    <span class="bp">self</span><span class="o">.</span><span class="n">current_dataset</span><span class="o">.</span><span class="n">xaxis</span><span class="p">(</span><span class="s2">&quot;Q&quot;</span><span class="p">,</span> <span class="n">unit</span><span class="p">)</span>
+                    <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">current_dataset</span><span class="p">,</span> <span class="n">plottable_2D</span><span class="p">):</span>
+                        <span class="bp">self</span><span class="o">.</span><span class="n">current_dataset</span><span class="o">.</span><span class="n">q</span> <span class="o">=</span> <span class="n">data_set</span><span class="o">.</span><span class="n">flatten</span><span class="p">()</span>
+                    <span class="k">else</span><span class="p">:</span>
+                        <span class="bp">self</span><span class="o">.</span><span class="n">current_dataset</span><span class="o">.</span><span class="n">x</span> <span class="o">=</span> <span class="n">data_set</span><span class="o">.</span><span class="n">flatten</span><span class="p">()</span>
+                    <span class="k">continue</span>
+                <span class="k">elif</span> <span class="n">key</span> <span class="o">==</span> <span class="s1">u&#39;Qdev&#39;</span><span class="p">:</span>
+                    <span class="bp">self</span><span class="o">.</span><span class="n">current_dataset</span><span class="o">.</span><span class="n">dx</span> <span class="o">=</span> <span class="n">data_set</span><span class="o">.</span><span class="n">flatten</span><span class="p">()</span>
+                    <span class="k">continue</span>
+                <span class="k">elif</span> <span class="n">key</span> <span class="o">==</span> <span class="s1">u&#39;dQw&#39;</span><span class="p">:</span>
+                    <span class="bp">self</span><span class="o">.</span><span class="n">current_dataset</span><span class="o">.</span><span class="n">dxw</span> <span class="o">=</span> <span class="n">data_set</span><span class="o">.</span><span class="n">flatten</span><span class="p">()</span>
+                    <span class="k">continue</span>
+                <span class="k">elif</span> <span class="n">key</span> <span class="o">==</span> <span class="s1">u&#39;dQl&#39;</span><span class="p">:</span>
+                    <span class="bp">self</span><span class="o">.</span><span class="n">current_dataset</span><span class="o">.</span><span class="n">dxl</span> <span class="o">=</span> <span class="n">data_set</span><span class="o">.</span><span class="n">flatten</span><span class="p">()</span>
+                    <span class="k">continue</span>
+                <span class="k">elif</span> <span class="n">key</span> <span class="o">==</span> <span class="s1">u&#39;Qy&#39;</span><span class="p">:</span>
+                    <span class="bp">self</span><span class="o">.</span><span class="n">current_dataset</span><span class="o">.</span><span class="n">yaxis</span><span class="p">(</span><span class="s2">&quot;Q_y&quot;</span><span class="p">,</span> <span class="n">unit</span><span class="p">)</span>
+                    <span class="bp">self</span><span class="o">.</span><span class="n">current_dataset</span><span class="o">.</span><span class="n">qy_data</span> <span class="o">=</span> <span class="n">data_set</span><span class="o">.</span><span class="n">flatten</span><span class="p">()</span>
+                    <span class="k">continue</span>
+                <span class="k">elif</span> <span class="n">key</span> <span class="o">==</span> <span class="s1">u&#39;Qydev&#39;</span><span class="p">:</span>
+                    <span class="bp">self</span><span class="o">.</span><span class="n">current_dataset</span><span class="o">.</span><span class="n">dqy_data</span> <span class="o">=</span> <span class="n">data_set</span><span class="o">.</span><span class="n">flatten</span><span class="p">()</span>
+                    <span class="k">continue</span>
+                <span class="k">elif</span> <span class="n">key</span> <span class="o">==</span> <span class="s1">u&#39;Qx&#39;</span><span class="p">:</span>
+                    <span class="bp">self</span><span class="o">.</span><span class="n">current_dataset</span><span class="o">.</span><span class="n">xaxis</span><span class="p">(</span><span class="s2">&quot;Q_x&quot;</span><span class="p">,</span> <span class="n">unit</span><span class="p">)</span>
+                    <span class="bp">self</span><span class="o">.</span><span class="n">current_dataset</span><span class="o">.</span><span class="n">qx_data</span> <span class="o">=</span> <span class="n">data_set</span><span class="o">.</span><span class="n">flatten</span><span class="p">()</span>
+                    <span class="k">continue</span>
+                <span class="k">elif</span> <span class="n">key</span> <span class="o">==</span> <span class="s1">u&#39;Qxdev&#39;</span><span class="p">:</span>
+                    <span class="bp">self</span><span class="o">.</span><span class="n">current_dataset</span><span class="o">.</span><span class="n">dqx_data</span> <span class="o">=</span> <span class="n">data_set</span><span class="o">.</span><span class="n">flatten</span><span class="p">()</span>
+                    <span class="k">continue</span>
+                <span class="k">elif</span> <span class="n">key</span> <span class="o">==</span> <span class="s1">u&#39;Mask&#39;</span><span class="p">:</span>
+                    <span class="bp">self</span><span class="o">.</span><span class="n">current_dataset</span><span class="o">.</span><span class="n">mask</span> <span class="o">=</span> <span class="n">data_set</span><span class="o">.</span><span class="n">flatten</span><span class="p">()</span>
+                    <span class="k">continue</span>
+                <span class="c1"># Transmission Spectrum</span>
+                <span class="k">elif</span> <span class="p">(</span><span class="n">key</span> <span class="o">==</span> <span class="s1">u&#39;T&#39;</span>
+                      <span class="ow">and</span> <span class="bp">self</span><span class="o">.</span><span class="n">parent_class</span> <span class="o">==</span> <span class="s1">u&#39;SAStransmission_spectrum&#39;</span><span class="p">):</span>
+                    <span class="bp">self</span><span class="o">.</span><span class="n">trans_spectrum</span><span class="o">.</span><span class="n">transmission</span> <span class="o">=</span> <span class="n">data_set</span><span class="o">.</span><span class="n">flatten</span><span class="p">()</span>
+                    <span class="k">continue</span>
+                <span class="k">elif</span> <span class="p">(</span><span class="n">key</span> <span class="o">==</span> <span class="s1">u&#39;Tdev&#39;</span>
+                      <span class="ow">and</span> <span class="bp">self</span><span class="o">.</span><span class="n">parent_class</span> <span class="o">==</span> <span class="s1">u&#39;SAStransmission_spectrum&#39;</span><span class="p">):</span>
+                    <span class="bp">self</span><span class="o">.</span><span class="n">trans_spectrum</span><span class="o">.</span><span class="n">transmission_deviation</span> <span class="o">=</span> \
+                        <span class="n">data_set</span><span class="o">.</span><span class="n">flatten</span><span class="p">()</span>
+                    <span class="k">continue</span>
+                <span class="k">elif</span> <span class="p">(</span><span class="n">key</span> <span class="o">==</span> <span class="s1">u&#39;lambda&#39;</span>
+                      <span class="ow">and</span> <span class="bp">self</span><span class="o">.</span><span class="n">parent_class</span> <span class="o">==</span> <span class="s1">u&#39;SAStransmission_spectrum&#39;</span><span class="p">):</span>
+                    <span class="bp">self</span><span class="o">.</span><span class="n">trans_spectrum</span><span class="o">.</span><span class="n">wavelength</span> <span class="o">=</span> <span class="n">data_set</span><span class="o">.</span><span class="n">flatten</span><span class="p">()</span>
+                    <span class="k">continue</span>
+
+                <span class="k">for</span> <span class="n">data_point</span> <span class="ow">in</span> <span class="n">data_set</span><span class="p">:</span>
+                    <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">data_point</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">):</span>
+                        <span class="k">if</span> <span class="n">data_point</span><span class="o">.</span><span class="n">dtype</span><span class="o">.</span><span class="n">char</span> <span class="o">==</span> <span class="s1">&#39;S&#39;</span><span class="p">:</span>
+                            <span class="n">data_point</span> <span class="o">=</span> <span class="n">decode</span><span class="p">(</span><span class="nb">bytes</span><span class="p">(</span><span class="n">data_point</span><span class="p">))</span>
+                    <span class="k">else</span><span class="p">:</span>
+                        <span class="n">data_point</span> <span class="o">=</span> <span class="n">decode</span><span class="p">(</span><span class="n">data_point</span><span class="p">)</span>
+                    <span class="c1"># Top Level Meta Data</span>
+                    <span class="k">if</span> <span class="n">key</span> <span class="o">==</span> <span class="s1">u&#39;definition&#39;</span><span class="p">:</span>
+                        <span class="bp">self</span><span class="o">.</span><span class="n">current_datainfo</span><span class="o">.</span><span class="n">meta_data</span><span class="p">[</span><span class="s1">&#39;reader&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="n">data_point</span>
+                    <span class="k">elif</span> <span class="n">key</span> <span class="o">==</span> <span class="s1">u&#39;run&#39;</span><span class="p">:</span>
+                        <span class="bp">self</span><span class="o">.</span><span class="n">current_datainfo</span><span class="o">.</span><span class="n">run</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">data_point</span><span class="p">)</span>
+                        <span class="k">try</span><span class="p">:</span>
+                            <span class="n">run_name</span> <span class="o">=</span> <span class="n">h5attr</span><span class="p">(</span><span class="n">value</span><span class="p">,</span> <span class="s1">&#39;name&#39;</span><span class="p">)</span>
+                            <span class="n">run_dict</span> <span class="o">=</span> <span class="p">{</span><span class="n">data_point</span><span class="p">:</span> <span class="n">run_name</span><span class="p">}</span>
+                            <span class="bp">self</span><span class="o">.</span><span class="n">current_datainfo</span><span class="o">.</span><span class="n">run_name</span> <span class="o">=</span> <span class="n">run_dict</span>
+                        <span class="k">except</span> <span class="ne">Exception</span><span class="p">:</span>
+                            <span class="k">pass</span>
+                    <span class="k">elif</span> <span class="n">key</span> <span class="o">==</span> <span class="s1">u&#39;title&#39;</span><span class="p">:</span>
+                        <span class="bp">self</span><span class="o">.</span><span class="n">current_datainfo</span><span class="o">.</span><span class="n">title</span> <span class="o">=</span> <span class="n">data_point</span>
+                    <span class="k">elif</span> <span class="n">key</span> <span class="o">==</span> <span class="s1">u&#39;SASnote&#39;</span><span class="p">:</span>
+                        <span class="bp">self</span><span class="o">.</span><span class="n">current_datainfo</span><span class="o">.</span><span class="n">notes</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">data_point</span><span class="p">)</span>
+
+                    <span class="c1"># Sample Information</span>
+                    <span class="c1"># CanSAS 2.0 format</span>
+                    <span class="k">elif</span> <span class="n">key</span> <span class="o">==</span> <span class="s1">u&#39;Title&#39;</span> <span class="ow">and</span> <span class="bp">self</span><span class="o">.</span><span class="n">parent_class</span> <span class="o">==</span> <span class="s1">u&#39;SASsample&#39;</span><span class="p">:</span>
+                        <span class="bp">self</span><span class="o">.</span><span class="n">current_datainfo</span><span class="o">.</span><span class="n">sample</span><span class="o">.</span><span class="n">name</span> <span class="o">=</span> <span class="n">data_point</span>
+                    <span class="c1"># NXcanSAS format</span>
+                    <span class="k">elif</span> <span class="n">key</span> <span class="o">==</span> <span class="s1">u&#39;name&#39;</span> <span class="ow">and</span> <span class="bp">self</span><span class="o">.</span><span class="n">parent_class</span> <span class="o">==</span> <span class="s1">u&#39;SASsample&#39;</span><span class="p">:</span>
+                        <span class="bp">self</span><span class="o">.</span><span class="n">current_datainfo</span><span class="o">.</span><span class="n">sample</span><span class="o">.</span><span class="n">name</span> <span class="o">=</span> <span class="n">data_point</span>
+                    <span class="c1"># NXcanSAS format</span>
+                    <span class="k">elif</span> <span class="n">key</span> <span class="o">==</span> <span class="s1">u&#39;ID&#39;</span> <span class="ow">and</span> <span class="bp">self</span><span class="o">.</span><span class="n">parent_class</span> <span class="o">==</span> <span class="s1">u&#39;SASsample&#39;</span><span class="p">:</span>
+                        <span class="bp">self</span><span class="o">.</span><span class="n">current_datainfo</span><span class="o">.</span><span class="n">sample</span><span class="o">.</span><span class="n">name</span> <span class="o">=</span> <span class="n">data_point</span>
+                    <span class="k">elif</span> <span class="p">(</span><span class="n">key</span> <span class="o">==</span> <span class="s1">u&#39;thickness&#39;</span>
+                          <span class="ow">and</span> <span class="bp">self</span><span class="o">.</span><span class="n">parent_class</span> <span class="o">==</span> <span class="s1">u&#39;SASsample&#39;</span><span class="p">):</span>
+                        <span class="bp">self</span><span class="o">.</span><span class="n">current_datainfo</span><span class="o">.</span><span class="n">sample</span><span class="o">.</span><span class="n">thickness</span> <span class="o">=</span> <span class="n">data_point</span>
+                    <span class="k">elif</span> <span class="p">(</span><span class="n">key</span> <span class="o">==</span> <span class="s1">u&#39;temperature&#39;</span>
+                          <span class="ow">and</span> <span class="bp">self</span><span class="o">.</span><span class="n">parent_class</span> <span class="o">==</span> <span class="s1">u&#39;SASsample&#39;</span><span class="p">):</span>
+                        <span class="bp">self</span><span class="o">.</span><span class="n">current_datainfo</span><span class="o">.</span><span class="n">sample</span><span class="o">.</span><span class="n">temperature</span> <span class="o">=</span> <span class="n">data_point</span>
+                    <span class="k">elif</span> <span class="p">(</span><span class="n">key</span> <span class="o">==</span> <span class="s1">u&#39;transmission&#39;</span>
+                          <span class="ow">and</span> <span class="bp">self</span><span class="o">.</span><span class="n">parent_class</span> <span class="o">==</span> <span class="s1">u&#39;SASsample&#39;</span><span class="p">):</span>
+                        <span class="bp">self</span><span class="o">.</span><span class="n">current_datainfo</span><span class="o">.</span><span class="n">sample</span><span class="o">.</span><span class="n">transmission</span> <span class="o">=</span> <span class="n">data_point</span>
+                    <span class="k">elif</span> <span class="p">(</span><span class="n">key</span> <span class="o">==</span> <span class="s1">u&#39;x_position&#39;</span>
+                          <span class="ow">and</span> <span class="bp">self</span><span class="o">.</span><span class="n">parent_class</span> <span class="o">==</span> <span class="s1">u&#39;SASsample&#39;</span><span class="p">):</span>
+                        <span class="bp">self</span><span class="o">.</span><span class="n">current_datainfo</span><span class="o">.</span><span class="n">sample</span><span class="o">.</span><span class="n">position</span><span class="o">.</span><span class="n">x</span> <span class="o">=</span> <span class="n">data_point</span>
+                    <span class="k">elif</span> <span class="p">(</span><span class="n">key</span> <span class="o">==</span> <span class="s1">u&#39;y_position&#39;</span>
+                          <span class="ow">and</span> <span class="bp">self</span><span class="o">.</span><span class="n">parent_class</span> <span class="o">==</span> <span class="s1">u&#39;SASsample&#39;</span><span class="p">):</span>
+                        <span class="bp">self</span><span class="o">.</span><span class="n">current_datainfo</span><span class="o">.</span><span class="n">sample</span><span class="o">.</span><span class="n">position</span><span class="o">.</span><span class="n">y</span> <span class="o">=</span> <span class="n">data_point</span>
+                    <span class="k">elif</span> <span class="n">key</span> <span class="o">==</span> <span class="s1">u&#39;pitch&#39;</span> <span class="ow">and</span> <span class="bp">self</span><span class="o">.</span><span class="n">parent_class</span> <span class="o">==</span> <span class="s1">u&#39;SASsample&#39;</span><span class="p">:</span>
+                        <span class="bp">self</span><span class="o">.</span><span class="n">current_datainfo</span><span class="o">.</span><span class="n">sample</span><span class="o">.</span><span class="n">orientation</span><span class="o">.</span><span class="n">x</span> <span class="o">=</span> <span class="n">data_point</span>
+                    <span class="k">elif</span> <span class="n">key</span> <span class="o">==</span> <span class="s1">u&#39;yaw&#39;</span> <span class="ow">and</span> <span class="bp">self</span><span class="o">.</span><span class="n">parent_class</span> <span class="o">==</span> <span class="s1">u&#39;SASsample&#39;</span><span class="p">:</span>
+                        <span class="bp">self</span><span class="o">.</span><span class="n">current_datainfo</span><span class="o">.</span><span class="n">sample</span><span class="o">.</span><span class="n">orientation</span><span class="o">.</span><span class="n">y</span> <span class="o">=</span> <span class="n">data_point</span>
+                    <span class="k">elif</span> <span class="n">key</span> <span class="o">==</span> <span class="s1">u&#39;roll&#39;</span> <span class="ow">and</span> <span class="bp">self</span><span class="o">.</span><span class="n">parent_class</span> <span class="o">==</span> <span class="s1">u&#39;SASsample&#39;</span><span class="p">:</span>
+                        <span class="bp">self</span><span class="o">.</span><span class="n">current_datainfo</span><span class="o">.</span><span class="n">sample</span><span class="o">.</span><span class="n">orientation</span><span class="o">.</span><span class="n">z</span> <span class="o">=</span> <span class="n">data_point</span>
+                    <span class="k">elif</span> <span class="p">(</span><span class="n">key</span> <span class="o">==</span> <span class="s1">u&#39;details&#39;</span>
+                          <span class="ow">and</span> <span class="bp">self</span><span class="o">.</span><span class="n">parent_class</span> <span class="o">==</span> <span class="s1">u&#39;SASsample&#39;</span><span class="p">):</span>
+                        <span class="bp">self</span><span class="o">.</span><span class="n">current_datainfo</span><span class="o">.</span><span class="n">sample</span><span class="o">.</span><span class="n">details</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">data_point</span><span class="p">)</span>
+
+                    <span class="c1"># Instrumental Information</span>
+                    <span class="k">elif</span> <span class="p">(</span><span class="n">key</span> <span class="o">==</span> <span class="s1">u&#39;name&#39;</span>
+                          <span class="ow">and</span> <span class="bp">self</span><span class="o">.</span><span class="n">parent_class</span> <span class="o">==</span> <span class="s1">u&#39;SASinstrument&#39;</span><span class="p">):</span>
+                        <span class="bp">self</span><span class="o">.</span><span class="n">current_datainfo</span><span class="o">.</span><span class="n">instrument</span> <span class="o">=</span> <span class="n">data_point</span>
+                    <span class="k">elif</span> <span class="n">key</span> <span class="o">==</span> <span class="s1">u&#39;name&#39;</span> <span class="ow">and</span> <span class="bp">self</span><span class="o">.</span><span class="n">parent_class</span> <span class="o">==</span> <span class="s1">u&#39;SASdetector&#39;</span><span class="p">:</span>
+                        <span class="bp">self</span><span class="o">.</span><span class="n">detector</span><span class="o">.</span><span class="n">name</span> <span class="o">=</span> <span class="n">data_point</span>
+                    <span class="k">elif</span> <span class="n">key</span> <span class="o">==</span> <span class="s1">u&#39;SDD&#39;</span> <span class="ow">and</span> <span class="bp">self</span><span class="o">.</span><span class="n">parent_class</span> <span class="o">==</span> <span class="s1">u&#39;SASdetector&#39;</span><span class="p">:</span>
+                        <span class="bp">self</span><span class="o">.</span><span class="n">detector</span><span class="o">.</span><span class="n">distance</span> <span class="o">=</span> <span class="nb">float</span><span class="p">(</span><span class="n">data_point</span><span class="p">)</span>
+                        <span class="bp">self</span><span class="o">.</span><span class="n">detector</span><span class="o">.</span><span class="n">distance_unit</span> <span class="o">=</span> <span class="n">unit</span>
+                    <span class="k">elif</span> <span class="p">(</span><span class="n">key</span> <span class="o">==</span> <span class="s1">u&#39;slit_length&#39;</span>
+                          <span class="ow">and</span> <span class="bp">self</span><span class="o">.</span><span class="n">parent_class</span> <span class="o">==</span> <span class="s1">u&#39;SASdetector&#39;</span><span class="p">):</span>
+                        <span class="bp">self</span><span class="o">.</span><span class="n">detector</span><span class="o">.</span><span class="n">slit_length</span> <span class="o">=</span> <span class="nb">float</span><span class="p">(</span><span class="n">data_point</span><span class="p">)</span>
+                        <span class="bp">self</span><span class="o">.</span><span class="n">detector</span><span class="o">.</span><span class="n">slit_length_unit</span> <span class="o">=</span> <span class="n">unit</span>
+                    <span class="k">elif</span> <span class="p">(</span><span class="n">key</span> <span class="o">==</span> <span class="s1">u&#39;x_position&#39;</span>
+                          <span class="ow">and</span> <span class="bp">self</span><span class="o">.</span><span class="n">parent_class</span> <span class="o">==</span> <span class="s1">u&#39;SASdetector&#39;</span><span class="p">):</span>
+                        <span class="bp">self</span><span class="o">.</span><span class="n">detector</span><span class="o">.</span><span class="n">offset</span><span class="o">.</span><span class="n">x</span> <span class="o">=</span> <span class="nb">float</span><span class="p">(</span><span class="n">data_point</span><span class="p">)</span>
+                        <span class="bp">self</span><span class="o">.</span><span class="n">detector</span><span class="o">.</span><span class="n">offset_unit</span> <span class="o">=</span> <span class="n">unit</span>
+                    <span class="k">elif</span> <span class="p">(</span><span class="n">key</span> <span class="o">==</span> <span class="s1">u&#39;y_position&#39;</span>
+                          <span class="ow">and</span> <span class="bp">self</span><span class="o">.</span><span class="n">parent_class</span> <span class="o">==</span> <span class="s1">u&#39;SASdetector&#39;</span><span class="p">):</span>
+                        <span class="bp">self</span><span class="o">.</span><span class="n">detector</span><span class="o">.</span><span class="n">offset</span><span class="o">.</span><span class="n">y</span> <span class="o">=</span> <span class="nb">float</span><span class="p">(</span><span class="n">data_point</span><span class="p">)</span>
+                        <span class="bp">self</span><span class="o">.</span><span class="n">detector</span><span class="o">.</span><span class="n">offset_unit</span> <span class="o">=</span> <span class="n">unit</span>
+                    <span class="k">elif</span> <span class="p">(</span><span class="n">key</span> <span class="o">==</span> <span class="s1">u&#39;pitch&#39;</span>
+                          <span class="ow">and</span> <span class="bp">self</span><span class="o">.</span><span class="n">parent_class</span> <span class="o">==</span> <span class="s1">u&#39;SASdetector&#39;</span><span class="p">):</span>
+                        <span class="bp">self</span><span class="o">.</span><span class="n">detector</span><span class="o">.</span><span class="n">orientation</span><span class="o">.</span><span class="n">x</span> <span class="o">=</span> <span class="nb">float</span><span class="p">(</span><span class="n">data_point</span><span class="p">)</span>
+                        <span class="bp">self</span><span class="o">.</span><span class="n">detector</span><span class="o">.</span><span class="n">orientation_unit</span> <span class="o">=</span> <span class="n">unit</span>
+                    <span class="k">elif</span> <span class="n">key</span> <span class="o">==</span> <span class="s1">u&#39;roll&#39;</span> <span class="ow">and</span> <span class="bp">self</span><span class="o">.</span><span class="n">parent_class</span> <span class="o">==</span> <span class="s1">u&#39;SASdetector&#39;</span><span class="p">:</span>
+                        <span class="bp">self</span><span class="o">.</span><span class="n">detector</span><span class="o">.</span><span class="n">orientation</span><span class="o">.</span><span class="n">z</span> <span class="o">=</span> <span class="nb">float</span><span class="p">(</span><span class="n">data_point</span><span class="p">)</span>
+                        <span class="bp">self</span><span class="o">.</span><span class="n">detector</span><span class="o">.</span><span class="n">orientation_unit</span> <span class="o">=</span> <span class="n">unit</span>
+                    <span class="k">elif</span> <span class="n">key</span> <span class="o">==</span> <span class="s1">u&#39;yaw&#39;</span> <span class="ow">and</span> <span class="bp">self</span><span class="o">.</span><span class="n">parent_class</span> <span class="o">==</span> <span class="s1">u&#39;SASdetector&#39;</span><span class="p">:</span>
+                        <span class="bp">self</span><span class="o">.</span><span class="n">detector</span><span class="o">.</span><span class="n">orientation</span><span class="o">.</span><span class="n">y</span> <span class="o">=</span> <span class="nb">float</span><span class="p">(</span><span class="n">data_point</span><span class="p">)</span>
+                        <span class="bp">self</span><span class="o">.</span><span class="n">detector</span><span class="o">.</span><span class="n">orientation_unit</span> <span class="o">=</span> <span class="n">unit</span>
+                    <span class="k">elif</span> <span class="p">(</span><span class="n">key</span> <span class="o">==</span> <span class="s1">u&#39;beam_center_x&#39;</span>
+                          <span class="ow">and</span> <span class="bp">self</span><span class="o">.</span><span class="n">parent_class</span> <span class="o">==</span> <span class="s1">u&#39;SASdetector&#39;</span><span class="p">):</span>
+                        <span class="bp">self</span><span class="o">.</span><span class="n">detector</span><span class="o">.</span><span class="n">beam_center</span><span class="o">.</span><span class="n">x</span> <span class="o">=</span> <span class="nb">float</span><span class="p">(</span><span class="n">data_point</span><span class="p">)</span>
+                        <span class="bp">self</span><span class="o">.</span><span class="n">detector</span><span class="o">.</span><span class="n">beam_center_unit</span> <span class="o">=</span> <span class="n">unit</span>
+                    <span class="k">elif</span> <span class="p">(</span><span class="n">key</span> <span class="o">==</span> <span class="s1">u&#39;beam_center_y&#39;</span>
+                          <span class="ow">and</span> <span class="bp">self</span><span class="o">.</span><span class="n">parent_class</span> <span class="o">==</span> <span class="s1">u&#39;SASdetector&#39;</span><span class="p">):</span>
+                        <span class="bp">self</span><span class="o">.</span><span class="n">detector</span><span class="o">.</span><span class="n">beam_center</span><span class="o">.</span><span class="n">y</span> <span class="o">=</span> <span class="nb">float</span><span class="p">(</span><span class="n">data_point</span><span class="p">)</span>
+                        <span class="bp">self</span><span class="o">.</span><span class="n">detector</span><span class="o">.</span><span class="n">beam_center_unit</span> <span class="o">=</span> <span class="n">unit</span>
+                    <span class="k">elif</span> <span class="p">(</span><span class="n">key</span> <span class="o">==</span> <span class="s1">u&#39;x_pixel_size&#39;</span>
+                          <span class="ow">and</span> <span class="bp">self</span><span class="o">.</span><span class="n">parent_class</span> <span class="o">==</span> <span class="s1">u&#39;SASdetector&#39;</span><span class="p">):</span>
+                        <span class="bp">self</span><span class="o">.</span><span class="n">detector</span><span class="o">.</span><span class="n">pixel_size</span><span class="o">.</span><span class="n">x</span> <span class="o">=</span> <span class="nb">float</span><span class="p">(</span><span class="n">data_point</span><span class="p">)</span>
+                        <span class="bp">self</span><span class="o">.</span><span class="n">detector</span><span class="o">.</span><span class="n">pixel_size_unit</span> <span class="o">=</span> <span class="n">unit</span>
+                    <span class="k">elif</span> <span class="p">(</span><span class="n">key</span> <span class="o">==</span> <span class="s1">u&#39;y_pixel_size&#39;</span>
+                          <span class="ow">and</span> <span class="bp">self</span><span class="o">.</span><span class="n">parent_class</span> <span class="o">==</span> <span class="s1">u&#39;SASdetector&#39;</span><span class="p">):</span>
+                        <span class="bp">self</span><span class="o">.</span><span class="n">detector</span><span class="o">.</span><span class="n">pixel_size</span><span class="o">.</span><span class="n">y</span> <span class="o">=</span> <span class="nb">float</span><span class="p">(</span><span class="n">data_point</span><span class="p">)</span>
+                        <span class="bp">self</span><span class="o">.</span><span class="n">detector</span><span class="o">.</span><span class="n">pixel_size_unit</span> <span class="o">=</span> <span class="n">unit</span>
+                    <span class="k">elif</span> <span class="p">(</span><span class="n">key</span> <span class="o">==</span> <span class="s1">u&#39;distance&#39;</span>
+                          <span class="ow">and</span> <span class="bp">self</span><span class="o">.</span><span class="n">parent_class</span> <span class="o">==</span> <span class="s1">u&#39;SAScollimation&#39;</span><span class="p">):</span>
+                        <span class="bp">self</span><span class="o">.</span><span class="n">collimation</span><span class="o">.</span><span class="n">length</span> <span class="o">=</span> <span class="n">data_point</span>
+                        <span class="bp">self</span><span class="o">.</span><span class="n">collimation</span><span class="o">.</span><span class="n">length_unit</span> <span class="o">=</span> <span class="n">unit</span>
+                    <span class="k">elif</span> <span class="p">(</span><span class="n">key</span> <span class="o">==</span> <span class="s1">u&#39;name&#39;</span>
+                          <span class="ow">and</span> <span class="bp">self</span><span class="o">.</span><span class="n">parent_class</span> <span class="o">==</span> <span class="s1">u&#39;SAScollimation&#39;</span><span class="p">):</span>
+                        <span class="bp">self</span><span class="o">.</span><span class="n">collimation</span><span class="o">.</span><span class="n">name</span> <span class="o">=</span> <span class="n">data_point</span>
+                    <span class="k">elif</span> <span class="p">(</span><span class="n">key</span> <span class="o">==</span> <span class="s1">u&#39;shape&#39;</span>
+                          <span class="ow">and</span> <span class="bp">self</span><span class="o">.</span><span class="n">parent_class</span> <span class="o">==</span> <span class="s1">u&#39;SASaperture&#39;</span><span class="p">):</span>
+                        <span class="bp">self</span><span class="o">.</span><span class="n">aperture</span><span class="o">.</span><span class="n">shape</span> <span class="o">=</span> <span class="n">data_point</span>
+                    <span class="k">elif</span> <span class="p">(</span><span class="n">key</span> <span class="o">==</span> <span class="s1">u&#39;x_gap&#39;</span>
+                          <span class="ow">and</span> <span class="bp">self</span><span class="o">.</span><span class="n">parent_class</span> <span class="o">==</span> <span class="s1">u&#39;SASaperture&#39;</span><span class="p">):</span>
+                        <span class="bp">self</span><span class="o">.</span><span class="n">aperture</span><span class="o">.</span><span class="n">size</span><span class="o">.</span><span class="n">x</span> <span class="o">=</span> <span class="n">data_point</span>
+                    <span class="k">elif</span> <span class="p">(</span><span class="n">key</span> <span class="o">==</span> <span class="s1">u&#39;y_gap&#39;</span>
+                          <span class="ow">and</span> <span class="bp">self</span><span class="o">.</span><span class="n">parent_class</span> <span class="o">==</span> <span class="s1">u&#39;SASaperture&#39;</span><span class="p">):</span>
+                        <span class="bp">self</span><span class="o">.</span><span class="n">aperture</span><span class="o">.</span><span class="n">size</span><span class="o">.</span><span class="n">y</span> <span class="o">=</span> <span class="n">data_point</span>
+
+                    <span class="c1"># Process Information</span>
+                    <span class="k">elif</span> <span class="p">(</span><span class="n">key</span> <span class="o">==</span> <span class="s1">u&#39;Title&#39;</span>
+                          <span class="ow">and</span> <span class="bp">self</span><span class="o">.</span><span class="n">parent_class</span> <span class="o">==</span> <span class="s1">u&#39;SASprocess&#39;</span><span class="p">):</span> <span class="c1"># CanSAS 2.0</span>
+                        <span class="bp">self</span><span class="o">.</span><span class="n">process</span><span class="o">.</span><span class="n">name</span> <span class="o">=</span> <span class="n">data_point</span>
+                    <span class="k">elif</span> <span class="p">(</span><span class="n">key</span> <span class="o">==</span> <span class="s1">u&#39;name&#39;</span>
+                          <span class="ow">and</span> <span class="bp">self</span><span class="o">.</span><span class="n">parent_class</span> <span class="o">==</span> <span class="s1">u&#39;SASprocess&#39;</span><span class="p">):</span> <span class="c1"># NXcanSAS</span>
+                        <span class="bp">self</span><span class="o">.</span><span class="n">process</span><span class="o">.</span><span class="n">name</span> <span class="o">=</span> <span class="n">data_point</span>
+                    <span class="k">elif</span> <span class="p">(</span><span class="n">key</span> <span class="o">==</span> <span class="s1">u&#39;description&#39;</span>
+                          <span class="ow">and</span> <span class="bp">self</span><span class="o">.</span><span class="n">parent_class</span> <span class="o">==</span> <span class="s1">u&#39;SASprocess&#39;</span><span class="p">):</span>
+                        <span class="bp">self</span><span class="o">.</span><span class="n">process</span><span class="o">.</span><span class="n">description</span> <span class="o">=</span> <span class="n">data_point</span>
+                    <span class="k">elif</span> <span class="n">key</span> <span class="o">==</span> <span class="s1">u&#39;date&#39;</span> <span class="ow">and</span> <span class="bp">self</span><span class="o">.</span><span class="n">parent_class</span> <span class="o">==</span> <span class="s1">u&#39;SASprocess&#39;</span><span class="p">:</span>
+                        <span class="bp">self</span><span class="o">.</span><span class="n">process</span><span class="o">.</span><span class="n">date</span> <span class="o">=</span> <span class="n">data_point</span>
+                    <span class="k">elif</span> <span class="n">key</span> <span class="o">==</span> <span class="s1">u&#39;term&#39;</span> <span class="ow">and</span> <span class="bp">self</span><span class="o">.</span><span class="n">parent_class</span> <span class="o">==</span> <span class="s1">u&#39;SASprocess&#39;</span><span class="p">:</span>
+                        <span class="bp">self</span><span class="o">.</span><span class="n">process</span><span class="o">.</span><span class="n">term</span> <span class="o">=</span> <span class="n">data_point</span>
+                    <span class="k">elif</span> <span class="bp">self</span><span class="o">.</span><span class="n">parent_class</span> <span class="o">==</span> <span class="s1">u&#39;SASprocess&#39;</span><span class="p">:</span>
+                        <span class="bp">self</span><span class="o">.</span><span class="n">process</span><span class="o">.</span><span class="n">notes</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">data_point</span><span class="p">)</span>
+
+                    <span class="c1"># Source</span>
+                    <span class="k">elif</span> <span class="p">(</span><span class="n">key</span> <span class="o">==</span> <span class="s1">u&#39;wavelength&#39;</span>
+                          <span class="ow">and</span> <span class="bp">self</span><span class="o">.</span><span class="n">parent_class</span> <span class="o">==</span> <span class="s1">u&#39;SASdata&#39;</span><span class="p">):</span>
+                        <span class="bp">self</span><span class="o">.</span><span class="n">current_datainfo</span><span class="o">.</span><span class="n">source</span><span class="o">.</span><span class="n">wavelength</span> <span class="o">=</span> <span class="n">data_point</span>
+                        <span class="bp">self</span><span class="o">.</span><span class="n">current_datainfo</span><span class="o">.</span><span class="n">source</span><span class="o">.</span><span class="n">wavelength_unit</span> <span class="o">=</span> <span class="n">unit</span>
+                    <span class="k">elif</span> <span class="p">(</span><span class="n">key</span> <span class="o">==</span> <span class="s1">u&#39;incident_wavelength&#39;</span>
+                          <span class="ow">and</span> <span class="bp">self</span><span class="o">.</span><span class="n">parent_class</span> <span class="o">==</span> <span class="s1">&#39;SASsource&#39;</span><span class="p">):</span>
+                        <span class="bp">self</span><span class="o">.</span><span class="n">current_datainfo</span><span class="o">.</span><span class="n">source</span><span class="o">.</span><span class="n">wavelength</span> <span class="o">=</span> <span class="n">data_point</span>
+                        <span class="bp">self</span><span class="o">.</span><span class="n">current_datainfo</span><span class="o">.</span><span class="n">source</span><span class="o">.</span><span class="n">wavelength_unit</span> <span class="o">=</span> <span class="n">unit</span>
+                    <span class="k">elif</span> <span class="p">(</span><span class="n">key</span> <span class="o">==</span> <span class="s1">u&#39;wavelength_max&#39;</span>
+                          <span class="ow">and</span> <span class="bp">self</span><span class="o">.</span><span class="n">parent_class</span> <span class="o">==</span> <span class="s1">u&#39;SASsource&#39;</span><span class="p">):</span>
+                        <span class="bp">self</span><span class="o">.</span><span class="n">current_datainfo</span><span class="o">.</span><span class="n">source</span><span class="o">.</span><span class="n">wavelength_max</span> <span class="o">=</span> <span class="n">data_point</span>
+                        <span class="bp">self</span><span class="o">.</span><span class="n">current_datainfo</span><span class="o">.</span><span class="n">source</span><span class="o">.</span><span class="n">wavelength_max_unit</span> <span class="o">=</span> <span class="n">unit</span>
+                    <span class="k">elif</span> <span class="p">(</span><span class="n">key</span> <span class="o">==</span> <span class="s1">u&#39;wavelength_min&#39;</span>
+                          <span class="ow">and</span> <span class="bp">self</span><span class="o">.</span><span class="n">parent_class</span> <span class="o">==</span> <span class="s1">u&#39;SASsource&#39;</span><span class="p">):</span>
+                        <span class="bp">self</span><span class="o">.</span><span class="n">current_datainfo</span><span class="o">.</span><span class="n">source</span><span class="o">.</span><span class="n">wavelength_min</span> <span class="o">=</span> <span class="n">data_point</span>
+                        <span class="bp">self</span><span class="o">.</span><span class="n">current_datainfo</span><span class="o">.</span><span class="n">source</span><span class="o">.</span><span class="n">wavelength_min_unit</span> <span class="o">=</span> <span class="n">unit</span>
+                    <span class="k">elif</span> <span class="p">(</span><span class="n">key</span> <span class="o">==</span> <span class="s1">u&#39;incident_wavelength_spread&#39;</span>
+                          <span class="ow">and</span> <span class="bp">self</span><span class="o">.</span><span class="n">parent_class</span> <span class="o">==</span> <span class="s1">u&#39;SASsource&#39;</span><span class="p">):</span>
+                        <span class="bp">self</span><span class="o">.</span><span class="n">current_datainfo</span><span class="o">.</span><span class="n">source</span><span class="o">.</span><span class="n">wavelength_spread</span> <span class="o">=</span> \
+                            <span class="n">data_point</span>
+                        <span class="bp">self</span><span class="o">.</span><span class="n">current_datainfo</span><span class="o">.</span><span class="n">source</span><span class="o">.</span><span class="n">wavelength_spread_unit</span> <span class="o">=</span> \
+                            <span class="n">unit</span>
+                    <span class="k">elif</span> <span class="p">(</span><span class="n">key</span> <span class="o">==</span> <span class="s1">u&#39;beam_size_x&#39;</span>
+                          <span class="ow">and</span> <span class="bp">self</span><span class="o">.</span><span class="n">parent_class</span> <span class="o">==</span> <span class="s1">u&#39;SASsource&#39;</span><span class="p">):</span>
+                        <span class="bp">self</span><span class="o">.</span><span class="n">current_datainfo</span><span class="o">.</span><span class="n">source</span><span class="o">.</span><span class="n">beam_size</span><span class="o">.</span><span class="n">x</span> <span class="o">=</span> <span class="n">data_point</span>
+                        <span class="bp">self</span><span class="o">.</span><span class="n">current_datainfo</span><span class="o">.</span><span class="n">source</span><span class="o">.</span><span class="n">beam_size_unit</span> <span class="o">=</span> <span class="n">unit</span>
+                    <span class="k">elif</span> <span class="p">(</span><span class="n">key</span> <span class="o">==</span> <span class="s1">u&#39;beam_size_y&#39;</span>
+                          <span class="ow">and</span> <span class="bp">self</span><span class="o">.</span><span class="n">parent_class</span> <span class="o">==</span> <span class="s1">u&#39;SASsource&#39;</span><span class="p">):</span>
+                        <span class="bp">self</span><span class="o">.</span><span class="n">current_datainfo</span><span class="o">.</span><span class="n">source</span><span class="o">.</span><span class="n">beam_size</span><span class="o">.</span><span class="n">y</span> <span class="o">=</span> <span class="n">data_point</span>
+                        <span class="bp">self</span><span class="o">.</span><span class="n">current_datainfo</span><span class="o">.</span><span class="n">source</span><span class="o">.</span><span class="n">beam_size_unit</span> <span class="o">=</span> <span class="n">unit</span>
+                    <span class="k">elif</span> <span class="p">(</span><span class="n">key</span> <span class="o">==</span> <span class="s1">u&#39;beam_shape&#39;</span>
+                          <span class="ow">and</span> <span class="bp">self</span><span class="o">.</span><span class="n">parent_class</span> <span class="o">==</span> <span class="s1">u&#39;SASsource&#39;</span><span class="p">):</span>
+                        <span class="bp">self</span><span class="o">.</span><span class="n">current_datainfo</span><span class="o">.</span><span class="n">source</span><span class="o">.</span><span class="n">beam_shape</span> <span class="o">=</span> <span class="n">data_point</span>
+                    <span class="k">elif</span> <span class="p">(</span><span class="n">key</span> <span class="o">==</span> <span class="s1">u&#39;radiation&#39;</span>
+                          <span class="ow">and</span> <span class="bp">self</span><span class="o">.</span><span class="n">parent_class</span> <span class="o">==</span> <span class="s1">u&#39;SASsource&#39;</span><span class="p">):</span>
+                        <span class="bp">self</span><span class="o">.</span><span class="n">current_datainfo</span><span class="o">.</span><span class="n">source</span><span class="o">.</span><span class="n">radiation</span> <span class="o">=</span> <span class="n">data_point</span>
+                    <span class="k">elif</span> <span class="p">(</span><span class="n">key</span> <span class="o">==</span> <span class="s1">u&#39;transmission&#39;</span>
+                          <span class="ow">and</span> <span class="bp">self</span><span class="o">.</span><span class="n">parent_class</span> <span class="o">==</span> <span class="s1">u&#39;SASdata&#39;</span><span class="p">):</span>
+                        <span class="bp">self</span><span class="o">.</span><span class="n">current_datainfo</span><span class="o">.</span><span class="n">sample</span><span class="o">.</span><span class="n">transmission</span> <span class="o">=</span> <span class="n">data_point</span>
+
+                    <span class="c1"># Everything else goes in meta_data</span>
+                    <span class="k">else</span><span class="p">:</span>
+                        <span class="n">new_key</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_create_unique_key</span><span class="p">(</span>
+                            <span class="bp">self</span><span class="o">.</span><span class="n">current_datainfo</span><span class="o">.</span><span class="n">meta_data</span><span class="p">,</span> <span class="n">key</span><span class="p">)</span>
+                        <span class="bp">self</span><span class="o">.</span><span class="n">current_datainfo</span><span class="o">.</span><span class="n">meta_data</span><span class="p">[</span><span class="n">new_key</span><span class="p">]</span> <span class="o">=</span> <span class="n">data_point</span>
+
+            <span class="k">else</span><span class="p">:</span>
+                <span class="c1"># I don&#39;t know if this reachable code</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">errors</span><span class="o">.</span><span class="n">add</span><span class="p">(</span><span class="s2">&quot;ShouldNeverHappenException&quot;</span><span class="p">)</span></div>
+
+<div class="viewcode-block" id="Reader.add_intermediate"><a class="viewcode-back" href="../../../../../dev/sasview-api/sas.sascalc.dataloader.readers.html#sas.sascalc.dataloader.readers.cansas_reader_HDF5.Reader.add_intermediate">[docs]</a>    <span class="k">def</span> <span class="nf">add_intermediate</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        This method stores any intermediate objects within the final data set</span>
+<span class="sd">        after fully reading the set.</span>
+
+<span class="sd">        :param parent: The NXclass name for the h5py Group object that just</span>
+<span class="sd">                       finished being processed</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">parent_class</span> <span class="o">==</span> <span class="s1">u&#39;SASprocess&#39;</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">current_datainfo</span><span class="o">.</span><span class="n">process</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">process</span><span class="p">)</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">process</span> <span class="o">=</span> <span class="n">Process</span><span class="p">()</span>
+        <span class="k">elif</span> <span class="bp">self</span><span class="o">.</span><span class="n">parent_class</span> <span class="o">==</span> <span class="s1">u&#39;SASdetector&#39;</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">current_datainfo</span><span class="o">.</span><span class="n">detector</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">detector</span><span class="p">)</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">detector</span> <span class="o">=</span> <span class="n">Detector</span><span class="p">()</span>
+        <span class="k">elif</span> <span class="bp">self</span><span class="o">.</span><span class="n">parent_class</span> <span class="o">==</span> <span class="s1">u&#39;SAStransmission_spectrum&#39;</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">current_datainfo</span><span class="o">.</span><span class="n">trans_spectrum</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">trans_spectrum</span><span class="p">)</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">trans_spectrum</span> <span class="o">=</span> <span class="n">TransmissionSpectrum</span><span class="p">()</span>
+        <span class="k">elif</span> <span class="bp">self</span><span class="o">.</span><span class="n">parent_class</span> <span class="o">==</span> <span class="s1">u&#39;SAScollimation&#39;</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">current_datainfo</span><span class="o">.</span><span class="n">collimation</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">collimation</span><span class="p">)</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">collimation</span> <span class="o">=</span> <span class="n">Collimation</span><span class="p">()</span>
+        <span class="k">elif</span> <span class="bp">self</span><span class="o">.</span><span class="n">parent_class</span> <span class="o">==</span> <span class="s1">u&#39;SASaperture&#39;</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">collimation</span><span class="o">.</span><span class="n">aperture</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">aperture</span><span class="p">)</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">aperture</span> <span class="o">=</span> <span class="n">Aperture</span><span class="p">()</span>
+        <span class="k">elif</span> <span class="bp">self</span><span class="o">.</span><span class="n">parent_class</span> <span class="o">==</span> <span class="s1">u&#39;SASdata&#39;</span><span class="p">:</span>
+            <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">current_dataset</span><span class="p">,</span> <span class="n">plottable_2D</span><span class="p">):</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">data2d</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">current_dataset</span><span class="p">)</span>
+            <span class="k">elif</span> <span class="nb">isinstance</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">current_dataset</span><span class="p">,</span> <span class="n">plottable_1D</span><span class="p">):</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">data1d</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">current_dataset</span><span class="p">)</span></div>
+
+<div class="viewcode-block" id="Reader.final_data_cleanup"><a class="viewcode-back" href="../../../../../dev/sasview-api/sas.sascalc.dataloader.readers.html#sas.sascalc.dataloader.readers.cansas_reader_HDF5.Reader.final_data_cleanup">[docs]</a>    <span class="k">def</span> <span class="nf">final_data_cleanup</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Does some final cleanup and formatting on self.current_datainfo and</span>
+<span class="sd">        all data1D and data2D objects and then combines the data and info into</span>
+<span class="sd">        Data1D and Data2D objects</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="c1"># Type cast data arrays to float64</span>
+        <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">current_datainfo</span><span class="o">.</span><span class="n">trans_spectrum</span><span class="p">)</span> <span class="o">&gt;</span> <span class="mi">0</span><span class="p">:</span>
+            <span class="n">spectrum_list</span> <span class="o">=</span> <span class="p">[]</span>
+            <span class="k">for</span> <span class="n">spectrum</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">current_datainfo</span><span class="o">.</span><span class="n">trans_spectrum</span><span class="p">:</span>
+                <span class="n">spectrum</span><span class="o">.</span><span class="n">transmission</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">delete</span><span class="p">(</span><span class="n">spectrum</span><span class="o">.</span><span class="n">transmission</span><span class="p">,</span> <span class="p">[</span><span class="mi">0</span><span class="p">])</span>
+                <span class="n">spectrum</span><span class="o">.</span><span class="n">transmission</span> <span class="o">=</span> <span class="n">spectrum</span><span class="o">.</span><span class="n">transmission</span><span class="o">.</span><span class="n">astype</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">float64</span><span class="p">)</span>
+                <span class="n">spectrum</span><span class="o">.</span><span class="n">transmission_deviation</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">delete</span><span class="p">(</span>
+                    <span class="n">spectrum</span><span class="o">.</span><span class="n">transmission_deviation</span><span class="p">,</span> <span class="p">[</span><span class="mi">0</span><span class="p">])</span>
+                <span class="n">spectrum</span><span class="o">.</span><span class="n">transmission_deviation</span> <span class="o">=</span> \
+                    <span class="n">spectrum</span><span class="o">.</span><span class="n">transmission_deviation</span><span class="o">.</span><span class="n">astype</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">float64</span><span class="p">)</span>
+                <span class="n">spectrum</span><span class="o">.</span><span class="n">wavelength</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">delete</span><span class="p">(</span><span class="n">spectrum</span><span class="o">.</span><span class="n">wavelength</span><span class="p">,</span> <span class="p">[</span><span class="mi">0</span><span class="p">])</span>
+                <span class="n">spectrum</span><span class="o">.</span><span class="n">wavelength</span> <span class="o">=</span> <span class="n">spectrum</span><span class="o">.</span><span class="n">wavelength</span><span class="o">.</span><span class="n">astype</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">float64</span><span class="p">)</span>
+                <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">spectrum</span><span class="o">.</span><span class="n">transmission</span><span class="p">)</span> <span class="o">&gt;</span> <span class="mi">0</span><span class="p">:</span>
+                    <span class="n">spectrum_list</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">spectrum</span><span class="p">)</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">current_datainfo</span><span class="o">.</span><span class="n">trans_spectrum</span> <span class="o">=</span> <span class="n">spectrum_list</span>
+
+        <span class="c1"># Append errors to dataset and reset class errors</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">current_datainfo</span><span class="o">.</span><span class="n">errors</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">errors</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">errors</span><span class="o">.</span><span class="n">clear</span><span class="p">()</span>
+
+        <span class="c1"># Combine all plottables with datainfo and append each to output</span>
+        <span class="c1"># Type cast data arrays to float64 and find min/max as appropriate</span>
+        <span class="k">for</span> <span class="n">dataset</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">data2d</span><span class="p">:</span>
+            <span class="n">zeros</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">ones</span><span class="p">(</span><span class="n">dataset</span><span class="o">.</span><span class="n">data</span><span class="o">.</span><span class="n">size</span><span class="p">,</span> <span class="n">dtype</span><span class="o">=</span><span class="nb">bool</span><span class="p">)</span>
+            <span class="k">try</span><span class="p">:</span>
+                <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="n">dataset</span><span class="o">.</span><span class="n">mask</span><span class="o">.</span><span class="n">size</span> <span class="o">-</span> <span class="mi">1</span><span class="p">):</span>
+                    <span class="n">zeros</span><span class="p">[</span><span class="n">i</span><span class="p">]</span> <span class="o">=</span> <span class="n">dataset</span><span class="o">.</span><span class="n">mask</span><span class="p">[</span><span class="n">i</span><span class="p">]</span>
+            <span class="k">except</span><span class="p">:</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">errors</span><span class="o">.</span><span class="n">add</span><span class="p">(</span><span class="n">sys</span><span class="o">.</span><span class="n">exc_value</span><span class="p">)</span>
+            <span class="n">dataset</span><span class="o">.</span><span class="n">mask</span> <span class="o">=</span> <span class="n">zeros</span>
+            <span class="c1"># Calculate the actual Q matrix</span>
+            <span class="k">try</span><span class="p">:</span>
+                <span class="k">if</span> <span class="n">dataset</span><span class="o">.</span><span class="n">q_data</span><span class="o">.</span><span class="n">size</span> <span class="o">&lt;=</span> <span class="mi">1</span><span class="p">:</span>
+                    <span class="n">dataset</span><span class="o">.</span><span class="n">q_data</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">sqrt</span><span class="p">(</span><span class="n">dataset</span><span class="o">.</span><span class="n">qx_data</span>
+                                             <span class="o">*</span> <span class="n">dataset</span><span class="o">.</span><span class="n">qx_data</span>
+                                             <span class="o">+</span> <span class="n">dataset</span><span class="o">.</span><span class="n">qy_data</span>
+                                             <span class="o">*</span> <span class="n">dataset</span><span class="o">.</span><span class="n">qy_data</span><span class="p">)</span>
+            <span class="k">except</span><span class="p">:</span>
+                <span class="n">dataset</span><span class="o">.</span><span class="n">q_data</span> <span class="o">=</span> <span class="bp">None</span>
+
+            <span class="k">if</span> <span class="n">dataset</span><span class="o">.</span><span class="n">data</span><span class="o">.</span><span class="n">ndim</span> <span class="o">==</span> <span class="mi">2</span><span class="p">:</span>
+                <span class="p">(</span><span class="n">n_rows</span><span class="p">,</span> <span class="n">n_cols</span><span class="p">)</span> <span class="o">=</span> <span class="n">dataset</span><span class="o">.</span><span class="n">data</span><span class="o">.</span><span class="n">shape</span>
+                <span class="n">dataset</span><span class="o">.</span><span class="n">y_bins</span> <span class="o">=</span> <span class="n">dataset</span><span class="o">.</span><span class="n">qy_data</span><span class="p">[</span><span class="mi">0</span><span class="p">::</span><span class="n">n_cols</span><span class="p">]</span>
+                <span class="n">dataset</span><span class="o">.</span><span class="n">x_bins</span> <span class="o">=</span> <span class="n">dataset</span><span class="o">.</span><span class="n">qx_data</span><span class="p">[:</span><span class="n">n_cols</span><span class="p">]</span>
+                <span class="n">dataset</span><span class="o">.</span><span class="n">data</span> <span class="o">=</span> <span class="n">dataset</span><span class="o">.</span><span class="n">data</span><span class="o">.</span><span class="n">flatten</span><span class="p">()</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">current_dataset</span> <span class="o">=</span> <span class="n">dataset</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">send_to_output</span><span class="p">()</span>
+
+        <span class="k">for</span> <span class="n">dataset</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">data1d</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">current_dataset</span> <span class="o">=</span> <span class="n">dataset</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">send_to_output</span><span class="p">()</span></div>
+
+<div class="viewcode-block" id="Reader.add_data_set"><a class="viewcode-back" href="../../../../../dev/sasview-api/sas.sascalc.dataloader.readers.html#sas.sascalc.dataloader.readers.cansas_reader_HDF5.Reader.add_data_set">[docs]</a>    <span class="k">def</span> <span class="nf">add_data_set</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">key</span><span class="o">=</span><span class="s2">&quot;&quot;</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Adds the current_dataset to the list of outputs after preforming final</span>
+<span class="sd">        processing on the data and then calls a private method to generate a</span>
+<span class="sd">        new data set.</span>
+
+<span class="sd">        :param key: NeXus group name for current tree level</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">current_datainfo</span> <span class="ow">and</span> <span class="bp">self</span><span class="o">.</span><span class="n">current_dataset</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">final_data_cleanup</span><span class="p">()</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">data1d</span> <span class="o">=</span> <span class="p">[]</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">data2d</span> <span class="o">=</span> <span class="p">[]</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">current_datainfo</span> <span class="o">=</span> <span class="n">DataInfo</span><span class="p">()</span></div>
+
+
+    <span class="k">def</span> <span class="nf">_initialize_new_data_set</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">parent_list</span><span class="o">=</span><span class="bp">None</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        A private class method to generate a new 1D or 2D data object based on</span>
+<span class="sd">        the type of data within the set. Outside methods should call</span>
+<span class="sd">        add_data_set() to be sure any existing data is stored properly.</span>
+
+<span class="sd">        :param parent_list: List of names of parent elements</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+
+        <span class="k">if</span> <span class="n">parent_list</span> <span class="ow">is</span> <span class="bp">None</span><span class="p">:</span>
+            <span class="n">parent_list</span> <span class="o">=</span> <span class="p">[]</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">_find_intermediate</span><span class="p">(</span><span class="n">parent_list</span><span class="p">,</span> <span class="s2">&quot;Qx&quot;</span><span class="p">):</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">current_dataset</span> <span class="o">=</span> <span class="n">plottable_2D</span><span class="p">()</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">x</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">(</span><span class="mi">0</span><span class="p">)</span>
+            <span class="n">y</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">(</span><span class="mi">0</span><span class="p">)</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">current_dataset</span> <span class="o">=</span> <span class="n">plottable_1D</span><span class="p">(</span><span class="n">x</span><span class="p">,</span> <span class="n">y</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">current_datainfo</span><span class="o">.</span><span class="n">filename</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">raw_data</span><span class="o">.</span><span class="n">filename</span>
+
+    <span class="k">def</span> <span class="nf">_find_intermediate</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">parent_list</span><span class="p">,</span> <span class="n">basename</span><span class="o">=</span><span class="s2">&quot;&quot;</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        A private class used to find an entry by either using a direct key or</span>
+<span class="sd">        knowing the approximate basename.</span>
+
+<span class="sd">        :param parent_list: List of parents nodes in the HDF5 file</span>
+<span class="sd">        :param basename: Approximate name of an entry to search for</span>
+<span class="sd">        :return:</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+
+        <span class="n">entry</span> <span class="o">=</span> <span class="bp">False</span>
+        <span class="n">key_prog</span> <span class="o">=</span> <span class="n">re</span><span class="o">.</span><span class="n">compile</span><span class="p">(</span><span class="n">basename</span><span class="p">)</span>
+        <span class="n">top</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">raw_data</span>
+        <span class="k">for</span> <span class="n">parent</span> <span class="ow">in</span> <span class="n">parent_list</span><span class="p">:</span>
+            <span class="n">top</span> <span class="o">=</span> <span class="n">top</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="n">parent</span><span class="p">)</span>
+        <span class="k">for</span> <span class="n">key</span> <span class="ow">in</span> <span class="n">top</span><span class="o">.</span><span class="n">keys</span><span class="p">():</span>
+            <span class="k">if</span> <span class="n">key_prog</span><span class="o">.</span><span class="n">match</span><span class="p">(</span><span class="n">key</span><span class="p">):</span>
+                <span class="n">entry</span> <span class="o">=</span> <span class="bp">True</span>
+                <span class="k">break</span>
+        <span class="k">return</span> <span class="n">entry</span>
+
+    <span class="k">def</span> <span class="nf">_create_unique_key</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">dictionary</span><span class="p">,</span> <span class="n">name</span><span class="p">,</span> <span class="n">numb</span><span class="o">=</span><span class="mi">0</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Create a unique key value for any dictionary to prevent overwriting</span>
+<span class="sd">        Recurses until a unique key value is found.</span>
+
+<span class="sd">        :param dictionary: A dictionary with any number of entries</span>
+<span class="sd">        :param name: The index of the item to be added to dictionary</span>
+<span class="sd">        :param numb: The number to be appended to the name, starts at 0</span>
+<span class="sd">        :return: The new name for the dictionary entry</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">if</span> <span class="n">dictionary</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="n">name</span><span class="p">)</span> <span class="ow">is</span> <span class="ow">not</span> <span class="bp">None</span><span class="p">:</span>
+            <span class="n">numb</span> <span class="o">+=</span> <span class="mi">1</span>
+            <span class="n">name</span> <span class="o">=</span> <span class="n">name</span><span class="o">.</span><span class="n">split</span><span class="p">(</span><span class="s2">&quot;_&quot;</span><span class="p">)[</span><span class="mi">0</span><span class="p">]</span>
+            <span class="n">name</span> <span class="o">+=</span> <span class="s2">&quot;_{0}&quot;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">numb</span><span class="p">)</span>
+            <span class="n">name</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_create_unique_key</span><span class="p">(</span><span class="n">dictionary</span><span class="p">,</span> <span class="n">name</span><span class="p">,</span> <span class="n">numb</span><span class="p">)</span>
+        <span class="k">return</span> <span class="n">name</span>
+
+    <span class="k">def</span> <span class="nf">_get_unit</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">value</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Find the unit for a particular value within the h5py dictionary</span>
+
+<span class="sd">        :param value: attribute dictionary for a particular value set</span>
+<span class="sd">        :return: unit for the value passed to the method</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">unit</span> <span class="o">=</span> <span class="n">h5attr</span><span class="p">(</span><span class="n">value</span><span class="p">,</span> <span class="s1">u&#39;units&#39;</span><span class="p">)</span>
+        <span class="k">if</span> <span class="n">unit</span> <span class="ow">is</span> <span class="bp">None</span><span class="p">:</span>
+            <span class="n">unit</span> <span class="o">=</span> <span class="n">h5attr</span><span class="p">(</span><span class="n">value</span><span class="p">,</span> <span class="s1">u&#39;unit&#39;</span><span class="p">)</span>
+        <span class="c1"># Convert the unit formats</span>
+        <span class="k">if</span> <span class="n">unit</span> <span class="o">==</span> <span class="s2">&quot;1/A&quot;</span><span class="p">:</span>
+            <span class="n">unit</span> <span class="o">=</span> <span class="s2">&quot;A^{-1}&quot;</span>
+        <span class="k">elif</span> <span class="n">unit</span> <span class="o">==</span> <span class="s2">&quot;1/cm&quot;</span><span class="p">:</span>
+            <span class="n">unit</span> <span class="o">=</span> <span class="s2">&quot;cm^{-1}&quot;</span>
+        <span class="k">return</span> <span class="n">unit</span></div>
+</pre></div>
+
+          </div>
+        </div>
+      </div>
+      <div class="sphinxsidebar" role="navigation" aria-label="main navigation">
+        <div class="sphinxsidebarwrapper">
+<div id="searchbox" style="display: none" role="search">
+  <h3>Quick search</h3>
+    <form class="search" action="../../../../../search.html" method="get">
+      <input type="text" name="q" />
+      <input type="submit" value="Go" />
+      <input type="hidden" name="check_keywords" value="yes" />
+      <input type="hidden" name="area" value="default" />
+    </form>
+</div>
+<script type="text/javascript">$('#searchbox').show(0);</script>
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="related" role="navigation" aria-label="related navigation">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="../../../../../genindex.html" title="General Index"
+             >index</a></li>
+        <li class="right" >
+          <a href="../../../../../py-modindex.html" title="Python Module Index"
+             >modules</a> |</li>
+        <li class="nav-item nav-item-0"><a href="../../../../../index.html">SasView 4.2.0 documentation</a> &raquo;</li>
+          <li class="nav-item nav-item-1"><a href="../../../../index.html" >Module code</a> &raquo;</li>
+          <li class="nav-item nav-item-2"><a href="../../../../sas.html" >sas</a> &raquo;</li> 
+      </ul>
+    </div>
+    <div class="footer" role="contentinfo">
+        &copy; Copyright 2018, The SasView Project.
+      Created using <a href="http://sphinx-doc.org/">Sphinx</a> 1.4.1.
+    </div>
+  </body>
+</html>

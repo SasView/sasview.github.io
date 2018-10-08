@@ -1,0 +1,410 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+  "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+    
+    <title>sas.sasgui.guiframe.local_perspectives.plotting.profile_dialog &mdash; SasView 4.2.0 documentation</title>
+    
+    <link rel="stylesheet" href="../../../../../../_static/classic.css" type="text/css" />
+    <link rel="stylesheet" href="../../../../../../_static/pygments.css" type="text/css" />
+    
+    <script type="text/javascript">
+      var DOCUMENTATION_OPTIONS = {
+        URL_ROOT:    '../../../../../../',
+        VERSION:     '4.2.0',
+        COLLAPSE_INDEX: false,
+        FILE_SUFFIX: '.html',
+        HAS_SOURCE:  true
+      };
+    </script>
+    <script type="text/javascript" src="../../../../../../_static/jquery.js"></script>
+    <script type="text/javascript" src="../../../../../../_static/underscore.js"></script>
+    <script type="text/javascript" src="../../../../../../_static/doctools.js"></script>
+    <script type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.1/MathJax.js?config=TeX-MML-AM_CHTML"></script>
+    <link rel="top" title="SasView 4.2.0 documentation" href="../../../../../../index.html" />
+    <link rel="up" title="sas.sasgui.guiframe" href="../../../guiframe.html" /> 
+  </head>
+  <body role="document">
+    <div class="related" role="navigation" aria-label="related navigation">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="../../../../../../genindex.html" title="General Index"
+             accesskey="I">index</a></li>
+        <li class="right" >
+          <a href="../../../../../../py-modindex.html" title="Python Module Index"
+             >modules</a> |</li>
+        <li class="nav-item nav-item-0"><a href="../../../../../../index.html">SasView 4.2.0 documentation</a> &raquo;</li>
+          <li class="nav-item nav-item-1"><a href="../../../../../index.html" >Module code</a> &raquo;</li>
+          <li class="nav-item nav-item-2"><a href="../../../../../sas.html" >sas</a> &raquo;</li>
+          <li class="nav-item nav-item-3"><a href="../../../guiframe.html" accesskey="U">sas.sasgui.guiframe</a> &raquo;</li> 
+      </ul>
+    </div>  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          <div class="body" role="main">
+            
+  <h1>Source code for sas.sasgui.guiframe.local_perspectives.plotting.profile_dialog</h1><div class="highlight"><pre>
+<span></span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">SLD Profile Dialog for multifunctional models</span>
+<span class="sd">&quot;&quot;&quot;</span>
+<span class="kn">import</span> <span class="nn">wx</span>
+<span class="kn">import</span> <span class="nn">sys</span>
+<span class="kn">from</span> <span class="nn">copy</span> <span class="kn">import</span> <span class="n">deepcopy</span>
+<span class="kn">from</span> <span class="nn">sas.sasgui.plottools.plottables</span> <span class="kn">import</span> <span class="n">Graph</span>
+<span class="kn">from</span> <span class="nn">Plotter1D</span> <span class="kn">import</span> <span class="n">ModelPanel1D</span> <span class="k">as</span> <span class="n">PlotPanel</span>
+<span class="kn">from</span> <span class="nn">sas.sasgui.guiframe.dataFitting</span> <span class="kn">import</span> <span class="n">Data1D</span>
+<span class="kn">from</span> <span class="nn">sas.sasgui.guiframe.gui_style</span> <span class="kn">import</span> <span class="n">GUIFRAME_ID</span>
+
+<span class="n">DEFAULT_CMAP</span> <span class="o">=</span> <span class="bp">None</span>  <span class="c1">#pylab.cm.jet</span>
+<span class="n">_BOX_WIDTH</span> <span class="o">=</span> <span class="mi">76</span>
+<span class="n">_STATICBOX_WIDTH</span> <span class="o">=</span> <span class="mi">400</span>
+<span class="c1"># X Y offset on plot</span>
+<span class="n">_X_OFF</span> <span class="o">=</span> <span class="mi">15</span>
+<span class="n">_Y_OFF</span> <span class="o">=</span> <span class="mf">0.5</span>
+
+<span class="c1">#SLD panel size</span>
+<span class="k">if</span> <span class="n">sys</span><span class="o">.</span><span class="n">platform</span><span class="o">.</span><span class="n">count</span><span class="p">(</span><span class="s2">&quot;win32&quot;</span><span class="p">)</span> <span class="o">&gt;</span> <span class="mi">0</span><span class="p">:</span>
+    <span class="n">_STATICBOX_WIDTH</span> <span class="o">=</span> <span class="mi">563</span>
+    <span class="n">PANEL_SIZE</span> <span class="o">=</span> <span class="mi">425</span>
+    <span class="n">FONT_VARIANT</span> <span class="o">=</span> <span class="mi">0</span>
+<span class="k">else</span><span class="p">:</span>
+    <span class="n">_STATICBOX_WIDTH</span> <span class="o">=</span> <span class="mi">605</span>
+    <span class="n">PANEL_SIZE</span> <span class="o">=</span> <span class="mi">500</span>
+    <span class="n">FONT_VARIANT</span> <span class="o">=</span> <span class="mi">1</span>
+
+
+<div class="viewcode-block" id="SLDPanel"><a class="viewcode-back" href="../../../../../../dev/sasview-api/sas.sasgui.guiframe.local_perspectives.plotting.html#sas.sasgui.guiframe.local_perspectives.plotting.profile_dialog.SLDPanel">[docs]</a><span class="k">class</span> <span class="nc">SLDPanel</span><span class="p">(</span><span class="n">wx</span><span class="o">.</span><span class="n">Dialog</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Provides the SLD profile plot panel.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="c1">## Internal nickname for the window, used by the AUI manager</span>
+    <span class="n">window_name</span> <span class="o">=</span> <span class="s2">&quot;Scattering Length Density Profile&quot;</span>
+    <span class="c1">## Name to appear on the window title bar</span>
+    <span class="n">window_caption</span> <span class="o">=</span> <span class="s2">&quot;Scattering Length Density Profile&quot;</span>
+    <span class="c1">## Flag to tell the AUI manager to put this panel in the center pane</span>
+    <span class="n">CENTER_PANE</span> <span class="o">=</span> <span class="bp">True</span>
+    <span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">parent</span><span class="o">=</span><span class="bp">None</span><span class="p">,</span> <span class="n">base</span><span class="o">=</span><span class="bp">None</span><span class="p">,</span> <span class="n">data</span><span class="o">=</span><span class="bp">None</span><span class="p">,</span> <span class="n">axes</span><span class="o">=</span><span class="p">[</span><span class="s1">&#39;Radius&#39;</span><span class="p">],</span>
+                 <span class="nb">id</span><span class="o">=-</span><span class="mi">1</span><span class="p">,</span> <span class="o">*</span><span class="n">args</span><span class="p">,</span> <span class="o">**</span><span class="n">kwds</span><span class="p">):</span>
+        <span class="n">kwds</span><span class="p">[</span><span class="s2">&quot;style&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">wx</span><span class="o">.</span><span class="n">DEFAULT_DIALOG_STYLE</span>
+        <span class="n">kwds</span><span class="p">[</span><span class="s2">&quot;size&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">wx</span><span class="o">.</span><span class="n">Size</span><span class="p">(</span><span class="n">_STATICBOX_WIDTH</span><span class="p">,</span> <span class="n">PANEL_SIZE</span><span class="p">)</span>
+        <span class="n">wx</span><span class="o">.</span><span class="n">Dialog</span><span class="o">.</span><span class="n">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">parent</span><span class="p">,</span> <span class="nb">id</span><span class="o">=</span><span class="nb">id</span><span class="p">,</span> <span class="o">*</span><span class="n">args</span><span class="p">,</span> <span class="o">**</span><span class="n">kwds</span><span class="p">)</span>
+
+        <span class="k">if</span> <span class="n">data</span> <span class="ow">is</span> <span class="ow">not</span> <span class="bp">None</span><span class="p">:</span>
+            <span class="c1">#Font size</span>
+            <span class="n">kwds</span> <span class="o">=</span> <span class="p">[]</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">SetWindowVariant</span><span class="p">(</span><span class="n">variant</span><span class="o">=</span><span class="n">FONT_VARIANT</span><span class="p">)</span>
+
+            <span class="bp">self</span><span class="o">.</span><span class="n">SetTitle</span><span class="p">(</span><span class="s2">&quot;Scattering Length Density Profile&quot;</span><span class="p">)</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">parent</span> <span class="o">=</span> <span class="n">parent</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_mgr</span> <span class="o">=</span> <span class="bp">None</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">data</span> <span class="o">=</span> <span class="n">data</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">str</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">data</span><span class="o">.</span><span class="n">__str__</span><span class="p">()</span>
+            <span class="c1">## when 2 data have the same id override the 1 st plotted</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">name</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">data</span><span class="o">.</span><span class="n">name</span>
+            <span class="c1"># Panel for plot</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">plotpanel</span> <span class="o">=</span> <span class="n">SLDplotpanel</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">axes</span><span class="p">,</span> <span class="o">-</span><span class="mi">1</span><span class="p">,</span>
+                                          <span class="n">style</span><span class="o">=</span><span class="n">wx</span><span class="o">.</span><span class="n">TRANSPARENT_WINDOW</span><span class="p">)</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">cmap</span> <span class="o">=</span> <span class="n">DEFAULT_CMAP</span>
+            <span class="c1">## Create Artist and bind it</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">subplot</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">plotpanel</span><span class="o">.</span><span class="n">subplot</span>
+            <span class="c1"># layout</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_setup_layout</span><span class="p">()</span>
+
+            <span class="c1"># plot</span>
+            <span class="n">data_plot</span> <span class="o">=</span> <span class="n">deepcopy</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">data</span><span class="p">)</span>
+            <span class="n">data_plot</span><span class="o">.</span><span class="n">dy</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_set_dy_data</span><span class="p">()</span>
+            <span class="c1"># unit increase to M times for users</span>
+            <span class="n">data_plot</span><span class="o">.</span><span class="n">y</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_set_y_data</span><span class="p">()</span>
+
+            <span class="bp">self</span><span class="o">.</span><span class="n">newplot</span> <span class="o">=</span> <span class="n">Data1D</span><span class="p">(</span><span class="n">data_plot</span><span class="o">.</span><span class="n">x</span><span class="p">,</span> <span class="n">data_plot</span><span class="o">.</span><span class="n">y</span><span class="p">,</span> <span class="n">data_plot</span><span class="o">.</span><span class="n">dy</span><span class="p">)</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">newplot</span><span class="o">.</span><span class="n">symbol</span> <span class="o">=</span> <span class="n">GUIFRAME_ID</span><span class="o">.</span><span class="n">CURVE_SYMBOL_NUM</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">newplot</span><span class="o">.</span><span class="n">dy</span> <span class="o">=</span> <span class="bp">None</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">newplot</span><span class="o">.</span><span class="n">name</span> <span class="o">=</span> <span class="s1">&#39;SLD&#39;</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">newplot</span><span class="o">.</span><span class="n">is_data</span> <span class="o">=</span> <span class="bp">False</span>
+
+            <span class="bp">self</span><span class="o">.</span><span class="n">newplot</span><span class="o">.</span><span class="n">id</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">newplot</span><span class="o">.</span><span class="n">name</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">plotpanel</span><span class="o">.</span><span class="n">add_image</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">newplot</span><span class="p">)</span>
+
+            <span class="bp">self</span><span class="o">.</span><span class="n">plotpanel</span><span class="o">.</span><span class="n">resizing</span> <span class="o">=</span> <span class="bp">False</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">plotpanel</span><span class="o">.</span><span class="n">canvas</span><span class="o">.</span><span class="n">set_resizing</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">plotpanel</span><span class="o">.</span><span class="n">resizing</span><span class="p">)</span>
+
+            <span class="bp">self</span><span class="o">.</span><span class="n">plotpanel</span><span class="o">.</span><span class="n">subplot</span><span class="o">.</span><span class="n">set_ylim</span><span class="p">(</span><span class="nb">min</span><span class="p">(</span><span class="n">data_plot</span><span class="o">.</span><span class="n">y</span><span class="p">)</span> <span class="o">-</span> <span class="n">_Y_OFF</span><span class="p">,</span>
+                                            <span class="nb">max</span><span class="p">(</span><span class="n">data_plot</span><span class="o">.</span><span class="n">y</span><span class="p">)</span> <span class="o">+</span> <span class="n">_Y_OFF</span><span class="p">)</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">plotpanel</span><span class="o">.</span><span class="n">subplot</span><span class="o">.</span><span class="n">set_xlim</span><span class="p">(</span><span class="nb">min</span><span class="p">(</span><span class="n">data_plot</span><span class="o">.</span><span class="n">x</span><span class="p">)</span> <span class="o">-</span> <span class="n">_X_OFF</span><span class="p">,</span>
+                                            <span class="nb">max</span><span class="p">(</span><span class="n">data_plot</span><span class="o">.</span><span class="n">x</span><span class="p">)</span> <span class="o">+</span> <span class="n">_X_OFF</span><span class="p">)</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">plotpanel</span><span class="o">.</span><span class="n">graph</span><span class="o">.</span><span class="n">render</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">plotpanel</span><span class="p">)</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">plotpanel</span><span class="o">.</span><span class="n">canvas</span><span class="o">.</span><span class="n">draw</span><span class="p">()</span>
+
+    <span class="k">def</span> <span class="nf">_set_dy_data</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        make fake dy data</span>
+
+<span class="sd">        :return dy:</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="c1"># set dy as zero</span>
+        <span class="n">dy</span> <span class="o">=</span> <span class="p">[</span><span class="mi">0</span> <span class="k">for</span> <span class="n">y</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">data</span><span class="o">.</span><span class="n">y</span><span class="p">]</span>
+        <span class="k">return</span> <span class="n">dy</span>
+
+    <span class="k">def</span> <span class="nf">_set_y_data</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        make y data unit Mega times</span>
+
+<span class="sd">        :return y_value:</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="c1"># changes the unit</span>
+        <span class="n">y_value</span> <span class="o">=</span> <span class="p">[</span><span class="n">yvalue</span> <span class="o">*</span> <span class="mf">1e+006</span> <span class="k">for</span> <span class="n">yvalue</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">data</span><span class="o">.</span><span class="n">y</span><span class="p">]</span>
+
+        <span class="k">return</span> <span class="n">y_value</span>
+
+    <span class="k">def</span> <span class="nf">_setup_layout</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Set up the layout</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="c1"># panel sizer</span>
+        <span class="n">sizer</span> <span class="o">=</span> <span class="n">wx</span><span class="o">.</span><span class="n">BoxSizer</span><span class="p">(</span><span class="n">wx</span><span class="o">.</span><span class="n">VERTICAL</span><span class="p">)</span>
+        <span class="n">sizer</span><span class="o">.</span><span class="n">Add</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">plotpanel</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="n">wx</span><span class="o">.</span><span class="n">LEFT</span> <span class="o">|</span> <span class="n">wx</span><span class="o">.</span><span class="n">RIGHT</span><span class="p">,</span> <span class="mi">5</span><span class="p">)</span>
+        <span class="n">sizer</span><span class="o">.</span><span class="n">Add</span><span class="p">(</span><span class="n">wx</span><span class="o">.</span><span class="n">StaticLine</span><span class="p">(</span><span class="bp">self</span><span class="p">),</span> <span class="mi">0</span><span class="p">,</span> <span class="n">wx</span><span class="o">.</span><span class="n">ALL</span> <span class="o">|</span> <span class="n">wx</span><span class="o">.</span><span class="n">EXPAND</span><span class="p">,</span> <span class="mi">5</span><span class="p">)</span>
+        <span class="n">sizer</span><span class="o">.</span><span class="n">Add</span><span class="p">((</span><span class="mi">0</span><span class="p">,</span> <span class="mi">5</span><span class="p">))</span>
+        <span class="c1">#-----Button------------1</span>
+        <span class="n">button_reset</span> <span class="o">=</span> <span class="n">wx</span><span class="o">.</span><span class="n">Button</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">wx</span><span class="o">.</span><span class="n">NewId</span><span class="p">(),</span> <span class="s2">&quot;Close&quot;</span><span class="p">)</span>
+        <span class="n">button_reset</span><span class="o">.</span><span class="n">SetToolTipString</span><span class="p">(</span><span class="s2">&quot;Close...&quot;</span><span class="p">)</span>
+        <span class="n">button_reset</span><span class="o">.</span><span class="n">Bind</span><span class="p">(</span><span class="n">wx</span><span class="o">.</span><span class="n">EVT_BUTTON</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">_close</span><span class="p">,</span>
+                          <span class="nb">id</span><span class="o">=</span><span class="n">button_reset</span><span class="o">.</span><span class="n">GetId</span><span class="p">())</span>
+        <span class="n">sizer</span><span class="o">.</span><span class="n">Add</span><span class="p">(</span><span class="n">button_reset</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="n">wx</span><span class="o">.</span><span class="n">LEFT</span><span class="p">,</span> <span class="n">_STATICBOX_WIDTH</span> <span class="o">-</span> <span class="mi">80</span><span class="p">)</span>
+        <span class="n">sizer</span><span class="o">.</span><span class="n">Add</span><span class="p">((</span><span class="mi">0</span><span class="p">,</span> <span class="mi">10</span><span class="p">))</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">SetSizerAndFit</span><span class="p">(</span><span class="n">sizer</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">Centre</span><span class="p">()</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">Show</span><span class="p">(</span><span class="bp">True</span><span class="p">)</span>
+        <span class="n">button_reset</span><span class="o">.</span><span class="n">SetFocus</span><span class="p">()</span>
+
+    <span class="k">def</span> <span class="nf">_close</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">event</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Close the dialog</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">Close</span><span class="p">(</span><span class="bp">True</span><span class="p">)</span>
+
+    <span class="k">def</span> <span class="nf">_draw_model</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">event</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">         on_close, update the model2d plot</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">pass</span>
+
+<div class="viewcode-block" id="SLDPanel.get_current_context_menu"><a class="viewcode-back" href="../../../../../../dev/sasview-api/sas.sasgui.guiframe.local_perspectives.plotting.html#sas.sasgui.guiframe.local_perspectives.plotting.profile_dialog.SLDPanel.get_current_context_menu">[docs]</a>    <span class="k">def</span> <span class="nf">get_current_context_menu</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">graph</span><span class="o">=</span><span class="bp">None</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        When the context menu of a plot is rendered, the</span>
+<span class="sd">        get_context_menu method will be called to give you a</span>
+<span class="sd">        chance to add a menu item to the context menu.</span>
+<span class="sd">        :param graph: the Graph object to which we attach the context menu</span>
+
+<span class="sd">        :return: a list of menu items with call-back function</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">return</span> <span class="p">[]</span></div>
+
+<div class="viewcode-block" id="SLDPanel.set_schedule_full_draw"><a class="viewcode-back" href="../../../../../../dev/sasview-api/sas.sasgui.guiframe.local_perspectives.plotting.html#sas.sasgui.guiframe.local_perspectives.plotting.profile_dialog.SLDPanel.set_schedule_full_draw">[docs]</a>    <span class="k">def</span> <span class="nf">set_schedule_full_draw</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">panel</span><span class="o">=</span><span class="bp">None</span><span class="p">,</span> <span class="n">func</span><span class="o">=</span><span class="bp">None</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Set_schedule for full draw</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="c1"># Not implemented</span>
+        <span class="k">pass</span></div>
+
+<div class="viewcode-block" id="SLDPanel.set_schedule"><a class="viewcode-back" href="../../../../../../dev/sasview-api/sas.sasgui.guiframe.local_perspectives.plotting.html#sas.sasgui.guiframe.local_perspectives.plotting.profile_dialog.SLDPanel.set_schedule">[docs]</a>    <span class="k">def</span> <span class="nf">set_schedule</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">schedule</span><span class="o">=</span><span class="bp">False</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Set schedule for redraw</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="c1"># Not implemented</span>
+        <span class="k">pass</span></div>
+
+<div class="viewcode-block" id="SLDPanel.set_plot_unfocus"><a class="viewcode-back" href="../../../../../../dev/sasview-api/sas.sasgui.guiframe.local_perspectives.plotting.html#sas.sasgui.guiframe.local_perspectives.plotting.profile_dialog.SLDPanel.set_plot_unfocus">[docs]</a>    <span class="k">def</span> <span class="nf">set_plot_unfocus</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Set_plot unfocus</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="c1"># NOt implemented</span>
+        <span class="k">pass</span></div>
+
+<div class="viewcode-block" id="SLDPanel.on_change_caption"><a class="viewcode-back" href="../../../../../../dev/sasview-api/sas.sasgui.guiframe.local_perspectives.plotting.html#sas.sasgui.guiframe.local_perspectives.plotting.profile_dialog.SLDPanel.on_change_caption">[docs]</a>    <span class="k">def</span> <span class="nf">on_change_caption</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">name</span><span class="p">,</span> <span class="n">old_caption</span><span class="p">,</span> <span class="n">new_caption</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">parent</span><span class="o">.</span><span class="n">parent</span><span class="o">.</span><span class="n">parent</span><span class="o">.</span><span class="n">on_change_caption</span><span class="p">(</span><span class="n">name</span><span class="p">,</span> <span class="n">old_caption</span><span class="p">,</span> <span class="n">new_caption</span><span class="p">)</span></div>
+
+<div class="viewcode-block" id="SLDPanel.disable_app_menu"><a class="viewcode-back" href="../../../../../../dev/sasview-api/sas.sasgui.guiframe.local_perspectives.plotting.html#sas.sasgui.guiframe.local_perspectives.plotting.profile_dialog.SLDPanel.disable_app_menu">[docs]</a>    <span class="k">def</span> <span class="nf">disable_app_menu</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">panel</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Disable menu bar</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="c1"># Not implemented!</span>
+        <span class="k">return</span></div>
+
+<div class="viewcode-block" id="SLDPanel.show_data1d"><a class="viewcode-back" href="../../../../../../dev/sasview-api/sas.sasgui.guiframe.local_perspectives.plotting.html#sas.sasgui.guiframe.local_perspectives.plotting.profile_dialog.SLDPanel.show_data1d">[docs]</a>    <span class="k">def</span> <span class="nf">show_data1d</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">data</span><span class="p">,</span> <span class="n">name</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Show data dialog</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">parent</span><span class="o">.</span><span class="n">_manager</span><span class="o">.</span><span class="n">parent</span><span class="o">.</span><span class="n">show_data1d</span><span class="p">(</span><span class="n">data</span><span class="p">,</span> <span class="n">name</span><span class="p">)</span></div></div>
+
+<div class="viewcode-block" id="SLDplotpanel"><a class="viewcode-back" href="../../../../../../dev/sasview-api/sas.sasgui.guiframe.local_perspectives.plotting.html#sas.sasgui.guiframe.local_perspectives.plotting.profile_dialog.SLDplotpanel">[docs]</a><span class="k">class</span> <span class="nc">SLDplotpanel</span><span class="p">(</span><span class="n">PlotPanel</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Panel</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">parent</span><span class="p">,</span> <span class="n">axes</span><span class="o">=</span><span class="p">[],</span> <span class="nb">id</span><span class="o">=-</span><span class="mi">1</span><span class="p">,</span> <span class="n">color</span><span class="o">=</span><span class="bp">None</span><span class="p">,</span> <span class="n">dpi</span><span class="o">=</span><span class="bp">None</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">PlotPanel</span><span class="o">.</span><span class="n">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">parent</span><span class="p">,</span> <span class="nb">id</span><span class="o">=</span><span class="nb">id</span><span class="p">,</span> <span class="n">xtransform</span><span class="o">=</span><span class="s1">&#39;x&#39;</span><span class="p">,</span> <span class="n">ytransform</span><span class="o">=</span><span class="s1">&#39;y&#39;</span><span class="p">,</span>
+                           <span class="n">color</span><span class="o">=</span><span class="n">color</span><span class="p">,</span> <span class="n">dpi</span><span class="o">=</span><span class="n">dpi</span><span class="p">,</span>
+                           <span class="n">size</span><span class="o">=</span><span class="p">(</span><span class="n">_STATICBOX_WIDTH</span><span class="p">,</span> <span class="n">PANEL_SIZE</span> <span class="o">-</span> <span class="mi">100</span><span class="p">),</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">)</span>
+
+        <span class="c1"># Keep track of the parent Frame</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">parent</span> <span class="o">=</span> <span class="n">parent</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">window_name</span> <span class="o">=</span> <span class="s2">&quot;Scattering Length Density Profile&quot;</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">window_caption</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">window_name</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">prevXtrans</span> <span class="o">=</span> <span class="s2">&quot;x&quot;</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">prevYtrans</span> <span class="o">=</span> <span class="s2">&quot;y&quot;</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">viewModel</span> <span class="o">=</span> <span class="s2">&quot;--&quot;</span>
+        <span class="c1"># Internal list of plottable names (because graph</span>
+        <span class="c1"># doesn&#39;t have a dictionary of handles for the plottables)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">plots</span> <span class="o">=</span> <span class="p">{}</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">graph</span> <span class="o">=</span> <span class="n">Graph</span><span class="p">()</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">axes_label</span> <span class="o">=</span> <span class="p">[]</span>
+        <span class="k">for</span> <span class="n">idx</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="nb">len</span><span class="p">(</span><span class="n">axes</span><span class="p">)):</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">axes_label</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">axes</span><span class="p">[</span><span class="n">idx</span><span class="p">])</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">xaxis_label</span> <span class="o">=</span> <span class="s1">&#39;&#39;</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">xaxis_unit</span> <span class="o">=</span> <span class="s1">&#39;&#39;</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">yaxis_label</span> <span class="o">=</span> <span class="s1">&#39;&#39;</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">yaxis_unit</span> <span class="o">=</span> <span class="s1">&#39;&#39;</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">resizing</span> <span class="o">=</span> <span class="bp">True</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">xcolor</span> <span class="o">=</span> <span class="s1">&#39;black&#39;</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">ycolor</span> <span class="o">=</span> <span class="s1">&#39;black&#39;</span>
+
+<div class="viewcode-block" id="SLDplotpanel.add_image"><a class="viewcode-back" href="../../../../../../dev/sasview-api/sas.sasgui.guiframe.local_perspectives.plotting.html#sas.sasgui.guiframe.local_perspectives.plotting.profile_dialog.SLDplotpanel.add_image">[docs]</a>    <span class="k">def</span> <span class="nf">add_image</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">plot</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Add image(Theory1D)</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">plots</span><span class="p">[</span><span class="n">plot</span><span class="o">.</span><span class="n">id</span><span class="p">]</span> <span class="o">=</span> <span class="n">plot</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">plots</span><span class="p">[</span><span class="n">plot</span><span class="o">.</span><span class="n">id</span><span class="p">]</span><span class="o">.</span><span class="n">is_data</span> <span class="o">=</span> <span class="bp">True</span>
+        <span class="c1">#add plot</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">graph</span><span class="o">.</span><span class="n">add</span><span class="p">(</span><span class="n">plot</span><span class="p">)</span>
+        <span class="c1">#add axes</span>
+        <span class="n">x1_label</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">axes_label</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">xaxis_label</span> <span class="o">=</span> <span class="s1">&#39;</span><span class="se">\\</span><span class="s1">rm{</span><span class="si">%s</span><span class="s1">} &#39;</span> <span class="o">%</span> <span class="n">x1_label</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">xaxis_unit</span> <span class="o">=</span> <span class="s1">&#39;A&#39;</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">graph</span><span class="o">.</span><span class="n">xaxis</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">xaxis_label</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">xaxis_unit</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">yaxis_label</span> <span class="o">=</span> <span class="s1">&#39;</span><span class="se">\\</span><span class="s1">rm{SLD} &#39;</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">yaxis_unit</span> <span class="o">=</span> <span class="s1">&#39;10^{-6}A^{-2}&#39;</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">graph</span><span class="o">.</span><span class="n">yaxis</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">yaxis_label</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">yaxis_unit</span><span class="p">)</span>
+        <span class="c1"># For latter scale changes</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">plots</span><span class="p">[</span><span class="n">plot</span><span class="o">.</span><span class="n">id</span><span class="p">]</span><span class="o">.</span><span class="n">xaxis</span><span class="p">(</span><span class="s1">&#39;</span><span class="se">\\</span><span class="s1">rm{</span><span class="si">%s</span><span class="s1">} &#39;</span> <span class="o">%</span> <span class="n">x1_label</span><span class="p">,</span> <span class="s1">&#39;A&#39;</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">plots</span><span class="p">[</span><span class="n">plot</span><span class="o">.</span><span class="n">id</span><span class="p">]</span><span class="o">.</span><span class="n">yaxis</span><span class="p">(</span><span class="s1">&#39;</span><span class="se">\\</span><span class="s1">rm{SLD} &#39;</span><span class="p">,</span> <span class="s1">&#39;10^{-6}A^{-2}&#39;</span><span class="p">)</span></div>
+
+<div class="viewcode-block" id="SLDplotpanel.on_set_focus"><a class="viewcode-back" href="../../../../../../dev/sasview-api/sas.sasgui.guiframe.local_perspectives.plotting.html#sas.sasgui.guiframe.local_perspectives.plotting.profile_dialog.SLDplotpanel.on_set_focus">[docs]</a>    <span class="k">def</span> <span class="nf">on_set_focus</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">event</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        send to the parenet the current panel on focus</span>
+
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="c1">#Not implemented</span>
+        <span class="k">pass</span></div>
+
+<div class="viewcode-block" id="SLDplotpanel.on_kill_focus"><a class="viewcode-back" href="../../../../../../dev/sasview-api/sas.sasgui.guiframe.local_perspectives.plotting.html#sas.sasgui.guiframe.local_perspectives.plotting.profile_dialog.SLDplotpanel.on_kill_focus">[docs]</a>    <span class="k">def</span> <span class="nf">on_kill_focus</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">event</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        reset the panel color</span>
+
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="c1">#Not implemented</span>
+        <span class="k">pass</span></div>
+
+<div class="viewcode-block" id="SLDplotpanel.onChangeCaption"><a class="viewcode-back" href="../../../../../../dev/sasview-api/sas.sasgui.guiframe.local_perspectives.plotting.html#sas.sasgui.guiframe.local_perspectives.plotting.profile_dialog.SLDplotpanel.onChangeCaption">[docs]</a>    <span class="k">def</span> <span class="nf">onChangeCaption</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">event</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Not implemented</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">pass</span></div>
+
+    <span class="k">def</span> <span class="nf">_onSave</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">evt</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Save a data set to a text file</span>
+
+<span class="sd">        :param evt: Menu event</span>
+
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">menu</span> <span class="o">=</span> <span class="n">evt</span><span class="o">.</span><span class="n">GetEventObject</span><span class="p">()</span>
+        <span class="n">event_id</span> <span class="o">=</span> <span class="n">evt</span><span class="o">.</span><span class="n">GetId</span><span class="p">()</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">set_selected_from_menu</span><span class="p">(</span><span class="n">menu</span><span class="p">,</span> <span class="n">event_id</span><span class="p">)</span>
+        <span class="n">data</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">plots</span><span class="p">[</span><span class="bp">self</span><span class="o">.</span><span class="n">graph</span><span class="o">.</span><span class="n">selected_plottable</span><span class="p">]</span>
+        <span class="n">default_name</span> <span class="o">=</span> <span class="n">data</span><span class="o">.</span><span class="n">label</span>
+        <span class="k">if</span> <span class="n">default_name</span><span class="o">.</span><span class="n">count</span><span class="p">(</span><span class="s1">&#39;.&#39;</span><span class="p">)</span> <span class="o">&gt;</span> <span class="mi">0</span><span class="p">:</span>
+            <span class="n">default_name</span> <span class="o">=</span> <span class="n">default_name</span><span class="o">.</span><span class="n">split</span><span class="p">(</span><span class="s1">&#39;.&#39;</span><span class="p">)[</span><span class="mi">0</span><span class="p">]</span>
+        <span class="n">default_name</span> <span class="o">+=</span> <span class="s2">&quot;_out&quot;</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">parent</span> <span class="ow">is</span> <span class="ow">not</span> <span class="bp">None</span><span class="p">:</span>
+            <span class="c1"># What an ancestor!</span>
+            <span class="n">fit_panel</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">parent</span><span class="o">.</span><span class="n">parent</span><span class="o">.</span><span class="n">parent</span>
+            <span class="n">fit_panel</span><span class="o">.</span><span class="n">_manager</span><span class="o">.</span><span class="n">parent</span><span class="o">.</span><span class="n">save_data1d</span><span class="p">(</span><span class="n">data</span><span class="p">,</span> <span class="n">default_name</span><span class="p">)</span></div>
+
+<div class="viewcode-block" id="ViewerFrame"><a class="viewcode-back" href="../../../../../../dev/sasview-api/sas.sasgui.guiframe.local_perspectives.plotting.html#sas.sasgui.guiframe.local_perspectives.plotting.profile_dialog.ViewerFrame">[docs]</a><span class="k">class</span> <span class="nc">ViewerFrame</span><span class="p">(</span><span class="n">wx</span><span class="o">.</span><span class="n">Frame</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Add comment</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">parent</span><span class="p">,</span> <span class="nb">id</span><span class="p">,</span> <span class="n">title</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        comment</span>
+<span class="sd">        :param parent: parent panel/container</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="c1"># Initialize the Frame object</span>
+        <span class="n">wx</span><span class="o">.</span><span class="n">Frame</span><span class="o">.</span><span class="n">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">parent</span><span class="p">,</span> <span class="nb">id</span><span class="p">,</span> <span class="n">title</span><span class="p">,</span> <span class="n">wx</span><span class="o">.</span><span class="n">DefaultPosition</span><span class="p">,</span>
+                          <span class="n">wx</span><span class="o">.</span><span class="n">Size</span><span class="p">(</span><span class="n">_STATICBOX_WIDTH</span><span class="p">,</span> <span class="n">PANEL_SIZE</span><span class="p">))</span>
+        <span class="c1"># Panel for 1D plot</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">plotpanel</span> <span class="o">=</span> <span class="n">SLDplotpanel</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="o">-</span><span class="mi">1</span><span class="p">,</span> <span class="n">style</span><span class="o">=</span><span class="n">wx</span><span class="o">.</span><span class="n">RAISED_BORDER</span><span class="p">)</span></div>
+
+<div class="viewcode-block" id="ViewApp"><a class="viewcode-back" href="../../../../../../dev/sasview-api/sas.sasgui.guiframe.local_perspectives.plotting.html#sas.sasgui.guiframe.local_perspectives.plotting.profile_dialog.ViewApp">[docs]</a><span class="k">class</span> <span class="nc">ViewApp</span><span class="p">(</span><span class="n">wx</span><span class="o">.</span><span class="n">App</span><span class="p">):</span>
+<div class="viewcode-block" id="ViewApp.OnInit"><a class="viewcode-back" href="../../../../../../dev/sasview-api/sas.sasgui.guiframe.local_perspectives.plotting.html#sas.sasgui.guiframe.local_perspectives.plotting.profile_dialog.ViewApp.OnInit">[docs]</a>    <span class="k">def</span> <span class="nf">OnInit</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="n">frame</span> <span class="o">=</span> <span class="n">ViewerFrame</span><span class="p">(</span><span class="bp">None</span><span class="p">,</span> <span class="o">-</span><span class="mi">1</span><span class="p">,</span> <span class="s1">&#39;testView&#39;</span><span class="p">)</span>
+        <span class="n">frame</span><span class="o">.</span><span class="n">Show</span><span class="p">(</span><span class="bp">True</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">SetTopWindow</span><span class="p">(</span><span class="n">frame</span><span class="p">)</span>
+
+        <span class="k">return</span> <span class="bp">True</span></div></div>
+
+<span class="k">if</span> <span class="n">__name__</span> <span class="o">==</span> <span class="s2">&quot;__main__&quot;</span><span class="p">:</span>
+    <span class="n">app</span> <span class="o">=</span> <span class="n">ViewApp</span><span class="p">(</span><span class="mi">0</span><span class="p">)</span>
+    <span class="n">app</span><span class="o">.</span><span class="n">MainLoop</span><span class="p">()</span>
+</pre></div>
+
+          </div>
+        </div>
+      </div>
+      <div class="sphinxsidebar" role="navigation" aria-label="main navigation">
+        <div class="sphinxsidebarwrapper">
+<div id="searchbox" style="display: none" role="search">
+  <h3>Quick search</h3>
+    <form class="search" action="../../../../../../search.html" method="get">
+      <input type="text" name="q" />
+      <input type="submit" value="Go" />
+      <input type="hidden" name="check_keywords" value="yes" />
+      <input type="hidden" name="area" value="default" />
+    </form>
+</div>
+<script type="text/javascript">$('#searchbox').show(0);</script>
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="related" role="navigation" aria-label="related navigation">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="../../../../../../genindex.html" title="General Index"
+             >index</a></li>
+        <li class="right" >
+          <a href="../../../../../../py-modindex.html" title="Python Module Index"
+             >modules</a> |</li>
+        <li class="nav-item nav-item-0"><a href="../../../../../../index.html">SasView 4.2.0 documentation</a> &raquo;</li>
+          <li class="nav-item nav-item-1"><a href="../../../../../index.html" >Module code</a> &raquo;</li>
+          <li class="nav-item nav-item-2"><a href="../../../../../sas.html" >sas</a> &raquo;</li>
+          <li class="nav-item nav-item-3"><a href="../../../guiframe.html" >sas.sasgui.guiframe</a> &raquo;</li> 
+      </ul>
+    </div>
+    <div class="footer" role="contentinfo">
+        &copy; Copyright 2018, The SasView Project.
+      Created using <a href="http://sphinx-doc.org/">Sphinx</a> 1.4.1.
+    </div>
+  </body>
+</html>
