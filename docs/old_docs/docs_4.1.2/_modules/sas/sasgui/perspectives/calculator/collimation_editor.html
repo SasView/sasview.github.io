@@ -1,0 +1,639 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+  "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+    
+    <title>sas.sasgui.perspectives.calculator.collimation_editor &mdash; SasView 4.1.2 documentation</title>
+    
+    <link rel="stylesheet" href="../../../../../_static/classic.css" type="text/css" />
+    <link rel="stylesheet" href="../../../../../_static/pygments.css" type="text/css" />
+    
+    <script type="text/javascript">
+      var DOCUMENTATION_OPTIONS = {
+        URL_ROOT:    '../../../../../',
+        VERSION:     '4.1.2',
+        COLLAPSE_INDEX: false,
+        FILE_SUFFIX: '.html',
+        HAS_SOURCE:  true
+      };
+    </script>
+    <script type="text/javascript" src="../../../../../_static/jquery.js"></script>
+    <script type="text/javascript" src="../../../../../_static/underscore.js"></script>
+    <script type="text/javascript" src="../../../../../_static/doctools.js"></script>
+    <script type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.1/MathJax.js?config=TeX-MML-AM_CHTML"></script>
+    <link rel="top" title="SasView 4.1.2 documentation" href="../../../../../index.html" />
+    <link rel="up" title="sas.sasgui.perspectives.calculator" href="../calculator.html" /> 
+  </head>
+  <body role="document">
+    <div class="related" role="navigation" aria-label="related navigation">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="../../../../../genindex.html" title="General Index"
+             accesskey="I">index</a></li>
+        <li class="right" >
+          <a href="../../../../../py-modindex.html" title="Python Module Index"
+             >modules</a> |</li>
+        <li class="nav-item nav-item-0"><a href="../../../../../index.html">SasView 4.1.2 documentation</a> &raquo;</li>
+          <li class="nav-item nav-item-1"><a href="../../../../index.html" >Module code</a> &raquo;</li>
+          <li class="nav-item nav-item-2"><a href="../calculator.html" accesskey="U">sas.sasgui.perspectives.calculator</a> &raquo;</li> 
+      </ul>
+    </div>  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          <div class="body" role="main">
+            
+  <h1>Source code for sas.sasgui.perspectives.calculator.collimation_editor</h1><div class="highlight"><pre>
+<span></span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">&quot;&quot;&quot;</span>
+<span class="kn">import</span> <span class="nn">wx</span>
+<span class="kn">import</span> <span class="nn">sys</span>
+<span class="kn">from</span> <span class="nn">copy</span> <span class="kn">import</span> <span class="n">deepcopy</span>
+<span class="kn">from</span> <span class="nn">sas.sascalc.dataloader.loader</span> <span class="kn">import</span> <span class="n">Loader</span>
+<span class="kn">from</span> <span class="nn">sas.sascalc.dataloader.data_info</span> <span class="kn">import</span> <span class="n">Aperture</span><span class="p">,</span> <span class="n">Collimation</span>
+<span class="kn">from</span> <span class="nn">aperture_editor</span> <span class="kn">import</span> <span class="n">ApertureDialog</span>
+
+<span class="kn">from</span> <span class="nn">sas.sasgui.guiframe.utils</span> <span class="kn">import</span> <span class="n">check_float</span>
+<span class="n">_BOX_WIDTH</span> <span class="o">=</span> <span class="mi">60</span>
+
+<span class="k">if</span> <span class="n">sys</span><span class="o">.</span><span class="n">platform</span><span class="o">.</span><span class="n">count</span><span class="p">(</span><span class="s2">&quot;win32&quot;</span><span class="p">)</span> <span class="o">&gt;</span> <span class="mi">0</span><span class="p">:</span>
+    <span class="n">_STATICBOX_WIDTH</span> <span class="o">=</span> <span class="mi">500</span>
+    <span class="n">PANEL_WIDTH</span> <span class="o">=</span> <span class="mi">530</span>
+    <span class="n">PANEL_HEIGHT</span> <span class="o">=</span> <span class="mi">430</span>
+    <span class="n">FONT_VARIANT</span> <span class="o">=</span> <span class="mi">0</span>
+<span class="k">else</span><span class="p">:</span>
+    <span class="n">_STATICBOX_WIDTH</span> <span class="o">=</span> <span class="mi">550</span>
+    <span class="n">PANEL_WIDTH</span> <span class="o">=</span> <span class="mi">600</span>
+    <span class="n">PANEL_HEIGHT</span> <span class="o">=</span> <span class="mi">480</span>
+    <span class="n">FONT_VARIANT</span> <span class="o">=</span> <span class="mi">1</span>
+
+<div class="viewcode-block" id="CollimationDialog"><a class="viewcode-back" href="../../../../../dev/api/sas.sasgui.perspectives.calculator.html#sas.sasgui.perspectives.calculator.collimation_editor.CollimationDialog">[docs]</a><span class="k">class</span> <span class="nc">CollimationDialog</span><span class="p">(</span><span class="n">wx</span><span class="o">.</span><span class="n">Dialog</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">parent</span><span class="o">=</span><span class="bp">None</span><span class="p">,</span> <span class="n">manager</span><span class="o">=</span><span class="bp">None</span><span class="p">,</span>
+                 <span class="n">collimation</span><span class="o">=</span><span class="p">[],</span> <span class="o">*</span><span class="n">args</span><span class="p">,</span> <span class="o">**</span><span class="n">kwds</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">kwds</span><span class="p">[</span><span class="s1">&#39;size&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="p">(</span><span class="n">PANEL_WIDTH</span><span class="p">,</span> <span class="n">PANEL_HEIGHT</span><span class="p">)</span>
+        <span class="n">kwds</span><span class="p">[</span><span class="s1">&#39;title&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="s2">&quot;Collimation Editor&quot;</span>
+        <span class="n">wx</span><span class="o">.</span><span class="n">Dialog</span><span class="o">.</span><span class="n">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">parent</span><span class="o">=</span><span class="n">parent</span><span class="p">,</span> <span class="o">*</span><span class="n">args</span><span class="p">,</span> <span class="o">**</span><span class="n">kwds</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">parent</span> <span class="o">=</span> <span class="n">parent</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">manager</span> <span class="o">=</span> <span class="n">manager</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_collimation</span> <span class="o">=</span> <span class="n">collimation</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_reset_collimation</span> <span class="o">=</span> <span class="n">deepcopy</span><span class="p">(</span><span class="n">collimation</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_notes</span> <span class="o">=</span> <span class="s2">&quot;&quot;</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_description</span> <span class="o">=</span> <span class="s2">&quot;Edit collimation&quot;</span>
+        <span class="c1">#layout attributes</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">main_sizer</span> <span class="o">=</span> <span class="bp">None</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">box_collimation</span> <span class="o">=</span> <span class="bp">None</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">boxsizer_collimation</span> <span class="o">=</span> <span class="bp">None</span>
+
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">_do_layout</span><span class="p">()</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">set_values</span><span class="p">()</span>
+
+    <span class="k">def</span> <span class="nf">_define_structure</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        define initial sizer</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">main_sizer</span> <span class="o">=</span> <span class="n">wx</span><span class="o">.</span><span class="n">BoxSizer</span><span class="p">(</span><span class="n">wx</span><span class="o">.</span><span class="n">VERTICAL</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">box_collimation</span> <span class="o">=</span> <span class="n">wx</span><span class="o">.</span><span class="n">StaticBox</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="o">-</span><span class="mi">1</span><span class="p">,</span>
+                                            <span class="nb">str</span><span class="p">(</span><span class="s2">&quot;Edit Selected Collimation&quot;</span><span class="p">))</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">boxsizer_collimation</span> <span class="o">=</span> <span class="n">wx</span><span class="o">.</span><span class="n">StaticBoxSizer</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">box_collimation</span><span class="p">,</span>
+                                                       <span class="n">wx</span><span class="o">.</span><span class="n">VERTICAL</span><span class="p">)</span>
+
+        <span class="n">collimation_box</span> <span class="o">=</span> <span class="n">wx</span><span class="o">.</span><span class="n">StaticBox</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="o">-</span><span class="mi">1</span><span class="p">,</span> <span class="s2">&quot;Edit Number of Collimations&quot;</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">collimation_sizer</span> <span class="o">=</span> <span class="n">wx</span><span class="o">.</span><span class="n">StaticBoxSizer</span><span class="p">(</span><span class="n">collimation_box</span><span class="p">,</span> <span class="n">wx</span><span class="o">.</span><span class="n">VERTICAL</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">collimation_sizer</span><span class="o">.</span><span class="n">SetMinSize</span><span class="p">((</span><span class="n">_STATICBOX_WIDTH</span><span class="p">,</span> <span class="o">-</span><span class="mi">1</span><span class="p">))</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">collimation_button_sizer</span> <span class="o">=</span> <span class="n">wx</span><span class="o">.</span><span class="n">BoxSizer</span><span class="p">(</span><span class="n">wx</span><span class="o">.</span><span class="n">HORIZONTAL</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">collimation_hint_sizer</span> <span class="o">=</span> <span class="n">wx</span><span class="o">.</span><span class="n">BoxSizer</span><span class="p">(</span><span class="n">wx</span><span class="o">.</span><span class="n">HORIZONTAL</span><span class="p">)</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">name_sizer</span> <span class="o">=</span> <span class="n">wx</span><span class="o">.</span><span class="n">BoxSizer</span><span class="p">(</span><span class="n">wx</span><span class="o">.</span><span class="n">HORIZONTAL</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">length_sizer</span> <span class="o">=</span> <span class="n">wx</span><span class="o">.</span><span class="n">BoxSizer</span><span class="p">(</span><span class="n">wx</span><span class="o">.</span><span class="n">HORIZONTAL</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">button_sizer</span> <span class="o">=</span> <span class="n">wx</span><span class="o">.</span><span class="n">BoxSizer</span><span class="p">(</span><span class="n">wx</span><span class="o">.</span><span class="n">HORIZONTAL</span><span class="p">)</span>
+
+        <span class="n">aperture_box</span> <span class="o">=</span> <span class="n">wx</span><span class="o">.</span><span class="n">StaticBox</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="o">-</span><span class="mi">1</span><span class="p">,</span> <span class="s2">&quot;Edit Aperture&quot;</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">aperture_sizer</span> <span class="o">=</span> <span class="n">wx</span><span class="o">.</span><span class="n">StaticBoxSizer</span><span class="p">(</span><span class="n">aperture_box</span><span class="p">,</span> <span class="n">wx</span><span class="o">.</span><span class="n">VERTICAL</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">aperture_button_sizer</span> <span class="o">=</span> <span class="n">wx</span><span class="o">.</span><span class="n">BoxSizer</span><span class="p">(</span><span class="n">wx</span><span class="o">.</span><span class="n">HORIZONTAL</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">aperture_hint_sizer</span> <span class="o">=</span> <span class="n">wx</span><span class="o">.</span><span class="n">BoxSizer</span><span class="p">(</span><span class="n">wx</span><span class="o">.</span><span class="n">HORIZONTAL</span><span class="p">)</span>
+
+    <span class="k">def</span> <span class="nf">_layout_collimation</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Do the layout for collimation related widgets</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">collimation_name_txt</span> <span class="o">=</span> <span class="n">wx</span><span class="o">.</span><span class="n">StaticText</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="o">-</span><span class="mi">1</span><span class="p">,</span> <span class="s2">&quot;Collimation:&quot;</span><span class="p">)</span>
+        <span class="n">hint_collimation_txt</span> <span class="o">=</span> <span class="s1">&#39;Current available collimation.&#39;</span>
+        <span class="n">collimation_name_txt</span><span class="o">.</span><span class="n">SetToolTipString</span><span class="p">(</span><span class="n">hint_collimation_txt</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">collimation_cbox</span> <span class="o">=</span> <span class="n">wx</span><span class="o">.</span><span class="n">ComboBox</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="o">-</span><span class="mi">1</span><span class="p">,</span> <span class="n">style</span><span class="o">=</span><span class="n">wx</span><span class="o">.</span><span class="n">CB_READONLY</span><span class="p">)</span>
+        <span class="n">wx</span><span class="o">.</span><span class="n">EVT_COMBOBOX</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">collimation_cbox</span><span class="p">,</span> <span class="o">-</span><span class="mi">1</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">on_select_collimation</span><span class="p">)</span>
+        <span class="n">hint_collimation_name_txt</span> <span class="o">=</span> <span class="s1">&#39;Name of collimations.&#39;</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">collimation_cbox</span><span class="o">.</span><span class="n">SetToolTipString</span><span class="p">(</span><span class="n">hint_collimation_name_txt</span><span class="p">)</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">bt_add_collimation</span> <span class="o">=</span> <span class="n">wx</span><span class="o">.</span><span class="n">Button</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="o">-</span><span class="mi">1</span><span class="p">,</span> <span class="s2">&quot;Add&quot;</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">bt_add_collimation</span><span class="o">.</span><span class="n">SetToolTipString</span><span class="p">(</span><span class="s2">&quot;Edit data&#39;s collimation.&quot;</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">bt_add_collimation</span><span class="o">.</span><span class="n">Bind</span><span class="p">(</span><span class="n">wx</span><span class="o">.</span><span class="n">EVT_BUTTON</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">add_collimation</span><span class="p">)</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">bt_remove_collimation</span> <span class="o">=</span> <span class="n">wx</span><span class="o">.</span><span class="n">Button</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="o">-</span><span class="mi">1</span><span class="p">,</span> <span class="s2">&quot;Remove&quot;</span><span class="p">)</span>
+        <span class="n">hint</span> <span class="o">=</span> <span class="s2">&quot;Remove data&#39;s collimation.&quot;</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">bt_remove_collimation</span><span class="o">.</span><span class="n">SetToolTipString</span><span class="p">(</span><span class="n">hint</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">bt_remove_collimation</span><span class="o">.</span><span class="n">Bind</span><span class="p">(</span><span class="n">wx</span><span class="o">.</span><span class="n">EVT_BUTTON</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">remove_collimation</span><span class="p">)</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">collimation_button_sizer</span><span class="o">.</span><span class="n">AddMany</span><span class="p">([(</span><span class="n">collimation_name_txt</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span>
+                                                 <span class="n">wx</span><span class="o">.</span><span class="n">LEFT</span><span class="p">,</span> <span class="mi">15</span><span class="p">),</span>
+                                     <span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">collimation_cbox</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="n">wx</span><span class="o">.</span><span class="n">LEFT</span><span class="p">,</span> <span class="mi">5</span><span class="p">),</span>
+                                     <span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">bt_add_collimation</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="n">wx</span><span class="o">.</span><span class="n">LEFT</span><span class="p">,</span> <span class="mi">10</span><span class="p">),</span>
+                                     <span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">bt_remove_collimation</span><span class="p">,</span>
+                                       <span class="mi">0</span><span class="p">,</span> <span class="n">wx</span><span class="o">.</span><span class="n">LEFT</span><span class="p">,</span> <span class="mi">5</span><span class="p">)])</span>
+        <span class="n">collimation_hint_txt</span> <span class="o">=</span> <span class="s1">&#39;No collimation is available for this data.&#39;</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">collimation_txt</span> <span class="o">=</span> <span class="n">wx</span><span class="o">.</span><span class="n">StaticText</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="o">-</span><span class="mi">1</span><span class="p">,</span> <span class="n">collimation_hint_txt</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">collimation_hint_sizer</span><span class="o">.</span><span class="n">Add</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">collimation_txt</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="n">wx</span><span class="o">.</span><span class="n">LEFT</span><span class="p">,</span> <span class="mi">10</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">collimation_sizer</span><span class="o">.</span><span class="n">AddMany</span><span class="p">([(</span><span class="bp">self</span><span class="o">.</span><span class="n">collimation_button_sizer</span><span class="p">,</span>
+                                          <span class="mi">0</span><span class="p">,</span> <span class="n">wx</span><span class="o">.</span><span class="n">ALL</span><span class="p">,</span> <span class="mi">10</span><span class="p">),</span>
+                                     <span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">collimation_hint_sizer</span><span class="p">,</span>
+                                       <span class="mi">0</span><span class="p">,</span> <span class="n">wx</span><span class="o">.</span><span class="n">ALL</span><span class="p">,</span> <span class="mi">10</span><span class="p">)])</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">fill_collimation_combox</span><span class="p">()</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">enable_collimation</span><span class="p">()</span>
+
+
+    <span class="k">def</span> <span class="nf">_layout_name</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Do the layout for collimation name related widgets</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="c1">#Collimation name [string]</span>
+        <span class="n">name_txt</span> <span class="o">=</span> <span class="n">wx</span><span class="o">.</span><span class="n">StaticText</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="o">-</span><span class="mi">1</span><span class="p">,</span> <span class="s1">&#39;Name : &#39;</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">name_tcl</span> <span class="o">=</span> <span class="n">wx</span><span class="o">.</span><span class="n">TextCtrl</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="o">-</span><span class="mi">1</span><span class="p">,</span> <span class="n">size</span><span class="o">=</span><span class="p">(</span><span class="n">_BOX_WIDTH</span> <span class="o">*</span> <span class="mi">5</span><span class="p">,</span> <span class="mi">20</span><span class="p">),</span> <span class="n">style</span><span class="o">=</span><span class="mi">0</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">name_sizer</span><span class="o">.</span><span class="n">AddMany</span><span class="p">([(</span><span class="n">name_txt</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="n">wx</span><span class="o">.</span><span class="n">LEFT</span> <span class="o">|</span> <span class="n">wx</span><span class="o">.</span><span class="n">RIGHT</span><span class="p">,</span> <span class="mi">10</span><span class="p">),</span>
+                                       <span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">name_tcl</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="n">wx</span><span class="o">.</span><span class="n">EXPAND</span><span class="p">)])</span>
+
+    <span class="k">def</span> <span class="nf">_layout_length</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Do the  layout for length related widgets</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="c1">#Collimation length</span>
+        <span class="n">length_txt</span> <span class="o">=</span> <span class="n">wx</span><span class="o">.</span><span class="n">StaticText</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="o">-</span><span class="mi">1</span><span class="p">,</span> <span class="s1">&#39;Length:&#39;</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">length_tcl</span> <span class="o">=</span> <span class="n">wx</span><span class="o">.</span><span class="n">TextCtrl</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="o">-</span><span class="mi">1</span><span class="p">,</span> <span class="n">size</span><span class="o">=</span><span class="p">(</span><span class="n">_BOX_WIDTH</span><span class="p">,</span> <span class="mi">20</span><span class="p">),</span> <span class="n">style</span><span class="o">=</span><span class="mi">0</span><span class="p">)</span>
+        <span class="n">length_unit_txt</span> <span class="o">=</span> <span class="n">wx</span><span class="o">.</span><span class="n">StaticText</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="o">-</span><span class="mi">1</span><span class="p">,</span> <span class="s1">&#39;Unit: &#39;</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">length_unit_tcl</span> <span class="o">=</span> <span class="n">wx</span><span class="o">.</span><span class="n">TextCtrl</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="o">-</span><span class="mi">1</span><span class="p">,</span> <span class="n">size</span><span class="o">=</span><span class="p">(</span><span class="n">_BOX_WIDTH</span><span class="p">,</span> <span class="mi">20</span><span class="p">),</span>
+                                           <span class="n">style</span><span class="o">=</span><span class="mi">0</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">length_sizer</span><span class="o">.</span><span class="n">AddMany</span><span class="p">([(</span><span class="n">length_txt</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="n">wx</span><span class="o">.</span><span class="n">LEFT</span> <span class="o">|</span> <span class="n">wx</span><span class="o">.</span><span class="n">RIGHT</span><span class="p">,</span> <span class="mi">10</span><span class="p">),</span>
+                                     <span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">length_tcl</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="n">wx</span><span class="o">.</span><span class="n">LEFT</span><span class="p">,</span> <span class="mi">12</span><span class="p">),</span>
+                                     <span class="p">(</span><span class="n">length_unit_txt</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="n">wx</span><span class="o">.</span><span class="n">LEFT</span> <span class="o">|</span> <span class="n">wx</span><span class="o">.</span><span class="n">RIGHT</span><span class="p">,</span> <span class="mi">10</span><span class="p">),</span>
+                                     <span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">length_unit_tcl</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="n">wx</span><span class="o">.</span><span class="n">EXPAND</span><span class="p">)])</span>
+
+    <span class="k">def</span> <span class="nf">_layout_button</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Do the layout for the button widgets</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">bt_apply</span> <span class="o">=</span> <span class="n">wx</span><span class="o">.</span><span class="n">Button</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="o">-</span><span class="mi">1</span><span class="p">,</span> <span class="s1">&#39;Apply&#39;</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">bt_apply</span><span class="o">.</span><span class="n">Bind</span><span class="p">(</span><span class="n">wx</span><span class="o">.</span><span class="n">EVT_BUTTON</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">on_click_apply</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">bt_apply</span><span class="o">.</span><span class="n">SetToolTipString</span><span class="p">(</span><span class="s2">&quot;Apply current changes to collimation.&quot;</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">bt_cancel</span> <span class="o">=</span> <span class="n">wx</span><span class="o">.</span><span class="n">Button</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="o">-</span><span class="mi">1</span><span class="p">,</span> <span class="s1">&#39;Cancel&#39;</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">bt_cancel</span><span class="o">.</span><span class="n">SetToolTipString</span><span class="p">(</span><span class="s2">&quot;Cancel current changes.&quot;</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">bt_cancel</span><span class="o">.</span><span class="n">Bind</span><span class="p">(</span><span class="n">wx</span><span class="o">.</span><span class="n">EVT_BUTTON</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">on_click_cancel</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">bt_close</span> <span class="o">=</span> <span class="n">wx</span><span class="o">.</span><span class="n">Button</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">wx</span><span class="o">.</span><span class="n">ID_CANCEL</span><span class="p">,</span> <span class="s1">&#39;Close&#39;</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">bt_close</span><span class="o">.</span><span class="n">SetToolTipString</span><span class="p">(</span><span class="s2">&quot;Close window.&quot;</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">button_sizer</span><span class="o">.</span><span class="n">AddMany</span><span class="p">([(</span><span class="bp">self</span><span class="o">.</span><span class="n">bt_apply</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="n">wx</span><span class="o">.</span><span class="n">LEFT</span><span class="p">,</span> <span class="mi">200</span><span class="p">),</span>
+                                   <span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">bt_cancel</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="n">wx</span><span class="o">.</span><span class="n">LEFT</span><span class="p">,</span> <span class="mi">10</span><span class="p">),</span>
+                                   <span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">bt_close</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="n">wx</span><span class="o">.</span><span class="n">LEFT</span><span class="p">,</span> <span class="mi">10</span><span class="p">)])</span>
+    <span class="k">def</span> <span class="nf">_layout_aperture</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Do the layout for aperture related widgets</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">aperture_name_txt</span> <span class="o">=</span> <span class="n">wx</span><span class="o">.</span><span class="n">StaticText</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="o">-</span><span class="mi">1</span><span class="p">,</span> <span class="s2">&quot;Aperture:&quot;</span><span class="p">)</span>
+        <span class="n">hint_aperture_txt</span> <span class="o">=</span> <span class="s1">&#39;Current available aperture.&#39;</span>
+        <span class="n">aperture_name_txt</span><span class="o">.</span><span class="n">SetToolTipString</span><span class="p">(</span><span class="n">hint_aperture_txt</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">aperture_cbox</span> <span class="o">=</span> <span class="n">wx</span><span class="o">.</span><span class="n">ComboBox</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="o">-</span><span class="mi">1</span><span class="p">,</span> <span class="n">style</span><span class="o">=</span><span class="n">wx</span><span class="o">.</span><span class="n">CB_READONLY</span><span class="p">)</span>
+        <span class="n">hint_aperture_name_txt</span> <span class="o">=</span> <span class="s1">&#39;Name of apertures.&#39;</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">aperture_cbox</span><span class="o">.</span><span class="n">SetToolTipString</span><span class="p">(</span><span class="n">hint_aperture_name_txt</span><span class="p">)</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">bt_add_aperture</span> <span class="o">=</span> <span class="n">wx</span><span class="o">.</span><span class="n">Button</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="o">-</span><span class="mi">1</span><span class="p">,</span> <span class="s2">&quot;Add&quot;</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">bt_add_aperture</span><span class="o">.</span><span class="n">SetToolTipString</span><span class="p">(</span><span class="s2">&quot;Edit data&#39;s aperture.&quot;</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">bt_add_aperture</span><span class="o">.</span><span class="n">Bind</span><span class="p">(</span><span class="n">wx</span><span class="o">.</span><span class="n">EVT_BUTTON</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">add_aperture</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">bt_edit_aperture</span> <span class="o">=</span> <span class="n">wx</span><span class="o">.</span><span class="n">Button</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="o">-</span><span class="mi">1</span><span class="p">,</span> <span class="s2">&quot;Edit&quot;</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">bt_edit_aperture</span><span class="o">.</span><span class="n">SetToolTipString</span><span class="p">(</span><span class="s2">&quot;Edit data&#39;s aperture.&quot;</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">bt_edit_aperture</span><span class="o">.</span><span class="n">Bind</span><span class="p">(</span><span class="n">wx</span><span class="o">.</span><span class="n">EVT_BUTTON</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">edit_aperture</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">bt_remove_aperture</span> <span class="o">=</span> <span class="n">wx</span><span class="o">.</span><span class="n">Button</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="o">-</span><span class="mi">1</span><span class="p">,</span> <span class="s2">&quot;Remove&quot;</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">bt_remove_aperture</span><span class="o">.</span><span class="n">SetToolTipString</span><span class="p">(</span><span class="s2">&quot;Remove data&#39;s aperture.&quot;</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">bt_remove_aperture</span><span class="o">.</span><span class="n">Bind</span><span class="p">(</span><span class="n">wx</span><span class="o">.</span><span class="n">EVT_BUTTON</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">remove_aperture</span><span class="p">)</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">aperture_button_sizer</span><span class="o">.</span><span class="n">AddMany</span><span class="p">([(</span><span class="n">aperture_name_txt</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="n">wx</span><span class="o">.</span><span class="n">LEFT</span><span class="p">,</span> <span class="mi">15</span><span class="p">),</span>
+                                     <span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">aperture_cbox</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="n">wx</span><span class="o">.</span><span class="n">LEFT</span><span class="p">,</span> <span class="mi">5</span><span class="p">),</span>
+                                     <span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">bt_add_aperture</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="n">wx</span><span class="o">.</span><span class="n">LEFT</span><span class="p">,</span> <span class="mi">10</span><span class="p">),</span>
+                                     <span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">bt_edit_aperture</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="n">wx</span><span class="o">.</span><span class="n">LEFT</span><span class="p">,</span> <span class="mi">5</span><span class="p">),</span>
+                                     <span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">bt_remove_aperture</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="n">wx</span><span class="o">.</span><span class="n">LEFT</span><span class="p">,</span> <span class="mi">5</span><span class="p">)])</span>
+        <span class="n">aperture_hint_txt</span> <span class="o">=</span> <span class="s1">&#39;No aperture is available for this data.&#39;</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">aperture_txt</span> <span class="o">=</span> <span class="n">wx</span><span class="o">.</span><span class="n">StaticText</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="o">-</span><span class="mi">1</span><span class="p">,</span> <span class="n">aperture_hint_txt</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">aperture_hint_sizer</span><span class="o">.</span><span class="n">Add</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">aperture_txt</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="n">wx</span><span class="o">.</span><span class="n">LEFT</span><span class="p">,</span> <span class="mi">10</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">aperture_sizer</span><span class="o">.</span><span class="n">AddMany</span><span class="p">([(</span><span class="bp">self</span><span class="o">.</span><span class="n">aperture_button_sizer</span><span class="p">,</span>
+                                       <span class="mi">0</span><span class="p">,</span> <span class="n">wx</span><span class="o">.</span><span class="n">ALL</span><span class="p">,</span> <span class="mi">10</span><span class="p">),</span>
+                                     <span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">aperture_hint_sizer</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="n">wx</span><span class="o">.</span><span class="n">ALL</span><span class="p">,</span> <span class="mi">10</span><span class="p">)])</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">fill_aperture_combox</span><span class="p">()</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">enable_aperture</span><span class="p">()</span>
+
+    <span class="k">def</span> <span class="nf">_do_layout</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Draw the current panel</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_define_structure</span><span class="p">()</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_layout_collimation</span><span class="p">()</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_layout_name</span><span class="p">()</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_layout_length</span><span class="p">()</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_layout_aperture</span><span class="p">()</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_layout_button</span><span class="p">()</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">boxsizer_collimation</span><span class="o">.</span><span class="n">AddMany</span><span class="p">([(</span><span class="bp">self</span><span class="o">.</span><span class="n">name_sizer</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span>
+                                          <span class="n">wx</span><span class="o">.</span><span class="n">EXPAND</span> <span class="o">|</span> <span class="n">wx</span><span class="o">.</span><span class="n">TOP</span> <span class="o">|</span> <span class="n">wx</span><span class="o">.</span><span class="n">BOTTOM</span><span class="p">,</span> <span class="mi">5</span><span class="p">),</span>
+                                          <span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">length_sizer</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span>
+                                     <span class="n">wx</span><span class="o">.</span><span class="n">EXPAND</span> <span class="o">|</span> <span class="n">wx</span><span class="o">.</span><span class="n">TOP</span> <span class="o">|</span> <span class="n">wx</span><span class="o">.</span><span class="n">BOTTOM</span><span class="p">,</span> <span class="mi">5</span><span class="p">),</span>
+                                     <span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">aperture_sizer</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span>
+                                     <span class="n">wx</span><span class="o">.</span><span class="n">EXPAND</span> <span class="o">|</span> <span class="n">wx</span><span class="o">.</span><span class="n">ALL</span><span class="p">,</span> <span class="mi">10</span><span class="p">)])</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">main_sizer</span><span class="o">.</span><span class="n">AddMany</span><span class="p">([(</span><span class="bp">self</span><span class="o">.</span><span class="n">collimation_sizer</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="n">wx</span><span class="o">.</span><span class="n">ALL</span><span class="p">,</span> <span class="mi">10</span><span class="p">),</span>
+                                  <span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">boxsizer_collimation</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="n">wx</span><span class="o">.</span><span class="n">ALL</span><span class="p">,</span> <span class="mi">10</span><span class="p">),</span>
+                                  <span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">button_sizer</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span>
+                                    <span class="n">wx</span><span class="o">.</span><span class="n">EXPAND</span> <span class="o">|</span> <span class="n">wx</span><span class="o">.</span><span class="n">TOP</span> <span class="o">|</span> <span class="n">wx</span><span class="o">.</span><span class="n">BOTTOM</span><span class="p">,</span> <span class="mi">5</span><span class="p">)])</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">SetSizer</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">main_sizer</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">SetAutoLayout</span><span class="p">(</span><span class="bp">True</span><span class="p">)</span>
+
+<div class="viewcode-block" id="CollimationDialog.get_current_collimation"><a class="viewcode-back" href="../../../../../dev/api/sas.sasgui.perspectives.calculator.html#sas.sasgui.perspectives.calculator.collimation_editor.CollimationDialog.get_current_collimation">[docs]</a>    <span class="k">def</span> <span class="nf">get_current_collimation</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="bp">self</span><span class="o">.</span><span class="n">collimation_cbox</span><span class="o">.</span><span class="n">IsEnabled</span><span class="p">():</span>
+            <span class="k">return</span> <span class="bp">None</span><span class="p">,</span> <span class="bp">None</span><span class="p">,</span> <span class="bp">None</span>
+        <span class="n">position</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">collimation_cbox</span><span class="o">.</span><span class="n">GetSelection</span><span class="p">()</span>
+        <span class="k">if</span> <span class="n">position</span> <span class="o">==</span> <span class="n">wx</span><span class="o">.</span><span class="n">NOT_FOUND</span><span class="p">:</span>
+            <span class="k">return</span> <span class="bp">None</span><span class="p">,</span> <span class="bp">None</span><span class="p">,</span> <span class="bp">None</span>
+        <span class="n">collimation_name</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">collimation_cbox</span><span class="o">.</span><span class="n">GetStringSelection</span><span class="p">()</span>
+        <span class="n">collimation</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">collimation_cbox</span><span class="o">.</span><span class="n">GetClientData</span><span class="p">(</span><span class="n">position</span><span class="p">)</span>
+        <span class="k">return</span> <span class="n">collimation</span><span class="p">,</span> <span class="n">collimation_name</span><span class="p">,</span> <span class="n">position</span></div>
+
+<div class="viewcode-block" id="CollimationDialog.fill_collimation_combox"><a class="viewcode-back" href="../../../../../dev/api/sas.sasgui.perspectives.calculator.html#sas.sasgui.perspectives.calculator.collimation_editor.CollimationDialog.fill_collimation_combox">[docs]</a>    <span class="k">def</span> <span class="nf">fill_collimation_combox</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        fill the current combobox with the available collimation</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">_collimation</span> <span class="ow">is</span> <span class="bp">None</span> <span class="ow">or</span> <span class="bp">self</span><span class="o">.</span><span class="n">_collimation</span> <span class="o">==</span> <span class="p">[]:</span>
+            <span class="k">return</span>
+        <span class="k">for</span> <span class="n">collimation</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">_collimation</span><span class="p">:</span>
+            <span class="n">pos</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">collimation_cbox</span><span class="o">.</span><span class="n">Append</span><span class="p">(</span><span class="nb">str</span><span class="p">(</span><span class="n">collimation</span><span class="o">.</span><span class="n">name</span><span class="p">))</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">collimation_cbox</span><span class="o">.</span><span class="n">SetClientData</span><span class="p">(</span><span class="n">pos</span><span class="p">,</span> <span class="n">collimation</span><span class="p">)</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">collimation_cbox</span><span class="o">.</span><span class="n">SetSelection</span><span class="p">(</span><span class="n">pos</span><span class="p">)</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">collimation_cbox</span><span class="o">.</span><span class="n">SetStringSelection</span><span class="p">(</span><span class="nb">str</span><span class="p">(</span><span class="n">collimation</span><span class="o">.</span><span class="n">name</span><span class="p">))</span></div>
+
+<div class="viewcode-block" id="CollimationDialog.add_collimation"><a class="viewcode-back" href="../../../../../dev/api/sas.sasgui.perspectives.calculator.html#sas.sasgui.perspectives.calculator.collimation_editor.CollimationDialog.add_collimation">[docs]</a>    <span class="k">def</span> <span class="nf">add_collimation</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">event</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Append empty collimation to data&#39;s list of collimation</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+
+        <span class="k">if</span> <span class="ow">not</span> <span class="bp">self</span><span class="o">.</span><span class="n">collimation_cbox</span><span class="o">.</span><span class="n">IsEnabled</span><span class="p">():</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">collimation_cbox</span><span class="o">.</span><span class="n">Enable</span><span class="p">()</span>
+        <span class="n">collimation</span> <span class="o">=</span> <span class="n">Collimation</span><span class="p">()</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_collimation</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">collimation</span><span class="p">)</span>
+        <span class="n">position</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">collimation_cbox</span><span class="o">.</span><span class="n">Append</span><span class="p">(</span><span class="nb">str</span><span class="p">(</span><span class="n">collimation</span><span class="o">.</span><span class="n">name</span><span class="p">))</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">collimation_cbox</span><span class="o">.</span><span class="n">SetClientData</span><span class="p">(</span><span class="n">position</span><span class="p">,</span> <span class="n">collimation</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">collimation_cbox</span><span class="o">.</span><span class="n">SetSelection</span><span class="p">(</span><span class="n">position</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">enable_collimation</span><span class="p">()</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">bt_add_aperture</span><span class="o">.</span><span class="n">Enable</span><span class="p">()</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">fill_aperture_combox</span><span class="p">()</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">enable_aperture</span><span class="p">()</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">set_values</span><span class="p">()</span></div>
+
+<div class="viewcode-block" id="CollimationDialog.remove_collimation"><a class="viewcode-back" href="../../../../../dev/api/sas.sasgui.perspectives.calculator.html#sas.sasgui.perspectives.calculator.collimation_editor.CollimationDialog.remove_collimation">[docs]</a>    <span class="k">def</span> <span class="nf">remove_collimation</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">event</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Remove collimation to data&#39;s list of collimation</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">collimation_cbox</span><span class="o">.</span><span class="n">IsEnabled</span><span class="p">():</span>
+            <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">collimation_cbox</span><span class="o">.</span><span class="n">GetCount</span><span class="p">()</span> <span class="o">&gt;</span> <span class="mi">0</span><span class="p">:</span>
+                <span class="n">position</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">collimation_cbox</span><span class="o">.</span><span class="n">GetCurrentSelection</span><span class="p">()</span>
+                <span class="n">collimation</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">collimation_cbox</span><span class="o">.</span><span class="n">GetClientData</span><span class="p">(</span><span class="n">position</span><span class="p">)</span>
+                <span class="k">if</span> <span class="n">collimation</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">_collimation</span><span class="p">:</span>
+                    <span class="bp">self</span><span class="o">.</span><span class="n">_collimation</span><span class="o">.</span><span class="n">remove</span><span class="p">(</span><span class="n">collimation</span><span class="p">)</span>
+                    <span class="bp">self</span><span class="o">.</span><span class="n">collimation_cbox</span><span class="o">.</span><span class="n">Delete</span><span class="p">(</span><span class="n">position</span><span class="p">)</span>
+                    <span class="c1">#set the combo box box the next available item</span>
+                    <span class="n">position</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">collimation_cbox</span><span class="o">.</span><span class="n">GetCount</span><span class="p">()</span>
+                    <span class="k">if</span> <span class="n">position</span> <span class="o">&gt;</span> <span class="mi">0</span><span class="p">:</span>
+                        <span class="n">position</span> <span class="o">-=</span> <span class="mi">1</span>
+                    <span class="bp">self</span><span class="o">.</span><span class="n">collimation_cbox</span><span class="o">.</span><span class="n">SetSelection</span><span class="p">(</span><span class="n">position</span><span class="p">)</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="bp">self</span><span class="o">.</span><span class="n">_collimation</span> <span class="ow">and</span> <span class="bp">self</span><span class="o">.</span><span class="n">collimation_cbox</span><span class="o">.</span><span class="n">GetCount</span><span class="p">()</span> <span class="o">==</span> <span class="mi">0</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">bt_add_aperture</span><span class="o">.</span><span class="n">Disable</span><span class="p">()</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">name_tcl</span><span class="o">.</span><span class="n">Clear</span><span class="p">()</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">length_tcl</span><span class="o">.</span><span class="n">Clear</span><span class="p">()</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">length_unit_tcl</span><span class="o">.</span><span class="n">Clear</span><span class="p">()</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">aperture_cbox</span><span class="o">.</span><span class="n">Clear</span><span class="p">()</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">aperture_cbox</span><span class="o">.</span><span class="n">Disable</span><span class="p">()</span>
+        <span class="c1">#disable or enable the combo box when necessary</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">enable_collimation</span><span class="p">()</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">enable_aperture</span><span class="p">()</span></div>
+
+<div class="viewcode-block" id="CollimationDialog.on_select_collimation"><a class="viewcode-back" href="../../../../../dev/api/sas.sasgui.perspectives.calculator.html#sas.sasgui.perspectives.calculator.collimation_editor.CollimationDialog.on_select_collimation">[docs]</a>    <span class="k">def</span> <span class="nf">on_select_collimation</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">event</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        fill the control on the panel according to</span>
+<span class="sd">        the current  selected collimation</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">set_values</span><span class="p">()</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">fill_aperture_combox</span><span class="p">()</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">enable_aperture</span><span class="p">()</span></div>
+
+<div class="viewcode-block" id="CollimationDialog.enable_collimation"><a class="viewcode-back" href="../../../../../dev/api/sas.sasgui.perspectives.calculator.html#sas.sasgui.perspectives.calculator.collimation_editor.CollimationDialog.enable_collimation">[docs]</a>    <span class="k">def</span> <span class="nf">enable_collimation</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Enable /disable widgets related to collimation</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">_collimation</span> <span class="ow">is</span> <span class="ow">not</span> <span class="bp">None</span> <span class="ow">and</span> \
+            <span class="bp">self</span><span class="o">.</span><span class="n">collimation_cbox</span><span class="o">.</span><span class="n">GetCount</span><span class="p">()</span> <span class="o">&gt;</span> <span class="mi">0</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">collimation_cbox</span><span class="o">.</span><span class="n">Enable</span><span class="p">()</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">bt_remove_collimation</span><span class="o">.</span><span class="n">Enable</span><span class="p">()</span>
+            <span class="n">n_collimation</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">collimation_cbox</span><span class="o">.</span><span class="n">GetCount</span><span class="p">()</span>
+            <span class="n">collimation_hint_txt</span> <span class="o">=</span> <span class="s2">&quot;collimations&quot;</span>
+            <span class="n">collimation_hint_txt</span> <span class="o">+=</span> <span class="s2">&quot; available: </span><span class="si">%s</span><span class="s2"> &quot;</span> <span class="o">%</span> <span class="nb">str</span><span class="p">(</span><span class="n">n_collimation</span><span class="p">)</span>
+            <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_collimation</span><span class="p">)</span> <span class="o">&gt;</span> <span class="mi">0</span><span class="p">:</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">bt_remove_collimation</span><span class="o">.</span><span class="n">Enable</span><span class="p">()</span>
+            <span class="k">else</span><span class="p">:</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">bt_remove_collimation</span><span class="o">.</span><span class="n">Disable</span><span class="p">()</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">collimation_cbox</span><span class="o">.</span><span class="n">Disable</span><span class="p">()</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">bt_remove_collimation</span><span class="o">.</span><span class="n">Disable</span><span class="p">()</span>
+            <span class="n">collimation_hint_txt</span> <span class="o">=</span> <span class="s1">&#39;No collimation is available for this data.&#39;</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">collimation_txt</span><span class="o">.</span><span class="n">SetLabel</span><span class="p">(</span><span class="n">collimation_hint_txt</span><span class="p">)</span></div>
+
+
+<div class="viewcode-block" id="CollimationDialog.reset_collimation_combobox"><a class="viewcode-back" href="../../../../../dev/api/sas.sasgui.perspectives.calculator.html#sas.sasgui.perspectives.calculator.collimation_editor.CollimationDialog.reset_collimation_combobox">[docs]</a>    <span class="k">def</span> <span class="nf">reset_collimation_combobox</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">edited_collimation</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        take all edited editor and reset clientdata of collimation combo box</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">for</span> <span class="n">position</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">collimation_cbox</span><span class="o">.</span><span class="n">GetCount</span><span class="p">()):</span>
+            <span class="n">collimation</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">collimation_cbox</span><span class="o">.</span><span class="n">GetClientData</span><span class="p">(</span><span class="n">position</span><span class="p">)</span>
+            <span class="k">if</span> <span class="n">collimation</span> <span class="o">==</span> <span class="n">edited_collimation</span><span class="p">:</span>
+                <span class="n">collimation</span> <span class="o">=</span> <span class="n">edited_collimation</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">collimation_cbox</span><span class="o">.</span><span class="n">SetString</span><span class="p">(</span><span class="n">position</span><span class="p">,</span> <span class="nb">str</span><span class="p">(</span><span class="n">collimation</span><span class="o">.</span><span class="n">name</span><span class="p">))</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">collimation_cbox</span><span class="o">.</span><span class="n">SetClientData</span><span class="p">(</span><span class="n">position</span><span class="p">,</span> <span class="n">collimation</span><span class="p">)</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">collimation_cbox</span><span class="o">.</span><span class="n">SetStringSelection</span><span class="p">(</span><span class="nb">str</span><span class="p">(</span><span class="n">collimation</span><span class="o">.</span><span class="n">name</span><span class="p">))</span></div>
+
+<div class="viewcode-block" id="CollimationDialog.add_aperture"><a class="viewcode-back" href="../../../../../dev/api/sas.sasgui.perspectives.calculator.html#sas.sasgui.perspectives.calculator.collimation_editor.CollimationDialog.add_aperture">[docs]</a>    <span class="k">def</span> <span class="nf">add_aperture</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">event</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Append empty aperture to data&#39;s list of aperture</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">collimation</span><span class="p">,</span> <span class="n">_</span><span class="p">,</span> <span class="n">_</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">get_current_collimation</span><span class="p">()</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="bp">self</span><span class="o">.</span><span class="n">aperture_cbox</span><span class="o">.</span><span class="n">IsEnabled</span><span class="p">():</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">aperture_cbox</span><span class="o">.</span><span class="n">Enable</span><span class="p">()</span>
+        <span class="n">aperture</span> <span class="o">=</span> <span class="n">Aperture</span><span class="p">()</span>
+        <span class="n">collimation</span><span class="o">.</span><span class="n">aperture</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">aperture</span><span class="p">)</span>
+        <span class="n">position</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">aperture_cbox</span><span class="o">.</span><span class="n">Append</span><span class="p">(</span><span class="nb">str</span><span class="p">(</span><span class="n">aperture</span><span class="o">.</span><span class="n">name</span><span class="p">))</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">aperture_cbox</span><span class="o">.</span><span class="n">SetClientData</span><span class="p">(</span><span class="n">position</span><span class="p">,</span> <span class="n">aperture</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">aperture_cbox</span><span class="o">.</span><span class="n">SetSelection</span><span class="p">(</span><span class="n">position</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">enable_aperture</span><span class="p">()</span></div>
+
+<div class="viewcode-block" id="CollimationDialog.edit_aperture"><a class="viewcode-back" href="../../../../../dev/api/sas.sasgui.perspectives.calculator.html#sas.sasgui.perspectives.calculator.collimation_editor.CollimationDialog.edit_aperture">[docs]</a>    <span class="k">def</span> <span class="nf">edit_aperture</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">event</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Edit the selected aperture</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">_collimation</span> <span class="ow">is</span> <span class="bp">None</span> <span class="ow">or</span> <span class="ow">not</span> <span class="bp">self</span><span class="o">.</span><span class="n">aperture_cbox</span><span class="o">.</span><span class="n">IsEnabled</span><span class="p">():</span>
+            <span class="k">return</span>
+        <span class="n">position</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">aperture_cbox</span><span class="o">.</span><span class="n">GetSelection</span><span class="p">()</span>
+        <span class="k">if</span> <span class="n">position</span> <span class="o">!=</span> <span class="n">wx</span><span class="o">.</span><span class="n">NOT_FOUND</span><span class="p">:</span>
+            <span class="n">name</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">aperture_cbox</span><span class="o">.</span><span class="n">GetStringSelection</span><span class="p">()</span>
+            <span class="n">aperture</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">aperture_cbox</span><span class="o">.</span><span class="n">GetClientData</span><span class="p">(</span><span class="n">position</span><span class="p">)</span>
+            <span class="n">dlg</span> <span class="o">=</span> <span class="n">ApertureDialog</span><span class="p">(</span><span class="n">parent</span><span class="o">=</span><span class="bp">self</span><span class="p">,</span> <span class="n">aperture</span><span class="o">=</span><span class="n">aperture</span><span class="p">)</span>
+            <span class="n">dlg</span><span class="o">.</span><span class="n">set_manager</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span>
+            <span class="n">dlg</span><span class="o">.</span><span class="n">ShowModal</span><span class="p">()</span></div>
+
+<div class="viewcode-block" id="CollimationDialog.remove_aperture"><a class="viewcode-back" href="../../../../../dev/api/sas.sasgui.perspectives.calculator.html#sas.sasgui.perspectives.calculator.collimation_editor.CollimationDialog.remove_aperture">[docs]</a>    <span class="k">def</span> <span class="nf">remove_aperture</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">event</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Remove aperture to data&#39;s list of aperture</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">_collimation</span> <span class="ow">is</span> <span class="bp">None</span> <span class="ow">or</span> <span class="ow">not</span> <span class="bp">self</span><span class="o">.</span><span class="n">_collimation</span><span class="p">:</span>
+            <span class="k">return</span>
+        <span class="n">collimation</span><span class="p">,</span> <span class="n">_</span><span class="p">,</span> <span class="n">_</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">get_current_collimation</span><span class="p">()</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">aperture_cbox</span><span class="o">.</span><span class="n">IsEnabled</span><span class="p">():</span>
+            <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">aperture_cbox</span><span class="o">.</span><span class="n">GetCount</span><span class="p">()</span> <span class="o">&gt;</span> <span class="mi">1</span><span class="p">:</span>
+                <span class="n">position</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">aperture_cbox</span><span class="o">.</span><span class="n">GetCurrentSelection</span><span class="p">()</span>
+                <span class="n">aperture</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">aperture_cbox</span><span class="o">.</span><span class="n">GetClientData</span><span class="p">(</span><span class="n">position</span><span class="p">)</span>
+                <span class="k">if</span> <span class="n">aperture</span> <span class="ow">in</span> <span class="n">collimation</span><span class="o">.</span><span class="n">aperture</span><span class="p">:</span>
+                    <span class="n">collimation</span><span class="o">.</span><span class="n">aperture</span><span class="o">.</span><span class="n">remove</span><span class="p">(</span><span class="n">aperture</span><span class="p">)</span>
+                    <span class="bp">self</span><span class="o">.</span><span class="n">aperture_cbox</span><span class="o">.</span><span class="n">Delete</span><span class="p">(</span><span class="n">position</span><span class="p">)</span>
+                    <span class="c1">#set the combo box box the next available item</span>
+                    <span class="n">position</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">aperture_cbox</span><span class="o">.</span><span class="n">GetCount</span><span class="p">()</span>
+                    <span class="k">if</span> <span class="n">position</span> <span class="o">&gt;</span> <span class="mi">0</span><span class="p">:</span>
+                        <span class="n">position</span> <span class="o">-=</span> <span class="mi">1</span>
+                    <span class="bp">self</span><span class="o">.</span><span class="n">aperture_cbox</span><span class="o">.</span><span class="n">SetSelection</span><span class="p">(</span><span class="n">position</span><span class="p">)</span>
+
+        <span class="c1">#disable or enable the combo box when necessary</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">enable_aperture</span><span class="p">()</span></div>
+
+<div class="viewcode-block" id="CollimationDialog.set_aperture"><a class="viewcode-back" href="../../../../../dev/api/sas.sasgui.perspectives.calculator.html#sas.sasgui.perspectives.calculator.collimation_editor.CollimationDialog.set_aperture">[docs]</a>    <span class="k">def</span> <span class="nf">set_aperture</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">aperture</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        set aperture for data</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">_collimation</span> <span class="ow">is</span> <span class="bp">None</span> <span class="ow">or</span> <span class="ow">not</span> <span class="bp">self</span><span class="o">.</span><span class="n">_collimation</span><span class="p">:</span>
+            <span class="k">return</span>
+        <span class="n">collimation</span><span class="p">,</span> <span class="n">_</span><span class="p">,</span> <span class="n">_</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">get_current_collimation</span><span class="p">()</span>
+        <span class="k">if</span> <span class="n">collimation</span><span class="o">.</span><span class="n">aperture</span><span class="p">:</span>
+            <span class="k">for</span> <span class="n">item</span> <span class="ow">in</span> <span class="n">collimation</span><span class="o">.</span><span class="n">aperture</span><span class="p">:</span>
+                <span class="k">if</span> <span class="n">item</span> <span class="o">==</span> <span class="n">aperture</span><span class="p">:</span>
+                    <span class="n">item</span> <span class="o">=</span> <span class="n">aperture</span>
+                    <span class="bp">self</span><span class="o">.</span><span class="n">reset_aperture_combobox</span><span class="p">(</span><span class="n">edited_aperture</span><span class="o">=</span><span class="n">aperture</span><span class="p">)</span>
+                    <span class="k">return</span></div>
+
+<div class="viewcode-block" id="CollimationDialog.enable_aperture"><a class="viewcode-back" href="../../../../../dev/api/sas.sasgui.perspectives.calculator.html#sas.sasgui.perspectives.calculator.collimation_editor.CollimationDialog.enable_aperture">[docs]</a>    <span class="k">def</span> <span class="nf">enable_aperture</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Enable /disable widgets crelated to aperture</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">collimation</span><span class="p">,</span> <span class="n">_</span><span class="p">,</span> <span class="n">_</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">get_current_collimation</span><span class="p">()</span>
+        <span class="k">if</span>  <span class="bp">self</span><span class="o">.</span><span class="n">aperture_cbox</span><span class="o">.</span><span class="n">GetCount</span><span class="p">()</span> <span class="o">&gt;</span> <span class="mi">0</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">aperture_cbox</span><span class="o">.</span><span class="n">Enable</span><span class="p">()</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">bt_edit_aperture</span><span class="o">.</span><span class="n">Enable</span><span class="p">()</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">bt_remove_aperture</span><span class="o">.</span><span class="n">Enable</span><span class="p">()</span>
+            <span class="n">n_aperture</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">aperture_cbox</span><span class="o">.</span><span class="n">GetCount</span><span class="p">()</span>
+            <span class="n">aperture_hint_txt</span> <span class="o">=</span> <span class="s1">&#39;apertures available: </span><span class="si">%s</span><span class="s1"> &#39;</span> <span class="o">%</span> <span class="nb">str</span><span class="p">(</span><span class="n">n_aperture</span><span class="p">)</span>
+            <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">collimation</span><span class="o">.</span><span class="n">aperture</span><span class="p">)</span> <span class="o">&gt;</span> <span class="mi">0</span><span class="p">:</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">bt_remove_aperture</span><span class="o">.</span><span class="n">Enable</span><span class="p">()</span>
+            <span class="k">else</span><span class="p">:</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">bt_remove_aperture</span><span class="o">.</span><span class="n">Disable</span><span class="p">()</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">aperture_cbox</span><span class="o">.</span><span class="n">Disable</span><span class="p">()</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">bt_edit_aperture</span><span class="o">.</span><span class="n">Disable</span><span class="p">()</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">bt_remove_aperture</span><span class="o">.</span><span class="n">Disable</span><span class="p">()</span>
+            <span class="n">aperture_hint_txt</span> <span class="o">=</span> <span class="s1">&#39;No aperture is available for this data.&#39;</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">aperture_txt</span><span class="o">.</span><span class="n">SetLabel</span><span class="p">(</span><span class="n">aperture_hint_txt</span><span class="p">)</span></div>
+
+<div class="viewcode-block" id="CollimationDialog.reset_aperture_combobox"><a class="viewcode-back" href="../../../../../dev/api/sas.sasgui.perspectives.calculator.html#sas.sasgui.perspectives.calculator.collimation_editor.CollimationDialog.reset_aperture_combobox">[docs]</a>    <span class="k">def</span> <span class="nf">reset_aperture_combobox</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">edited_aperture</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        take all edited editor and reset clientdata of aperture combo box</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">for</span> <span class="n">position</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">aperture_cbox</span><span class="o">.</span><span class="n">GetCount</span><span class="p">()):</span>
+            <span class="n">aperture</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">aperture_cbox</span><span class="o">.</span><span class="n">GetClientData</span><span class="p">(</span><span class="n">position</span><span class="p">)</span>
+            <span class="k">if</span> <span class="n">aperture</span> <span class="o">==</span> <span class="n">edited_aperture</span><span class="p">:</span>
+                <span class="n">aperture</span> <span class="o">=</span> <span class="n">edited_aperture</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">aperture_cbox</span><span class="o">.</span><span class="n">SetString</span><span class="p">(</span><span class="n">position</span><span class="p">,</span> <span class="nb">str</span><span class="p">(</span><span class="n">aperture</span><span class="o">.</span><span class="n">name</span><span class="p">))</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">aperture_cbox</span><span class="o">.</span><span class="n">SetClientData</span><span class="p">(</span><span class="n">position</span><span class="p">,</span> <span class="n">aperture</span><span class="p">)</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">aperture_cbox</span><span class="o">.</span><span class="n">SetStringSelection</span><span class="p">(</span><span class="nb">str</span><span class="p">(</span><span class="n">aperture</span><span class="o">.</span><span class="n">name</span><span class="p">))</span></div>
+
+<div class="viewcode-block" id="CollimationDialog.fill_aperture_combox"><a class="viewcode-back" href="../../../../../dev/api/sas.sasgui.perspectives.calculator.html#sas.sasgui.perspectives.calculator.collimation_editor.CollimationDialog.fill_aperture_combox">[docs]</a>    <span class="k">def</span> <span class="nf">fill_aperture_combox</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        fill the current combobox with the available aperture</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">aperture_cbox</span><span class="o">.</span><span class="n">Clear</span><span class="p">()</span>
+        <span class="n">collimation</span><span class="p">,</span> <span class="n">_</span><span class="p">,</span> <span class="n">_</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">get_current_collimation</span><span class="p">()</span>
+        <span class="k">if</span> <span class="n">collimation</span> <span class="ow">is</span> <span class="bp">None</span> <span class="ow">or</span> <span class="ow">not</span> <span class="n">collimation</span><span class="o">.</span><span class="n">aperture</span><span class="p">:</span>
+            <span class="k">return</span>
+        <span class="k">for</span> <span class="n">aperture</span> <span class="ow">in</span> <span class="n">collimation</span><span class="o">.</span><span class="n">aperture</span><span class="p">:</span>
+            <span class="n">pos</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">aperture_cbox</span><span class="o">.</span><span class="n">Append</span><span class="p">(</span><span class="nb">str</span><span class="p">(</span><span class="n">aperture</span><span class="o">.</span><span class="n">name</span><span class="p">))</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">aperture_cbox</span><span class="o">.</span><span class="n">SetClientData</span><span class="p">(</span><span class="n">pos</span><span class="p">,</span> <span class="n">aperture</span><span class="p">)</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">aperture_cbox</span><span class="o">.</span><span class="n">SetSelection</span><span class="p">(</span><span class="n">pos</span><span class="p">)</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">aperture_cbox</span><span class="o">.</span><span class="n">SetStringSelection</span><span class="p">(</span><span class="nb">str</span><span class="p">(</span><span class="n">aperture</span><span class="o">.</span><span class="n">name</span><span class="p">))</span></div>
+
+<div class="viewcode-block" id="CollimationDialog.set_manager"><a class="viewcode-back" href="../../../../../dev/api/sas.sasgui.perspectives.calculator.html#sas.sasgui.perspectives.calculator.collimation_editor.CollimationDialog.set_manager">[docs]</a>    <span class="k">def</span> <span class="nf">set_manager</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">manager</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Set manager of this window</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">manager</span> <span class="o">=</span> <span class="n">manager</span></div>
+
+<div class="viewcode-block" id="CollimationDialog.set_values"><a class="viewcode-back" href="../../../../../dev/api/sas.sasgui.perspectives.calculator.html#sas.sasgui.perspectives.calculator.collimation_editor.CollimationDialog.set_values">[docs]</a>    <span class="k">def</span> <span class="nf">set_values</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        take the collimation values of the current data and display them</span>
+<span class="sd">        through the panel</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">collimation</span><span class="p">,</span> <span class="n">_</span><span class="p">,</span> <span class="n">_</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">get_current_collimation</span><span class="p">()</span>
+        <span class="k">if</span> <span class="n">collimation</span> <span class="ow">is</span> <span class="bp">None</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">bt_add_aperture</span><span class="o">.</span><span class="n">Disable</span><span class="p">()</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">length_tcl</span><span class="o">.</span><span class="n">SetValue</span><span class="p">(</span><span class="s2">&quot;&quot;</span><span class="p">)</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">name_tcl</span><span class="o">.</span><span class="n">SetValue</span><span class="p">(</span><span class="s2">&quot;&quot;</span><span class="p">)</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">length_unit_tcl</span><span class="o">.</span><span class="n">SetValue</span><span class="p">(</span><span class="s2">&quot;&quot;</span><span class="p">)</span>
+            <span class="k">return</span>
+        <span class="c1">#Name</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">name_tcl</span><span class="o">.</span><span class="n">SetValue</span><span class="p">(</span><span class="nb">str</span><span class="p">(</span><span class="n">collimation</span><span class="o">.</span><span class="n">name</span><span class="p">))</span>
+        <span class="c1">#length</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">length_tcl</span><span class="o">.</span><span class="n">SetValue</span><span class="p">(</span><span class="nb">str</span><span class="p">(</span><span class="n">collimation</span><span class="o">.</span><span class="n">length</span><span class="p">))</span>
+        <span class="c1">#Length unit</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">length_unit_tcl</span><span class="o">.</span><span class="n">SetValue</span><span class="p">(</span><span class="nb">str</span><span class="p">(</span><span class="n">collimation</span><span class="o">.</span><span class="n">length_unit</span><span class="p">))</span></div>
+
+<div class="viewcode-block" id="CollimationDialog.get_collimation"><a class="viewcode-back" href="../../../../../dev/api/sas.sasgui.perspectives.calculator.html#sas.sasgui.perspectives.calculator.collimation_editor.CollimationDialog.get_collimation">[docs]</a>    <span class="k">def</span> <span class="nf">get_collimation</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        return the current collimation</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_collimation</span></div>
+
+<div class="viewcode-block" id="CollimationDialog.get_notes"><a class="viewcode-back" href="../../../../../dev/api/sas.sasgui.perspectives.calculator.html#sas.sasgui.perspectives.calculator.collimation_editor.CollimationDialog.get_notes">[docs]</a>    <span class="k">def</span> <span class="nf">get_notes</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        return notes</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_notes</span></div>
+
+<div class="viewcode-block" id="CollimationDialog.on_change_name"><a class="viewcode-back" href="../../../../../dev/api/sas.sasgui.perspectives.calculator.html#sas.sasgui.perspectives.calculator.collimation_editor.CollimationDialog.on_change_name">[docs]</a>    <span class="k">def</span> <span class="nf">on_change_name</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Change name</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">collimation</span><span class="p">,</span> <span class="n">collimation_name</span><span class="p">,</span> <span class="n">position</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">get_current_collimation</span><span class="p">()</span>
+        <span class="k">if</span> <span class="n">collimation</span> <span class="ow">is</span> <span class="bp">None</span><span class="p">:</span>
+            <span class="k">return</span>
+        <span class="c1">#Change the name of the collimation</span>
+        <span class="n">name</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">name_tcl</span><span class="o">.</span><span class="n">GetValue</span><span class="p">()</span><span class="o">.</span><span class="n">lstrip</span><span class="p">()</span><span class="o">.</span><span class="n">rstrip</span><span class="p">()</span>
+        <span class="k">if</span> <span class="n">name</span> <span class="o">==</span> <span class="s2">&quot;&quot;</span> <span class="ow">or</span> <span class="n">name</span> <span class="o">==</span> <span class="nb">str</span><span class="p">(</span><span class="bp">None</span><span class="p">):</span>
+            <span class="n">name</span> <span class="o">=</span> <span class="bp">None</span>
+        <span class="k">if</span> <span class="n">collimation</span><span class="o">.</span><span class="n">name</span> <span class="o">!=</span> <span class="n">name</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_notes</span> <span class="o">+=</span> <span class="s2">&quot;Change collimation &#39;s &quot;</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_notes</span> <span class="o">+=</span> <span class="s2">&quot;name from </span><span class="si">%s</span><span class="s2"> to </span><span class="si">%s</span><span class="s2"> </span><span class="se">\n</span><span class="s2">&quot;</span> <span class="o">%</span> <span class="p">(</span><span class="n">collimation</span><span class="o">.</span><span class="n">name</span><span class="p">,</span> <span class="n">name</span><span class="p">)</span>
+            <span class="n">collimation</span><span class="o">.</span><span class="n">name</span> <span class="o">=</span> <span class="n">name</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">collimation_cbox</span><span class="o">.</span><span class="n">SetString</span><span class="p">(</span><span class="n">position</span><span class="p">,</span> <span class="nb">str</span><span class="p">(</span><span class="n">collimation</span><span class="o">.</span><span class="n">name</span><span class="p">))</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">collimation_cbox</span><span class="o">.</span><span class="n">SetClientData</span><span class="p">(</span><span class="n">position</span><span class="p">,</span> <span class="n">collimation</span><span class="p">)</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">collimation_cbox</span><span class="o">.</span><span class="n">SetStringSelection</span><span class="p">(</span><span class="nb">str</span><span class="p">(</span><span class="n">collimation</span><span class="o">.</span><span class="n">name</span><span class="p">))</span></div>
+
+<div class="viewcode-block" id="CollimationDialog.on_change_length"><a class="viewcode-back" href="../../../../../dev/api/sas.sasgui.perspectives.calculator.html#sas.sasgui.perspectives.calculator.collimation_editor.CollimationDialog.on_change_length">[docs]</a>    <span class="k">def</span> <span class="nf">on_change_length</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Change the length</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">collimation</span><span class="p">,</span> <span class="n">collimation_name</span><span class="p">,</span> <span class="n">position</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">get_current_collimation</span><span class="p">()</span>
+        <span class="k">if</span> <span class="n">collimation</span> <span class="ow">is</span> <span class="bp">None</span><span class="p">:</span>
+            <span class="k">return</span>
+        <span class="c1">#Change length  </span>
+        <span class="n">length</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">length_tcl</span><span class="o">.</span><span class="n">GetValue</span><span class="p">()</span><span class="o">.</span><span class="n">lstrip</span><span class="p">()</span><span class="o">.</span><span class="n">rstrip</span><span class="p">()</span>
+        <span class="k">if</span> <span class="n">length</span> <span class="o">==</span> <span class="s2">&quot;&quot;</span> <span class="ow">or</span> <span class="n">length</span> <span class="o">==</span> <span class="nb">str</span><span class="p">(</span><span class="bp">None</span><span class="p">):</span>
+            <span class="n">length</span> <span class="o">=</span> <span class="bp">None</span>
+            <span class="n">collimation</span><span class="o">.</span><span class="n">length</span> <span class="o">=</span> <span class="n">length</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="k">if</span> <span class="n">check_float</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">length_tcl</span><span class="p">):</span>
+                <span class="k">if</span> <span class="n">collimation</span><span class="o">.</span><span class="n">length</span> <span class="o">!=</span> <span class="nb">float</span><span class="p">(</span><span class="n">length</span><span class="p">):</span>
+                    <span class="bp">self</span><span class="o">.</span><span class="n">_notes</span> <span class="o">+=</span> <span class="s2">&quot;Change Collimation length from &quot;</span>
+                    <span class="bp">self</span><span class="o">.</span><span class="n">_notes</span> <span class="o">+=</span> <span class="s2">&quot;</span><span class="si">%s</span><span class="s2"> to </span><span class="si">%s</span><span class="s2"> </span><span class="se">\n</span><span class="s2">&quot;</span> <span class="o">%</span> <span class="p">(</span><span class="n">collimation</span><span class="o">.</span><span class="n">length</span><span class="p">,</span> <span class="n">length</span><span class="p">)</span>
+                    <span class="n">collimation</span><span class="o">.</span><span class="n">length</span> <span class="o">=</span> <span class="nb">float</span><span class="p">(</span><span class="n">length</span><span class="p">)</span>
+            <span class="k">else</span><span class="p">:</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">_notes</span> <span class="o">+=</span> <span class="s2">&quot;Error: Expected a float for collimation length&quot;</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">_notes</span> <span class="o">+=</span> <span class="s2">&quot; won&#39;t changes length from &quot;</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">_notes</span> <span class="o">+=</span> <span class="s2">&quot;</span><span class="si">%s</span><span class="s2"> to </span><span class="si">%s</span><span class="s2">&quot;</span> <span class="o">%</span> <span class="p">(</span><span class="n">collimation</span><span class="o">.</span><span class="n">length</span><span class="p">,</span> <span class="n">length</span><span class="p">)</span>
+        <span class="c1">#change length  unit</span>
+        <span class="n">unit</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">length_unit_tcl</span><span class="o">.</span><span class="n">GetValue</span><span class="p">()</span><span class="o">.</span><span class="n">lstrip</span><span class="p">()</span><span class="o">.</span><span class="n">rstrip</span><span class="p">()</span>
+        <span class="k">if</span> <span class="n">collimation</span><span class="o">.</span><span class="n">length_unit</span> <span class="o">!=</span> <span class="n">unit</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_notes</span> <span class="o">+=</span> <span class="s2">&quot; Change length&#39;s unit from &quot;</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_notes</span> <span class="o">+=</span> <span class="s2">&quot;</span><span class="si">%s</span><span class="s2"> to </span><span class="si">%s</span><span class="s2">&quot;</span> <span class="o">%</span> <span class="p">(</span><span class="n">collimation</span><span class="o">.</span><span class="n">length_unit</span><span class="p">,</span> <span class="n">unit</span><span class="p">)</span>
+            <span class="n">collimation</span><span class="o">.</span><span class="n">length_unit</span> <span class="o">=</span> <span class="n">unit</span></div>
+
+<div class="viewcode-block" id="CollimationDialog.on_click_apply"><a class="viewcode-back" href="../../../../../dev/api/sas.sasgui.perspectives.calculator.html#sas.sasgui.perspectives.calculator.collimation_editor.CollimationDialog.on_click_apply">[docs]</a>    <span class="k">def</span> <span class="nf">on_click_apply</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">event</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Apply user values to the collimation</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">on_change_name</span><span class="p">()</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">on_change_length</span><span class="p">()</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">set_values</span><span class="p">()</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">manager</span> <span class="ow">is</span> <span class="ow">not</span> <span class="bp">None</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">manager</span><span class="o">.</span><span class="n">set_collimation</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_collimation</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">_notes</span><span class="p">)</span></div>
+
+<div class="viewcode-block" id="CollimationDialog.on_click_cancel"><a class="viewcode-back" href="../../../../../dev/api/sas.sasgui.perspectives.calculator.html#sas.sasgui.perspectives.calculator.collimation_editor.CollimationDialog.on_click_cancel">[docs]</a>    <span class="k">def</span> <span class="nf">on_click_cancel</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">event</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        leave the collimation as it is and close</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_collimation</span> <span class="o">=</span> <span class="n">deepcopy</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_reset_collimation</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">set_values</span><span class="p">()</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">manager</span> <span class="ow">is</span> <span class="ow">not</span> <span class="bp">None</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">manager</span><span class="o">.</span><span class="n">set_collimation</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_collimation</span><span class="p">)</span></div></div>
+
+
+<span class="k">if</span> <span class="n">__name__</span> <span class="o">==</span> <span class="s2">&quot;__main__&quot;</span><span class="p">:</span>
+
+    <span class="n">app</span> <span class="o">=</span> <span class="n">wx</span><span class="o">.</span><span class="n">App</span><span class="p">()</span>
+    <span class="n">dlg</span> <span class="o">=</span> <span class="n">CollimationDialog</span><span class="p">(</span><span class="n">collimation</span><span class="o">=</span><span class="p">[</span><span class="n">Collimation</span><span class="p">()])</span>
+    <span class="n">dlg</span><span class="o">.</span><span class="n">ShowModal</span><span class="p">()</span>
+    <span class="n">app</span><span class="o">.</span><span class="n">MainLoop</span><span class="p">()</span>
+</pre></div>
+
+          </div>
+        </div>
+      </div>
+      <div class="sphinxsidebar" role="navigation" aria-label="main navigation">
+        <div class="sphinxsidebarwrapper">
+<div id="searchbox" style="display: none" role="search">
+  <h3>Quick search</h3>
+    <form class="search" action="../../../../../search.html" method="get">
+      <input type="text" name="q" />
+      <input type="submit" value="Go" />
+      <input type="hidden" name="check_keywords" value="yes" />
+      <input type="hidden" name="area" value="default" />
+    </form>
+</div>
+<script type="text/javascript">$('#searchbox').show(0);</script>
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="related" role="navigation" aria-label="related navigation">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="../../../../../genindex.html" title="General Index"
+             >index</a></li>
+        <li class="right" >
+          <a href="../../../../../py-modindex.html" title="Python Module Index"
+             >modules</a> |</li>
+        <li class="nav-item nav-item-0"><a href="../../../../../index.html">SasView 4.1.2 documentation</a> &raquo;</li>
+          <li class="nav-item nav-item-1"><a href="../../../../index.html" >Module code</a> &raquo;</li>
+          <li class="nav-item nav-item-2"><a href="../calculator.html" >sas.sasgui.perspectives.calculator</a> &raquo;</li> 
+      </ul>
+    </div>
+    <div class="footer" role="contentinfo">
+        &copy; Copyright 2017, The SasView Project.
+      Created using <a href="http://sphinx-doc.org/">Sphinx</a> 1.4.1.
+    </div>
+  </body>
+</html>

@@ -1,0 +1,530 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+  "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+    
+    <title>sas.sasgui.perspectives.calculator.image_viewer &mdash; SasView 4.1.2 documentation</title>
+    
+    <link rel="stylesheet" href="../../../../../_static/classic.css" type="text/css" />
+    <link rel="stylesheet" href="../../../../../_static/pygments.css" type="text/css" />
+    
+    <script type="text/javascript">
+      var DOCUMENTATION_OPTIONS = {
+        URL_ROOT:    '../../../../../',
+        VERSION:     '4.1.2',
+        COLLAPSE_INDEX: false,
+        FILE_SUFFIX: '.html',
+        HAS_SOURCE:  true
+      };
+    </script>
+    <script type="text/javascript" src="../../../../../_static/jquery.js"></script>
+    <script type="text/javascript" src="../../../../../_static/underscore.js"></script>
+    <script type="text/javascript" src="../../../../../_static/doctools.js"></script>
+    <script type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.1/MathJax.js?config=TeX-MML-AM_CHTML"></script>
+    <link rel="top" title="SasView 4.1.2 documentation" href="../../../../../index.html" />
+    <link rel="up" title="sas.sasgui.perspectives.calculator" href="../calculator.html" /> 
+  </head>
+  <body role="document">
+    <div class="related" role="navigation" aria-label="related navigation">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="../../../../../genindex.html" title="General Index"
+             accesskey="I">index</a></li>
+        <li class="right" >
+          <a href="../../../../../py-modindex.html" title="Python Module Index"
+             >modules</a> |</li>
+        <li class="nav-item nav-item-0"><a href="../../../../../index.html">SasView 4.1.2 documentation</a> &raquo;</li>
+          <li class="nav-item nav-item-1"><a href="../../../../index.html" >Module code</a> &raquo;</li>
+          <li class="nav-item nav-item-2"><a href="../calculator.html" accesskey="U">sas.sasgui.perspectives.calculator</a> &raquo;</li> 
+      </ul>
+    </div>  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          <div class="body" role="main">
+            
+  <h1>Source code for sas.sasgui.perspectives.calculator.image_viewer</h1><div class="highlight"><pre>
+<span></span><span class="kn">import</span> <span class="nn">os</span>
+<span class="kn">import</span> <span class="nn">sys</span>
+<span class="kn">import</span> <span class="nn">wx</span>
+<span class="kn">import</span> <span class="nn">numpy</span> <span class="kn">as</span> <span class="nn">np</span>
+<span class="kn">import</span> <span class="nn">matplotlib</span>
+<span class="n">matplotlib</span><span class="o">.</span><span class="n">interactive</span><span class="p">(</span><span class="bp">False</span><span class="p">)</span>
+<span class="c1">#Use the WxAgg back end. The Wx one takes too long to render</span>
+<span class="n">matplotlib</span><span class="o">.</span><span class="n">use</span><span class="p">(</span><span class="s1">&#39;WXAgg&#39;</span><span class="p">)</span>
+<span class="kn">from</span> <span class="nn">sas.sasgui.guiframe.local_perspectives.plotting.SimplePlot</span> <span class="kn">import</span> <span class="n">PlotFrame</span>
+<span class="c1">#import matplotlib.pyplot as plt</span>
+<span class="kn">import</span> <span class="nn">matplotlib.image</span> <span class="kn">as</span> <span class="nn">mpimg</span>
+<span class="kn">import</span> <span class="nn">matplotlib.colors</span> <span class="kn">as</span> <span class="nn">colors</span>
+<span class="kn">from</span> <span class="nn">sas.sasgui.guiframe.events</span> <span class="kn">import</span> <span class="n">StatusEvent</span>
+<span class="kn">from</span> <span class="nn">sas.sasgui.perspectives.calculator.calculator_widgets</span> <span class="kn">import</span> <span class="n">InputTextCtrl</span>
+<span class="kn">from</span> <span class="nn">sas.sascalc.dataloader.data_info</span> <span class="kn">import</span> <span class="n">Data2D</span>
+<span class="kn">from</span> <span class="nn">sas.sascalc.dataloader.data_info</span> <span class="kn">import</span> <span class="n">Detector</span>
+<span class="kn">from</span> <span class="nn">sas.sascalc.dataloader.manipulations</span> <span class="kn">import</span> <span class="n">reader2D_converter</span>
+<span class="kn">from</span> <span class="nn">sas.sasgui.guiframe.documentation_window</span> <span class="kn">import</span> <span class="n">DocumentationWindow</span>
+
+<span class="n">_BOX_WIDTH</span> <span class="o">=</span> <span class="mi">60</span>
+<span class="n">IS_WIN</span> <span class="o">=</span> <span class="bp">True</span>
+<span class="k">if</span> <span class="n">sys</span><span class="o">.</span><span class="n">platform</span><span class="o">.</span><span class="n">count</span><span class="p">(</span><span class="s2">&quot;win32&quot;</span><span class="p">)</span> <span class="o">&gt;</span> <span class="mi">0</span><span class="p">:</span>
+    <span class="n">_DIALOG_WIDTH</span> <span class="o">=</span> <span class="mi">400</span>
+<span class="k">else</span><span class="p">:</span>
+    <span class="n">_DIALOG_WIDTH</span> <span class="o">=</span> <span class="mi">480</span>
+    <span class="n">IS_WIN</span> <span class="o">=</span> <span class="bp">False</span>
+
+<div class="viewcode-block" id="ImageView"><a class="viewcode-back" href="../../../../../dev/api/sas.sasgui.perspectives.calculator.html#sas.sasgui.perspectives.calculator.image_viewer.ImageView">[docs]</a><span class="k">class</span> <span class="nc">ImageView</span><span class="p">:</span>
+    <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Open a file dialog to allow the user to select a given file.</span>
+<span class="sd">    Display the loaded data if available.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">parent</span><span class="o">=</span><span class="bp">None</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Init</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">parent</span> <span class="o">=</span> <span class="n">parent</span>
+
+<div class="viewcode-block" id="ImageView.load"><a class="viewcode-back" href="../../../../../dev/api/sas.sasgui.perspectives.calculator.html#sas.sasgui.perspectives.calculator.image_viewer.ImageView.load">[docs]</a>    <span class="k">def</span> <span class="nf">load</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        load image files</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">parent</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">parent</span>
+        <span class="k">if</span> <span class="n">parent</span> <span class="o">==</span> <span class="bp">None</span><span class="p">:</span>
+            <span class="n">location</span> <span class="o">=</span> <span class="n">os</span><span class="o">.</span><span class="n">getcwd</span><span class="p">()</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">location</span> <span class="o">=</span> <span class="n">parent</span><span class="o">.</span><span class="n">_default_save_location</span>
+        <span class="n">path_list</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">choose_data_file</span><span class="p">(</span><span class="n">location</span><span class="o">=</span><span class="n">location</span><span class="p">)</span>
+        <span class="k">if</span> <span class="n">path_list</span> <span class="o">==</span> <span class="bp">None</span><span class="p">:</span>
+            <span class="k">return</span>
+        <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">path_list</span><span class="p">)</span> <span class="o">&gt;=</span> <span class="mi">0</span> <span class="ow">and</span> <span class="ow">not</span><span class="p">(</span><span class="n">path_list</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="ow">is</span> <span class="bp">None</span><span class="p">):</span>
+            <span class="k">if</span> <span class="n">parent</span> <span class="o">!=</span> <span class="bp">None</span><span class="p">:</span>
+                <span class="n">parent</span><span class="o">.</span><span class="n">_default_save_location</span> <span class="o">=</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">dirname</span><span class="p">(</span><span class="n">path_list</span><span class="p">[</span><span class="mi">0</span><span class="p">])</span>
+        <span class="n">err_msg</span> <span class="o">=</span> <span class="s1">&#39;&#39;</span>
+        <span class="k">for</span> <span class="n">file_path</span> <span class="ow">in</span> <span class="n">path_list</span><span class="p">:</span>
+            <span class="n">basename</span> <span class="o">=</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">basename</span><span class="p">(</span><span class="n">file_path</span><span class="p">)</span>
+            <span class="n">_</span><span class="p">,</span> <span class="n">extension</span> <span class="o">=</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">splitext</span><span class="p">(</span><span class="n">basename</span><span class="p">)</span>
+            <span class="k">try</span><span class="p">:</span>
+                <span class="n">img</span> <span class="o">=</span> <span class="n">mpimg</span><span class="o">.</span><span class="n">imread</span><span class="p">(</span><span class="n">file_path</span><span class="p">)</span>
+                <span class="n">is_png</span> <span class="o">=</span> <span class="n">extension</span><span class="o">.</span><span class="n">lower</span><span class="p">()</span> <span class="o">==</span> <span class="s1">&#39;.png&#39;</span>
+                <span class="n">plot_frame</span> <span class="o">=</span> <span class="n">ImageFrame</span><span class="p">(</span><span class="n">parent</span><span class="p">,</span> <span class="o">-</span><span class="mi">1</span><span class="p">,</span> <span class="n">basename</span><span class="p">,</span> <span class="n">img</span><span class="p">)</span>
+                <span class="n">plot_frame</span><span class="o">.</span><span class="n">Show</span><span class="p">(</span><span class="bp">False</span><span class="p">)</span>
+                <span class="n">ax</span> <span class="o">=</span> <span class="n">plot_frame</span><span class="o">.</span><span class="n">plotpanel</span>
+                <span class="k">if</span> <span class="ow">not</span> <span class="n">is_png</span><span class="p">:</span>
+                    <span class="n">ax</span><span class="o">.</span><span class="n">subplot</span><span class="o">.</span><span class="n">set_ylim</span><span class="p">(</span><span class="n">ax</span><span class="o">.</span><span class="n">subplot</span><span class="o">.</span><span class="n">get_ylim</span><span class="p">()[::</span><span class="o">-</span><span class="mi">1</span><span class="p">])</span>
+                <span class="n">ax</span><span class="o">.</span><span class="n">subplot</span><span class="o">.</span><span class="n">set_xlabel</span><span class="p">(</span><span class="s1">&#39;x [pixel]&#39;</span><span class="p">)</span>
+                <span class="n">ax</span><span class="o">.</span><span class="n">subplot</span><span class="o">.</span><span class="n">set_ylabel</span><span class="p">(</span><span class="s1">&#39;y [pixel]&#39;</span><span class="p">)</span>
+                <span class="n">ax</span><span class="o">.</span><span class="n">figure</span><span class="o">.</span><span class="n">subplots_adjust</span><span class="p">(</span><span class="n">left</span><span class="o">=</span><span class="mf">0.15</span><span class="p">,</span> <span class="n">bottom</span><span class="o">=</span><span class="mf">0.1</span><span class="p">,</span>
+                                          <span class="n">right</span><span class="o">=</span><span class="mf">0.95</span><span class="p">,</span> <span class="n">top</span><span class="o">=</span><span class="mf">0.95</span><span class="p">)</span>
+                <span class="n">plot_frame</span><span class="o">.</span><span class="n">SetTitle</span><span class="p">(</span><span class="s1">&#39;Picture -- </span><span class="si">%s</span><span class="s1"> --&#39;</span> <span class="o">%</span> <span class="n">basename</span><span class="p">)</span>
+                <span class="n">plot_frame</span><span class="o">.</span><span class="n">Show</span><span class="p">(</span><span class="bp">True</span><span class="p">)</span>
+                <span class="k">if</span> <span class="n">parent</span> <span class="o">!=</span> <span class="bp">None</span><span class="p">:</span>
+                    <span class="n">parent</span><span class="o">.</span><span class="n">put_icon</span><span class="p">(</span><span class="n">plot_frame</span><span class="p">)</span>
+            <span class="k">except</span><span class="p">:</span>
+                <span class="n">err_msg</span> <span class="o">+=</span> <span class="s2">&quot;Failed to load &#39;</span><span class="si">%s</span><span class="s2">&#39;.</span><span class="se">\n</span><span class="s2">&quot;</span> <span class="o">%</span> <span class="n">basename</span>
+        <span class="k">if</span> <span class="n">err_msg</span><span class="p">:</span>
+            <span class="k">if</span> <span class="n">parent</span> <span class="ow">is</span> <span class="ow">not</span> <span class="bp">None</span><span class="p">:</span>
+                <span class="n">wx</span><span class="o">.</span><span class="n">PostEvent</span><span class="p">(</span><span class="n">parent</span><span class="p">,</span> <span class="n">StatusEvent</span><span class="p">(</span><span class="n">status</span><span class="o">=</span><span class="n">err_msg</span><span class="p">,</span> <span class="n">info</span><span class="o">=</span><span class="s2">&quot;error&quot;</span><span class="p">))</span>
+            <span class="k">else</span><span class="p">:</span>
+                <span class="k">print</span> <span class="n">err_msg</span></div>
+
+<div class="viewcode-block" id="ImageView.choose_data_file"><a class="viewcode-back" href="../../../../../dev/api/sas.sasgui.perspectives.calculator.html#sas.sasgui.perspectives.calculator.image_viewer.ImageView.choose_data_file">[docs]</a>    <span class="k">def</span> <span class="nf">choose_data_file</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">location</span><span class="o">=</span><span class="bp">None</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Open a file dialog to allow loading a file</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">path</span> <span class="o">=</span> <span class="bp">None</span>
+        <span class="k">if</span> <span class="n">location</span> <span class="o">==</span> <span class="bp">None</span><span class="p">:</span>
+            <span class="n">location</span> <span class="o">=</span> <span class="n">os</span><span class="o">.</span><span class="n">getcwd</span><span class="p">()</span>
+        <span class="n">dlg</span> <span class="o">=</span> <span class="n">wx</span><span class="o">.</span><span class="n">FileDialog</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">parent</span><span class="p">,</span> <span class="s2">&quot;Image Viewer: Choose a image file&quot;</span><span class="p">,</span>
+                            <span class="n">location</span><span class="p">,</span> <span class="s2">&quot;&quot;</span><span class="p">,</span> <span class="s2">&quot;&quot;</span><span class="p">,</span> <span class="n">style</span><span class="o">=</span><span class="n">wx</span><span class="o">.</span><span class="n">FD_OPEN</span> <span class="o">|</span> <span class="n">wx</span><span class="o">.</span><span class="n">FD_MULTIPLE</span><span class="p">)</span>
+        <span class="k">if</span> <span class="n">dlg</span><span class="o">.</span><span class="n">ShowModal</span><span class="p">()</span> <span class="o">==</span> <span class="n">wx</span><span class="o">.</span><span class="n">ID_OK</span><span class="p">:</span>
+            <span class="n">path</span> <span class="o">=</span> <span class="n">dlg</span><span class="o">.</span><span class="n">GetPaths</span><span class="p">()</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="k">return</span> <span class="bp">None</span>
+        <span class="n">dlg</span><span class="o">.</span><span class="n">Destroy</span><span class="p">()</span>
+        <span class="k">return</span> <span class="n">path</span></div></div>
+
+<div class="viewcode-block" id="ImageFrame"><a class="viewcode-back" href="../../../../../dev/api/sas.sasgui.perspectives.calculator.html#sas.sasgui.perspectives.calculator.image_viewer.ImageFrame">[docs]</a><span class="k">class</span> <span class="nc">ImageFrame</span><span class="p">(</span><span class="n">PlotFrame</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Frame for simple plot</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">parent</span><span class="p">,</span> <span class="nb">id</span><span class="p">,</span> <span class="n">title</span><span class="p">,</span> <span class="n">image</span><span class="o">=</span><span class="bp">None</span><span class="p">,</span> <span class="n">scale</span><span class="o">=</span><span class="s1">&#39;log_{10}&#39;</span><span class="p">,</span>
+                 <span class="n">size</span><span class="o">=</span><span class="n">wx</span><span class="o">.</span><span class="n">Size</span><span class="p">(</span><span class="mi">550</span><span class="p">,</span> <span class="mi">470</span><span class="p">)):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        comment</span>
+<span class="sd">        :Param data: image array got from imread() of matplotlib [narray]</span>
+<span class="sd">        :param parent: parent panel/container</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="c1"># Initialize the Frame object</span>
+        <span class="n">PlotFrame</span><span class="o">.</span><span class="n">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">parent</span><span class="p">,</span> <span class="nb">id</span><span class="p">,</span> <span class="n">title</span><span class="p">,</span> <span class="n">scale</span><span class="p">,</span> <span class="n">size</span><span class="p">,</span>
+            <span class="n">show_menu_icons</span><span class="o">=</span><span class="bp">False</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">parent</span> <span class="o">=</span> <span class="n">parent</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">data</span> <span class="o">=</span> <span class="n">image</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">file_name</span> <span class="o">=</span> <span class="n">title</span>
+
+        <span class="n">menu</span> <span class="o">=</span> <span class="n">wx</span><span class="o">.</span><span class="n">Menu</span><span class="p">()</span>
+        <span class="nb">id</span> <span class="o">=</span> <span class="n">wx</span><span class="o">.</span><span class="n">NewId</span><span class="p">()</span>
+        <span class="n">item</span> <span class="o">=</span> <span class="n">wx</span><span class="o">.</span><span class="n">MenuItem</span><span class="p">(</span><span class="n">menu</span><span class="p">,</span> <span class="nb">id</span><span class="p">,</span> <span class="s2">&quot;&amp;Convert to Data&quot;</span><span class="p">)</span>
+        <span class="n">menu</span><span class="o">.</span><span class="n">AppendItem</span><span class="p">(</span><span class="n">item</span><span class="p">)</span>
+        <span class="n">wx</span><span class="o">.</span><span class="n">EVT_MENU</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="nb">id</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">on_set_data</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">menu_bar</span><span class="o">.</span><span class="n">Append</span><span class="p">(</span><span class="n">menu</span><span class="p">,</span> <span class="s2">&quot;&amp;Image&quot;</span><span class="p">)</span>
+
+        <span class="n">menu_help</span> <span class="o">=</span> <span class="n">wx</span><span class="o">.</span><span class="n">Menu</span><span class="p">()</span>
+        <span class="nb">id</span> <span class="o">=</span> <span class="n">wx</span><span class="o">.</span><span class="n">NewId</span><span class="p">()</span>
+        <span class="n">item</span> <span class="o">=</span> <span class="n">wx</span><span class="o">.</span><span class="n">MenuItem</span><span class="p">(</span><span class="n">menu_help</span><span class="p">,</span> <span class="nb">id</span><span class="p">,</span> <span class="s2">&quot;&amp;HowTo&quot;</span><span class="p">)</span>
+        <span class="n">menu_help</span><span class="o">.</span><span class="n">AppendItem</span><span class="p">(</span><span class="n">item</span><span class="p">)</span>
+        <span class="n">wx</span><span class="o">.</span><span class="n">EVT_MENU</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="nb">id</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">on_help</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">menu_bar</span><span class="o">.</span><span class="n">Append</span><span class="p">(</span><span class="n">menu_help</span><span class="p">,</span> <span class="s2">&quot;&amp;Help&quot;</span><span class="p">)</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">SetMenuBar</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">menu_bar</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">im_show</span><span class="p">(</span><span class="n">image</span><span class="p">)</span>
+
+<div class="viewcode-block" id="ImageFrame.on_set_data"><a class="viewcode-back" href="../../../../../dev/api/sas.sasgui.perspectives.calculator.html#sas.sasgui.perspectives.calculator.image_viewer.ImageFrame.on_set_data">[docs]</a>    <span class="k">def</span> <span class="nf">on_set_data</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">event</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Rescale the x y range, make 2D data and send it to data explore</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">title</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">file_name</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">panel</span> <span class="o">=</span> <span class="n">SetDialog</span><span class="p">(</span><span class="n">parent</span><span class="o">=</span><span class="bp">self</span><span class="p">,</span> <span class="n">title</span><span class="o">=</span><span class="n">title</span><span class="p">,</span> <span class="n">image</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">data</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">panel</span><span class="o">.</span><span class="n">ShowModal</span><span class="p">()</span></div>
+
+<div class="viewcode-block" id="ImageFrame.on_help"><a class="viewcode-back" href="../../../../../dev/api/sas.sasgui.perspectives.calculator.html#sas.sasgui.perspectives.calculator.image_viewer.ImageFrame.on_help">[docs]</a>    <span class="k">def</span> <span class="nf">on_help</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">event</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Bring up Image Viewer Documentation from the image viewer window</span>
+<span class="sd">        whenever the help menu item &quot;how to&quot; is clicked. Calls</span>
+<span class="sd">        DocumentationWindow with the path of the location within the</span>
+<span class="sd">        documentation tree (after /doc/ ....&quot;.</span>
+
+<span class="sd">        :param evt: Triggers on clicking &quot;how to&quot; in help menu</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+
+        <span class="n">_TreeLocation</span> <span class="o">=</span> <span class="s2">&quot;user/sasgui/perspectives/calculator/&quot;</span>
+        <span class="n">_TreeLocation</span> <span class="o">+=</span> <span class="s2">&quot;image_viewer_help.html&quot;</span>
+        <span class="n">_doc_viewer</span> <span class="o">=</span> <span class="n">DocumentationWindow</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="o">-</span><span class="mi">1</span><span class="p">,</span> <span class="n">_TreeLocation</span><span class="p">,</span> <span class="s2">&quot;&quot;</span><span class="p">,</span>
+                                          <span class="s2">&quot;Image Viewer Help&quot;</span><span class="p">)</span></div></div>
+
+
+<div class="viewcode-block" id="SetDialog"><a class="viewcode-back" href="../../../../../dev/api/sas.sasgui.perspectives.calculator.html#sas.sasgui.perspectives.calculator.image_viewer.SetDialog">[docs]</a><span class="k">class</span> <span class="nc">SetDialog</span><span class="p">(</span><span class="n">wx</span><span class="o">.</span><span class="n">Dialog</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Dialog for Data Set</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">parent</span><span class="p">,</span> <span class="nb">id</span><span class="o">=</span> <span class="o">-</span><span class="mi">1</span><span class="p">,</span> <span class="n">title</span><span class="o">=</span><span class="s2">&quot;Convert to Data&quot;</span><span class="p">,</span> <span class="n">image</span><span class="o">=</span><span class="bp">None</span><span class="p">,</span>
+                 <span class="n">size</span><span class="o">=</span><span class="p">(</span><span class="n">_DIALOG_WIDTH</span><span class="p">,</span> <span class="mi">270</span><span class="p">)):</span>
+        <span class="n">wx</span><span class="o">.</span><span class="n">Dialog</span><span class="o">.</span><span class="n">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">parent</span><span class="p">,</span> <span class="nb">id</span><span class="p">,</span> <span class="n">title</span><span class="p">,</span> <span class="n">size</span><span class="p">)</span>
+        <span class="c1"># parent</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">parent</span> <span class="o">=</span> <span class="n">parent</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">base</span> <span class="o">=</span> <span class="n">parent</span><span class="o">.</span><span class="n">parent</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">title</span> <span class="o">=</span> <span class="n">title</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">image</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">(</span><span class="n">image</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">z_ctrl</span> <span class="o">=</span> <span class="bp">None</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">xy_ctrls</span> <span class="o">=</span> <span class="p">[]</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">is_png</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_get_is_png</span><span class="p">()</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_build_layout</span><span class="p">()</span>
+        <span class="n">my_title</span> <span class="o">=</span> <span class="s2">&quot;Convert Image to Data - </span><span class="si">%s</span><span class="s2"> -&quot;</span> <span class="o">%</span> <span class="bp">self</span><span class="o">.</span><span class="n">title</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">SetTitle</span><span class="p">(</span><span class="n">my_title</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">SetSize</span><span class="p">(</span><span class="n">size</span><span class="p">)</span>
+
+    <span class="k">def</span> <span class="nf">_get_is_png</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Get if the image file is png</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">_</span><span class="p">,</span> <span class="n">extension</span> <span class="o">=</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">splitext</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">title</span><span class="p">)</span>
+        <span class="k">return</span> <span class="n">extension</span><span class="o">.</span><span class="n">lower</span><span class="p">()</span> <span class="o">==</span> <span class="s1">&#39;.png&#39;</span>
+
+    <span class="k">def</span> <span class="nf">_build_layout</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Layout</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">vbox</span> <span class="o">=</span> <span class="n">wx</span><span class="o">.</span><span class="n">BoxSizer</span><span class="p">(</span><span class="n">wx</span><span class="o">.</span><span class="n">VERTICAL</span><span class="p">)</span>
+        <span class="n">zbox</span> <span class="o">=</span> <span class="n">wx</span><span class="o">.</span><span class="n">BoxSizer</span><span class="p">(</span><span class="n">wx</span><span class="o">.</span><span class="n">HORIZONTAL</span><span class="p">)</span>
+        <span class="n">xbox</span> <span class="o">=</span> <span class="n">wx</span><span class="o">.</span><span class="n">BoxSizer</span><span class="p">(</span><span class="n">wx</span><span class="o">.</span><span class="n">HORIZONTAL</span><span class="p">)</span>
+        <span class="n">ybox</span> <span class="o">=</span> <span class="n">wx</span><span class="o">.</span><span class="n">BoxSizer</span><span class="p">(</span><span class="n">wx</span><span class="o">.</span><span class="n">HORIZONTAL</span><span class="p">)</span>
+        <span class="n">btnbox</span> <span class="o">=</span> <span class="n">wx</span><span class="o">.</span><span class="n">BoxSizer</span><span class="p">(</span><span class="n">wx</span><span class="o">.</span><span class="n">VERTICAL</span><span class="p">)</span>
+
+        <span class="n">sb_title</span> <span class="o">=</span> <span class="n">wx</span><span class="o">.</span><span class="n">StaticBox</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="o">-</span><span class="mi">1</span><span class="p">,</span> <span class="s1">&#39;Transform Axes&#39;</span><span class="p">)</span>
+        <span class="n">boxsizer</span> <span class="o">=</span> <span class="n">wx</span><span class="o">.</span><span class="n">StaticBoxSizer</span><span class="p">(</span><span class="n">sb_title</span><span class="p">,</span> <span class="n">wx</span><span class="o">.</span><span class="n">VERTICAL</span><span class="p">)</span>
+        <span class="n">z_title</span> <span class="o">=</span> <span class="n">wx</span><span class="o">.</span><span class="n">StaticText</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="o">-</span><span class="mi">1</span><span class="p">,</span> <span class="s1">&#39;z values (range: 0 - 255) to:&#39;</span><span class="p">)</span>
+        <span class="n">ztime_title</span> <span class="o">=</span> <span class="n">wx</span><span class="o">.</span><span class="n">StaticText</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="o">-</span><span class="mi">1</span><span class="p">,</span> <span class="s1">&#39;z *&#39;</span><span class="p">)</span>
+        <span class="n">x_title</span> <span class="o">=</span> <span class="n">wx</span><span class="o">.</span><span class="n">StaticText</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="o">-</span><span class="mi">1</span><span class="p">,</span> <span class="s1">&#39;x values from pixel # to:&#39;</span><span class="p">)</span>
+        <span class="n">xmin_title</span> <span class="o">=</span> <span class="n">wx</span><span class="o">.</span><span class="n">StaticText</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="o">-</span><span class="mi">1</span><span class="p">,</span> <span class="s1">&#39;xmin:&#39;</span><span class="p">)</span>
+        <span class="n">xmax_title</span> <span class="o">=</span> <span class="n">wx</span><span class="o">.</span><span class="n">StaticText</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="o">-</span><span class="mi">1</span><span class="p">,</span> <span class="s1">&#39;xmax:&#39;</span><span class="p">)</span>
+        <span class="n">y_title</span> <span class="o">=</span> <span class="n">wx</span><span class="o">.</span><span class="n">StaticText</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="o">-</span><span class="mi">1</span><span class="p">,</span> <span class="s1">&#39;y values from pixel # to:&#39;</span><span class="p">)</span>
+        <span class="n">ymin_title</span> <span class="o">=</span> <span class="n">wx</span><span class="o">.</span><span class="n">StaticText</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="o">-</span><span class="mi">1</span><span class="p">,</span> <span class="s1">&#39;ymin: &#39;</span><span class="p">)</span>
+        <span class="n">ymax_title</span> <span class="o">=</span> <span class="n">wx</span><span class="o">.</span><span class="n">StaticText</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="o">-</span><span class="mi">1</span><span class="p">,</span> <span class="s1">&#39;ymax:&#39;</span><span class="p">)</span>
+        <span class="n">z_ctl</span> <span class="o">=</span> <span class="n">InputTextCtrl</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="o">-</span><span class="mi">1</span><span class="p">,</span> <span class="n">size</span><span class="o">=</span><span class="p">(</span><span class="n">_BOX_WIDTH</span> <span class="p">,</span> <span class="mi">20</span><span class="p">),</span>
+                                <span class="n">style</span><span class="o">=</span><span class="n">wx</span><span class="o">.</span><span class="n">TE_PROCESS_ENTER</span><span class="p">)</span>
+
+        <span class="n">xmin_ctl</span> <span class="o">=</span> <span class="n">InputTextCtrl</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="o">-</span><span class="mi">1</span><span class="p">,</span> <span class="n">size</span><span class="o">=</span><span class="p">(</span><span class="n">_BOX_WIDTH</span><span class="p">,</span> <span class="mi">20</span><span class="p">),</span>
+                                <span class="n">style</span><span class="o">=</span><span class="n">wx</span><span class="o">.</span><span class="n">TE_PROCESS_ENTER</span><span class="p">)</span>
+        <span class="n">xmax_ctl</span> <span class="o">=</span> <span class="n">InputTextCtrl</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="o">-</span><span class="mi">1</span><span class="p">,</span> <span class="n">size</span><span class="o">=</span><span class="p">(</span><span class="n">_BOX_WIDTH</span><span class="p">,</span> <span class="mi">20</span><span class="p">),</span>
+                                <span class="n">style</span><span class="o">=</span><span class="n">wx</span><span class="o">.</span><span class="n">TE_PROCESS_ENTER</span><span class="p">)</span>
+        <span class="n">ymin_ctl</span> <span class="o">=</span> <span class="n">InputTextCtrl</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="o">-</span><span class="mi">1</span><span class="p">,</span> <span class="n">size</span><span class="o">=</span><span class="p">(</span><span class="n">_BOX_WIDTH</span><span class="p">,</span> <span class="mi">20</span><span class="p">),</span>
+                                <span class="n">style</span><span class="o">=</span><span class="n">wx</span><span class="o">.</span><span class="n">TE_PROCESS_ENTER</span><span class="p">)</span>
+        <span class="n">ymax_ctl</span> <span class="o">=</span> <span class="n">InputTextCtrl</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="o">-</span><span class="mi">1</span><span class="p">,</span> <span class="n">size</span><span class="o">=</span><span class="p">(</span><span class="n">_BOX_WIDTH</span><span class="p">,</span> <span class="mi">20</span><span class="p">),</span>
+                                <span class="n">style</span><span class="o">=</span><span class="n">wx</span><span class="o">.</span><span class="n">TE_PROCESS_ENTER</span><span class="p">)</span>
+        <span class="n">z_ctl</span><span class="o">.</span><span class="n">SetValue</span><span class="p">(</span><span class="s1">&#39;1.0&#39;</span><span class="p">)</span>
+        <span class="n">xmin_ctl</span><span class="o">.</span><span class="n">SetValue</span><span class="p">(</span><span class="s1">&#39;-0.3&#39;</span><span class="p">)</span>
+        <span class="n">xmax_ctl</span><span class="o">.</span><span class="n">SetValue</span><span class="p">(</span><span class="s1">&#39;0.3&#39;</span><span class="p">)</span>
+        <span class="n">ymin_ctl</span><span class="o">.</span><span class="n">SetValue</span><span class="p">(</span><span class="s1">&#39;-0.3&#39;</span><span class="p">)</span>
+        <span class="n">ymax_ctl</span><span class="o">.</span><span class="n">SetValue</span><span class="p">(</span><span class="s1">&#39;0.3&#39;</span><span class="p">)</span>
+        <span class="n">z_ctl</span><span class="o">.</span><span class="n">Bind</span><span class="p">(</span><span class="n">wx</span><span class="o">.</span><span class="n">EVT_TEXT</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">_on_z_enter</span><span class="p">)</span>
+        <span class="n">xmin_ctl</span><span class="o">.</span><span class="n">Bind</span><span class="p">(</span><span class="n">wx</span><span class="o">.</span><span class="n">EVT_TEXT</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">_onparam</span><span class="p">)</span>
+        <span class="n">xmax_ctl</span><span class="o">.</span><span class="n">Bind</span><span class="p">(</span><span class="n">wx</span><span class="o">.</span><span class="n">EVT_TEXT</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">_onparam</span><span class="p">)</span>
+        <span class="n">ymin_ctl</span><span class="o">.</span><span class="n">Bind</span><span class="p">(</span><span class="n">wx</span><span class="o">.</span><span class="n">EVT_TEXT</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">_onparam</span><span class="p">)</span>
+        <span class="n">ymax_ctl</span><span class="o">.</span><span class="n">Bind</span><span class="p">(</span><span class="n">wx</span><span class="o">.</span><span class="n">EVT_TEXT</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">_onparam</span><span class="p">)</span>
+        <span class="n">xbox</span><span class="o">.</span><span class="n">AddMany</span><span class="p">([(</span><span class="n">x_title</span> <span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="n">wx</span><span class="o">.</span><span class="n">LEFT</span><span class="p">,</span> <span class="mi">0</span><span class="p">),</span>
+                      <span class="p">(</span><span class="n">xmin_title</span> <span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="n">wx</span><span class="o">.</span><span class="n">LEFT</span><span class="p">,</span> <span class="mi">10</span><span class="p">),</span>
+                      <span class="p">(</span><span class="n">xmin_ctl</span> <span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="n">wx</span><span class="o">.</span><span class="n">LEFT</span><span class="p">,</span> <span class="mi">10</span><span class="p">),</span>
+                      <span class="p">(</span><span class="n">xmax_title</span> <span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="n">wx</span><span class="o">.</span><span class="n">LEFT</span><span class="p">,</span> <span class="mi">10</span><span class="p">),</span>
+                      <span class="p">(</span><span class="n">xmax_ctl</span> <span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="n">wx</span><span class="o">.</span><span class="n">LEFT</span><span class="p">,</span> <span class="mi">10</span><span class="p">)])</span>
+        <span class="n">ybox</span><span class="o">.</span><span class="n">AddMany</span><span class="p">([(</span><span class="n">y_title</span> <span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="n">wx</span><span class="o">.</span><span class="n">LEFT</span><span class="p">,</span> <span class="mi">0</span><span class="p">),</span>
+                      <span class="p">(</span><span class="n">ymin_title</span> <span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="n">wx</span><span class="o">.</span><span class="n">LEFT</span><span class="p">,</span> <span class="mi">10</span><span class="p">),</span>
+                      <span class="p">(</span><span class="n">ymin_ctl</span> <span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="n">wx</span><span class="o">.</span><span class="n">LEFT</span><span class="p">,</span> <span class="mi">10</span><span class="p">),</span>
+                      <span class="p">(</span><span class="n">ymax_title</span> <span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="n">wx</span><span class="o">.</span><span class="n">LEFT</span><span class="p">,</span> <span class="mi">10</span><span class="p">),</span>
+                      <span class="p">(</span><span class="n">ymax_ctl</span> <span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="n">wx</span><span class="o">.</span><span class="n">LEFT</span><span class="p">,</span> <span class="mi">10</span><span class="p">)])</span>
+        <span class="n">zbox</span><span class="o">.</span><span class="n">AddMany</span><span class="p">([(</span><span class="n">z_title</span> <span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="n">wx</span><span class="o">.</span><span class="n">LEFT</span><span class="p">,</span> <span class="mi">0</span><span class="p">),</span>
+                      <span class="p">(</span><span class="n">ztime_title</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="n">wx</span><span class="o">.</span><span class="n">LEFT</span><span class="p">,</span> <span class="mi">10</span><span class="p">),</span>
+                      <span class="p">(</span><span class="n">z_ctl</span> <span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="n">wx</span><span class="o">.</span><span class="n">LEFT</span><span class="p">,</span> <span class="mi">7</span><span class="p">),</span>
+                      <span class="p">])</span>
+        <span class="n">msg</span> <span class="o">=</span> <span class="s2">&quot;The data rescaled will show up in the Data Explorer. </span><span class="se">\n</span><span class="s2">&quot;</span>
+        <span class="n">msg</span> <span class="o">+=</span> <span class="s2">&quot;*Note: Recommend to use an image with 8 bit Grey </span><span class="se">\n</span><span class="s2">&quot;</span>
+        <span class="n">msg</span> <span class="o">+=</span> <span class="s2">&quot;  scale (and with No. of pixels &lt; 300 x 300).</span><span class="se">\n</span><span class="s2">&quot;</span>
+        <span class="n">msg</span> <span class="o">+=</span> <span class="s2">&quot;  Otherwise, z = 0.299R + 0.587G + 0.114B.&quot;</span>
+        <span class="n">note_txt</span> <span class="o">=</span> <span class="n">wx</span><span class="o">.</span><span class="n">StaticText</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="o">-</span><span class="mi">1</span><span class="p">,</span> <span class="n">msg</span><span class="p">)</span>
+        <span class="n">note_txt</span><span class="o">.</span><span class="n">SetForegroundColour</span><span class="p">(</span><span class="s2">&quot;black&quot;</span><span class="p">)</span>
+        <span class="n">hbox</span> <span class="o">=</span> <span class="n">wx</span><span class="o">.</span><span class="n">BoxSizer</span><span class="p">(</span><span class="n">wx</span><span class="o">.</span><span class="n">HORIZONTAL</span><span class="p">)</span>
+        <span class="n">okButton</span> <span class="o">=</span> <span class="n">wx</span><span class="o">.</span><span class="n">Button</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="o">-</span><span class="mi">1</span><span class="p">,</span> <span class="s1">&#39;OK&#39;</span><span class="p">)</span>
+        <span class="n">okButton</span><span class="o">.</span><span class="n">Bind</span><span class="p">(</span><span class="n">wx</span><span class="o">.</span><span class="n">EVT_BUTTON</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">on_set</span><span class="p">)</span>
+        <span class="n">cancelButton</span> <span class="o">=</span> <span class="n">wx</span><span class="o">.</span><span class="n">Button</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="o">-</span><span class="mi">1</span><span class="p">,</span> <span class="s1">&#39;Cancel&#39;</span><span class="p">)</span>
+        <span class="n">cancelButton</span><span class="o">.</span><span class="n">Bind</span><span class="p">(</span><span class="n">wx</span><span class="o">.</span><span class="n">EVT_BUTTON</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">OnClose</span><span class="p">)</span>
+        <span class="n">btnbox</span><span class="o">.</span><span class="n">Add</span><span class="p">(</span><span class="n">okButton</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="n">wx</span><span class="o">.</span><span class="n">LEFT</span> <span class="o">|</span> <span class="n">wx</span><span class="o">.</span><span class="n">BOTTOM</span><span class="p">,</span> <span class="mi">5</span><span class="p">)</span>
+        <span class="n">btnbox</span><span class="o">.</span><span class="n">Add</span><span class="p">(</span><span class="n">cancelButton</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="n">wx</span><span class="o">.</span><span class="n">LEFT</span> <span class="o">|</span> <span class="n">wx</span><span class="o">.</span><span class="n">TOP</span><span class="p">,</span> <span class="mi">5</span><span class="p">)</span>
+        <span class="n">hbox</span><span class="o">.</span><span class="n">Add</span><span class="p">(</span><span class="n">note_txt</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="n">wx</span><span class="o">.</span><span class="n">LEFT</span><span class="p">,</span> <span class="mi">5</span><span class="p">)</span>
+        <span class="n">hbox</span><span class="o">.</span><span class="n">Add</span><span class="p">(</span><span class="n">btnbox</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="n">wx</span><span class="o">.</span><span class="n">LEFT</span><span class="p">,</span> <span class="mi">15</span><span class="p">)</span>
+        <span class="n">vbox</span><span class="o">.</span><span class="n">Add</span><span class="p">((</span><span class="mi">10</span><span class="p">,</span> <span class="mi">15</span><span class="p">))</span>
+        <span class="n">boxsizer</span><span class="o">.</span><span class="n">Add</span><span class="p">(</span><span class="n">xbox</span><span class="p">,</span> <span class="mi">1</span><span class="p">,</span> <span class="n">wx</span><span class="o">.</span><span class="n">LEFT</span> <span class="o">|</span> <span class="n">wx</span><span class="o">.</span><span class="n">BOTTOM</span><span class="p">,</span> <span class="mi">5</span><span class="p">)</span>
+        <span class="n">boxsizer</span><span class="o">.</span><span class="n">Add</span><span class="p">(</span><span class="n">ybox</span><span class="p">,</span> <span class="mi">1</span><span class="p">,</span> <span class="n">wx</span><span class="o">.</span><span class="n">LEFT</span> <span class="o">|</span> <span class="n">wx</span><span class="o">.</span><span class="n">BOTTOM</span><span class="p">,</span> <span class="mi">5</span><span class="p">)</span>
+        <span class="n">boxsizer</span><span class="o">.</span><span class="n">Add</span><span class="p">(</span><span class="n">zbox</span><span class="p">,</span> <span class="mi">1</span><span class="p">,</span> <span class="n">wx</span><span class="o">.</span><span class="n">LEFT</span> <span class="o">|</span> <span class="n">wx</span><span class="o">.</span><span class="n">BOTTOM</span><span class="p">,</span> <span class="mi">5</span><span class="p">)</span>
+        <span class="n">vbox</span><span class="o">.</span><span class="n">Add</span><span class="p">(</span><span class="n">boxsizer</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="n">wx</span><span class="o">.</span><span class="n">LEFT</span><span class="p">,</span> <span class="mi">20</span><span class="p">)</span>
+        <span class="n">vbox</span><span class="o">.</span><span class="n">Add</span><span class="p">(</span><span class="n">hbox</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="n">wx</span><span class="o">.</span><span class="n">LEFT</span> <span class="o">|</span> <span class="n">wx</span><span class="o">.</span><span class="n">TOP</span><span class="p">,</span> <span class="mi">15</span><span class="p">)</span>
+        <span class="n">okButton</span><span class="o">.</span><span class="n">SetFocus</span><span class="p">()</span>
+        <span class="c1"># set sizer</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">SetSizer</span><span class="p">(</span><span class="n">vbox</span><span class="p">)</span>
+        <span class="c1">#pos = self.parent.GetPosition()</span>
+        <span class="c1">#self.SetPosition(pos)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">z_ctrl</span> <span class="o">=</span> <span class="n">z_ctl</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">xy_ctrls</span> <span class="o">=</span> <span class="p">[[</span><span class="n">xmin_ctl</span><span class="p">,</span> <span class="n">xmax_ctl</span><span class="p">],</span> <span class="p">[</span><span class="n">ymin_ctl</span><span class="p">,</span> <span class="n">ymax_ctl</span><span class="p">]]</span>
+
+    <span class="k">def</span> <span class="nf">_onparamEnter</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">event</span><span class="o">=</span><span class="bp">None</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        By pass original txtcrl binding</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">pass</span>
+
+    <span class="k">def</span> <span class="nf">_onparam</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">event</span><span class="o">=</span><span class="bp">None</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Set to default</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">item</span> <span class="o">=</span> <span class="n">event</span><span class="o">.</span><span class="n">GetEventObject</span><span class="p">()</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_check_ctrls</span><span class="p">(</span><span class="n">item</span><span class="p">)</span>
+
+    <span class="k">def</span> <span class="nf">_check_ctrls</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">item</span><span class="p">,</span> <span class="n">is_button</span><span class="o">=</span><span class="bp">False</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">flag</span> <span class="o">=</span> <span class="bp">True</span>
+        <span class="n">item</span><span class="o">.</span><span class="n">SetBackgroundColour</span><span class="p">(</span><span class="s2">&quot;white&quot;</span><span class="p">)</span>
+        <span class="k">try</span><span class="p">:</span>
+            <span class="n">val</span> <span class="o">=</span> <span class="nb">float</span><span class="p">(</span><span class="n">item</span><span class="o">.</span><span class="n">GetValue</span><span class="p">())</span>
+            <span class="k">if</span> <span class="n">val</span> <span class="o">&lt;</span> <span class="o">-</span><span class="mf">10.0</span> <span class="ow">or</span> <span class="n">val</span> <span class="o">&gt;</span> <span class="mf">10.0</span><span class="p">:</span>
+                <span class="n">item</span><span class="o">.</span><span class="n">SetBackgroundColour</span><span class="p">(</span><span class="s2">&quot;pink&quot;</span><span class="p">)</span>
+                <span class="n">item</span><span class="o">.</span><span class="n">Refresh</span><span class="p">()</span>
+                <span class="n">flag</span> <span class="o">=</span> <span class="bp">False</span>
+        <span class="k">except</span><span class="p">:</span>
+            <span class="n">item</span><span class="o">.</span><span class="n">SetBackgroundColour</span><span class="p">(</span><span class="s2">&quot;pink&quot;</span><span class="p">)</span>
+            <span class="n">item</span><span class="o">.</span><span class="n">Refresh</span><span class="p">()</span>
+            <span class="n">flag</span> <span class="o">=</span> <span class="bp">False</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="n">flag</span> <span class="ow">and</span> <span class="n">is_button</span><span class="p">:</span>
+            <span class="n">err_msg</span> <span class="o">=</span> <span class="s2">&quot;The allowed range of the min and max values are </span><span class="se">\n</span><span class="s2">&quot;</span>
+            <span class="n">err_msg</span> <span class="o">+=</span> <span class="s2">&quot;between -10 and 10.&quot;</span>
+            <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">base</span> <span class="ow">is</span> <span class="ow">not</span> <span class="bp">None</span><span class="p">:</span>
+                <span class="n">wx</span><span class="o">.</span><span class="n">PostEvent</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">base</span><span class="p">,</span> <span class="n">StatusEvent</span><span class="p">(</span><span class="n">status</span><span class="o">=</span><span class="n">err_msg</span><span class="p">,</span>
+                                                    <span class="n">info</span><span class="o">=</span><span class="s2">&quot;error&quot;</span><span class="p">))</span>
+            <span class="k">else</span><span class="p">:</span>
+                <span class="k">print</span> <span class="n">err_msg</span>
+        <span class="k">return</span> <span class="n">flag</span>
+
+    <span class="k">def</span> <span class="nf">_on_z_enter</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">event</span><span class="o">=</span><span class="bp">None</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        On z factor enter</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">item</span> <span class="o">=</span> <span class="n">event</span><span class="o">.</span><span class="n">GetEventObject</span><span class="p">()</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_check_z_ctrl</span><span class="p">(</span><span class="n">item</span><span class="p">)</span>
+
+    <span class="k">def</span> <span class="nf">_check_z_ctrl</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">item</span><span class="p">,</span> <span class="n">is_button</span><span class="o">=</span><span class="bp">False</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">flag</span> <span class="o">=</span> <span class="bp">True</span>
+        <span class="n">item</span><span class="o">.</span><span class="n">SetBackgroundColour</span><span class="p">(</span><span class="s2">&quot;white&quot;</span><span class="p">)</span>
+        <span class="k">try</span><span class="p">:</span>
+            <span class="n">val</span> <span class="o">=</span> <span class="nb">float</span><span class="p">(</span><span class="n">item</span><span class="o">.</span><span class="n">GetValue</span><span class="p">())</span>
+            <span class="k">if</span> <span class="n">val</span> <span class="o">&lt;=</span> <span class="mi">0</span><span class="p">:</span>
+                <span class="n">item</span><span class="o">.</span><span class="n">SetBackgroundColour</span><span class="p">(</span><span class="s2">&quot;pink&quot;</span><span class="p">)</span>
+                <span class="n">item</span><span class="o">.</span><span class="n">Refresh</span><span class="p">()</span>
+                <span class="n">flag</span> <span class="o">=</span> <span class="bp">False</span>
+        <span class="k">except</span><span class="p">:</span>
+            <span class="n">item</span><span class="o">.</span><span class="n">SetBackgroundColour</span><span class="p">(</span><span class="s2">&quot;pink&quot;</span><span class="p">)</span>
+            <span class="n">item</span><span class="o">.</span><span class="n">Refresh</span><span class="p">()</span>
+            <span class="n">flag</span> <span class="o">=</span> <span class="bp">False</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="n">flag</span> <span class="ow">and</span> <span class="n">is_button</span><span class="p">:</span>
+            <span class="n">err_msg</span> <span class="o">=</span> <span class="s2">&quot;The z scale value should be larger than 0.&quot;</span>
+            <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">base</span> <span class="ow">is</span> <span class="ow">not</span> <span class="bp">None</span><span class="p">:</span>
+                <span class="n">wx</span><span class="o">.</span><span class="n">PostEvent</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">base</span><span class="p">,</span> <span class="n">StatusEvent</span><span class="p">(</span><span class="n">status</span><span class="o">=</span><span class="n">err_msg</span><span class="p">,</span>
+                                                    <span class="n">info</span><span class="o">=</span><span class="s2">&quot;error&quot;</span><span class="p">))</span>
+            <span class="k">else</span><span class="p">:</span>
+                <span class="k">print</span> <span class="n">err_msg</span>
+        <span class="k">return</span> <span class="n">flag</span>
+
+<div class="viewcode-block" id="SetDialog.on_set"><a class="viewcode-back" href="../../../../../dev/api/sas.sasgui.perspectives.calculator.html#sas.sasgui.perspectives.calculator.image_viewer.SetDialog.on_set">[docs]</a>    <span class="k">def</span> <span class="nf">on_set</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">event</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Set image as data</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">event</span><span class="o">.</span><span class="n">Skip</span><span class="p">()</span>
+        <span class="c1"># Check the textctrl values</span>
+        <span class="k">for</span> <span class="n">item_list</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">xy_ctrls</span><span class="p">:</span>
+            <span class="k">for</span> <span class="n">item</span> <span class="ow">in</span> <span class="n">item_list</span><span class="p">:</span>
+                 <span class="k">if</span> <span class="ow">not</span> <span class="bp">self</span><span class="o">.</span><span class="n">_check_ctrls</span><span class="p">(</span><span class="n">item</span><span class="p">,</span> <span class="bp">True</span><span class="p">):</span>
+                     <span class="k">return</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="bp">self</span><span class="o">.</span><span class="n">_check_z_ctrl</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">z_ctrl</span><span class="p">,</span> <span class="bp">True</span><span class="p">):</span>
+            <span class="k">return</span>
+        <span class="k">try</span><span class="p">:</span>
+            <span class="n">image</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">image</span>
+            <span class="n">xmin</span> <span class="o">=</span> <span class="nb">float</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">xy_ctrls</span><span class="p">[</span><span class="mi">0</span><span class="p">][</span><span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">GetValue</span><span class="p">())</span>
+            <span class="n">xmax</span> <span class="o">=</span> <span class="nb">float</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">xy_ctrls</span><span class="p">[</span><span class="mi">0</span><span class="p">][</span><span class="mi">1</span><span class="p">]</span><span class="o">.</span><span class="n">GetValue</span><span class="p">())</span>
+            <span class="n">ymin</span> <span class="o">=</span> <span class="nb">float</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">xy_ctrls</span><span class="p">[</span><span class="mi">1</span><span class="p">][</span><span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">GetValue</span><span class="p">())</span>
+            <span class="n">ymax</span> <span class="o">=</span> <span class="nb">float</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">xy_ctrls</span><span class="p">[</span><span class="mi">1</span><span class="p">][</span><span class="mi">1</span><span class="p">]</span><span class="o">.</span><span class="n">GetValue</span><span class="p">())</span>
+            <span class="n">zscale</span> <span class="o">=</span> <span class="nb">float</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">z_ctrl</span><span class="o">.</span><span class="n">GetValue</span><span class="p">())</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">convert_image</span><span class="p">(</span><span class="n">image</span><span class="p">,</span> <span class="n">xmin</span><span class="p">,</span> <span class="n">xmax</span><span class="p">,</span> <span class="n">ymin</span><span class="p">,</span> <span class="n">ymax</span><span class="p">,</span> <span class="n">zscale</span><span class="p">)</span>
+        <span class="k">except</span><span class="p">:</span>
+            <span class="n">err_msg</span> <span class="o">=</span> <span class="s2">&quot;Error occurred while converting Image to Data.&quot;</span>
+            <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">base</span> <span class="ow">is</span> <span class="ow">not</span> <span class="bp">None</span><span class="p">:</span>
+                <span class="n">wx</span><span class="o">.</span><span class="n">PostEvent</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">base</span><span class="p">,</span> <span class="n">StatusEvent</span><span class="p">(</span><span class="n">status</span><span class="o">=</span><span class="n">err_msg</span><span class="p">,</span>
+                                                    <span class="n">info</span><span class="o">=</span><span class="s2">&quot;error&quot;</span><span class="p">))</span>
+            <span class="k">else</span><span class="p">:</span>
+                <span class="k">print</span> <span class="n">err_msg</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">OnClose</span><span class="p">(</span><span class="n">event</span><span class="p">)</span></div>
+
+<div class="viewcode-block" id="SetDialog.convert_image"><a class="viewcode-back" href="../../../../../dev/api/sas.sasgui.perspectives.calculator.html#sas.sasgui.perspectives.calculator.image_viewer.SetDialog.convert_image">[docs]</a>    <span class="k">def</span> <span class="nf">convert_image</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">rgb</span><span class="p">,</span> <span class="n">xmin</span><span class="p">,</span> <span class="n">xmax</span><span class="p">,</span> <span class="n">ymin</span><span class="p">,</span> <span class="n">ymax</span><span class="p">,</span> <span class="n">zscale</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Convert image to data2D</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">x_len</span> <span class="o">=</span> <span class="nb">len</span><span class="p">(</span><span class="n">rgb</span><span class="p">[</span><span class="mi">0</span><span class="p">])</span>
+        <span class="n">y_len</span> <span class="o">=</span> <span class="nb">len</span><span class="p">(</span><span class="n">rgb</span><span class="p">)</span>
+        <span class="n">x_vals</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">linspace</span><span class="p">(</span><span class="n">xmin</span><span class="p">,</span> <span class="n">xmax</span><span class="p">,</span> <span class="n">num</span><span class="o">=</span><span class="n">x_len</span><span class="p">)</span>
+        <span class="n">y_vals</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">linspace</span><span class="p">(</span><span class="n">ymin</span><span class="p">,</span> <span class="n">ymax</span><span class="p">,</span> <span class="n">num</span><span class="o">=</span><span class="n">y_len</span><span class="p">)</span>
+        <span class="c1"># Instantiate data object</span>
+        <span class="n">output</span> <span class="o">=</span> <span class="n">Data2D</span><span class="p">()</span>
+        <span class="n">output</span><span class="o">.</span><span class="n">filename</span> <span class="o">=</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">basename</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">title</span><span class="p">)</span>
+        <span class="n">output</span><span class="o">.</span><span class="n">id</span> <span class="o">=</span> <span class="n">output</span><span class="o">.</span><span class="n">filename</span>
+        <span class="n">detector</span> <span class="o">=</span> <span class="n">Detector</span><span class="p">()</span>
+        <span class="n">detector</span><span class="o">.</span><span class="n">pixel_size</span><span class="o">.</span><span class="n">x</span> <span class="o">=</span> <span class="bp">None</span>
+        <span class="n">detector</span><span class="o">.</span><span class="n">pixel_size</span><span class="o">.</span><span class="n">y</span> <span class="o">=</span> <span class="bp">None</span>
+        <span class="c1"># Store the sample to detector distance</span>
+        <span class="n">detector</span><span class="o">.</span><span class="n">distance</span> <span class="o">=</span> <span class="bp">None</span>
+        <span class="n">output</span><span class="o">.</span><span class="n">detector</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">detector</span><span class="p">)</span>
+        <span class="c1"># Initiazed the output data object</span>
+        <span class="n">output</span><span class="o">.</span><span class="n">data</span> <span class="o">=</span> <span class="n">zscale</span> <span class="o">*</span> <span class="bp">self</span><span class="o">.</span><span class="n">rgb2gray</span><span class="p">(</span><span class="n">rgb</span><span class="p">)</span>
+        <span class="n">output</span><span class="o">.</span><span class="n">err_data</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">zeros</span><span class="p">([</span><span class="n">x_len</span><span class="p">,</span> <span class="n">y_len</span><span class="p">])</span>
+        <span class="n">output</span><span class="o">.</span><span class="n">mask</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">ones</span><span class="p">([</span><span class="n">x_len</span><span class="p">,</span> <span class="n">y_len</span><span class="p">],</span> <span class="n">dtype</span><span class="o">=</span><span class="nb">bool</span><span class="p">)</span>
+        <span class="n">output</span><span class="o">.</span><span class="n">xbins</span> <span class="o">=</span> <span class="n">x_len</span>
+        <span class="n">output</span><span class="o">.</span><span class="n">ybins</span> <span class="o">=</span> <span class="n">y_len</span>
+        <span class="n">output</span><span class="o">.</span><span class="n">x_bins</span> <span class="o">=</span> <span class="n">x_vals</span>
+        <span class="n">output</span><span class="o">.</span><span class="n">y_bins</span> <span class="o">=</span> <span class="n">y_vals</span>
+        <span class="n">output</span><span class="o">.</span><span class="n">qx_data</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">(</span><span class="n">x_vals</span><span class="p">)</span>
+        <span class="n">output</span><span class="o">.</span><span class="n">qy_data</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">(</span><span class="n">y_vals</span><span class="p">)</span>
+        <span class="n">output</span><span class="o">.</span><span class="n">xmin</span> <span class="o">=</span> <span class="n">xmin</span>
+        <span class="n">output</span><span class="o">.</span><span class="n">xmax</span> <span class="o">=</span> <span class="n">xmax</span>
+        <span class="n">output</span><span class="o">.</span><span class="n">ymin</span> <span class="o">=</span> <span class="n">ymin</span>
+        <span class="n">output</span><span class="o">.</span><span class="n">ymax</span> <span class="o">=</span> <span class="n">ymax</span>
+        <span class="n">output</span><span class="o">.</span><span class="n">xaxis</span><span class="p">(</span><span class="s1">&#39;</span><span class="se">\\</span><span class="s1">rm{Q_{x}}&#39;</span><span class="p">,</span> <span class="s1">&#39;\AA^{-1}&#39;</span><span class="p">)</span>
+        <span class="n">output</span><span class="o">.</span><span class="n">yaxis</span><span class="p">(</span><span class="s1">&#39;</span><span class="se">\\</span><span class="s1">rm{Q_{y}}&#39;</span><span class="p">,</span> <span class="s1">&#39;\AA^{-1}&#39;</span><span class="p">)</span>
+        <span class="c1"># Store loading process information</span>
+        <span class="n">output</span><span class="o">.</span><span class="n">meta_data</span><span class="p">[</span><span class="s1">&#39;loader&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">title</span><span class="o">.</span><span class="n">split</span><span class="p">(</span><span class="s1">&#39;.&#39;</span><span class="p">)[</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span> <span class="o">+</span> <span class="s2">&quot;Reader&quot;</span>
+        <span class="n">output</span><span class="o">.</span><span class="n">is_data</span> <span class="o">=</span> <span class="bp">True</span>
+        <span class="n">output</span> <span class="o">=</span> <span class="n">reader2D_converter</span><span class="p">(</span><span class="n">output</span><span class="p">)</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">base</span> <span class="o">!=</span> <span class="bp">None</span><span class="p">:</span>
+            <span class="n">data</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">base</span><span class="o">.</span><span class="n">create_gui_data</span><span class="p">(</span><span class="n">output</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">title</span><span class="p">)</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">base</span><span class="o">.</span><span class="n">add_data</span><span class="p">({</span><span class="n">data</span><span class="o">.</span><span class="n">id</span><span class="p">:</span><span class="n">data</span><span class="p">})</span></div>
+
+<div class="viewcode-block" id="SetDialog.rgb2gray"><a class="viewcode-back" href="../../../../../dev/api/sas.sasgui.perspectives.calculator.html#sas.sasgui.perspectives.calculator.image_viewer.SetDialog.rgb2gray">[docs]</a>    <span class="k">def</span> <span class="nf">rgb2gray</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">rgb</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        RGB to Grey</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">is_png</span><span class="p">:</span>
+            <span class="c1"># png image limits: 0 to 1, others 0 to 255</span>
+            <span class="c1">#factor = 255.0</span>
+            <span class="n">rgb</span> <span class="o">=</span> <span class="n">rgb</span><span class="p">[::</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span>
+        <span class="k">if</span> <span class="n">rgb</span><span class="o">.</span><span class="n">ndim</span> <span class="o">==</span> <span class="mi">2</span><span class="p">:</span>
+            <span class="n">grey</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">rollaxis</span><span class="p">(</span><span class="n">rgb</span><span class="p">,</span> <span class="n">axis</span><span class="o">=</span><span class="mi">0</span><span class="p">)</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">red</span><span class="p">,</span> <span class="n">green</span><span class="p">,</span> <span class="n">blue</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">rollaxis</span><span class="p">(</span><span class="n">rgb</span><span class="p">[</span><span class="o">...</span><span class="p">,</span> <span class="p">:</span><span class="mi">3</span><span class="p">],</span> <span class="n">axis</span><span class="o">=</span> <span class="o">-</span><span class="mi">1</span><span class="p">)</span>
+            <span class="n">grey</span> <span class="o">=</span> <span class="mf">0.299</span> <span class="o">*</span> <span class="n">red</span> <span class="o">+</span> <span class="mf">0.587</span> <span class="o">*</span> <span class="n">green</span> <span class="o">+</span> <span class="mf">0.114</span> <span class="o">*</span> <span class="n">blue</span>
+        <span class="n">max_i</span> <span class="o">=</span> <span class="n">rgb</span><span class="o">.</span><span class="n">max</span><span class="p">()</span>
+        <span class="n">factor</span> <span class="o">=</span> <span class="mf">255.0</span> <span class="o">/</span> <span class="n">max_i</span>
+        <span class="n">grey</span> <span class="o">*=</span> <span class="n">factor</span>
+        <span class="k">return</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">(</span><span class="n">grey</span><span class="p">)</span></div>
+
+<div class="viewcode-block" id="SetDialog.OnClose"><a class="viewcode-back" href="../../../../../dev/api/sas.sasgui.perspectives.calculator.html#sas.sasgui.perspectives.calculator.image_viewer.SetDialog.OnClose">[docs]</a>    <span class="k">def</span> <span class="nf">OnClose</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">event</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Close event</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="c1"># clear event</span>
+        <span class="n">event</span><span class="o">.</span><span class="n">Skip</span><span class="p">()</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">Destroy</span><span class="p">()</span></div></div>
+
+<span class="k">if</span> <span class="n">__name__</span> <span class="o">==</span> <span class="s2">&quot;__main__&quot;</span><span class="p">:</span>
+    <span class="n">app</span> <span class="o">=</span> <span class="n">wx</span><span class="o">.</span><span class="n">App</span><span class="p">()</span>
+    <span class="n">ImageView</span><span class="p">(</span><span class="bp">None</span><span class="p">)</span><span class="o">.</span><span class="n">load</span><span class="p">()</span>
+    <span class="n">app</span><span class="o">.</span><span class="n">MainLoop</span><span class="p">()</span>
+</pre></div>
+
+          </div>
+        </div>
+      </div>
+      <div class="sphinxsidebar" role="navigation" aria-label="main navigation">
+        <div class="sphinxsidebarwrapper">
+<div id="searchbox" style="display: none" role="search">
+  <h3>Quick search</h3>
+    <form class="search" action="../../../../../search.html" method="get">
+      <input type="text" name="q" />
+      <input type="submit" value="Go" />
+      <input type="hidden" name="check_keywords" value="yes" />
+      <input type="hidden" name="area" value="default" />
+    </form>
+</div>
+<script type="text/javascript">$('#searchbox').show(0);</script>
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="related" role="navigation" aria-label="related navigation">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="../../../../../genindex.html" title="General Index"
+             >index</a></li>
+        <li class="right" >
+          <a href="../../../../../py-modindex.html" title="Python Module Index"
+             >modules</a> |</li>
+        <li class="nav-item nav-item-0"><a href="../../../../../index.html">SasView 4.1.2 documentation</a> &raquo;</li>
+          <li class="nav-item nav-item-1"><a href="../../../../index.html" >Module code</a> &raquo;</li>
+          <li class="nav-item nav-item-2"><a href="../calculator.html" >sas.sasgui.perspectives.calculator</a> &raquo;</li> 
+      </ul>
+    </div>
+    <div class="footer" role="contentinfo">
+        &copy; Copyright 2017, The SasView Project.
+      Created using <a href="http://sphinx-doc.org/">Sphinx</a> 1.4.1.
+    </div>
+  </body>
+</html>

@@ -1,0 +1,447 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+  "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+    
+    <title>sas.sasgui.perspectives.calculator.pyconsole &mdash; SasView 4.1.2 documentation</title>
+    
+    <link rel="stylesheet" href="../../../../../_static/classic.css" type="text/css" />
+    <link rel="stylesheet" href="../../../../../_static/pygments.css" type="text/css" />
+    
+    <script type="text/javascript">
+      var DOCUMENTATION_OPTIONS = {
+        URL_ROOT:    '../../../../../',
+        VERSION:     '4.1.2',
+        COLLAPSE_INDEX: false,
+        FILE_SUFFIX: '.html',
+        HAS_SOURCE:  true
+      };
+    </script>
+    <script type="text/javascript" src="../../../../../_static/jquery.js"></script>
+    <script type="text/javascript" src="../../../../../_static/underscore.js"></script>
+    <script type="text/javascript" src="../../../../../_static/doctools.js"></script>
+    <script type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.1/MathJax.js?config=TeX-MML-AM_CHTML"></script>
+    <link rel="top" title="SasView 4.1.2 documentation" href="../../../../../index.html" />
+    <link rel="up" title="sas.sasgui.perspectives.calculator" href="../calculator.html" /> 
+  </head>
+  <body role="document">
+    <div class="related" role="navigation" aria-label="related navigation">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="../../../../../genindex.html" title="General Index"
+             accesskey="I">index</a></li>
+        <li class="right" >
+          <a href="../../../../../py-modindex.html" title="Python Module Index"
+             >modules</a> |</li>
+        <li class="nav-item nav-item-0"><a href="../../../../../index.html">SasView 4.1.2 documentation</a> &raquo;</li>
+          <li class="nav-item nav-item-1"><a href="../../../../index.html" >Module code</a> &raquo;</li>
+          <li class="nav-item nav-item-2"><a href="../calculator.html" accesskey="U">sas.sasgui.perspectives.calculator</a> &raquo;</li> 
+      </ul>
+    </div>  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          <div class="body" role="main">
+            
+  <h1>Source code for sas.sasgui.perspectives.calculator.pyconsole</h1><div class="highlight"><pre>
+<span></span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">Console Module display Python console</span>
+<span class="sd">&quot;&quot;&quot;</span>
+<span class="kn">import</span> <span class="nn">sys</span>
+<span class="kn">import</span> <span class="nn">os</span>
+
+<span class="kn">import</span> <span class="nn">numpy</span> <span class="kn">as</span> <span class="nn">np</span>
+
+<span class="kn">import</span> <span class="nn">wx</span>
+<span class="kn">from</span> <span class="nn">wx.lib.dialogs</span> <span class="kn">import</span> <span class="n">ScrolledMessageDialog</span>
+<span class="kn">from</span> <span class="nn">wx.lib</span> <span class="kn">import</span> <span class="n">layoutf</span>
+
+<span class="kn">import</span> <span class="nn">wx.py.editor</span> <span class="kn">as</span> <span class="nn">editor</span>
+
+<span class="k">if</span> <span class="n">sys</span><span class="o">.</span><span class="n">platform</span><span class="o">.</span><span class="n">count</span><span class="p">(</span><span class="s2">&quot;win32&quot;</span><span class="p">)</span> <span class="o">&gt;</span> <span class="mi">0</span><span class="p">:</span>
+    <span class="n">PANEL_WIDTH</span> <span class="o">=</span> <span class="mi">800</span>
+    <span class="n">PANEL_HEIGHT</span> <span class="o">=</span> <span class="mi">700</span>
+    <span class="n">FONT_VARIANT</span> <span class="o">=</span> <span class="mi">0</span>
+<span class="k">else</span><span class="p">:</span>
+    <span class="n">PANEL_WIDTH</span> <span class="o">=</span> <span class="mi">830</span>
+    <span class="n">PANEL_HEIGHT</span> <span class="o">=</span> <span class="mi">730</span>
+    <span class="n">FONT_VARIANT</span> <span class="o">=</span> <span class="mi">1</span>
+<span class="n">ID_CHECK_MODEL</span> <span class="o">=</span> <span class="n">wx</span><span class="o">.</span><span class="n">NewId</span><span class="p">()</span>
+<span class="n">ID_RUN</span> <span class="o">=</span> <span class="n">wx</span><span class="o">.</span><span class="n">NewId</span><span class="p">()</span>
+
+<div class="viewcode-block" id="check_model"><a class="viewcode-back" href="../../../../../dev/api/sas.sasgui.perspectives.calculator.html#sas.sasgui.perspectives.calculator.pyconsole.check_model">[docs]</a><span class="k">def</span> <span class="nf">check_model</span><span class="p">(</span><span class="n">path</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Check that the model on the path can run.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="c1"># try running the model</span>
+    <span class="kn">from</span> <span class="nn">sasmodels.sasview_model</span> <span class="kn">import</span> <span class="n">load_custom_model</span>
+    <span class="n">Model</span> <span class="o">=</span> <span class="n">load_custom_model</span><span class="p">(</span><span class="n">path</span><span class="p">)</span>
+    <span class="n">model</span> <span class="o">=</span> <span class="n">Model</span><span class="p">()</span>
+    <span class="n">q</span> <span class="o">=</span>  <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">([</span><span class="mf">0.01</span><span class="p">,</span> <span class="mf">0.1</span><span class="p">])</span>
+    <span class="n">Iq</span> <span class="o">=</span> <span class="n">model</span><span class="o">.</span><span class="n">evalDistribution</span><span class="p">(</span><span class="n">q</span><span class="p">)</span>
+    <span class="n">qx</span><span class="p">,</span> <span class="n">qy</span> <span class="o">=</span>  <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">([</span><span class="mf">0.01</span><span class="p">,</span> <span class="mf">0.01</span><span class="p">]),</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">([</span><span class="mf">0.1</span><span class="p">,</span> <span class="mf">0.1</span><span class="p">])</span>
+    <span class="n">Iqxy</span> <span class="o">=</span> <span class="n">model</span><span class="o">.</span><span class="n">evalDistribution</span><span class="p">([</span><span class="n">qx</span><span class="p">,</span> <span class="n">qy</span><span class="p">])</span>
+
+    <span class="n">result</span> <span class="o">=</span> <span class="s2">&quot;&quot;&quot;</span>
+<span class="s2">    Iq(</span><span class="si">%s</span><span class="s2">) = </span><span class="si">%s</span><span class="s2"></span>
+<span class="s2">    Iqxy(</span><span class="si">%s</span><span class="s2">, </span><span class="si">%s</span><span class="s2">) = </span><span class="si">%s</span><span class="s2"></span>
+<span class="s2">    &quot;&quot;&quot;</span><span class="o">%</span><span class="p">(</span><span class="n">q</span><span class="p">,</span> <span class="n">Iq</span><span class="p">,</span> <span class="n">qx</span><span class="p">,</span> <span class="n">qy</span><span class="p">,</span> <span class="n">Iqxy</span><span class="p">)</span>
+
+    <span class="k">return</span> <span class="n">result</span></div>
+
+<div class="viewcode-block" id="show_model_output"><a class="viewcode-back" href="../../../../../dev/api/sas.sasgui.perspectives.calculator.html#sas.sasgui.perspectives.calculator.pyconsole.show_model_output">[docs]</a><span class="k">def</span> <span class="nf">show_model_output</span><span class="p">(</span><span class="n">parent</span><span class="p">,</span> <span class="n">fname</span><span class="p">):</span>
+    <span class="c1"># Make sure we have a python file; not sure why we care though...</span>
+    <span class="k">if</span> <span class="ow">not</span> <span class="p">(</span><span class="n">fname</span> <span class="ow">and</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">exists</span><span class="p">(</span><span class="n">fname</span><span class="p">)</span> <span class="ow">and</span> <span class="n">fname</span><span class="o">.</span><span class="n">endswith</span><span class="p">(</span><span class="s1">&#39;.py&#39;</span><span class="p">)):</span>
+        <span class="n">mssg</span> <span class="o">=</span> <span class="s2">&quot;</span><span class="se">\n</span><span class="s2"> This is not a python file.&quot;</span>
+        <span class="n">wx</span><span class="o">.</span><span class="n">MessageBox</span><span class="p">(</span><span class="nb">str</span><span class="p">(</span><span class="n">mssg</span><span class="p">),</span> <span class="s1">&#39;Error&#39;</span><span class="p">,</span> <span class="n">style</span><span class="o">=</span><span class="n">wx</span><span class="o">.</span><span class="n">ICON_ERROR</span><span class="p">)</span>
+        <span class="k">return</span> <span class="bp">False</span>
+
+    <span class="k">try</span><span class="p">:</span>
+        <span class="n">result</span><span class="p">,</span> <span class="n">errmsg</span> <span class="o">=</span> <span class="n">check_model</span><span class="p">(</span><span class="n">fname</span><span class="p">),</span> <span class="bp">None</span>
+    <span class="k">except</span> <span class="ne">Exception</span><span class="p">:</span>
+        <span class="kn">import</span> <span class="nn">traceback</span>
+        <span class="n">result</span><span class="p">,</span> <span class="n">errmsg</span> <span class="o">=</span> <span class="bp">None</span><span class="p">,</span> <span class="n">traceback</span><span class="o">.</span><span class="n">format_exc</span><span class="p">()</span>
+
+    <span class="n">parts</span> <span class="o">=</span> <span class="p">[</span><span class="s2">&quot;Running model &#39;</span><span class="si">%s</span><span class="s2">&#39;...&quot;</span> <span class="o">%</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">basename</span><span class="p">(</span><span class="n">fname</span><span class="p">)]</span>
+    <span class="k">if</span> <span class="n">errmsg</span> <span class="ow">is</span> <span class="ow">not</span> <span class="bp">None</span><span class="p">:</span>
+        <span class="n">parts</span><span class="o">.</span><span class="n">extend</span><span class="p">([</span><span class="s2">&quot;&quot;</span><span class="p">,</span> <span class="s2">&quot;Error occurred:&quot;</span><span class="p">,</span> <span class="n">errmsg</span><span class="p">,</span> <span class="s2">&quot;&quot;</span><span class="p">])</span>
+        <span class="n">title</span><span class="p">,</span> <span class="n">icon</span> <span class="o">=</span> <span class="s2">&quot;Error&quot;</span><span class="p">,</span> <span class="n">wx</span><span class="o">.</span><span class="n">ICON_ERROR</span>
+    <span class="k">else</span><span class="p">:</span>
+        <span class="n">parts</span><span class="o">.</span><span class="n">extend</span><span class="p">([</span><span class="s2">&quot;&quot;</span><span class="p">,</span> <span class="s2">&quot;Success:&quot;</span><span class="p">,</span> <span class="n">result</span><span class="p">,</span> <span class="s2">&quot;&quot;</span><span class="p">])</span>
+        <span class="n">title</span><span class="p">,</span> <span class="n">icon</span> <span class="o">=</span> <span class="s2">&quot;Info&quot;</span><span class="p">,</span> <span class="n">wx</span><span class="o">.</span><span class="n">ICON_INFORMATION</span>
+    <span class="n">text</span> <span class="o">=</span> <span class="s2">&quot;</span><span class="se">\n</span><span class="s2">&quot;</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">parts</span><span class="p">)</span>
+    <span class="n">dlg</span> <span class="o">=</span> <span class="n">ResizableScrolledMessageDialog</span><span class="p">(</span><span class="n">parent</span><span class="p">,</span> <span class="n">text</span><span class="p">,</span> <span class="n">title</span><span class="p">,</span> <span class="n">size</span><span class="o">=</span><span class="p">((</span><span class="mi">550</span><span class="p">,</span> <span class="mi">250</span><span class="p">)))</span>
+    <span class="n">fnt</span> <span class="o">=</span> <span class="n">wx</span><span class="o">.</span><span class="n">Font</span><span class="p">(</span><span class="mi">10</span><span class="p">,</span> <span class="n">wx</span><span class="o">.</span><span class="n">TELETYPE</span><span class="p">,</span> <span class="n">wx</span><span class="o">.</span><span class="n">NORMAL</span><span class="p">,</span> <span class="n">wx</span><span class="o">.</span><span class="n">NORMAL</span><span class="p">)</span>
+    <span class="n">dlg</span><span class="o">.</span><span class="n">GetChildren</span><span class="p">()[</span><span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">SetFont</span><span class="p">(</span><span class="n">fnt</span><span class="p">)</span>
+    <span class="n">dlg</span><span class="o">.</span><span class="n">GetChildren</span><span class="p">()[</span><span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">SetInsertionPoint</span><span class="p">(</span><span class="mi">0</span><span class="p">)</span>
+    <span class="n">dlg</span><span class="o">.</span><span class="n">ShowModal</span><span class="p">()</span>
+    <span class="n">dlg</span><span class="o">.</span><span class="n">Destroy</span><span class="p">()</span>
+    <span class="k">return</span> <span class="n">errmsg</span> <span class="ow">is</span> <span class="bp">None</span></div>
+
+<div class="viewcode-block" id="ResizableScrolledMessageDialog"><a class="viewcode-back" href="../../../../../dev/api/sas.sasgui.perspectives.calculator.html#sas.sasgui.perspectives.calculator.pyconsole.ResizableScrolledMessageDialog">[docs]</a><span class="k">class</span> <span class="nc">ResizableScrolledMessageDialog</span><span class="p">(</span><span class="n">wx</span><span class="o">.</span><span class="n">Dialog</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Custom version of wx ScrolledMessageDialog, allowing border resize</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">parent</span><span class="p">,</span> <span class="n">msg</span><span class="p">,</span> <span class="n">caption</span><span class="p">,</span>
+        <span class="n">pos</span><span class="o">=</span><span class="n">wx</span><span class="o">.</span><span class="n">DefaultPosition</span><span class="p">,</span> <span class="n">size</span><span class="o">=</span><span class="p">(</span><span class="mi">500</span><span class="p">,</span><span class="mi">300</span><span class="p">),</span>
+        <span class="n">style</span><span class="o">=</span><span class="n">wx</span><span class="o">.</span><span class="n">DEFAULT_DIALOG_STYLE</span> <span class="o">|</span> <span class="n">wx</span><span class="o">.</span><span class="n">RESIZE_BORDER</span> <span class="p">):</span>
+        <span class="c1"># Notice, that style can be overrriden in the caller.</span>
+        <span class="n">wx</span><span class="o">.</span><span class="n">Dialog</span><span class="o">.</span><span class="n">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">parent</span><span class="p">,</span> <span class="o">-</span><span class="mi">1</span><span class="p">,</span> <span class="n">caption</span><span class="p">,</span> <span class="n">pos</span><span class="p">,</span> <span class="n">size</span><span class="p">,</span> <span class="n">style</span><span class="p">)</span>
+        <span class="n">x</span><span class="p">,</span> <span class="n">y</span> <span class="o">=</span> <span class="n">pos</span>
+        <span class="k">if</span> <span class="n">x</span> <span class="o">==</span> <span class="o">-</span><span class="mi">1</span> <span class="ow">and</span> <span class="n">y</span> <span class="o">==</span> <span class="o">-</span><span class="mi">1</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">CenterOnScreen</span><span class="p">(</span><span class="n">wx</span><span class="o">.</span><span class="n">BOTH</span><span class="p">)</span>
+
+        <span class="n">text</span> <span class="o">=</span> <span class="n">wx</span><span class="o">.</span><span class="n">TextCtrl</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="o">-</span><span class="mi">1</span><span class="p">,</span> <span class="n">msg</span><span class="p">,</span> <span class="n">style</span><span class="o">=</span><span class="n">wx</span><span class="o">.</span><span class="n">TE_MULTILINE</span> <span class="o">|</span> <span class="n">wx</span><span class="o">.</span><span class="n">TE_READONLY</span><span class="p">)</span>
+        <span class="n">ok</span> <span class="o">=</span> <span class="n">wx</span><span class="o">.</span><span class="n">Button</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">wx</span><span class="o">.</span><span class="n">ID_OK</span><span class="p">,</span> <span class="s2">&quot;OK&quot;</span><span class="p">)</span>
+
+        <span class="c1"># Mysterious constraint layouts from </span>
+        <span class="c1"># https://www.wxpython.org/docs/api/wx.lib.layoutf.Layoutf-class.html</span>
+        <span class="n">lc</span> <span class="o">=</span> <span class="n">layoutf</span><span class="o">.</span><span class="n">Layoutf</span><span class="p">(</span><span class="s1">&#39;t=t5#1;b=t5#2;l=l5#1;r=r5#1&#39;</span><span class="p">,</span> <span class="p">(</span><span class="bp">self</span><span class="p">,</span><span class="n">ok</span><span class="p">))</span>
+        <span class="n">text</span><span class="o">.</span><span class="n">SetConstraints</span><span class="p">(</span><span class="n">lc</span><span class="p">)</span>
+        <span class="n">lc</span> <span class="o">=</span> <span class="n">layoutf</span><span class="o">.</span><span class="n">Layoutf</span><span class="p">(</span><span class="s1">&#39;b=b5#1;x%w50#1;w!80;h!25&#39;</span><span class="p">,</span> <span class="p">(</span><span class="bp">self</span><span class="p">,))</span>
+        <span class="n">ok</span><span class="o">.</span><span class="n">SetConstraints</span><span class="p">(</span><span class="n">lc</span><span class="p">)</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">SetAutoLayout</span><span class="p">(</span><span class="mi">1</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">Layout</span><span class="p">()</span></div>
+
+<div class="viewcode-block" id="PyConsole"><a class="viewcode-back" href="../../../../../dev/api/sas.sasgui.perspectives.calculator.html#sas.sasgui.perspectives.calculator.pyconsole.PyConsole">[docs]</a><span class="k">class</span> <span class="nc">PyConsole</span><span class="p">(</span><span class="n">editor</span><span class="o">.</span><span class="n">EditorNotebookFrame</span><span class="p">):</span>
+    <span class="c1">## Internal nickname for the window, used by the AUI manager</span>
+    <span class="n">window_name</span> <span class="o">=</span> <span class="s2">&quot;Custom Model Editor&quot;</span>
+    <span class="c1">## Name to appear on the window title bar</span>
+    <span class="n">window_caption</span> <span class="o">=</span> <span class="s2">&quot;Plugin Model Editor&quot;</span>
+    <span class="c1">## Flag to tell the AUI manager to put this panel in the center pane</span>
+    <span class="n">CENTER_PANE</span> <span class="o">=</span> <span class="bp">False</span>
+    <span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">parent</span><span class="o">=</span><span class="bp">None</span><span class="p">,</span> <span class="n">base</span><span class="o">=</span><span class="bp">None</span><span class="p">,</span> <span class="n">manager</span><span class="o">=</span><span class="bp">None</span><span class="p">,</span> <span class="n">panel</span><span class="o">=</span><span class="bp">None</span><span class="p">,</span>
+                    <span class="n">title</span><span class="o">=</span><span class="s1">&#39;Python Shell/Editor&#39;</span><span class="p">,</span> <span class="n">filename</span><span class="o">=</span><span class="bp">None</span><span class="p">,</span>
+                    <span class="n">size</span><span class="o">=</span><span class="p">(</span><span class="n">PANEL_WIDTH</span><span class="p">,</span> <span class="n">PANEL_HEIGHT</span><span class="p">)):</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">config</span> <span class="o">=</span> <span class="bp">None</span>
+
+        <span class="n">editor</span><span class="o">.</span><span class="n">EditorNotebookFrame</span><span class="o">.</span><span class="n">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">parent</span><span class="o">=</span><span class="n">parent</span><span class="p">,</span>
+                                        <span class="n">title</span><span class="o">=</span><span class="n">title</span><span class="p">,</span> <span class="n">size</span><span class="o">=</span><span class="n">size</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">parent</span> <span class="o">=</span> <span class="n">parent</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_manager</span> <span class="o">=</span> <span class="n">manager</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">base</span> <span class="o">=</span> <span class="n">base</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">panel</span> <span class="o">=</span> <span class="n">panel</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_add_menu</span><span class="p">()</span>
+        <span class="k">if</span> <span class="n">filename</span> <span class="o">!=</span> <span class="bp">None</span><span class="p">:</span>
+            <span class="n">dataDir</span> <span class="o">=</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">dirname</span><span class="p">(</span><span class="n">filename</span><span class="p">)</span>
+        <span class="k">elif</span> <span class="bp">self</span><span class="o">.</span><span class="n">parent</span> <span class="o">!=</span> <span class="bp">None</span><span class="p">:</span>
+            <span class="n">dataDir</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">parent</span><span class="o">.</span><span class="n">_default_save_location</span>
+        <span class="k">else</span><span class="p">:</span>
+             <span class="n">dataDir</span> <span class="o">=</span> <span class="bp">None</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">dataDir</span> <span class="o">=</span> <span class="n">dataDir</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">Centre</span><span class="p">()</span>
+
+        <span class="c1"># See if there is a corresponding C file</span>
+        <span class="k">if</span> <span class="n">filename</span> <span class="o">!=</span> <span class="bp">None</span><span class="p">:</span>
+            <span class="n">c_filename</span> <span class="o">=</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">splitext</span><span class="p">(</span><span class="n">filename</span><span class="p">)[</span><span class="mi">0</span><span class="p">]</span> <span class="o">+</span> <span class="s2">&quot;.c&quot;</span>
+            <span class="k">if</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">isfile</span><span class="p">(</span><span class="n">c_filename</span><span class="p">):</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">bufferCreate</span><span class="p">(</span><span class="n">c_filename</span><span class="p">)</span>
+
+            <span class="c1"># If not, just open the requested .py, if any.</span>
+            <span class="c1"># Needs to be after the C file so the tab focus is correct.</span>
+            <span class="k">if</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">isfile</span><span class="p">(</span><span class="n">filename</span><span class="p">):</span>
+                    <span class="bp">self</span><span class="o">.</span><span class="n">bufferCreate</span><span class="p">(</span><span class="n">filename</span><span class="p">)</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">Bind</span><span class="p">(</span><span class="n">wx</span><span class="o">.</span><span class="n">EVT_MENU</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">OnNewFile</span><span class="p">,</span> <span class="nb">id</span><span class="o">=</span><span class="n">wx</span><span class="o">.</span><span class="n">ID_NEW</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">Bind</span><span class="p">(</span><span class="n">wx</span><span class="o">.</span><span class="n">EVT_MENU</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">OnOpenFile</span><span class="p">,</span> <span class="nb">id</span><span class="o">=</span><span class="n">wx</span><span class="o">.</span><span class="n">ID_OPEN</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">Bind</span><span class="p">(</span><span class="n">wx</span><span class="o">.</span><span class="n">EVT_MENU</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">OnSaveFile</span><span class="p">,</span> <span class="nb">id</span><span class="o">=</span><span class="n">wx</span><span class="o">.</span><span class="n">ID_SAVE</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">Bind</span><span class="p">(</span><span class="n">wx</span><span class="o">.</span><span class="n">EVT_MENU</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">OnSaveAsFile</span><span class="p">,</span> <span class="nb">id</span><span class="o">=</span><span class="n">wx</span><span class="o">.</span><span class="n">ID_SAVEAS</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">Bind</span><span class="p">(</span><span class="n">wx</span><span class="o">.</span><span class="n">EVT_MENU</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">OnCheckModel</span><span class="p">,</span> <span class="nb">id</span><span class="o">=</span><span class="n">ID_CHECK_MODEL</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">Bind</span><span class="p">(</span><span class="n">wx</span><span class="o">.</span><span class="n">EVT_MENU</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">OnRun</span><span class="p">,</span> <span class="nb">id</span><span class="o">=</span><span class="n">ID_RUN</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">Bind</span><span class="p">(</span><span class="n">wx</span><span class="o">.</span><span class="n">EVT_UPDATE_UI</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">OnUpdateCompileMenu</span><span class="p">,</span> <span class="nb">id</span><span class="o">=</span><span class="n">ID_CHECK_MODEL</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">Bind</span><span class="p">(</span><span class="n">wx</span><span class="o">.</span><span class="n">EVT_UPDATE_UI</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">OnUpdateCompileMenu</span><span class="p">,</span> <span class="nb">id</span><span class="o">=</span><span class="n">ID_RUN</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">Bind</span><span class="p">(</span><span class="n">wx</span><span class="o">.</span><span class="n">EVT_CLOSE</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">on_close</span><span class="p">)</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="n">title</span><span class="o">.</span><span class="n">count</span><span class="p">(</span><span class="s1">&#39;Python Shell&#39;</span><span class="p">):</span>
+            <span class="c1"># Delete menu item (open and new) if not python shell</span>
+            <span class="c1">#self.fileMenu.Delete(wx.ID_NEW)</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">fileMenu</span><span class="o">.</span><span class="n">Delete</span><span class="p">(</span><span class="n">wx</span><span class="o">.</span><span class="n">ID_OPEN</span><span class="p">)</span>
+
+
+    <span class="k">def</span> <span class="nf">_add_menu</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Add menu</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">compileMenu</span> <span class="o">=</span> <span class="n">wx</span><span class="o">.</span><span class="n">Menu</span><span class="p">()</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">compileMenu</span><span class="o">.</span><span class="n">Append</span><span class="p">(</span><span class="n">ID_CHECK_MODEL</span><span class="p">,</span> <span class="s1">&#39;Check model&#39;</span><span class="p">,</span>
+                 <span class="s1">&#39;Loading and run the model&#39;</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">compileMenu</span><span class="o">.</span><span class="n">AppendSeparator</span><span class="p">()</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">compileMenu</span><span class="o">.</span><span class="n">Append</span><span class="p">(</span><span class="n">ID_RUN</span><span class="p">,</span> <span class="s1">&#39;Run in Shell&#39;</span><span class="p">,</span>
+                 <span class="s1">&#39;Run the file in the Python Shell&#39;</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">MenuBar</span><span class="o">.</span><span class="n">Insert</span><span class="p">(</span><span class="mi">3</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">compileMenu</span><span class="p">,</span> <span class="s1">&#39;&amp;Run&#39;</span><span class="p">)</span>
+
+<div class="viewcode-block" id="PyConsole.OnHelp"><a class="viewcode-back" href="../../../../../dev/api/sas.sasgui.perspectives.calculator.html#sas.sasgui.perspectives.calculator.pyconsole.PyConsole.OnHelp">[docs]</a>    <span class="k">def</span> <span class="nf">OnHelp</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">event</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Show a help dialog.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="kn">import</span>  <span class="nn">wx.lib.dialogs</span>
+        <span class="n">title</span> <span class="o">=</span> <span class="s1">&#39;Help on key bindings&#39;</span>
+        <span class="n">text</span> <span class="o">=</span> <span class="n">wx</span><span class="o">.</span><span class="n">py</span><span class="o">.</span><span class="n">shell</span><span class="o">.</span><span class="n">HELP_TEXT</span>
+        <span class="n">dlg</span> <span class="o">=</span> <span class="n">wx</span><span class="o">.</span><span class="n">lib</span><span class="o">.</span><span class="n">dialogs</span><span class="o">.</span><span class="n">ScrolledMessageDialog</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">text</span><span class="p">,</span> <span class="n">title</span><span class="p">,</span>
+                                                   <span class="n">size</span><span class="o">=</span><span class="p">((</span><span class="mi">700</span><span class="p">,</span> <span class="mi">540</span><span class="p">)))</span>
+        <span class="n">fnt</span> <span class="o">=</span> <span class="n">wx</span><span class="o">.</span><span class="n">Font</span><span class="p">(</span><span class="mi">10</span><span class="p">,</span> <span class="n">wx</span><span class="o">.</span><span class="n">TELETYPE</span><span class="p">,</span> <span class="n">wx</span><span class="o">.</span><span class="n">NORMAL</span><span class="p">,</span> <span class="n">wx</span><span class="o">.</span><span class="n">NORMAL</span><span class="p">)</span>
+        <span class="n">dlg</span><span class="o">.</span><span class="n">GetChildren</span><span class="p">()[</span><span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">SetFont</span><span class="p">(</span><span class="n">fnt</span><span class="p">)</span>
+        <span class="n">dlg</span><span class="o">.</span><span class="n">GetChildren</span><span class="p">()[</span><span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">SetInsertionPoint</span><span class="p">(</span><span class="mi">0</span><span class="p">)</span>
+        <span class="n">dlg</span><span class="o">.</span><span class="n">ShowModal</span><span class="p">()</span>
+        <span class="n">dlg</span><span class="o">.</span><span class="n">Destroy</span><span class="p">()</span></div>
+
+<div class="viewcode-block" id="PyConsole.set_manager"><a class="viewcode-back" href="../../../../../dev/api/sas.sasgui.perspectives.calculator.html#sas.sasgui.perspectives.calculator.pyconsole.PyConsole.set_manager">[docs]</a>    <span class="k">def</span> <span class="nf">set_manager</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">manager</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Set the manager of this window</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_manager</span> <span class="o">=</span> <span class="n">manager</span></div>
+
+<div class="viewcode-block" id="PyConsole.OnAbout"><a class="viewcode-back" href="../../../../../dev/api/sas.sasgui.perspectives.calculator.html#sas.sasgui.perspectives.calculator.pyconsole.PyConsole.OnAbout">[docs]</a>    <span class="k">def</span> <span class="nf">OnAbout</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">event</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        On About</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">message</span> <span class="o">=</span> <span class="n">ABOUT</span>
+        <span class="n">dial</span> <span class="o">=</span> <span class="n">wx</span><span class="o">.</span><span class="n">MessageDialog</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">message</span><span class="p">,</span> <span class="s1">&#39;About&#39;</span><span class="p">,</span>
+                           <span class="n">wx</span><span class="o">.</span><span class="n">OK</span> <span class="o">|</span> <span class="n">wx</span><span class="o">.</span><span class="n">ICON_INFORMATION</span><span class="p">)</span>
+        <span class="n">dial</span><span class="o">.</span><span class="n">ShowModal</span><span class="p">()</span></div>
+
+<div class="viewcode-block" id="PyConsole.OnNewFile"><a class="viewcode-back" href="../../../../../dev/api/sas.sasgui.perspectives.calculator.html#sas.sasgui.perspectives.calculator.pyconsole.PyConsole.OnNewFile">[docs]</a>    <span class="k">def</span> <span class="nf">OnNewFile</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">event</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        OnFileOpen</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">OnFileNew</span><span class="p">(</span><span class="n">event</span><span class="p">)</span></div>
+
+<div class="viewcode-block" id="PyConsole.OnOpenFile"><a class="viewcode-back" href="../../../../../dev/api/sas.sasgui.perspectives.calculator.html#sas.sasgui.perspectives.calculator.pyconsole.PyConsole.OnOpenFile">[docs]</a>    <span class="k">def</span> <span class="nf">OnOpenFile</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">event</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        OnFileOpen</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">OnFileOpen</span><span class="p">(</span><span class="n">event</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">Show</span><span class="p">(</span><span class="bp">False</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">Show</span><span class="p">(</span><span class="bp">True</span><span class="p">)</span></div>
+
+<div class="viewcode-block" id="PyConsole.OnSaveFile"><a class="viewcode-back" href="../../../../../dev/api/sas.sasgui.perspectives.calculator.html#sas.sasgui.perspectives.calculator.pyconsole.PyConsole.OnSaveFile">[docs]</a>    <span class="k">def</span> <span class="nf">OnSaveFile</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">event</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        OnFileSave overwrite</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">OnFileSave</span><span class="p">(</span><span class="n">event</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">Show</span><span class="p">(</span><span class="bp">False</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">Show</span><span class="p">(</span><span class="bp">True</span><span class="p">)</span></div>
+
+<div class="viewcode-block" id="PyConsole.OnSaveAsFile"><a class="viewcode-back" href="../../../../../dev/api/sas.sasgui.perspectives.calculator.html#sas.sasgui.perspectives.calculator.pyconsole.PyConsole.OnSaveAsFile">[docs]</a>    <span class="k">def</span> <span class="nf">OnSaveAsFile</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">event</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        OnFileSaveAs overwrite</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">OnFileSaveAs</span><span class="p">(</span><span class="n">event</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">Show</span><span class="p">(</span><span class="bp">False</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">Show</span><span class="p">(</span><span class="bp">True</span><span class="p">)</span></div>
+
+<div class="viewcode-block" id="PyConsole.bufferOpen"><a class="viewcode-back" href="../../../../../dev/api/sas.sasgui.perspectives.calculator.html#sas.sasgui.perspectives.calculator.pyconsole.PyConsole.bufferOpen">[docs]</a>    <span class="k">def</span> <span class="nf">bufferOpen</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Open file in buffer, bypassing editor bufferOpen</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">bufferHasChanged</span><span class="p">():</span>
+            <span class="n">cancel</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">bufferSuggestSave</span><span class="p">()</span>
+            <span class="k">if</span> <span class="n">cancel</span><span class="p">:</span>
+                <span class="k">return</span> <span class="n">cancel</span>
+        <span class="n">filedir</span> <span class="o">=</span> <span class="s1">&#39;&#39;</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">buffer</span> <span class="ow">and</span> <span class="bp">self</span><span class="o">.</span><span class="n">buffer</span><span class="o">.</span><span class="n">doc</span><span class="o">.</span><span class="n">filedir</span><span class="p">:</span>
+            <span class="n">filedir</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">buffer</span><span class="o">.</span><span class="n">doc</span><span class="o">.</span><span class="n">filedir</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="n">filedir</span><span class="p">:</span>
+            <span class="n">filedir</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">dataDir</span>
+        <span class="n">result</span> <span class="o">=</span> <span class="n">editor</span><span class="o">.</span><span class="n">openSingle</span><span class="p">(</span><span class="n">directory</span><span class="o">=</span><span class="n">filedir</span><span class="p">,</span>
+                            <span class="n">wildcard</span><span class="o">=</span><span class="s1">&#39;Python Files (*.py)|*.py&#39;</span><span class="p">)</span>
+        <span class="k">if</span> <span class="n">result</span><span class="o">.</span><span class="n">path</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">bufferCreate</span><span class="p">(</span><span class="n">result</span><span class="o">.</span><span class="n">path</span><span class="p">)</span>
+
+        <span class="c1"># See if there is a corresponding C file</span>
+        <span class="k">if</span> <span class="n">result</span><span class="o">.</span><span class="n">path</span> <span class="o">!=</span> <span class="bp">None</span><span class="p">:</span>
+            <span class="n">c_filename</span> <span class="o">=</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">splitext</span><span class="p">(</span><span class="n">result</span><span class="o">.</span><span class="n">path</span><span class="p">)[</span><span class="mi">0</span><span class="p">]</span> <span class="o">+</span> <span class="s2">&quot;.c&quot;</span>
+            <span class="k">if</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">isfile</span><span class="p">(</span><span class="n">c_filename</span><span class="p">):</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">bufferCreate</span><span class="p">(</span><span class="n">c_filename</span><span class="p">)</span>
+
+        <span class="n">cancel</span> <span class="o">=</span> <span class="bp">False</span>
+        <span class="k">return</span> <span class="n">cancel</span></div>
+
+<div class="viewcode-block" id="PyConsole.bufferSaveAs"><a class="viewcode-back" href="../../../../../dev/api/sas.sasgui.perspectives.calculator.html#sas.sasgui.perspectives.calculator.pyconsole.PyConsole.bufferSaveAs">[docs]</a>    <span class="k">def</span> <span class="nf">bufferSaveAs</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Save buffer to a new filename: Bypassing editor bufferSaveAs</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">filedir</span> <span class="o">=</span> <span class="s1">&#39;&#39;</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">buffer</span> <span class="ow">and</span> <span class="bp">self</span><span class="o">.</span><span class="n">buffer</span><span class="o">.</span><span class="n">doc</span><span class="o">.</span><span class="n">filedir</span><span class="p">:</span>
+            <span class="n">filedir</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">buffer</span><span class="o">.</span><span class="n">doc</span><span class="o">.</span><span class="n">filedir</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="n">filedir</span><span class="p">:</span>
+            <span class="n">filedir</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">dataDir</span>
+        <span class="n">result</span> <span class="o">=</span> <span class="n">editor</span><span class="o">.</span><span class="n">saveSingle</span><span class="p">(</span><span class="n">directory</span><span class="o">=</span><span class="n">filedir</span><span class="p">,</span>
+                                   <span class="n">filename</span><span class="o">=</span><span class="s1">&#39;untitled.py&#39;</span><span class="p">,</span>
+                                   <span class="n">wildcard</span><span class="o">=</span><span class="s1">&#39;Python Files (*.py)|*.py&#39;</span><span class="p">)</span>
+        <span class="k">if</span> <span class="n">result</span><span class="o">.</span><span class="n">path</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">buffer</span><span class="o">.</span><span class="n">confirmed</span> <span class="o">=</span> <span class="bp">True</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">buffer</span><span class="o">.</span><span class="n">saveAs</span><span class="p">(</span><span class="n">result</span><span class="o">.</span><span class="n">path</span><span class="p">)</span>
+            <span class="n">cancel</span> <span class="o">=</span> <span class="bp">False</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">cancel</span> <span class="o">=</span> <span class="bp">True</span>
+        <span class="k">return</span> <span class="n">cancel</span></div>
+
+<div class="viewcode-block" id="PyConsole.OnRun"><a class="viewcode-back" href="../../../../../dev/api/sas.sasgui.perspectives.calculator.html#sas.sasgui.perspectives.calculator.pyconsole.PyConsole.OnRun">[docs]</a>    <span class="k">def</span> <span class="nf">OnRun</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">event</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Run</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="bp">self</span><span class="o">.</span><span class="n">_check_saved</span><span class="p">():</span>
+            <span class="k">return</span> <span class="bp">True</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">buffer</span> <span class="ow">and</span> <span class="bp">self</span><span class="o">.</span><span class="n">buffer</span><span class="o">.</span><span class="n">doc</span><span class="o">.</span><span class="n">filepath</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">editor</span><span class="o">.</span><span class="n">setFocus</span><span class="p">()</span>
+            <span class="c1"># Why we have to do this (Otherwise problems on Windows)?</span>
+            <span class="n">forward_path</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">buffer</span><span class="o">.</span><span class="n">doc</span><span class="o">.</span><span class="n">filepath</span><span class="o">.</span><span class="n">replace</span><span class="p">(</span><span class="s1">&#39;</span><span class="se">\\</span><span class="s1">&#39;</span><span class="p">,</span> <span class="s1">&#39;/&#39;</span><span class="p">)</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">shell</span><span class="o">.</span><span class="n">Execute</span><span class="p">(</span><span class="s2">&quot;execfile(&#39;</span><span class="si">%s</span><span class="s2">&#39;)&quot;</span> <span class="o">%</span> <span class="n">forward_path</span><span class="p">)</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">shell</span><span class="o">.</span><span class="n">Hide</span><span class="p">()</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">shell</span><span class="o">.</span><span class="n">Show</span><span class="p">(</span><span class="bp">True</span><span class="p">)</span>
+            <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">shell</span><span class="o">.</span><span class="n">GetText</span><span class="p">()</span><span class="o">.</span><span class="n">split</span><span class="p">(</span><span class="s2">&quot;&gt;&gt;&gt;&quot;</span><span class="p">)[</span><span class="o">-</span><span class="mi">2</span><span class="p">]</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">mssg</span> <span class="o">=</span> <span class="s2">&quot;</span><span class="se">\n</span><span class="s2"> This is not a python file.&quot;</span>
+            <span class="n">title</span> <span class="o">=</span> <span class="s1">&#39;Error&#39;</span>
+            <span class="n">icon</span> <span class="o">=</span> <span class="n">wx</span><span class="o">.</span><span class="n">ICON_ERROR</span>
+            <span class="n">wx</span><span class="o">.</span><span class="n">MessageBox</span><span class="p">(</span><span class="nb">str</span><span class="p">(</span><span class="n">mssg</span><span class="p">),</span> <span class="n">title</span><span class="p">,</span> <span class="n">style</span><span class="o">=</span><span class="n">icon</span><span class="p">)</span>
+            <span class="k">return</span> <span class="bp">False</span></div>
+
+<div class="viewcode-block" id="PyConsole.OnCheckModel"><a class="viewcode-back" href="../../../../../dev/api/sas.sasgui.perspectives.calculator.html#sas.sasgui.perspectives.calculator.pyconsole.PyConsole.OnCheckModel">[docs]</a>    <span class="k">def</span> <span class="nf">OnCheckModel</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">event</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Compile</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="bp">self</span><span class="o">.</span><span class="n">_check_saved</span><span class="p">():</span>
+            <span class="k">return</span> <span class="bp">True</span>
+        <span class="n">fname</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">editor</span><span class="o">.</span><span class="n">getStatus</span><span class="p">()[</span><span class="mi">0</span><span class="p">]</span>
+        <span class="n">success</span> <span class="o">=</span> <span class="n">show_model_output</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">fname</span><span class="p">)</span>
+
+        <span class="c1"># Update plugin model list in fitpage combobox</span>
+        <span class="k">if</span> <span class="n">success</span> <span class="ow">and</span> <span class="bp">self</span><span class="o">.</span><span class="n">_manager</span> <span class="o">!=</span> <span class="bp">None</span> <span class="ow">and</span> <span class="bp">self</span><span class="o">.</span><span class="n">panel</span> <span class="o">!=</span> <span class="bp">None</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_manager</span><span class="o">.</span><span class="n">set_edit_menu_helper</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">parent</span><span class="p">)</span>
+            <span class="n">wx</span><span class="o">.</span><span class="n">CallAfter</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_manager</span><span class="o">.</span><span class="n">update_custom_combo</span><span class="p">)</span></div>
+
+    <span class="k">def</span> <span class="nf">_check_saved</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        If content was changed, suggest to save it first</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">bufferHasChanged</span><span class="p">()</span> <span class="ow">and</span> <span class="bp">self</span><span class="o">.</span><span class="n">buffer</span><span class="o">.</span><span class="n">doc</span><span class="o">.</span><span class="n">filepath</span><span class="p">:</span>
+            <span class="n">cancel</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">bufferSuggestSave</span><span class="p">()</span>
+            <span class="k">return</span> <span class="ow">not</span> <span class="n">cancel</span>
+        <span class="k">return</span> <span class="bp">True</span>
+
+<div class="viewcode-block" id="PyConsole.OnUpdateCompileMenu"><a class="viewcode-back" href="../../../../../dev/api/sas.sasgui.perspectives.calculator.html#sas.sasgui.perspectives.calculator.pyconsole.PyConsole.OnUpdateCompileMenu">[docs]</a>    <span class="k">def</span> <span class="nf">OnUpdateCompileMenu</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">event</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Update Compile menu items based on current tap.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">win</span> <span class="o">=</span> <span class="n">wx</span><span class="o">.</span><span class="n">Window</span><span class="o">.</span><span class="n">FindFocus</span><span class="p">()</span>
+        <span class="nb">id</span> <span class="o">=</span> <span class="n">event</span><span class="o">.</span><span class="n">GetId</span><span class="p">()</span>
+        <span class="n">event</span><span class="o">.</span><span class="n">Enable</span><span class="p">(</span><span class="bp">True</span><span class="p">)</span>
+        <span class="k">try</span><span class="p">:</span>
+            <span class="k">if</span> <span class="nb">id</span> <span class="o">==</span> <span class="n">ID_CHECK_MODEL</span> <span class="ow">or</span> <span class="nb">id</span> <span class="o">==</span> <span class="n">ID_RUN</span><span class="p">:</span>
+                <span class="n">menu_on</span> <span class="o">=</span> <span class="bp">False</span>
+                <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">buffer</span> <span class="ow">and</span> <span class="bp">self</span><span class="o">.</span><span class="n">buffer</span><span class="o">.</span><span class="n">doc</span><span class="o">.</span><span class="n">filepath</span><span class="p">:</span>
+                    <span class="n">menu_on</span> <span class="o">=</span> <span class="bp">True</span>
+                <span class="n">event</span><span class="o">.</span><span class="n">Enable</span><span class="p">(</span><span class="n">menu_on</span><span class="p">)</span>
+        <span class="k">except</span> <span class="ne">AttributeError</span><span class="p">:</span>
+            <span class="c1"># This menu option is not supported in the current context.</span>
+            <span class="n">event</span><span class="o">.</span><span class="n">Enable</span><span class="p">(</span><span class="bp">False</span><span class="p">)</span></div>
+
+<div class="viewcode-block" id="PyConsole.on_close"><a class="viewcode-back" href="../../../../../dev/api/sas.sasgui.perspectives.calculator.html#sas.sasgui.perspectives.calculator.pyconsole.PyConsole.on_close">[docs]</a>    <span class="k">def</span> <span class="nf">on_close</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">event</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Close event</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">base</span> <span class="o">!=</span> <span class="bp">None</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">base</span><span class="o">.</span><span class="n">py_frame</span> <span class="o">=</span> <span class="bp">None</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">Destroy</span><span class="p">()</span></div></div>
+
+<span class="n">ABOUT</span> <span class="o">=</span> <span class="s2">&quot;Welcome to Python </span><span class="si">%s</span><span class="s2">! </span><span class="se">\n\n</span><span class="s2">&quot;</span> <span class="o">%</span> <span class="n">sys</span><span class="o">.</span><span class="n">version</span><span class="o">.</span><span class="n">split</span><span class="p">()[</span><span class="mi">0</span><span class="p">]</span>
+<span class="n">ABOUT</span> <span class="o">+=</span> <span class="s2">&quot;This uses Py Shell/Editor in wx (developed by Patrick K. O&#39;Brien).</span><span class="se">\n</span><span class="s2">&quot;</span>
+<span class="n">ABOUT</span> <span class="o">+=</span> <span class="s2">&quot;If this is your first time using Python, </span><span class="se">\n</span><span class="s2">&quot;</span>
+<span class="n">ABOUT</span> <span class="o">+=</span> <span class="s2">&quot;you should definitely check out the tutorial &quot;</span>
+<span class="n">ABOUT</span> <span class="o">+=</span> <span class="s2">&quot;on the Internet at http://www.python.org/doc/tut/.&quot;</span>
+
+
+<span class="k">if</span> <span class="n">__name__</span> <span class="o">==</span> <span class="s2">&quot;__main__&quot;</span><span class="p">:</span>
+
+    <span class="n">app</span> <span class="o">=</span> <span class="n">wx</span><span class="o">.</span><span class="n">App</span><span class="p">()</span>
+    <span class="n">dlg</span> <span class="o">=</span> <span class="n">PyConsole</span><span class="p">()</span>
+    <span class="n">dlg</span><span class="o">.</span><span class="n">Show</span><span class="p">()</span>
+    <span class="n">app</span><span class="o">.</span><span class="n">MainLoop</span><span class="p">()</span>
+</pre></div>
+
+          </div>
+        </div>
+      </div>
+      <div class="sphinxsidebar" role="navigation" aria-label="main navigation">
+        <div class="sphinxsidebarwrapper">
+<div id="searchbox" style="display: none" role="search">
+  <h3>Quick search</h3>
+    <form class="search" action="../../../../../search.html" method="get">
+      <input type="text" name="q" />
+      <input type="submit" value="Go" />
+      <input type="hidden" name="check_keywords" value="yes" />
+      <input type="hidden" name="area" value="default" />
+    </form>
+</div>
+<script type="text/javascript">$('#searchbox').show(0);</script>
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="related" role="navigation" aria-label="related navigation">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="../../../../../genindex.html" title="General Index"
+             >index</a></li>
+        <li class="right" >
+          <a href="../../../../../py-modindex.html" title="Python Module Index"
+             >modules</a> |</li>
+        <li class="nav-item nav-item-0"><a href="../../../../../index.html">SasView 4.1.2 documentation</a> &raquo;</li>
+          <li class="nav-item nav-item-1"><a href="../../../../index.html" >Module code</a> &raquo;</li>
+          <li class="nav-item nav-item-2"><a href="../calculator.html" >sas.sasgui.perspectives.calculator</a> &raquo;</li> 
+      </ul>
+    </div>
+    <div class="footer" role="contentinfo">
+        &copy; Copyright 2017, The SasView Project.
+      Created using <a href="http://sphinx-doc.org/">Sphinx</a> 1.4.1.
+    </div>
+  </body>
+</html>

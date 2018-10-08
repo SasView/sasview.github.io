@@ -1,0 +1,1088 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+  "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+    
+    <title>sas.sasgui.perspectives.calculator.data_operator &mdash; SasView 4.1.2 documentation</title>
+    
+    <link rel="stylesheet" href="../../../../../_static/classic.css" type="text/css" />
+    <link rel="stylesheet" href="../../../../../_static/pygments.css" type="text/css" />
+    
+    <script type="text/javascript">
+      var DOCUMENTATION_OPTIONS = {
+        URL_ROOT:    '../../../../../',
+        VERSION:     '4.1.2',
+        COLLAPSE_INDEX: false,
+        FILE_SUFFIX: '.html',
+        HAS_SOURCE:  true
+      };
+    </script>
+    <script type="text/javascript" src="../../../../../_static/jquery.js"></script>
+    <script type="text/javascript" src="../../../../../_static/underscore.js"></script>
+    <script type="text/javascript" src="../../../../../_static/doctools.js"></script>
+    <script type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.1/MathJax.js?config=TeX-MML-AM_CHTML"></script>
+    <link rel="top" title="SasView 4.1.2 documentation" href="../../../../../index.html" />
+    <link rel="up" title="sas.sasgui.perspectives.calculator" href="../calculator.html" /> 
+  </head>
+  <body role="document">
+    <div class="related" role="navigation" aria-label="related navigation">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="../../../../../genindex.html" title="General Index"
+             accesskey="I">index</a></li>
+        <li class="right" >
+          <a href="../../../../../py-modindex.html" title="Python Module Index"
+             >modules</a> |</li>
+        <li class="nav-item nav-item-0"><a href="../../../../../index.html">SasView 4.1.2 documentation</a> &raquo;</li>
+          <li class="nav-item nav-item-1"><a href="../../../../index.html" >Module code</a> &raquo;</li>
+          <li class="nav-item nav-item-2"><a href="../calculator.html" accesskey="U">sas.sasgui.perspectives.calculator</a> &raquo;</li> 
+      </ul>
+    </div>  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          <div class="body" role="main">
+            
+  <h1>Source code for sas.sasgui.perspectives.calculator.data_operator</h1><div class="highlight"><pre>
+<span></span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">GUI for the data operations panel (sum and multiply)</span>
+<span class="sd">&quot;&quot;&quot;</span>
+<span class="kn">import</span> <span class="nn">wx</span>
+<span class="kn">import</span> <span class="nn">sys</span>
+<span class="kn">import</span> <span class="nn">time</span>
+<span class="kn">import</span> <span class="nn">numpy</span>
+<span class="kn">from</span> <span class="nn">sas.sascalc.dataloader.data_info</span> <span class="kn">import</span> <span class="n">Data1D</span>
+<span class="kn">from</span> <span class="nn">sas.sasgui.plottools.PlotPanel</span> <span class="kn">import</span> <span class="n">PlotPanel</span>
+<span class="kn">from</span> <span class="nn">sas.sasgui.plottools.plottables</span> <span class="kn">import</span> <span class="n">Graph</span>
+<span class="kn">from</span> <span class="nn">sas.sasgui.plottools</span> <span class="kn">import</span> <span class="n">transform</span>
+<span class="kn">from</span> <span class="nn">matplotlib.font_manager</span> <span class="kn">import</span> <span class="n">FontProperties</span>
+<span class="kn">from</span> <span class="nn">sas.sasgui.guiframe.events</span> <span class="kn">import</span> <span class="n">StatusEvent</span>
+<span class="kn">from</span> <span class="nn">sas.sasgui.perspectives.calculator</span> <span class="kn">import</span> <span class="n">calculator_widgets</span> <span class="k">as</span> <span class="n">widget</span>
+<span class="kn">from</span> <span class="nn">sas.sasgui.guiframe.documentation_window</span> <span class="kn">import</span> <span class="n">DocumentationWindow</span>
+
+<span class="c1">#Control panel width</span>
+<span class="k">if</span> <span class="n">sys</span><span class="o">.</span><span class="n">platform</span><span class="o">.</span><span class="n">count</span><span class="p">(</span><span class="s2">&quot;win32&quot;</span><span class="p">)</span> <span class="o">&gt;</span> <span class="mi">0</span><span class="p">:</span>
+    <span class="n">PANEL_TOP</span> <span class="o">=</span> <span class="mi">0</span>
+    <span class="n">PANEL_WIDTH</span> <span class="o">=</span> <span class="mi">790</span>
+    <span class="n">PANEL_HEIGTH</span> <span class="o">=</span> <span class="mi">370</span>
+    <span class="n">FONT_VARIANT</span> <span class="o">=</span> <span class="mi">0</span>
+    <span class="n">_BOX_WIDTH</span> <span class="o">=</span> <span class="mi">200</span>
+    <span class="n">ON_MAC</span> <span class="o">=</span> <span class="bp">False</span>
+<span class="k">else</span><span class="p">:</span>
+    <span class="n">PANEL_TOP</span> <span class="o">=</span> <span class="mi">60</span>
+    <span class="n">_BOX_WIDTH</span> <span class="o">=</span> <span class="mi">230</span>
+    <span class="n">PANEL_WIDTH</span> <span class="o">=</span> <span class="mi">900</span>
+    <span class="n">PANEL_HEIGTH</span> <span class="o">=</span> <span class="mi">430</span>
+    <span class="n">FONT_VARIANT</span> <span class="o">=</span> <span class="mi">1</span>
+    <span class="n">ON_MAC</span> <span class="o">=</span> <span class="bp">True</span>
+
+<div class="viewcode-block" id="DataOperPanel"><a class="viewcode-back" href="../../../../../dev/api/sas.sasgui.perspectives.calculator.html#sas.sasgui.perspectives.calculator.data_operator.DataOperPanel">[docs]</a><span class="k">class</span> <span class="nc">DataOperPanel</span><span class="p">(</span><span class="n">wx</span><span class="o">.</span><span class="n">ScrolledWindow</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">parent</span><span class="p">,</span> <span class="o">*</span><span class="n">args</span><span class="p">,</span> <span class="o">**</span><span class="n">kwds</span><span class="p">):</span>
+        <span class="n">kwds</span><span class="p">[</span><span class="s1">&#39;name&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="s2">&quot;Data Operation&quot;</span>
+        <span class="n">kwds</span><span class="p">[</span><span class="s2">&quot;size&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="p">(</span><span class="n">PANEL_WIDTH</span><span class="p">,</span> <span class="n">PANEL_HEIGTH</span><span class="p">)</span>
+        <span class="n">wx</span><span class="o">.</span><span class="n">ScrolledWindow</span><span class="o">.</span><span class="n">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">parent</span><span class="p">,</span> <span class="o">*</span><span class="n">args</span><span class="p">,</span> <span class="o">**</span><span class="n">kwds</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">parent</span> <span class="o">=</span> <span class="n">parent</span>
+        <span class="c1">#sizers etc.</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">main_sizer</span> <span class="o">=</span> <span class="bp">None</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">name_sizer</span> <span class="o">=</span> <span class="bp">None</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">button_sizer</span> <span class="o">=</span> <span class="bp">None</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">data_namectr</span> <span class="o">=</span> <span class="bp">None</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">numberctr</span> <span class="o">=</span> <span class="bp">None</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">data1_cbox</span> <span class="o">=</span> <span class="bp">None</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">operator_cbox</span> <span class="o">=</span> <span class="bp">None</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">data2_cbox</span> <span class="o">=</span> <span class="bp">None</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">data_title_tcl</span> <span class="o">=</span> <span class="bp">None</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">out_pic</span> <span class="o">=</span> <span class="bp">None</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">equal_pic</span> <span class="o">=</span> <span class="bp">None</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">data1_pic</span> <span class="o">=</span> <span class="bp">None</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">operator_pic</span> <span class="o">=</span> <span class="bp">None</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">data2_pic</span> <span class="o">=</span> <span class="bp">None</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">output</span> <span class="o">=</span> <span class="bp">None</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_notes</span> <span class="o">=</span> <span class="bp">None</span>
+        <span class="c1">#text grayed color</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">color</span> <span class="o">=</span> <span class="n">wx</span><span class="o">.</span><span class="n">SystemSettings</span><span class="o">.</span><span class="n">GetColour</span><span class="p">(</span><span class="n">wx</span><span class="o">.</span><span class="n">SYS_COLOUR_BACKGROUND</span><span class="p">)</span>
+        <span class="c1">#data</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_data</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">get_datalist</span><span class="p">()</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_do_layout</span><span class="p">()</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">fill_data_combox</span><span class="p">()</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">fill_oprator_combox</span><span class="p">()</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">Bind</span><span class="p">(</span><span class="n">wx</span><span class="o">.</span><span class="n">EVT_SET_FOCUS</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">set_panel_on_focus</span><span class="p">)</span>
+
+    <span class="k">def</span> <span class="nf">_define_structure</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        define initial sizer</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">main_sizer</span> <span class="o">=</span> <span class="n">wx</span><span class="o">.</span><span class="n">BoxSizer</span><span class="p">(</span><span class="n">wx</span><span class="o">.</span><span class="n">VERTICAL</span><span class="p">)</span>
+        <span class="n">title</span> <span class="o">=</span> <span class="s2">&quot;Data Operation &quot;</span>
+        <span class="n">title</span> <span class="o">+=</span> <span class="s2">&quot;[ + (add); - (subtract); &quot;</span>
+        <span class="n">title</span> <span class="o">+=</span> <span class="s2">&quot;* (multiply); / (divide); &quot;</span>
+        <span class="n">title</span> <span class="o">+=</span> <span class="s2">&quot;| (append) ]&quot;</span>
+        <span class="n">name_box</span> <span class="o">=</span> <span class="n">wx</span><span class="o">.</span><span class="n">StaticBox</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="o">-</span><span class="mi">1</span><span class="p">,</span> <span class="n">title</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">name_sizer</span> <span class="o">=</span> <span class="n">wx</span><span class="o">.</span><span class="n">StaticBoxSizer</span><span class="p">(</span><span class="n">name_box</span><span class="p">,</span> <span class="n">wx</span><span class="o">.</span><span class="n">HORIZONTAL</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">button_sizer</span> <span class="o">=</span> <span class="n">wx</span><span class="o">.</span><span class="n">BoxSizer</span><span class="p">(</span><span class="n">wx</span><span class="o">.</span><span class="n">HORIZONTAL</span><span class="p">)</span>
+
+    <span class="k">def</span> <span class="nf">_layout_name</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Do the layout for data name related widgets</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">new_data_sizer</span> <span class="o">=</span> <span class="n">wx</span><span class="o">.</span><span class="n">BoxSizer</span><span class="p">(</span><span class="n">wx</span><span class="o">.</span><span class="n">VERTICAL</span><span class="p">)</span>
+        <span class="n">equal_sizer</span> <span class="o">=</span> <span class="n">wx</span><span class="o">.</span><span class="n">BoxSizer</span><span class="p">(</span><span class="n">wx</span><span class="o">.</span><span class="n">VERTICAL</span><span class="p">)</span>
+        <span class="n">old_data1_sizer</span> <span class="o">=</span> <span class="n">wx</span><span class="o">.</span><span class="n">BoxSizer</span><span class="p">(</span><span class="n">wx</span><span class="o">.</span><span class="n">VERTICAL</span><span class="p">)</span>
+        <span class="n">operator_sizer</span> <span class="o">=</span> <span class="n">wx</span><span class="o">.</span><span class="n">BoxSizer</span><span class="p">(</span><span class="n">wx</span><span class="o">.</span><span class="n">VERTICAL</span><span class="p">)</span>
+        <span class="n">old_data2_sizer</span> <span class="o">=</span> <span class="n">wx</span><span class="o">.</span><span class="n">BoxSizer</span><span class="p">(</span><span class="n">wx</span><span class="o">.</span><span class="n">VERTICAL</span><span class="p">)</span>
+        <span class="n">data2_hori_sizer</span> <span class="o">=</span> <span class="n">wx</span><span class="o">.</span><span class="n">BoxSizer</span><span class="p">(</span><span class="n">wx</span><span class="o">.</span><span class="n">HORIZONTAL</span><span class="p">)</span>
+        <span class="n">data_name</span> <span class="o">=</span> <span class="n">wx</span><span class="o">.</span><span class="n">StaticText</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="o">-</span><span class="mi">1</span><span class="p">,</span> <span class="s1">&#39;Output Data Name&#39;</span><span class="p">)</span>
+        <span class="n">equal_name</span> <span class="o">=</span> <span class="n">wx</span><span class="o">.</span><span class="n">StaticText</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="o">-</span><span class="mi">1</span><span class="p">,</span> <span class="s1">&#39; =&#39;</span><span class="p">,</span> <span class="n">size</span><span class="o">=</span><span class="p">(</span><span class="mi">50</span><span class="p">,</span> <span class="mi">25</span><span class="p">))</span>
+        <span class="n">data1_name</span> <span class="o">=</span> <span class="n">wx</span><span class="o">.</span><span class="n">StaticText</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="o">-</span><span class="mi">1</span><span class="p">,</span> <span class="s1">&#39;Data1&#39;</span><span class="p">)</span>
+        <span class="n">operator_name</span> <span class="o">=</span> <span class="n">wx</span><span class="o">.</span><span class="n">StaticText</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="o">-</span><span class="mi">1</span><span class="p">,</span> <span class="s1">&#39;Operator&#39;</span><span class="p">)</span>
+        <span class="n">data2_name</span> <span class="o">=</span> <span class="n">wx</span><span class="o">.</span><span class="n">StaticText</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="o">-</span><span class="mi">1</span><span class="p">,</span> <span class="s1">&#39;Data2 (or Number)&#39;</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">data_namectr</span> <span class="o">=</span> <span class="n">wx</span><span class="o">.</span><span class="n">TextCtrl</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="o">-</span><span class="mi">1</span><span class="p">,</span> <span class="n">size</span><span class="o">=</span><span class="p">(</span><span class="n">_BOX_WIDTH</span><span class="p">,</span> <span class="mi">25</span><span class="p">),</span> <span class="n">style</span><span class="o">=</span><span class="n">wx</span><span class="o">.</span><span class="n">TE_PROCESS_ENTER</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">data_namectr</span><span class="o">.</span><span class="n">SetToolTipString</span><span class="p">(</span><span class="s2">&quot;Hit &#39;Enter&#39; key after typing.&quot;</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">data_namectr</span><span class="o">.</span><span class="n">SetValue</span><span class="p">(</span><span class="nb">str</span><span class="p">(</span><span class="s1">&#39;MyNewDataName&#39;</span><span class="p">))</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">numberctr</span> <span class="o">=</span> <span class="n">wx</span><span class="o">.</span><span class="n">TextCtrl</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="o">-</span><span class="mi">1</span><span class="p">,</span> <span class="n">size</span><span class="o">=</span><span class="p">(</span><span class="n">_BOX_WIDTH</span> <span class="o">/</span> <span class="mi">3</span><span class="p">,</span> <span class="mi">25</span><span class="p">),</span> <span class="n">style</span><span class="o">=</span><span class="n">wx</span><span class="o">.</span><span class="n">TE_PROCESS_ENTER</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">numberctr</span><span class="o">.</span><span class="n">SetToolTipString</span><span class="p">(</span><span class="s2">&quot;Hit &#39;Enter&#39; key after typing.&quot;</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">numberctr</span><span class="o">.</span><span class="n">SetValue</span><span class="p">(</span><span class="nb">str</span><span class="p">(</span><span class="mf">1.0</span><span class="p">))</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">data1_cbox</span> <span class="o">=</span> <span class="n">wx</span><span class="o">.</span><span class="n">ComboBox</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="o">-</span><span class="mi">1</span><span class="p">,</span> <span class="n">size</span><span class="o">=</span><span class="p">(</span><span class="n">_BOX_WIDTH</span><span class="p">,</span> <span class="mi">25</span><span class="p">),</span>
+                                      <span class="n">style</span><span class="o">=</span><span class="n">wx</span><span class="o">.</span><span class="n">CB_READONLY</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">operator_cbox</span> <span class="o">=</span> <span class="n">wx</span><span class="o">.</span><span class="n">ComboBox</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="o">-</span><span class="mi">1</span><span class="p">,</span> <span class="n">size</span><span class="o">=</span><span class="p">(</span><span class="mi">70</span><span class="p">,</span> <span class="mi">25</span><span class="p">),</span>
+                                         <span class="n">style</span><span class="o">=</span><span class="n">wx</span><span class="o">.</span><span class="n">CB_READONLY</span><span class="p">)</span>
+        <span class="n">operation_tip</span> <span class="o">=</span> <span class="s2">&quot;Add: +, Subtract: -, &quot;</span>
+        <span class="n">operation_tip</span> <span class="o">+=</span> <span class="s2">&quot;Multiply: *, Divide: /, &quot;</span>
+        <span class="n">operation_tip</span> <span class="o">+=</span> <span class="s2">&quot;Append(Combine): | &quot;</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">operator_cbox</span><span class="o">.</span><span class="n">SetToolTipString</span><span class="p">(</span><span class="n">operation_tip</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">data2_cbox</span> <span class="o">=</span> <span class="n">wx</span><span class="o">.</span><span class="n">ComboBox</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="o">-</span><span class="mi">1</span><span class="p">,</span> <span class="n">size</span><span class="o">=</span><span class="p">(</span><span class="n">_BOX_WIDTH</span> <span class="o">*</span> <span class="mi">2</span> <span class="o">/</span> <span class="mi">3</span><span class="p">,</span> <span class="mi">25</span><span class="p">),</span>
+                                       <span class="n">style</span><span class="o">=</span><span class="n">wx</span><span class="o">.</span><span class="n">CB_READONLY</span><span class="p">)</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">out_pic</span> <span class="o">=</span> <span class="n">SmallPanel</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="o">-</span><span class="mi">1</span><span class="p">,</span> <span class="bp">True</span><span class="p">,</span>
+                                    <span class="n">size</span><span class="o">=</span><span class="p">(</span><span class="n">_BOX_WIDTH</span><span class="p">,</span> <span class="n">_BOX_WIDTH</span><span class="p">),</span>
+                                    <span class="n">style</span><span class="o">=</span><span class="n">wx</span><span class="o">.</span><span class="n">NO_BORDER</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">equal_pic</span> <span class="o">=</span> <span class="n">SmallPanel</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="o">-</span><span class="mi">1</span><span class="p">,</span> <span class="bp">True</span><span class="p">,</span> <span class="s1">&#39;=&#39;</span><span class="p">,</span>
+                                    <span class="n">size</span><span class="o">=</span><span class="p">(</span><span class="mi">50</span><span class="p">,</span> <span class="n">_BOX_WIDTH</span><span class="p">),</span>
+                                    <span class="n">style</span><span class="o">=</span><span class="n">wx</span><span class="o">.</span><span class="n">NO_BORDER</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">data1_pic</span> <span class="o">=</span> <span class="n">SmallPanel</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="o">-</span><span class="mi">1</span><span class="p">,</span> <span class="bp">True</span><span class="p">,</span>
+                                    <span class="n">size</span><span class="o">=</span><span class="p">(</span><span class="n">_BOX_WIDTH</span><span class="p">,</span> <span class="n">_BOX_WIDTH</span><span class="p">),</span>
+                                    <span class="n">style</span><span class="o">=</span><span class="n">wx</span><span class="o">.</span><span class="n">NO_BORDER</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">operator_pic</span> <span class="o">=</span> <span class="n">SmallPanel</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="o">-</span><span class="mi">1</span><span class="p">,</span> <span class="bp">True</span><span class="p">,</span> <span class="s1">&#39;+&#39;</span><span class="p">,</span>
+                                    <span class="n">size</span><span class="o">=</span><span class="p">(</span><span class="mi">70</span><span class="p">,</span> <span class="n">_BOX_WIDTH</span><span class="p">),</span>
+                                    <span class="n">style</span><span class="o">=</span><span class="n">wx</span><span class="o">.</span><span class="n">NO_BORDER</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">data2_pic</span> <span class="o">=</span> <span class="n">SmallPanel</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="o">-</span><span class="mi">1</span><span class="p">,</span> <span class="bp">True</span><span class="p">,</span>
+                                    <span class="n">size</span><span class="o">=</span><span class="p">(</span><span class="n">_BOX_WIDTH</span><span class="p">,</span> <span class="n">_BOX_WIDTH</span><span class="p">),</span>
+                                    <span class="n">style</span><span class="o">=</span><span class="n">wx</span><span class="o">.</span><span class="n">NO_BORDER</span><span class="p">)</span>
+        <span class="k">for</span> <span class="n">ax</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">equal_pic</span><span class="o">.</span><span class="n">axes</span><span class="p">:</span>
+            <span class="n">ax</span><span class="o">.</span><span class="n">set_frame_on</span><span class="p">(</span><span class="bp">False</span><span class="p">)</span>
+        <span class="k">for</span> <span class="n">ax</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">operator_pic</span><span class="o">.</span><span class="n">axes</span><span class="p">:</span>
+            <span class="n">ax</span><span class="o">.</span><span class="n">set_frame_on</span><span class="p">(</span><span class="bp">False</span><span class="p">)</span>
+
+        <span class="n">new_data_sizer</span><span class="o">.</span><span class="n">AddMany</span><span class="p">([(</span><span class="n">data_name</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="n">wx</span><span class="o">.</span><span class="n">LEFT</span><span class="p">,</span> <span class="mi">3</span><span class="p">),</span>
+                                       <span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">data_namectr</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="n">wx</span><span class="o">.</span><span class="n">LEFT</span><span class="p">,</span> <span class="mi">3</span><span class="p">),</span>
+                                       <span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">out_pic</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="n">wx</span><span class="o">.</span><span class="n">LEFT</span><span class="p">,</span> <span class="mi">3</span><span class="p">)])</span>
+        <span class="n">equal_sizer</span><span class="o">.</span><span class="n">AddMany</span><span class="p">([(</span><span class="mi">13</span><span class="p">,</span> <span class="mi">13</span><span class="p">),</span> <span class="p">(</span><span class="n">equal_name</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="n">wx</span><span class="o">.</span><span class="n">LEFT</span><span class="p">,</span> <span class="mi">3</span><span class="p">),</span>
+                                       <span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">equal_pic</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="n">wx</span><span class="o">.</span><span class="n">LEFT</span><span class="p">,</span> <span class="mi">3</span><span class="p">)])</span>
+        <span class="n">old_data1_sizer</span><span class="o">.</span><span class="n">AddMany</span><span class="p">([(</span><span class="n">data1_name</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="n">wx</span><span class="o">.</span><span class="n">LEFT</span><span class="p">,</span> <span class="mi">3</span><span class="p">),</span>
+                                       <span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">data1_cbox</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="n">wx</span><span class="o">.</span><span class="n">LEFT</span><span class="p">,</span> <span class="mi">3</span><span class="p">),</span>
+                                       <span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">data1_pic</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="n">wx</span><span class="o">.</span><span class="n">LEFT</span><span class="p">,</span> <span class="mi">3</span><span class="p">)])</span>
+        <span class="n">operator_sizer</span><span class="o">.</span><span class="n">AddMany</span><span class="p">([(</span><span class="n">operator_name</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="n">wx</span><span class="o">.</span><span class="n">LEFT</span><span class="p">,</span> <span class="mi">3</span><span class="p">),</span>
+                                 <span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">operator_cbox</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="n">wx</span><span class="o">.</span><span class="n">LEFT</span><span class="p">,</span> <span class="mi">3</span><span class="p">),</span>
+                                 <span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">operator_pic</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="n">wx</span><span class="o">.</span><span class="n">LEFT</span><span class="p">,</span> <span class="mi">3</span><span class="p">)])</span>
+        <span class="n">data2_hori_sizer</span><span class="o">.</span><span class="n">AddMany</span><span class="p">([(</span><span class="bp">self</span><span class="o">.</span><span class="n">data2_cbox</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="n">wx</span><span class="o">.</span><span class="n">LEFT</span><span class="p">,</span> <span class="mi">0</span><span class="p">),</span>
+                                       <span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">numberctr</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="n">wx</span><span class="o">.</span><span class="n">RIGHT</span><span class="p">,</span> <span class="mi">0</span><span class="p">)])</span>
+        <span class="n">old_data2_sizer</span><span class="o">.</span><span class="n">AddMany</span><span class="p">([(</span><span class="n">data2_name</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="n">wx</span><span class="o">.</span><span class="n">LEFT</span><span class="p">,</span> <span class="mi">3</span><span class="p">),</span>
+                                       <span class="p">(</span><span class="n">data2_hori_sizer</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="n">wx</span><span class="o">.</span><span class="n">LEFT</span><span class="p">,</span> <span class="mi">3</span><span class="p">),</span>
+                                       <span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">data2_pic</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="n">wx</span><span class="o">.</span><span class="n">LEFT</span><span class="p">,</span> <span class="mi">3</span><span class="p">)])</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">name_sizer</span><span class="o">.</span><span class="n">AddMany</span><span class="p">([(</span><span class="n">new_data_sizer</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="n">wx</span><span class="o">.</span><span class="n">LEFT</span> <span class="o">|</span> <span class="n">wx</span><span class="o">.</span><span class="n">TOP</span><span class="p">,</span> <span class="mi">5</span><span class="p">),</span>
+                                       <span class="p">(</span><span class="n">equal_sizer</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="n">wx</span><span class="o">.</span><span class="n">TOP</span><span class="p">,</span> <span class="mi">5</span><span class="p">),</span>
+                                       <span class="p">(</span><span class="n">old_data1_sizer</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="n">wx</span><span class="o">.</span><span class="n">TOP</span><span class="p">,</span> <span class="mi">5</span><span class="p">),</span>
+                                       <span class="p">(</span><span class="n">operator_sizer</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="n">wx</span><span class="o">.</span><span class="n">TOP</span><span class="p">,</span> <span class="mi">5</span><span class="p">),</span>
+                                       <span class="p">(</span><span class="n">old_data2_sizer</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="n">wx</span><span class="o">.</span><span class="n">TOP</span><span class="p">,</span> <span class="mi">5</span><span class="p">)])</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">data2_cbox</span><span class="o">.</span><span class="n">Show</span><span class="p">(</span><span class="bp">True</span><span class="p">)</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">_show_numctrl</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">numberctr</span><span class="p">,</span> <span class="bp">False</span><span class="p">)</span>
+
+        <span class="n">wx</span><span class="o">.</span><span class="n">EVT_TEXT_ENTER</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">data_namectr</span><span class="p">,</span> <span class="o">-</span><span class="mi">1</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">on_name</span><span class="p">)</span>
+        <span class="n">wx</span><span class="o">.</span><span class="n">EVT_TEXT</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">numberctr</span><span class="p">,</span> <span class="o">-</span><span class="mi">1</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">on_number</span><span class="p">)</span>
+        <span class="n">wx</span><span class="o">.</span><span class="n">EVT_COMBOBOX</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">data1_cbox</span><span class="p">,</span> <span class="o">-</span><span class="mi">1</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">on_select_data1</span><span class="p">)</span>
+        <span class="n">wx</span><span class="o">.</span><span class="n">EVT_COMBOBOX</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">operator_cbox</span><span class="p">,</span> <span class="o">-</span><span class="mi">1</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">on_select_operator</span><span class="p">)</span>
+        <span class="n">wx</span><span class="o">.</span><span class="n">EVT_COMBOBOX</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">data2_cbox</span><span class="p">,</span> <span class="o">-</span><span class="mi">1</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">on_select_data2</span><span class="p">)</span>
+
+    <span class="k">def</span> <span class="nf">_show_numctrl</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">ctrl</span><span class="p">,</span> <span class="n">enable</span><span class="o">=</span><span class="bp">True</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Show/Hide on Win</span>
+<span class="sd">        Enable/Disable on MAC</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">if</span> <span class="n">ON_MAC</span><span class="p">:</span>
+            <span class="n">ctrl</span><span class="o">.</span><span class="n">Enable</span><span class="p">(</span><span class="n">enable</span><span class="p">)</span>
+            <span class="n">children</span> <span class="o">=</span> <span class="n">ctrl</span><span class="o">.</span><span class="n">GetChildren</span><span class="p">()</span>
+            <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">children</span><span class="p">)</span> <span class="o">&gt;</span> <span class="mi">0</span><span class="p">:</span>
+                <span class="n">ctrl</span><span class="o">.</span><span class="n">GetChildren</span><span class="p">()[</span><span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">SetBackGroundColour</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">color</span><span class="p">)</span>
+            <span class="k">if</span> <span class="n">enable</span><span class="p">:</span>
+                <span class="n">wx</span><span class="o">.</span><span class="n">EVT_TEXT_ENTER</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">numberctr</span><span class="p">,</span> <span class="o">-</span><span class="mi">1</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">on_number</span><span class="p">)</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="k">if</span> <span class="ow">not</span> <span class="n">ctrl</span><span class="o">.</span><span class="n">IsEnabled</span><span class="p">():</span>
+                <span class="n">ctrl</span><span class="o">.</span><span class="n">Enable</span><span class="p">(</span><span class="bp">True</span><span class="p">)</span>
+            <span class="n">ctrl</span><span class="o">.</span><span class="n">Show</span><span class="p">(</span><span class="n">enable</span><span class="p">)</span>
+
+<div class="viewcode-block" id="DataOperPanel.on_name"><a class="viewcode-back" href="../../../../../dev/api/sas.sasgui.perspectives.calculator.html#sas.sasgui.perspectives.calculator.data_operator.DataOperPanel.on_name">[docs]</a>    <span class="k">def</span> <span class="nf">on_name</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">event</span><span class="o">=</span><span class="bp">None</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        On data name typing</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">if</span> <span class="n">event</span> <span class="o">!=</span> <span class="bp">None</span><span class="p">:</span>
+            <span class="n">event</span><span class="o">.</span><span class="n">Skip</span><span class="p">()</span>
+        <span class="n">item</span> <span class="o">=</span> <span class="n">event</span><span class="o">.</span><span class="n">GetEventObject</span><span class="p">()</span>
+        <span class="k">if</span> <span class="n">item</span><span class="o">.</span><span class="n">IsEnabled</span><span class="p">():</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_set_textctrl_color</span><span class="p">(</span><span class="n">item</span><span class="p">,</span> <span class="s1">&#39;white&#39;</span><span class="p">)</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_set_textctrl_color</span><span class="p">(</span><span class="n">item</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">color</span><span class="p">)</span>
+        <span class="n">text</span> <span class="o">=</span> <span class="n">item</span><span class="o">.</span><span class="n">GetValue</span><span class="p">()</span><span class="o">.</span><span class="n">strip</span><span class="p">()</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_check_newname</span><span class="p">(</span><span class="n">text</span><span class="p">)</span></div>
+
+    <span class="k">def</span> <span class="nf">_check_newname</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">name</span><span class="o">=</span><span class="bp">None</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Check name ctr strings</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">send_warnings</span><span class="p">(</span><span class="s1">&#39;&#39;</span><span class="p">)</span>
+        <span class="n">msg</span> <span class="o">=</span> <span class="s1">&#39;&#39;</span>
+        <span class="k">if</span> <span class="n">name</span> <span class="o">==</span> <span class="bp">None</span><span class="p">:</span>
+            <span class="n">text</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">data_namectr</span><span class="o">.</span><span class="n">GetValue</span><span class="p">()</span><span class="o">.</span><span class="n">strip</span><span class="p">()</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">text</span> <span class="o">=</span> <span class="n">name</span>
+        <span class="n">state_list</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">get_datalist</span><span class="p">()</span><span class="o">.</span><span class="n">values</span><span class="p">()</span>
+        <span class="n">name_list</span> <span class="o">=</span> <span class="p">[]</span>
+        <span class="k">for</span> <span class="n">state</span> <span class="ow">in</span> <span class="n">state_list</span><span class="p">:</span>
+            <span class="k">if</span> <span class="n">state</span><span class="o">.</span><span class="n">data</span> <span class="o">==</span> <span class="bp">None</span><span class="p">:</span>
+                <span class="n">theory_list</span> <span class="o">=</span> <span class="n">state</span><span class="o">.</span><span class="n">get_theory</span><span class="p">()</span>
+                <span class="n">theory</span><span class="p">,</span> <span class="n">_</span> <span class="o">=</span> <span class="n">theory_list</span><span class="o">.</span><span class="n">values</span><span class="p">()[</span><span class="mi">0</span><span class="p">]</span>
+                <span class="n">d_name</span> <span class="o">=</span> <span class="nb">str</span><span class="p">(</span><span class="n">theory</span><span class="o">.</span><span class="n">name</span><span class="p">)</span>
+            <span class="k">else</span><span class="p">:</span>
+                <span class="n">d_name</span> <span class="o">=</span> <span class="nb">str</span><span class="p">(</span><span class="n">state</span><span class="o">.</span><span class="n">data</span><span class="o">.</span><span class="n">name</span><span class="p">)</span>
+            <span class="n">name_list</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">d_name</span><span class="p">)</span>
+        <span class="k">if</span> <span class="n">text</span> <span class="ow">in</span> <span class="n">name_list</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_set_textctrl_color</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">data_namectr</span><span class="p">,</span> <span class="s1">&#39;pink&#39;</span><span class="p">)</span>
+            <span class="n">msg</span> <span class="o">=</span> <span class="s2">&quot;DataOperation: The name already exists.&quot;</span>
+        <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">text</span><span class="p">)</span> <span class="o">==</span> <span class="mi">0</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_set_textctrl_color</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">data_namectr</span><span class="p">,</span> <span class="s1">&#39;pink&#39;</span><span class="p">)</span>
+            <span class="n">msg</span> <span class="o">=</span> <span class="s2">&quot;DataOperation: Type the data name first.&quot;</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">_notes</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">send_warnings</span><span class="p">(</span><span class="n">msg</span><span class="p">,</span> <span class="s1">&#39;error&#39;</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">name_sizer</span><span class="o">.</span><span class="n">Layout</span><span class="p">()</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">Refresh</span><span class="p">()</span>
+
+    <span class="k">def</span> <span class="nf">_set_textctrl_color</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">ctrl</span><span class="p">,</span> <span class="n">color</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Set TextCtrl color</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">if</span> <span class="n">ON_MAC</span><span class="p">:</span>
+            <span class="n">children</span> <span class="o">=</span> <span class="n">ctrl</span><span class="o">.</span><span class="n">GetChildren</span><span class="p">()</span>
+            <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">children</span><span class="p">)</span> <span class="o">&gt;</span> <span class="mi">0</span><span class="p">:</span>
+                <span class="n">children</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">SetBackgroundColour</span><span class="p">(</span><span class="n">color</span><span class="p">)</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">ctrl</span><span class="o">.</span><span class="n">SetBackgroundColour</span><span class="p">(</span><span class="n">color</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">name_sizer</span><span class="o">.</span><span class="n">Layout</span><span class="p">()</span>
+
+<div class="viewcode-block" id="DataOperPanel.on_number"><a class="viewcode-back" href="../../../../../dev/api/sas.sasgui.perspectives.calculator.html#sas.sasgui.perspectives.calculator.data_operator.DataOperPanel.on_number">[docs]</a>    <span class="k">def</span> <span class="nf">on_number</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">event</span><span class="o">=</span><span class="bp">None</span><span class="p">,</span> <span class="n">control</span><span class="o">=</span><span class="bp">None</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        On selecting Number for Data2</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">send_warnings</span><span class="p">(</span><span class="s1">&#39;&#39;</span><span class="p">)</span>
+        <span class="n">item</span> <span class="o">=</span> <span class="n">control</span>
+        <span class="k">if</span> <span class="n">item</span> <span class="ow">is</span> <span class="bp">None</span> <span class="ow">and</span> <span class="n">event</span> <span class="ow">is</span> <span class="ow">not</span> <span class="bp">None</span><span class="p">:</span>
+            <span class="n">item</span> <span class="o">=</span> <span class="n">event</span><span class="o">.</span><span class="n">GetEventObject</span><span class="p">()</span>
+        <span class="k">elif</span> <span class="n">item</span> <span class="ow">is</span> <span class="bp">None</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s2">&quot;Event or control must be supplied&quot;</span><span class="p">)</span>
+        <span class="n">text</span> <span class="o">=</span> <span class="n">item</span><span class="o">.</span><span class="n">GetValue</span><span class="p">()</span><span class="o">.</span><span class="n">strip</span><span class="p">()</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">numberctr</span><span class="o">.</span><span class="n">IsShown</span><span class="p">():</span>
+            <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">numberctr</span><span class="o">.</span><span class="n">IsEnabled</span><span class="p">():</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">_set_textctrl_color</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">numberctr</span><span class="p">,</span> <span class="s1">&#39;white&#39;</span><span class="p">)</span>
+                <span class="k">try</span><span class="p">:</span>
+                    <span class="n">val</span> <span class="o">=</span> <span class="nb">float</span><span class="p">(</span><span class="n">text</span><span class="p">)</span>
+                    <span class="n">pos</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">data2_cbox</span><span class="o">.</span><span class="n">GetCurrentSelection</span><span class="p">()</span>
+                    <span class="bp">self</span><span class="o">.</span><span class="n">data2_cbox</span><span class="o">.</span><span class="n">SetClientData</span><span class="p">(</span><span class="n">pos</span><span class="p">,</span> <span class="n">val</span><span class="p">)</span>
+                <span class="k">except</span><span class="p">:</span>
+                    <span class="bp">self</span><span class="o">.</span><span class="n">_set_textctrl_color</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">numberctr</span><span class="p">,</span> <span class="s1">&#39;pink&#39;</span><span class="p">)</span>
+                    <span class="k">if</span> <span class="n">event</span> <span class="ow">is</span> <span class="bp">None</span><span class="p">:</span>
+                        <span class="n">msg</span> <span class="o">=</span> <span class="s2">&quot;DataOperation: Number requires a float number.&quot;</span>
+                        <span class="bp">self</span><span class="o">.</span><span class="n">send_warnings</span><span class="p">(</span><span class="n">msg</span><span class="p">,</span> <span class="s1">&#39;error&#39;</span><span class="p">)</span>
+                    <span class="k">return</span> <span class="bp">False</span>
+            <span class="k">else</span><span class="p">:</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">_set_textctrl_color</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">numberctr</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">color</span><span class="p">)</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">put_text_pic</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">data2_pic</span><span class="p">,</span> <span class="n">content</span><span class="o">=</span><span class="nb">str</span><span class="p">(</span><span class="n">val</span><span class="p">))</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">check_data_inputs</span><span class="p">()</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">output</span> <span class="o">!=</span> <span class="bp">None</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">output</span><span class="o">.</span><span class="n">name</span> <span class="o">=</span> <span class="nb">str</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">data_namectr</span><span class="o">.</span><span class="n">GetValue</span><span class="p">())</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">draw_output</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">output</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">Refresh</span><span class="p">()</span>
+        <span class="k">return</span> <span class="bp">True</span></div>
+
+<div class="viewcode-block" id="DataOperPanel.on_select_data1"><a class="viewcode-back" href="../../../../../dev/api/sas.sasgui.perspectives.calculator.html#sas.sasgui.perspectives.calculator.data_operator.DataOperPanel.on_select_data1">[docs]</a>    <span class="k">def</span> <span class="nf">on_select_data1</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">event</span><span class="o">=</span><span class="bp">None</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        On select data1</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">send_warnings</span><span class="p">(</span><span class="s1">&#39;&#39;</span><span class="p">)</span>
+        <span class="n">item</span> <span class="o">=</span> <span class="n">event</span><span class="o">.</span><span class="n">GetEventObject</span><span class="p">()</span>
+        <span class="n">pos</span> <span class="o">=</span> <span class="n">item</span><span class="o">.</span><span class="n">GetCurrentSelection</span><span class="p">()</span>
+        <span class="n">data</span> <span class="o">=</span> <span class="n">item</span><span class="o">.</span><span class="n">GetClientData</span><span class="p">(</span><span class="n">pos</span><span class="p">)</span>
+        <span class="k">if</span> <span class="n">data</span> <span class="o">==</span> <span class="bp">None</span><span class="p">:</span>
+            <span class="n">content</span> <span class="o">=</span> <span class="s2">&quot;?&quot;</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">put_text_pic</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">data1_pic</span><span class="p">,</span> <span class="n">content</span><span class="p">)</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">data1_pic</span><span class="o">.</span><span class="n">add_image</span><span class="p">(</span><span class="n">data</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">check_data_inputs</span><span class="p">()</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">output</span> <span class="o">!=</span> <span class="bp">None</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">output</span><span class="o">.</span><span class="n">name</span> <span class="o">=</span> <span class="nb">str</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">data_namectr</span><span class="o">.</span><span class="n">GetValue</span><span class="p">())</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">draw_output</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">output</span><span class="p">)</span></div>
+
+<div class="viewcode-block" id="DataOperPanel.on_select_operator"><a class="viewcode-back" href="../../../../../dev/api/sas.sasgui.perspectives.calculator.html#sas.sasgui.perspectives.calculator.data_operator.DataOperPanel.on_select_operator">[docs]</a>    <span class="k">def</span> <span class="nf">on_select_operator</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">event</span><span class="o">=</span><span class="bp">None</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        On Select an Operator</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">send_warnings</span><span class="p">(</span><span class="s1">&#39;&#39;</span><span class="p">)</span>
+        <span class="n">item</span> <span class="o">=</span> <span class="n">event</span><span class="o">.</span><span class="n">GetEventObject</span><span class="p">()</span>
+        <span class="n">text</span> <span class="o">=</span> <span class="n">item</span><span class="o">.</span><span class="n">GetValue</span><span class="p">()</span><span class="o">.</span><span class="n">strip</span><span class="p">()</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">put_text_pic</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">operator_pic</span><span class="p">,</span> <span class="n">content</span><span class="o">=</span><span class="n">text</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">check_data_inputs</span><span class="p">()</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">output</span> <span class="o">!=</span> <span class="bp">None</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">output</span><span class="o">.</span><span class="n">name</span> <span class="o">=</span> <span class="nb">str</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">data_namectr</span><span class="o">.</span><span class="n">GetValue</span><span class="p">())</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">draw_output</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">output</span><span class="p">)</span></div>
+
+<div class="viewcode-block" id="DataOperPanel.on_select_data2"><a class="viewcode-back" href="../../../../../dev/api/sas.sasgui.perspectives.calculator.html#sas.sasgui.perspectives.calculator.data_operator.DataOperPanel.on_select_data2">[docs]</a>    <span class="k">def</span> <span class="nf">on_select_data2</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">event</span><span class="o">=</span><span class="bp">None</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        On Selecting Data2</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">send_warnings</span><span class="p">(</span><span class="s1">&#39;&#39;</span><span class="p">)</span>
+        <span class="n">item</span> <span class="o">=</span> <span class="n">event</span><span class="o">.</span><span class="n">GetEventObject</span><span class="p">()</span>
+        <span class="n">text</span> <span class="o">=</span> <span class="n">item</span><span class="o">.</span><span class="n">GetValue</span><span class="p">()</span><span class="o">.</span><span class="n">strip</span><span class="p">()</span><span class="o">.</span><span class="n">lower</span><span class="p">()</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_show_numctrl</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">numberctr</span><span class="p">,</span> <span class="n">text</span> <span class="o">==</span> <span class="s1">&#39;number&#39;</span><span class="p">)</span>
+        <span class="n">pos</span> <span class="o">=</span> <span class="n">item</span><span class="o">.</span><span class="n">GetCurrentSelection</span><span class="p">()</span>
+        <span class="n">data</span> <span class="o">=</span> <span class="n">item</span><span class="o">.</span><span class="n">GetClientData</span><span class="p">(</span><span class="n">pos</span><span class="p">)</span>
+        <span class="n">content</span> <span class="o">=</span> <span class="s2">&quot;?&quot;</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">numberctr</span><span class="o">.</span><span class="n">IsShown</span><span class="p">()</span> <span class="ow">and</span> <span class="bp">self</span><span class="o">.</span><span class="n">numberctr</span><span class="o">.</span><span class="n">IsEnabled</span><span class="p">()):</span>
+            <span class="k">if</span> <span class="n">data</span> <span class="o">==</span> <span class="bp">None</span><span class="p">:</span>
+                <span class="n">content</span> <span class="o">=</span> <span class="s2">&quot;?&quot;</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">put_text_pic</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">data2_pic</span><span class="p">,</span> <span class="n">content</span><span class="p">)</span>
+            <span class="k">else</span><span class="p">:</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">data2_pic</span><span class="o">.</span><span class="n">add_image</span><span class="p">(</span><span class="n">data</span><span class="p">)</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">check_data_inputs</span><span class="p">()</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">content</span> <span class="o">=</span> <span class="nb">str</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">numberctr</span><span class="o">.</span><span class="n">GetValue</span><span class="p">()</span><span class="o">.</span><span class="n">strip</span><span class="p">())</span>
+            <span class="k">try</span><span class="p">:</span>
+                <span class="n">content</span> <span class="o">=</span> <span class="nb">float</span><span class="p">(</span><span class="n">content</span><span class="p">)</span>
+                <span class="n">data</span> <span class="o">=</span> <span class="n">content</span>
+            <span class="k">except</span><span class="p">:</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">_set_textctrl_color</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">numberctr</span><span class="p">,</span> <span class="s1">&#39;pink&#39;</span><span class="p">)</span>
+                <span class="n">content</span> <span class="o">=</span> <span class="s2">&quot;?&quot;</span>
+                <span class="n">data</span> <span class="o">=</span> <span class="bp">None</span>
+            <span class="n">item</span><span class="o">.</span><span class="n">SetClientData</span><span class="p">(</span><span class="n">pos</span><span class="p">,</span> <span class="n">data</span><span class="p">)</span>
+            <span class="k">if</span> <span class="n">data</span> <span class="o">!=</span> <span class="bp">None</span><span class="p">:</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">check_data_inputs</span><span class="p">()</span>
+
+            <span class="bp">self</span><span class="o">.</span><span class="n">put_text_pic</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">data2_pic</span><span class="p">,</span> <span class="n">content</span><span class="p">)</span>
+
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">output</span> <span class="o">!=</span> <span class="bp">None</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">output</span><span class="o">.</span><span class="n">name</span> <span class="o">=</span> <span class="nb">str</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">data_namectr</span><span class="o">.</span><span class="n">GetValue</span><span class="p">())</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">draw_output</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">output</span><span class="p">)</span></div>
+
+<div class="viewcode-block" id="DataOperPanel.put_text_pic"><a class="viewcode-back" href="../../../../../dev/api/sas.sasgui.perspectives.calculator.html#sas.sasgui.perspectives.calculator.data_operator.DataOperPanel.put_text_pic">[docs]</a>    <span class="k">def</span> <span class="nf">put_text_pic</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">pic</span><span class="o">=</span><span class="bp">None</span><span class="p">,</span> <span class="n">content</span><span class="o">=</span><span class="s1">&#39;&#39;</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Put text to the pic</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">pic</span><span class="o">.</span><span class="n">set_content</span><span class="p">(</span><span class="n">content</span><span class="p">)</span>
+        <span class="n">pic</span><span class="o">.</span><span class="n">add_text</span><span class="p">()</span>
+        <span class="n">pic</span><span class="o">.</span><span class="n">draw</span><span class="p">()</span></div>
+
+<div class="viewcode-block" id="DataOperPanel.check_data_inputs"><a class="viewcode-back" href="../../../../../dev/api/sas.sasgui.perspectives.calculator.html#sas.sasgui.perspectives.calculator.data_operator.DataOperPanel.check_data_inputs">[docs]</a>    <span class="k">def</span> <span class="nf">check_data_inputs</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Check data1 and data2 whether or not they are ready for operation</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_set_textctrl_color</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">data1_cbox</span><span class="p">,</span> <span class="s1">&#39;white&#39;</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_set_textctrl_color</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">data2_cbox</span><span class="p">,</span> <span class="s1">&#39;white&#39;</span><span class="p">)</span>
+        <span class="n">flag</span> <span class="o">=</span> <span class="bp">False</span>
+        <span class="n">pos1</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">data1_cbox</span><span class="o">.</span><span class="n">GetCurrentSelection</span><span class="p">()</span>
+        <span class="n">data1</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">data1_cbox</span><span class="o">.</span><span class="n">GetClientData</span><span class="p">(</span><span class="n">pos1</span><span class="p">)</span>
+        <span class="k">if</span> <span class="n">data1</span> <span class="o">==</span> <span class="bp">None</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">output</span> <span class="o">=</span> <span class="bp">None</span>
+            <span class="k">return</span> <span class="n">flag</span>
+        <span class="n">pos2</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">data2_cbox</span><span class="o">.</span><span class="n">GetCurrentSelection</span><span class="p">()</span>
+        <span class="n">data2</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">data2_cbox</span><span class="o">.</span><span class="n">GetClientData</span><span class="p">(</span><span class="n">pos2</span><span class="p">)</span>
+
+        <span class="k">if</span> <span class="n">data2</span> <span class="o">==</span> <span class="bp">None</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">output</span> <span class="o">=</span> <span class="bp">None</span>
+            <span class="k">return</span> <span class="n">flag</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">numberctr</span><span class="o">.</span><span class="n">IsShown</span><span class="p">():</span>
+            <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">numberctr</span><span class="o">.</span><span class="n">IsEnabled</span><span class="p">():</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">_set_textctrl_color</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">numberctr</span><span class="p">,</span> <span class="s1">&#39;white&#39;</span><span class="p">)</span>
+                <span class="k">try</span><span class="p">:</span>
+                    <span class="nb">float</span><span class="p">(</span><span class="n">data2</span><span class="p">)</span>
+                    <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">operator_cbox</span><span class="o">.</span><span class="n">GetValue</span><span class="p">()</span><span class="o">.</span><span class="n">strip</span><span class="p">()</span> <span class="o">==</span> <span class="s1">&#39;|&#39;</span><span class="p">:</span>
+                        <span class="n">msg</span> <span class="o">=</span> <span class="s2">&quot;DataOperation: This operation can not accept &quot;</span>
+                        <span class="n">msg</span> <span class="o">+=</span> <span class="s2">&quot;a float number.&quot;</span>
+                        <span class="bp">self</span><span class="o">.</span><span class="n">send_warnings</span><span class="p">(</span><span class="n">msg</span><span class="p">,</span> <span class="s1">&#39;error&#39;</span><span class="p">)</span>
+                        <span class="bp">self</span><span class="o">.</span><span class="n">_set_textctrl_color</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">numberctr</span><span class="p">,</span> <span class="s1">&#39;pink&#39;</span><span class="p">)</span>
+                        <span class="bp">self</span><span class="o">.</span><span class="n">output</span> <span class="o">=</span> <span class="bp">None</span>
+                        <span class="k">return</span> <span class="n">flag</span>
+                <span class="k">except</span><span class="p">:</span>
+                    <span class="n">msg</span> <span class="o">=</span> <span class="s2">&quot;DataOperation: Number requires a float number.&quot;</span>
+                    <span class="bp">self</span><span class="o">.</span><span class="n">send_warnings</span><span class="p">(</span><span class="n">msg</span><span class="p">,</span> <span class="s1">&#39;error&#39;</span><span class="p">)</span>
+                    <span class="bp">self</span><span class="o">.</span><span class="n">_set_textctrl_color</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">numberctr</span><span class="p">,</span> <span class="s1">&#39;pink&#39;</span><span class="p">)</span>
+                    <span class="bp">self</span><span class="o">.</span><span class="n">output</span> <span class="o">=</span> <span class="bp">None</span>
+                    <span class="k">return</span> <span class="n">flag</span>
+            <span class="k">else</span><span class="p">:</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">_set_textctrl_color</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">numberctr</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">color</span><span class="p">)</span>
+        <span class="k">elif</span> <span class="n">data1</span><span class="o">.</span><span class="n">__class__</span><span class="o">.</span><span class="n">__name__</span> <span class="o">!=</span> <span class="n">data2</span><span class="o">.</span><span class="n">__class__</span><span class="o">.</span><span class="n">__name__</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_set_textctrl_color</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">data1_cbox</span><span class="p">,</span> <span class="s1">&#39;pink&#39;</span><span class="p">)</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_set_textctrl_color</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">data2_cbox</span><span class="p">,</span> <span class="s1">&#39;pink&#39;</span><span class="p">)</span>
+            <span class="n">msg</span> <span class="o">=</span> <span class="s2">&quot;DataOperation: Data types must be same.&quot;</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">send_warnings</span><span class="p">(</span><span class="n">msg</span><span class="p">,</span> <span class="s1">&#39;error&#39;</span><span class="p">)</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">output</span> <span class="o">=</span> <span class="bp">None</span>
+            <span class="k">return</span> <span class="n">flag</span>
+        <span class="k">try</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">output</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">make_data_out</span><span class="p">(</span><span class="n">data1</span><span class="p">,</span> <span class="n">data2</span><span class="p">)</span>
+        <span class="k">except</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_check_newname</span><span class="p">()</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_set_textctrl_color</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">data1_cbox</span><span class="p">,</span> <span class="s1">&#39;pink&#39;</span><span class="p">)</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_set_textctrl_color</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">data2_cbox</span><span class="p">,</span> <span class="s1">&#39;pink&#39;</span><span class="p">)</span>
+            <span class="n">msg</span> <span class="o">=</span> <span class="s2">&quot;DataOperation: </span><span class="si">%s</span><span class="s2">&quot;</span> <span class="o">%</span> <span class="n">sys</span><span class="o">.</span><span class="n">exc_value</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">send_warnings</span><span class="p">(</span><span class="n">msg</span><span class="p">,</span> <span class="s1">&#39;error&#39;</span><span class="p">)</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">output</span> <span class="o">=</span> <span class="bp">None</span>
+            <span class="k">return</span> <span class="n">flag</span>
+        <span class="k">return</span> <span class="bp">True</span></div>
+
+<div class="viewcode-block" id="DataOperPanel.make_data_out"><a class="viewcode-back" href="../../../../../dev/api/sas.sasgui.perspectives.calculator.html#sas.sasgui.perspectives.calculator.data_operator.DataOperPanel.make_data_out">[docs]</a>    <span class="k">def</span> <span class="nf">make_data_out</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">data1</span><span class="p">,</span> <span class="n">data2</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Make a temp. data output set</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">output</span> <span class="o">=</span> <span class="bp">None</span>
+        <span class="n">pos</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">operator_cbox</span><span class="o">.</span><span class="n">GetCurrentSelection</span><span class="p">()</span>
+        <span class="n">operator</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">operator_cbox</span><span class="o">.</span><span class="n">GetClientData</span><span class="p">(</span><span class="n">pos</span><span class="p">)</span>
+        <span class="k">try</span><span class="p">:</span>
+            <span class="k">exec</span> <span class="s2">&quot;output = data1 </span><span class="si">%s</span><span class="s2"> data2&quot;</span> <span class="o">%</span> <span class="n">operator</span>
+        <span class="k">except</span><span class="p">:</span>
+            <span class="k">raise</span>
+        <span class="k">return</span> <span class="n">output</span></div>
+
+
+<div class="viewcode-block" id="DataOperPanel.draw_output"><a class="viewcode-back" href="../../../../../dev/api/sas.sasgui.perspectives.calculator.html#sas.sasgui.perspectives.calculator.data_operator.DataOperPanel.draw_output">[docs]</a>    <span class="k">def</span> <span class="nf">draw_output</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">output</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Draw output data(temp)</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">out</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">out_pic</span>
+        <span class="k">if</span> <span class="n">output</span> <span class="o">==</span> <span class="bp">None</span><span class="p">:</span>
+            <span class="n">content</span> <span class="o">=</span> <span class="s2">&quot;?&quot;</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">put_text_pic</span><span class="p">(</span><span class="n">out</span><span class="p">,</span> <span class="n">content</span><span class="p">)</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">out</span><span class="o">.</span><span class="n">add_image</span><span class="p">(</span><span class="n">output</span><span class="p">)</span>
+        <span class="n">wx</span><span class="o">.</span><span class="n">CallAfter</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">name_sizer</span><span class="o">.</span><span class="n">Layout</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">Layout</span><span class="p">()</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">Refresh</span><span class="p">()</span></div>
+
+    <span class="k">def</span> <span class="nf">_layout_button</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">            Do the layout for the button widgets</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">bt_apply</span> <span class="o">=</span> <span class="n">wx</span><span class="o">.</span><span class="n">Button</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="o">-</span><span class="mi">1</span><span class="p">,</span> <span class="s2">&quot;Apply&quot;</span><span class="p">,</span> <span class="n">size</span><span class="o">=</span><span class="p">(</span><span class="n">_BOX_WIDTH</span> <span class="o">/</span> <span class="mi">2</span><span class="p">,</span> <span class="o">-</span><span class="mi">1</span><span class="p">))</span>
+        <span class="n">app_tip</span> <span class="o">=</span> <span class="s2">&quot;Generate the Data and send to Data Explorer.&quot;</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">bt_apply</span><span class="o">.</span><span class="n">SetToolTipString</span><span class="p">(</span><span class="n">app_tip</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">bt_apply</span><span class="o">.</span><span class="n">Bind</span><span class="p">(</span><span class="n">wx</span><span class="o">.</span><span class="n">EVT_BUTTON</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">on_click_apply</span><span class="p">)</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">bt_help</span> <span class="o">=</span> <span class="n">wx</span><span class="o">.</span><span class="n">Button</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="o">-</span><span class="mi">1</span><span class="p">,</span> <span class="s2">&quot;HELP&quot;</span><span class="p">)</span>
+        <span class="n">app_tip</span> <span class="o">=</span> <span class="s2">&quot;Get help on Data Operations.&quot;</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">bt_help</span><span class="o">.</span><span class="n">SetToolTipString</span><span class="p">(</span><span class="n">app_tip</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">bt_help</span><span class="o">.</span><span class="n">Bind</span><span class="p">(</span><span class="n">wx</span><span class="o">.</span><span class="n">EVT_BUTTON</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">on_help</span><span class="p">)</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">bt_close</span> <span class="o">=</span> <span class="n">wx</span><span class="o">.</span><span class="n">Button</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="o">-</span><span class="mi">1</span><span class="p">,</span> <span class="s1">&#39;Close&#39;</span><span class="p">,</span> <span class="n">size</span><span class="o">=</span><span class="p">(</span><span class="n">_BOX_WIDTH</span> <span class="o">/</span> <span class="mi">2</span><span class="p">,</span> <span class="o">-</span><span class="mi">1</span><span class="p">))</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">bt_close</span><span class="o">.</span><span class="n">Bind</span><span class="p">(</span><span class="n">wx</span><span class="o">.</span><span class="n">EVT_BUTTON</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">on_close</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">bt_close</span><span class="o">.</span><span class="n">SetToolTipString</span><span class="p">(</span><span class="s2">&quot;Close this panel.&quot;</span><span class="p">)</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">button_sizer</span><span class="o">.</span><span class="n">AddMany</span><span class="p">([(</span><span class="n">PANEL_WIDTH</span> <span class="o">/</span> <span class="mi">2</span><span class="p">,</span> <span class="mi">25</span><span class="p">),</span>
+                                   <span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">bt_apply</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="n">wx</span><span class="o">.</span><span class="n">RIGHT</span><span class="p">,</span> <span class="mi">10</span><span class="p">),</span>
+                                   <span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">bt_help</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="n">wx</span><span class="o">.</span><span class="n">RIGHT</span><span class="p">,</span> <span class="mi">10</span><span class="p">),</span>
+                                   <span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">bt_close</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="n">wx</span><span class="o">.</span><span class="n">RIGHT</span><span class="p">,</span> <span class="mi">10</span><span class="p">)])</span>
+
+    <span class="k">def</span> <span class="nf">_do_layout</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Draw the current panel</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_define_structure</span><span class="p">()</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_layout_name</span><span class="p">()</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_layout_button</span><span class="p">()</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">main_sizer</span><span class="o">.</span><span class="n">AddMany</span><span class="p">([(</span><span class="bp">self</span><span class="o">.</span><span class="n">name_sizer</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="n">wx</span><span class="o">.</span><span class="n">EXPAND</span> <span class="o">|</span> <span class="n">wx</span><span class="o">.</span><span class="n">ALL</span><span class="p">,</span> <span class="mi">10</span><span class="p">),</span>
+                                <span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">button_sizer</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span>
+                                          <span class="n">wx</span><span class="o">.</span><span class="n">EXPAND</span> <span class="o">|</span> <span class="n">wx</span><span class="o">.</span><span class="n">TOP</span> <span class="o">|</span> <span class="n">wx</span><span class="o">.</span><span class="n">BOTTOM</span><span class="p">,</span> <span class="mi">5</span><span class="p">)])</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">SetSizer</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">main_sizer</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">SetScrollbars</span><span class="p">(</span><span class="mi">20</span><span class="p">,</span> <span class="mi">20</span><span class="p">,</span> <span class="mi">25</span><span class="p">,</span> <span class="mi">65</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">SetAutoLayout</span><span class="p">(</span><span class="bp">True</span><span class="p">)</span>
+
+<div class="viewcode-block" id="DataOperPanel.set_panel_on_focus"><a class="viewcode-back" href="../../../../../dev/api/sas.sasgui.perspectives.calculator.html#sas.sasgui.perspectives.calculator.data_operator.DataOperPanel.set_panel_on_focus">[docs]</a>    <span class="k">def</span> <span class="nf">set_panel_on_focus</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">event</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        On Focus at this window</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">if</span> <span class="n">event</span> <span class="o">!=</span> <span class="bp">None</span><span class="p">:</span>
+            <span class="n">event</span><span class="o">.</span><span class="n">Skip</span><span class="p">()</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_data</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">get_datalist</span><span class="p">()</span>
+        <span class="k">if</span> <span class="n">ON_MAC</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">fill_data_combox</span><span class="p">()</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">children</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">GetChildren</span><span class="p">()</span>
+            <span class="c1"># update the list only when it is on the top</span>
+            <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">FindFocus</span><span class="p">()</span> <span class="ow">in</span> <span class="n">children</span><span class="p">:</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">fill_data_combox</span><span class="p">()</span></div>
+
+<div class="viewcode-block" id="DataOperPanel.fill_oprator_combox"><a class="viewcode-back" href="../../../../../dev/api/sas.sasgui.perspectives.calculator.html#sas.sasgui.perspectives.calculator.data_operator.DataOperPanel.fill_oprator_combox">[docs]</a>    <span class="k">def</span> <span class="nf">fill_oprator_combox</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        fill the current combobox with the operator</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">operator_list</span> <span class="o">=</span> <span class="p">[</span><span class="s1">&#39; +&#39;</span><span class="p">,</span> <span class="s1">&#39; -&#39;</span><span class="p">,</span> <span class="s1">&#39; *&#39;</span><span class="p">,</span> <span class="s2">&quot; /&quot;</span><span class="p">,</span> <span class="s2">&quot; |&quot;</span><span class="p">]</span>
+        <span class="k">for</span> <span class="n">oper</span> <span class="ow">in</span> <span class="n">operator_list</span><span class="p">:</span>
+            <span class="n">pos</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">operator_cbox</span><span class="o">.</span><span class="n">Append</span><span class="p">(</span><span class="nb">str</span><span class="p">(</span><span class="n">oper</span><span class="p">))</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">operator_cbox</span><span class="o">.</span><span class="n">SetClientData</span><span class="p">(</span><span class="n">pos</span><span class="p">,</span> <span class="nb">str</span><span class="p">(</span><span class="n">oper</span><span class="o">.</span><span class="n">strip</span><span class="p">()))</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">operator_cbox</span><span class="o">.</span><span class="n">SetSelection</span><span class="p">(</span><span class="mi">0</span><span class="p">)</span></div>
+
+
+<div class="viewcode-block" id="DataOperPanel.fill_data_combox"><a class="viewcode-back" href="../../../../../dev/api/sas.sasgui.perspectives.calculator.html#sas.sasgui.perspectives.calculator.data_operator.DataOperPanel.fill_data_combox">[docs]</a>    <span class="k">def</span> <span class="nf">fill_data_combox</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        fill the current combobox with the available data</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">pos_pre1</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">data1_cbox</span><span class="o">.</span><span class="n">GetCurrentSelection</span><span class="p">()</span>
+        <span class="n">pos_pre2</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">data2_cbox</span><span class="o">.</span><span class="n">GetCurrentSelection</span><span class="p">()</span>
+        <span class="n">current1</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">data1_cbox</span><span class="o">.</span><span class="n">GetLabel</span><span class="p">()</span>
+        <span class="n">current2</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">data2_cbox</span><span class="o">.</span><span class="n">GetLabel</span><span class="p">()</span>
+        <span class="k">if</span> <span class="n">pos_pre1</span> <span class="o">&lt;</span> <span class="mi">0</span><span class="p">:</span>
+            <span class="n">pos_pre1</span> <span class="o">=</span> <span class="mi">0</span>
+        <span class="k">if</span> <span class="n">pos_pre2</span> <span class="o">&lt;</span> <span class="mi">0</span><span class="p">:</span>
+            <span class="n">pos_pre2</span> <span class="o">=</span> <span class="mi">0</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">data1_cbox</span><span class="o">.</span><span class="n">Clear</span><span class="p">()</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">data2_cbox</span><span class="o">.</span><span class="n">Clear</span><span class="p">()</span>
+
+        <span class="k">if</span> <span class="ow">not</span> <span class="bp">self</span><span class="o">.</span><span class="n">_data</span><span class="p">:</span>
+            <span class="n">pos</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">data1_cbox</span><span class="o">.</span><span class="n">Append</span><span class="p">(</span><span class="s1">&#39;No Data Available&#39;</span><span class="p">)</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">data1_cbox</span><span class="o">.</span><span class="n">SetSelection</span><span class="p">(</span><span class="n">pos</span><span class="p">)</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">data1_cbox</span><span class="o">.</span><span class="n">SetClientData</span><span class="p">(</span><span class="n">pos</span><span class="p">,</span> <span class="bp">None</span><span class="p">)</span>
+            <span class="n">pos2</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">data2_cbox</span><span class="o">.</span><span class="n">Append</span><span class="p">(</span><span class="s1">&#39;No Data Available&#39;</span><span class="p">)</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">data2_cbox</span><span class="o">.</span><span class="n">SetSelection</span><span class="p">(</span><span class="n">pos2</span><span class="p">)</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">data2_cbox</span><span class="o">.</span><span class="n">SetClientData</span><span class="p">(</span><span class="n">pos2</span><span class="p">,</span> <span class="bp">None</span><span class="p">)</span>
+            <span class="k">return</span>
+        <span class="n">pos1</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">data1_cbox</span><span class="o">.</span><span class="n">Append</span><span class="p">(</span><span class="s1">&#39;Select Data&#39;</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">data1_cbox</span><span class="o">.</span><span class="n">SetSelection</span><span class="p">(</span><span class="n">pos1</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">data1_cbox</span><span class="o">.</span><span class="n">SetClientData</span><span class="p">(</span><span class="n">pos1</span><span class="p">,</span> <span class="bp">None</span><span class="p">)</span>
+        <span class="n">pos2</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">data2_cbox</span><span class="o">.</span><span class="n">Append</span><span class="p">(</span><span class="s1">&#39;Select Data&#39;</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">data2_cbox</span><span class="o">.</span><span class="n">SetSelection</span><span class="p">(</span><span class="n">pos2</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">data2_cbox</span><span class="o">.</span><span class="n">SetClientData</span><span class="p">(</span><span class="n">pos2</span><span class="p">,</span> <span class="bp">None</span><span class="p">)</span>
+        <span class="n">pos3</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">data2_cbox</span><span class="o">.</span><span class="n">Append</span><span class="p">(</span><span class="s1">&#39;Number&#39;</span><span class="p">)</span>
+        <span class="n">val</span> <span class="o">=</span> <span class="bp">None</span>
+        <span class="k">if</span> <span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">numberctr</span><span class="o">.</span><span class="n">IsShown</span><span class="p">()</span> <span class="ow">and</span> <span class="bp">self</span><span class="o">.</span><span class="n">numberctr</span><span class="o">.</span><span class="n">IsEnabled</span><span class="p">()):</span>
+            <span class="k">try</span><span class="p">:</span>
+                <span class="n">val</span> <span class="o">=</span> <span class="nb">float</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">numberctr</span><span class="o">.</span><span class="n">GetValue</span><span class="p">())</span>
+            <span class="k">except</span><span class="p">:</span>
+                <span class="n">val</span> <span class="o">=</span> <span class="bp">None</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">data2_cbox</span><span class="o">.</span><span class="n">SetClientData</span><span class="p">(</span><span class="n">pos3</span><span class="p">,</span> <span class="n">val</span><span class="p">)</span>
+        <span class="n">dnames</span> <span class="o">=</span> <span class="p">[]</span>
+        <span class="n">ids</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_data</span><span class="o">.</span><span class="n">keys</span><span class="p">()</span>
+        <span class="k">for</span> <span class="nb">id</span> <span class="ow">in</span> <span class="n">ids</span><span class="p">:</span>
+            <span class="k">if</span> <span class="nb">id</span> <span class="o">!=</span> <span class="bp">None</span><span class="p">:</span>
+                <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">_data</span><span class="p">[</span><span class="nb">id</span><span class="p">]</span><span class="o">.</span><span class="n">data</span> <span class="o">!=</span> <span class="bp">None</span><span class="p">:</span>
+                    <span class="n">dnames</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_data</span><span class="p">[</span><span class="nb">id</span><span class="p">]</span><span class="o">.</span><span class="n">data</span><span class="o">.</span><span class="n">name</span><span class="p">)</span>
+                <span class="k">else</span><span class="p">:</span>
+                    <span class="n">theory_list</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_data</span><span class="p">[</span><span class="nb">id</span><span class="p">]</span><span class="o">.</span><span class="n">get_theory</span><span class="p">()</span>
+                    <span class="n">theory</span><span class="p">,</span> <span class="n">_</span> <span class="o">=</span> <span class="n">theory_list</span><span class="o">.</span><span class="n">values</span><span class="p">()[</span><span class="mi">0</span><span class="p">]</span>
+                    <span class="n">dnames</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">theory</span><span class="o">.</span><span class="n">name</span><span class="p">)</span>
+        <span class="n">ind</span> <span class="o">=</span> <span class="n">numpy</span><span class="o">.</span><span class="n">argsort</span><span class="p">(</span><span class="n">dnames</span><span class="p">)</span>
+        <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">ind</span><span class="p">)</span> <span class="o">&gt;</span> <span class="mi">0</span><span class="p">:</span>
+            <span class="n">val_list</span> <span class="o">=</span> <span class="n">numpy</span><span class="o">.</span><span class="n">array</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_data</span><span class="o">.</span><span class="n">values</span><span class="p">())[</span><span class="n">ind</span><span class="p">]</span>
+            <span class="k">for</span> <span class="n">datastate</span> <span class="ow">in</span> <span class="n">val_list</span><span class="p">:</span>
+                <span class="n">data</span> <span class="o">=</span> <span class="n">datastate</span><span class="o">.</span><span class="n">data</span>
+                <span class="k">if</span> <span class="n">data</span> <span class="o">!=</span> <span class="bp">None</span><span class="p">:</span>
+                    <span class="n">name</span> <span class="o">=</span> <span class="n">data</span><span class="o">.</span><span class="n">name</span>
+                    <span class="n">pos1</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">data1_cbox</span><span class="o">.</span><span class="n">Append</span><span class="p">(</span><span class="nb">str</span><span class="p">(</span><span class="n">name</span><span class="p">))</span>
+                    <span class="bp">self</span><span class="o">.</span><span class="n">data1_cbox</span><span class="o">.</span><span class="n">SetClientData</span><span class="p">(</span><span class="n">pos1</span><span class="p">,</span> <span class="n">data</span><span class="p">)</span>
+                    <span class="n">pos2</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">data2_cbox</span><span class="o">.</span><span class="n">Append</span><span class="p">(</span><span class="nb">str</span><span class="p">(</span><span class="n">name</span><span class="p">))</span>
+                    <span class="bp">self</span><span class="o">.</span><span class="n">data2_cbox</span><span class="o">.</span><span class="n">SetClientData</span><span class="p">(</span><span class="n">pos2</span><span class="p">,</span> <span class="n">data</span><span class="p">)</span>
+                    <span class="k">if</span> <span class="nb">str</span><span class="p">(</span><span class="n">current1</span><span class="p">)</span> <span class="o">==</span> <span class="nb">str</span><span class="p">(</span><span class="n">name</span><span class="p">):</span>
+                      <span class="n">pos_pre1</span> <span class="o">=</span> <span class="n">pos1</span>
+                    <span class="k">if</span> <span class="nb">str</span><span class="p">(</span><span class="n">current2</span><span class="p">)</span> <span class="o">==</span> <span class="nb">str</span><span class="p">(</span><span class="n">name</span><span class="p">):</span>
+                      <span class="n">pos_pre2</span> <span class="o">=</span> <span class="n">pos2</span>
+                <span class="k">try</span><span class="p">:</span>
+                    <span class="n">theory_list</span> <span class="o">=</span> <span class="n">datastate</span><span class="o">.</span><span class="n">get_theory</span><span class="p">()</span>
+                    <span class="k">for</span> <span class="n">theory</span><span class="p">,</span> <span class="n">_</span> <span class="ow">in</span> <span class="n">theory_list</span><span class="o">.</span><span class="n">values</span><span class="p">():</span>
+                        <span class="n">th_name</span> <span class="o">=</span> <span class="n">theory</span><span class="o">.</span><span class="n">name</span>
+                        <span class="n">posth1</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">data1_cbox</span><span class="o">.</span><span class="n">Append</span><span class="p">(</span><span class="nb">str</span><span class="p">(</span><span class="n">th_name</span><span class="p">))</span>
+                        <span class="bp">self</span><span class="o">.</span><span class="n">data1_cbox</span><span class="o">.</span><span class="n">SetClientData</span><span class="p">(</span><span class="n">posth1</span><span class="p">,</span> <span class="n">theory</span><span class="p">)</span>
+                        <span class="n">posth2</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">data2_cbox</span><span class="o">.</span><span class="n">Append</span><span class="p">(</span><span class="nb">str</span><span class="p">(</span><span class="n">th_name</span><span class="p">))</span>
+                        <span class="bp">self</span><span class="o">.</span><span class="n">data2_cbox</span><span class="o">.</span><span class="n">SetClientData</span><span class="p">(</span><span class="n">posth2</span><span class="p">,</span> <span class="n">theory</span><span class="p">)</span>
+                        <span class="k">if</span> <span class="nb">str</span><span class="p">(</span><span class="n">current1</span><span class="p">)</span> <span class="o">==</span> <span class="nb">str</span><span class="p">(</span><span class="n">th_name</span><span class="p">):</span>
+                            <span class="n">pos_pre1</span> <span class="o">=</span> <span class="n">posth1</span>
+                        <span class="k">if</span> <span class="nb">str</span><span class="p">(</span><span class="n">current2</span><span class="p">)</span> <span class="o">==</span> <span class="nb">str</span><span class="p">(</span><span class="n">th_name</span><span class="p">):</span>
+                            <span class="n">pos_pre2</span> <span class="o">=</span> <span class="n">posth2</span>
+                <span class="k">except</span><span class="p">:</span>
+                    <span class="k">continue</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">data1_cbox</span><span class="o">.</span><span class="n">SetSelection</span><span class="p">(</span><span class="n">pos_pre1</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">data2_cbox</span><span class="o">.</span><span class="n">SetSelection</span><span class="p">(</span><span class="n">pos_pre2</span><span class="p">)</span></div>
+
+<div class="viewcode-block" id="DataOperPanel.get_datalist"><a class="viewcode-back" href="../../../../../dev/api/sas.sasgui.perspectives.calculator.html#sas.sasgui.perspectives.calculator.data_operator.DataOperPanel.get_datalist">[docs]</a>    <span class="k">def</span> <span class="nf">get_datalist</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">data_manager</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">parent</span><span class="o">.</span><span class="n">parent</span><span class="o">.</span><span class="n">get_data_manager</span><span class="p">()</span>
+        <span class="k">if</span> <span class="n">data_manager</span> <span class="o">!=</span> <span class="bp">None</span><span class="p">:</span>
+            <span class="k">return</span>  <span class="n">data_manager</span><span class="o">.</span><span class="n">get_all_data</span><span class="p">()</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="k">return</span> <span class="p">{}</span></div>
+
+<div class="viewcode-block" id="DataOperPanel.on_click_apply"><a class="viewcode-back" href="../../../../../dev/api/sas.sasgui.perspectives.calculator.html#sas.sasgui.perspectives.calculator.data_operator.DataOperPanel.on_click_apply">[docs]</a>    <span class="k">def</span> <span class="nf">on_click_apply</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">event</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        changes are saved in data object imported to edit</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">send_warnings</span><span class="p">(</span><span class="s1">&#39;&#39;</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">data_namectr</span><span class="o">.</span><span class="n">SetBackgroundColour</span><span class="p">(</span><span class="s1">&#39;white&#39;</span><span class="p">)</span>
+        <span class="n">state_list</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">get_datalist</span><span class="p">()</span><span class="o">.</span><span class="n">values</span><span class="p">()</span>
+        <span class="n">name</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">data_namectr</span><span class="o">.</span><span class="n">GetValue</span><span class="p">()</span><span class="o">.</span><span class="n">strip</span><span class="p">()</span>
+        <span class="n">name_list</span> <span class="o">=</span> <span class="p">[]</span>
+        <span class="k">for</span> <span class="n">state</span> <span class="ow">in</span> <span class="n">state_list</span><span class="p">:</span>
+            <span class="k">if</span> <span class="n">state</span><span class="o">.</span><span class="n">data</span> <span class="o">==</span> <span class="bp">None</span><span class="p">:</span>
+                <span class="n">theory_list</span> <span class="o">=</span> <span class="n">state</span><span class="o">.</span><span class="n">get_theory</span><span class="p">()</span>
+                <span class="n">theory</span><span class="p">,</span> <span class="n">_</span> <span class="o">=</span> <span class="n">theory_list</span><span class="o">.</span><span class="n">values</span><span class="p">()[</span><span class="mi">0</span><span class="p">]</span>
+                <span class="n">d_name</span> <span class="o">=</span> <span class="nb">str</span><span class="p">(</span><span class="n">theory</span><span class="o">.</span><span class="n">name</span><span class="p">)</span>
+            <span class="k">else</span><span class="p">:</span>
+                <span class="n">d_name</span> <span class="o">=</span> <span class="nb">str</span><span class="p">(</span><span class="n">state</span><span class="o">.</span><span class="n">data</span><span class="o">.</span><span class="n">name</span><span class="p">)</span>
+            <span class="n">name_list</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">d_name</span><span class="p">)</span>
+        <span class="k">if</span> <span class="n">name</span> <span class="ow">in</span> <span class="n">name_list</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_set_textctrl_color</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">data_namectr</span><span class="p">,</span> <span class="s1">&#39;pink&#39;</span><span class="p">)</span>
+            <span class="n">msg</span> <span class="o">=</span> <span class="s2">&quot;The Output Data Name already exists...   &quot;</span>
+            <span class="n">wx</span><span class="o">.</span><span class="n">MessageBox</span><span class="p">(</span><span class="n">msg</span><span class="p">,</span> <span class="s1">&#39;Error&#39;</span><span class="p">)</span>
+            <span class="k">return</span>
+        <span class="k">if</span> <span class="n">name</span> <span class="o">==</span> <span class="s1">&#39;&#39;</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_set_textctrl_color</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">data_namectr</span><span class="p">,</span> <span class="s1">&#39;pink&#39;</span><span class="p">)</span>
+            <span class="n">msg</span> <span class="o">=</span> <span class="s2">&quot;Please type the output data name first...   &quot;</span>
+            <span class="n">wx</span><span class="o">.</span><span class="n">MessageBox</span><span class="p">(</span><span class="n">msg</span><span class="p">,</span> <span class="s1">&#39;Error&#39;</span><span class="p">)</span>
+            <span class="k">return</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">output</span> <span class="o">==</span> <span class="bp">None</span><span class="p">:</span>
+            <span class="n">msg</span> <span class="o">=</span> <span class="s2">&quot;No Output Data has been generated...   &quot;</span>
+            <span class="n">wx</span><span class="o">.</span><span class="n">MessageBox</span><span class="p">(</span><span class="n">msg</span><span class="p">,</span> <span class="s1">&#39;Error&#39;</span><span class="p">)</span>
+            <span class="k">return</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">numberctr</span><span class="o">.</span><span class="n">IsEnabled</span><span class="p">()</span> <span class="ow">and</span> <span class="bp">self</span><span class="o">.</span><span class="n">numberctr</span><span class="o">.</span><span class="n">IsShown</span><span class="p">():</span>
+            <span class="n">valid_num</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">on_number</span><span class="p">(</span><span class="n">control</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">numberctr</span><span class="p">)</span>
+            <span class="k">if</span> <span class="ow">not</span> <span class="n">valid_num</span><span class="p">:</span>
+                <span class="k">return</span>
+        <span class="c1"># send data to data manager</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">output</span><span class="o">.</span><span class="n">name</span> <span class="o">=</span> <span class="n">name</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">output</span><span class="o">.</span><span class="n">run</span> <span class="o">=</span> <span class="s2">&quot;Data Operation&quot;</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">output</span><span class="o">.</span><span class="n">instrument</span> <span class="o">=</span> <span class="s2">&quot;SasView&quot;</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">output</span><span class="o">.</span><span class="n">id</span> <span class="o">=</span> <span class="nb">str</span><span class="p">(</span><span class="n">name</span><span class="p">)</span> <span class="o">+</span> <span class="nb">str</span><span class="p">(</span><span class="n">time</span><span class="o">.</span><span class="n">time</span><span class="p">())</span>
+        <span class="n">data</span> <span class="o">=</span> <span class="p">{</span><span class="bp">self</span><span class="o">.</span><span class="n">output</span><span class="o">.</span><span class="n">id</span> <span class="p">:</span><span class="bp">self</span><span class="o">.</span><span class="n">output</span><span class="p">}</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">parent</span><span class="o">.</span><span class="n">parent</span><span class="o">.</span><span class="n">add_data</span><span class="p">(</span><span class="n">data</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">name_sizer</span><span class="o">.</span><span class="n">Layout</span><span class="p">()</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">Refresh</span><span class="p">()</span>
+        <span class="c1">#must post event here</span>
+        <span class="n">event</span><span class="o">.</span><span class="n">Skip</span><span class="p">()</span></div>
+
+<div class="viewcode-block" id="DataOperPanel.on_help"><a class="viewcode-back" href="../../../../../dev/api/sas.sasgui.perspectives.calculator.html#sas.sasgui.perspectives.calculator.data_operator.DataOperPanel.on_help">[docs]</a>    <span class="k">def</span> <span class="nf">on_help</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">event</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Bring up the Data Operations Panel Documentation whenever</span>
+<span class="sd">        the HELP button is clicked.</span>
+
+<span class="sd">        Calls DocumentationWindow with the path of the location within the</span>
+<span class="sd">        documentation tree (after /doc/ ....&quot;.  Note that when using old</span>
+<span class="sd">        versions of Wx (before 2.9) and thus not the release version of</span>
+<span class="sd">        installers, the help comes up at the top level of the file as</span>
+<span class="sd">        webbrowser does not pass anything past the # to the browser when it is</span>
+<span class="sd">        running &quot;file:///....&quot;</span>
+
+<span class="sd">    :param evt: Triggers on clicking the help button</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+
+        <span class="n">_TreeLocation</span> <span class="o">=</span> <span class="s2">&quot;user/sasgui/perspectives/calculator/&quot;</span>
+        <span class="n">_TreeLocation</span> <span class="o">+=</span> <span class="s2">&quot;data_operator_help.html&quot;</span>
+        <span class="n">_doc_viewer</span> <span class="o">=</span> <span class="n">DocumentationWindow</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="o">-</span><span class="mi">1</span><span class="p">,</span> <span class="n">_TreeLocation</span><span class="p">,</span> <span class="s2">&quot;&quot;</span><span class="p">,</span>
+                                          <span class="s2">&quot;Data Operation Help&quot;</span><span class="p">)</span></div>
+
+<div class="viewcode-block" id="DataOperPanel.disconnect_panels"><a class="viewcode-back" href="../../../../../dev/api/sas.sasgui.perspectives.calculator.html#sas.sasgui.perspectives.calculator.data_operator.DataOperPanel.disconnect_panels">[docs]</a>    <span class="k">def</span> <span class="nf">disconnect_panels</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">out_pic</span><span class="o">.</span><span class="n">connect</span><span class="o">.</span><span class="n">disconnect</span><span class="p">()</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">equal_pic</span><span class="o">.</span><span class="n">connect</span><span class="o">.</span><span class="n">disconnect</span><span class="p">()</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">data1_pic</span><span class="o">.</span><span class="n">connect</span><span class="o">.</span><span class="n">disconnect</span><span class="p">()</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">operator_pic</span><span class="o">.</span><span class="n">connect</span><span class="o">.</span><span class="n">disconnect</span><span class="p">()</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">data2_pic</span><span class="o">.</span><span class="n">connect</span><span class="o">.</span><span class="n">disconnect</span><span class="p">()</span></div>
+
+<div class="viewcode-block" id="DataOperPanel.on_close"><a class="viewcode-back" href="../../../../../dev/api/sas.sasgui.perspectives.calculator.html#sas.sasgui.perspectives.calculator.data_operator.DataOperPanel.on_close">[docs]</a>    <span class="k">def</span> <span class="nf">on_close</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">event</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        leave data as it is and close</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">parent</span><span class="o">.</span><span class="n">OnClose</span><span class="p">()</span></div>
+
+<div class="viewcode-block" id="DataOperPanel.set_plot_unfocus"><a class="viewcode-back" href="../../../../../dev/api/sas.sasgui.perspectives.calculator.html#sas.sasgui.perspectives.calculator.data_operator.DataOperPanel.set_plot_unfocus">[docs]</a>    <span class="k">def</span> <span class="nf">set_plot_unfocus</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Unfocus on right click</span>
+<span class="sd">        &quot;&quot;&quot;</span></div>
+
+<div class="viewcode-block" id="DataOperPanel.send_warnings"><a class="viewcode-back" href="../../../../../dev/api/sas.sasgui.perspectives.calculator.html#sas.sasgui.perspectives.calculator.data_operator.DataOperPanel.send_warnings">[docs]</a>    <span class="k">def</span> <span class="nf">send_warnings</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">msg</span><span class="o">=</span><span class="s1">&#39;&#39;</span><span class="p">,</span> <span class="n">info</span><span class="o">=</span><span class="s1">&#39;info&#39;</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Send warning to status bar</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">wx</span><span class="o">.</span><span class="n">PostEvent</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">parent</span><span class="o">.</span><span class="n">parent</span><span class="p">,</span> <span class="n">StatusEvent</span><span class="p">(</span><span class="n">status</span><span class="o">=</span><span class="n">msg</span><span class="p">,</span> <span class="n">info</span><span class="o">=</span><span class="n">info</span><span class="p">))</span></div></div>
+
+<div class="viewcode-block" id="SmallPanel"><a class="viewcode-back" href="../../../../../dev/api/sas.sasgui.perspectives.calculator.html#sas.sasgui.perspectives.calculator.data_operator.SmallPanel">[docs]</a><span class="k">class</span> <span class="nc">SmallPanel</span><span class="p">(</span><span class="n">PlotPanel</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    PlotPanel for Quick plot and masking plot</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">parent</span><span class="p">,</span> <span class="nb">id</span><span class="o">=</span> <span class="o">-</span><span class="mi">1</span><span class="p">,</span> <span class="n">is_number</span><span class="o">=</span><span class="bp">False</span><span class="p">,</span> <span class="n">content</span><span class="o">=</span><span class="s1">&#39;?&#39;</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">PlotPanel</span><span class="o">.</span><span class="n">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">parent</span><span class="p">,</span> <span class="nb">id</span><span class="o">=</span><span class="nb">id</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">is_number</span> <span class="o">=</span> <span class="n">is_number</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">content</span> <span class="o">=</span> <span class="n">content</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">point</span> <span class="o">=</span> <span class="bp">None</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">position</span> <span class="o">=</span> <span class="p">(</span><span class="mf">0.4</span><span class="p">,</span> <span class="mf">0.5</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">scale</span> <span class="o">=</span> <span class="s1">&#39;linear&#39;</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">prevXtrans</span> <span class="o">=</span> <span class="s2">&quot;x&quot;</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">prevYtrans</span> <span class="o">=</span> <span class="s2">&quot;y&quot;</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">viewModel</span> <span class="o">=</span> <span class="s2">&quot;--&quot;</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">subplot</span><span class="o">.</span><span class="n">set_xticks</span><span class="p">([])</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">subplot</span><span class="o">.</span><span class="n">set_yticks</span><span class="p">([])</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">add_text</span><span class="p">()</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">figure</span><span class="o">.</span><span class="n">subplots_adjust</span><span class="p">(</span><span class="n">left</span><span class="o">=</span><span class="mf">0.1</span><span class="p">,</span> <span class="n">bottom</span><span class="o">=</span><span class="mf">0.1</span><span class="p">)</span>
+
+<div class="viewcode-block" id="SmallPanel.set_content"><a class="viewcode-back" href="../../../../../dev/api/sas.sasgui.perspectives.calculator.html#sas.sasgui.perspectives.calculator.data_operator.SmallPanel.set_content">[docs]</a>    <span class="k">def</span> <span class="nf">set_content</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">content</span><span class="o">=</span><span class="s1">&#39;&#39;</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Set text content</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">content</span> <span class="o">=</span> <span class="nb">str</span><span class="p">(</span><span class="n">content</span><span class="p">)</span></div>
+
+<div class="viewcode-block" id="SmallPanel.add_toolbar"><a class="viewcode-back" href="../../../../../dev/api/sas.sasgui.perspectives.calculator.html#sas.sasgui.perspectives.calculator.data_operator.SmallPanel.add_toolbar">[docs]</a>    <span class="k">def</span> <span class="nf">add_toolbar</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Add toolbar</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="c1"># Not implemented</span>
+        <span class="k">pass</span></div>
+
+<div class="viewcode-block" id="SmallPanel.on_set_focus"><a class="viewcode-back" href="../../../../../dev/api/sas.sasgui.perspectives.calculator.html#sas.sasgui.perspectives.calculator.data_operator.SmallPanel.on_set_focus">[docs]</a>    <span class="k">def</span> <span class="nf">on_set_focus</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">event</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        send to the parenet the current panel on focus</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">pass</span></div>
+
+<div class="viewcode-block" id="SmallPanel.add_image"><a class="viewcode-back" href="../../../../../dev/api/sas.sasgui.perspectives.calculator.html#sas.sasgui.perspectives.calculator.data_operator.SmallPanel.add_image">[docs]</a>    <span class="k">def</span> <span class="nf">add_image</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">plot</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Add Image</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">content</span> <span class="o">=</span> <span class="s1">&#39;&#39;</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">textList</span> <span class="o">=</span> <span class="p">[]</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">plots</span> <span class="o">=</span> <span class="p">{}</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">clear</span><span class="p">()</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">point</span> <span class="o">=</span> <span class="n">plot</span>
+        <span class="k">try</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">figure</span><span class="o">.</span><span class="n">delaxes</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">figure</span><span class="o">.</span><span class="n">axes</span><span class="p">[</span><span class="mi">0</span><span class="p">])</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">subplot</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">figure</span><span class="o">.</span><span class="n">add_subplot</span><span class="p">(</span><span class="mi">111</span><span class="p">)</span>
+            <span class="c1">#self.figure.delaxes(self.figure.axes[1])</span>
+        <span class="k">except</span><span class="p">:</span>
+            <span class="k">pass</span>
+        <span class="k">try</span><span class="p">:</span>
+            <span class="n">name</span> <span class="o">=</span> <span class="n">plot</span><span class="o">.</span><span class="n">name</span>
+        <span class="k">except</span><span class="p">:</span>
+            <span class="n">name</span> <span class="o">=</span> <span class="n">plot</span><span class="o">.</span><span class="n">filename</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">plots</span><span class="p">[</span><span class="n">name</span><span class="p">]</span> <span class="o">=</span> <span class="n">plot</span>
+
+        <span class="c1">#init graph</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">graph</span> <span class="o">=</span> <span class="n">Graph</span><span class="p">()</span>
+
+        <span class="c1">#add plot</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">graph</span><span class="o">.</span><span class="n">add</span><span class="p">(</span><span class="n">plot</span><span class="p">)</span>
+        <span class="c1">#draw</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">graph</span><span class="o">.</span><span class="n">render</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span>
+
+        <span class="k">try</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">figure</span><span class="o">.</span><span class="n">delaxes</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">figure</span><span class="o">.</span><span class="n">axes</span><span class="p">[</span><span class="mi">1</span><span class="p">])</span>
+        <span class="k">except</span><span class="p">:</span>
+            <span class="k">pass</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">subplot</span><span class="o">.</span><span class="n">figure</span><span class="o">.</span><span class="n">canvas</span><span class="o">.</span><span class="n">resizing</span> <span class="o">=</span> <span class="bp">False</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">subplot</span><span class="o">.</span><span class="n">tick_params</span><span class="p">(</span><span class="n">axis</span><span class="o">=</span><span class="s1">&#39;both&#39;</span><span class="p">,</span> <span class="n">labelsize</span><span class="o">=</span><span class="mi">9</span><span class="p">)</span>
+        <span class="c1"># Draw zero axis lines</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">subplot</span><span class="o">.</span><span class="n">axhline</span><span class="p">(</span><span class="n">linewidth</span><span class="o">=</span><span class="mi">1</span><span class="p">,</span> <span class="n">color</span><span class="o">=</span><span class="s1">&#39;r&#39;</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">subplot</span><span class="o">.</span><span class="n">axvline</span><span class="p">(</span><span class="n">linewidth</span><span class="o">=</span><span class="mi">1</span><span class="p">,</span> <span class="n">color</span><span class="o">=</span><span class="s1">&#39;r&#39;</span><span class="p">)</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">erase_legend</span><span class="p">()</span>
+        <span class="k">try</span><span class="p">:</span>
+            <span class="c1"># mpl &gt;= 1.1.0</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">figure</span><span class="o">.</span><span class="n">tight_layout</span><span class="p">()</span>
+        <span class="k">except</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">figure</span><span class="o">.</span><span class="n">subplots_adjust</span><span class="p">(</span><span class="n">left</span><span class="o">=</span><span class="mf">0.1</span><span class="p">,</span> <span class="n">bottom</span><span class="o">=</span><span class="mf">0.1</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">subplot</span><span class="o">.</span><span class="n">figure</span><span class="o">.</span><span class="n">canvas</span><span class="o">.</span><span class="n">draw</span><span class="p">()</span></div>
+
+<div class="viewcode-block" id="SmallPanel.add_text"><a class="viewcode-back" href="../../../../../dev/api/sas.sasgui.perspectives.calculator.html#sas.sasgui.perspectives.calculator.data_operator.SmallPanel.add_text">[docs]</a>    <span class="k">def</span> <span class="nf">add_text</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Text in the plot</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="bp">self</span><span class="o">.</span><span class="n">is_number</span><span class="p">:</span>
+            <span class="k">return</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">clear</span><span class="p">()</span>
+        <span class="k">try</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">figure</span><span class="o">.</span><span class="n">delaxes</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">figure</span><span class="o">.</span><span class="n">axes</span><span class="p">[</span><span class="mi">0</span><span class="p">])</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">subplot</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">figure</span><span class="o">.</span><span class="n">add_subplot</span><span class="p">(</span><span class="mi">111</span><span class="p">)</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">figure</span><span class="o">.</span><span class="n">delaxes</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">figure</span><span class="o">.</span><span class="n">axes</span><span class="p">[</span><span class="mi">1</span><span class="p">])</span>
+        <span class="k">except</span><span class="p">:</span>
+            <span class="k">pass</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">subplot</span><span class="o">.</span><span class="n">set_xticks</span><span class="p">([])</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">subplot</span><span class="o">.</span><span class="n">set_yticks</span><span class="p">([])</span>
+        <span class="n">label</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">content</span>
+        <span class="n">FONT</span> <span class="o">=</span> <span class="n">FontProperties</span><span class="p">()</span>
+        <span class="n">xpos</span><span class="p">,</span> <span class="n">ypos</span> <span class="o">=</span> <span class="p">(</span><span class="mf">0.4</span><span class="p">,</span> <span class="mf">0.5</span><span class="p">)</span>
+        <span class="n">font</span> <span class="o">=</span> <span class="n">FONT</span><span class="o">.</span><span class="n">copy</span><span class="p">()</span>
+        <span class="n">font</span><span class="o">.</span><span class="n">set_size</span><span class="p">(</span><span class="mi">14</span><span class="p">)</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">textList</span> <span class="o">=</span> <span class="p">[]</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">subplot</span><span class="o">.</span><span class="n">set_xlim</span><span class="p">((</span><span class="mi">0</span><span class="p">,</span> <span class="mi">1</span><span class="p">))</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">subplot</span><span class="o">.</span><span class="n">set_ylim</span><span class="p">((</span><span class="mi">0</span><span class="p">,</span> <span class="mi">1</span><span class="p">))</span>
+
+        <span class="k">try</span><span class="p">:</span>
+            <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">content</span> <span class="o">!=</span> <span class="s1">&#39;?&#39;</span><span class="p">:</span>
+                <span class="nb">float</span><span class="p">(</span><span class="n">label</span><span class="p">)</span>
+        <span class="k">except</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">subplot</span><span class="o">.</span><span class="n">set_frame_on</span><span class="p">(</span><span class="bp">False</span><span class="p">)</span>
+        <span class="k">try</span><span class="p">:</span>
+            <span class="c1"># mpl &gt;= 1.1.0</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">figure</span><span class="o">.</span><span class="n">tight_layout</span><span class="p">()</span>
+        <span class="k">except</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">figure</span><span class="o">.</span><span class="n">subplots_adjust</span><span class="p">(</span><span class="n">left</span><span class="o">=</span><span class="mf">0.1</span><span class="p">,</span> <span class="n">bottom</span><span class="o">=</span><span class="mf">0.1</span><span class="p">)</span>
+        <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">label</span><span class="p">)</span> <span class="o">&gt;</span> <span class="mi">0</span> <span class="ow">and</span> <span class="n">xpos</span> <span class="o">&gt;</span> <span class="mi">0</span> <span class="ow">and</span> <span class="n">ypos</span> <span class="o">&gt;</span> <span class="mi">0</span><span class="p">:</span>
+            <span class="n">new_text</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">subplot</span><span class="o">.</span><span class="n">text</span><span class="p">(</span><span class="nb">str</span><span class="p">(</span><span class="n">xpos</span><span class="p">),</span> <span class="nb">str</span><span class="p">(</span><span class="n">ypos</span><span class="p">),</span> <span class="nb">str</span><span class="p">(</span><span class="n">label</span><span class="p">),</span>
+                                           <span class="n">fontproperties</span><span class="o">=</span><span class="n">font</span><span class="p">)</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">textList</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">new_text</span><span class="p">)</span></div>
+
+<div class="viewcode-block" id="SmallPanel.erase_legend"><a class="viewcode-back" href="../../../../../dev/api/sas.sasgui.perspectives.calculator.html#sas.sasgui.perspectives.calculator.data_operator.SmallPanel.erase_legend">[docs]</a>    <span class="k">def</span> <span class="nf">erase_legend</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Remove Legend</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="c1">#for ax in self.axes:</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">remove_legend</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">subplot</span><span class="p">)</span></div>
+
+<div class="viewcode-block" id="SmallPanel.onMouseMotion"><a class="viewcode-back" href="../../../../../dev/api/sas.sasgui.perspectives.calculator.html#sas.sasgui.perspectives.calculator.data_operator.SmallPanel.onMouseMotion">[docs]</a>    <span class="k">def</span> <span class="nf">onMouseMotion</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">event</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Disable dragging 2D image</span>
+<span class="sd">        &quot;&quot;&quot;</span></div>
+
+<div class="viewcode-block" id="SmallPanel.onWheel"><a class="viewcode-back" href="../../../../../dev/api/sas.sasgui.perspectives.calculator.html#sas.sasgui.perspectives.calculator.data_operator.SmallPanel.onWheel">[docs]</a>    <span class="k">def</span> <span class="nf">onWheel</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">event</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        &quot;&quot;&quot;</span></div>
+
+<div class="viewcode-block" id="SmallPanel.onLeftDown"><a class="viewcode-back" href="../../../../../dev/api/sas.sasgui.perspectives.calculator.html#sas.sasgui.perspectives.calculator.data_operator.SmallPanel.onLeftDown">[docs]</a>    <span class="k">def</span> <span class="nf">onLeftDown</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">event</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Disables LeftDown</span>
+<span class="sd">        &quot;&quot;&quot;</span></div>
+
+<div class="viewcode-block" id="SmallPanel.onPick"><a class="viewcode-back" href="../../../../../dev/api/sas.sasgui.perspectives.calculator.html#sas.sasgui.perspectives.calculator.data_operator.SmallPanel.onPick">[docs]</a>    <span class="k">def</span> <span class="nf">onPick</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">event</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Remove Legend</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">for</span> <span class="n">ax</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">axes</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">remove_legend</span><span class="p">(</span><span class="n">ax</span><span class="p">)</span></div>
+
+
+<div class="viewcode-block" id="SmallPanel.draw"><a class="viewcode-back" href="../../../../../dev/api/sas.sasgui.perspectives.calculator.html#sas.sasgui.perspectives.calculator.data_operator.SmallPanel.draw">[docs]</a>    <span class="k">def</span> <span class="nf">draw</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Draw</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">dimension</span> <span class="o">==</span> <span class="mi">3</span><span class="p">:</span>
+            <span class="k">pass</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">subplot</span><span class="o">.</span><span class="n">figure</span><span class="o">.</span><span class="n">canvas</span><span class="o">.</span><span class="n">resizing</span> <span class="o">=</span> <span class="bp">False</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">subplot</span><span class="o">.</span><span class="n">tick_params</span><span class="p">(</span><span class="n">axis</span><span class="o">=</span><span class="s1">&#39;both&#39;</span><span class="p">,</span> <span class="n">labelsize</span><span class="o">=</span><span class="mi">9</span><span class="p">)</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">erase_legend</span><span class="p">()</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">subplot</span><span class="o">.</span><span class="n">figure</span><span class="o">.</span><span class="n">canvas</span><span class="o">.</span><span class="n">draw_idle</span><span class="p">()</span>
+            <span class="k">try</span><span class="p">:</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">figure</span><span class="o">.</span><span class="n">delaxes</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">figure</span><span class="o">.</span><span class="n">axes</span><span class="p">[</span><span class="mi">1</span><span class="p">])</span>
+            <span class="k">except</span><span class="p">:</span>
+                <span class="k">pass</span></div>
+
+
+<div class="viewcode-block" id="SmallPanel.onContextMenu"><a class="viewcode-back" href="../../../../../dev/api/sas.sasgui.perspectives.calculator.html#sas.sasgui.perspectives.calculator.data_operator.SmallPanel.onContextMenu">[docs]</a>    <span class="k">def</span> <span class="nf">onContextMenu</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">event</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Default context menu for a plot panel</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="nb">id</span> <span class="o">=</span> <span class="n">wx</span><span class="o">.</span><span class="n">NewId</span><span class="p">()</span>
+        <span class="n">slicerpop</span> <span class="o">=</span> <span class="n">wx</span><span class="o">.</span><span class="n">Menu</span><span class="p">()</span>
+        <span class="n">data</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">point</span>
+        <span class="k">if</span> <span class="nb">issubclass</span><span class="p">(</span><span class="n">data</span><span class="o">.</span><span class="n">__class__</span><span class="p">,</span> <span class="n">Data1D</span><span class="p">):</span>
+            <span class="n">slicerpop</span><span class="o">.</span><span class="n">Append</span><span class="p">(</span><span class="nb">id</span><span class="p">,</span> <span class="s1">&#39;&amp;Change Scale&#39;</span><span class="p">)</span>
+            <span class="n">wx</span><span class="o">.</span><span class="n">EVT_MENU</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="nb">id</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">_onProperties</span><span class="p">)</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">slicerpop</span><span class="o">.</span><span class="n">Append</span><span class="p">(</span><span class="nb">id</span><span class="p">,</span> <span class="s1">&#39;&amp;Toggle Linear/Log Scale&#39;</span><span class="p">)</span>
+            <span class="n">wx</span><span class="o">.</span><span class="n">EVT_MENU</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="nb">id</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">ontogglescale</span><span class="p">)</span>
+        <span class="k">try</span><span class="p">:</span>
+            <span class="c1"># mouse event</span>
+            <span class="n">pos_evt</span> <span class="o">=</span> <span class="n">event</span><span class="o">.</span><span class="n">GetPosition</span><span class="p">()</span>
+            <span class="n">pos</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">ScreenToClient</span><span class="p">(</span><span class="n">pos_evt</span><span class="p">)</span>
+        <span class="k">except</span><span class="p">:</span>
+            <span class="c1"># toolbar event</span>
+            <span class="n">pos_x</span><span class="p">,</span> <span class="n">pos_y</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">toolbar</span><span class="o">.</span><span class="n">GetPositionTuple</span><span class="p">()</span>
+            <span class="n">pos</span> <span class="o">=</span> <span class="p">(</span><span class="n">pos_x</span><span class="p">,</span> <span class="n">pos_y</span> <span class="o">+</span> <span class="mi">5</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">PopupMenu</span><span class="p">(</span><span class="n">slicerpop</span><span class="p">,</span> <span class="n">pos</span><span class="p">)</span></div>
+
+<div class="viewcode-block" id="SmallPanel.ontogglescale"><a class="viewcode-back" href="../../../../../dev/api/sas.sasgui.perspectives.calculator.html#sas.sasgui.perspectives.calculator.data_operator.SmallPanel.ontogglescale">[docs]</a>    <span class="k">def</span> <span class="nf">ontogglescale</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">event</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        On toggle 2d scale</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_onToggleScale</span><span class="p">(</span><span class="n">event</span><span class="p">)</span>
+        <span class="k">try</span><span class="p">:</span>
+            <span class="c1"># mpl &gt;= 1.1.0</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">figure</span><span class="o">.</span><span class="n">tight_layout</span><span class="p">()</span>
+        <span class="k">except</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">figure</span><span class="o">.</span><span class="n">subplots_adjust</span><span class="p">(</span><span class="n">left</span><span class="o">=</span><span class="mf">0.1</span><span class="p">,</span> <span class="n">bottom</span><span class="o">=</span><span class="mf">0.1</span><span class="p">)</span>
+        <span class="k">try</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">figure</span><span class="o">.</span><span class="n">delaxes</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">figure</span><span class="o">.</span><span class="n">axes</span><span class="p">[</span><span class="mi">1</span><span class="p">])</span>
+        <span class="k">except</span><span class="p">:</span>
+            <span class="k">pass</span></div>
+
+    <span class="k">def</span> <span class="nf">_onProperties</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">event</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        when clicking on Properties on context menu ,</span>
+<span class="sd">        The Property dialog is displayed</span>
+<span class="sd">        The user selects a transformation for x or y value and</span>
+<span class="sd">        a new plot is displayed</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="nb">list</span> <span class="o">=</span> <span class="p">[]</span>
+        <span class="nb">list</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">graph</span><span class="o">.</span><span class="n">returnPlottable</span><span class="p">()</span>
+        <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="nb">list</span><span class="o">.</span><span class="n">keys</span><span class="p">())</span> <span class="o">&gt;</span> <span class="mi">0</span><span class="p">:</span>
+            <span class="n">first_item</span> <span class="o">=</span> <span class="nb">list</span><span class="o">.</span><span class="n">keys</span><span class="p">()[</span><span class="mi">0</span><span class="p">]</span>
+            <span class="k">if</span> <span class="n">first_item</span><span class="o">.</span><span class="n">x</span> <span class="o">!=</span> <span class="p">[]:</span>
+                <span class="kn">from</span> <span class="nn">sas.sasgui.plottools.PropertyDialog</span> <span class="kn">import</span> <span class="n">Properties</span>
+                <span class="n">dial</span> <span class="o">=</span> <span class="n">Properties</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="o">-</span><span class="mi">1</span><span class="p">,</span> <span class="s1">&#39;Change Scale&#39;</span><span class="p">)</span>
+                <span class="c1"># type of view or model used</span>
+                <span class="n">dial</span><span class="o">.</span><span class="n">xvalue</span><span class="o">.</span><span class="n">Clear</span><span class="p">()</span>
+                <span class="n">dial</span><span class="o">.</span><span class="n">yvalue</span><span class="o">.</span><span class="n">Clear</span><span class="p">()</span>
+                <span class="n">dial</span><span class="o">.</span><span class="n">view</span><span class="o">.</span><span class="n">Clear</span><span class="p">()</span>
+                <span class="n">dial</span><span class="o">.</span><span class="n">xvalue</span><span class="o">.</span><span class="n">Insert</span><span class="p">(</span><span class="s2">&quot;x&quot;</span><span class="p">,</span> <span class="mi">0</span><span class="p">)</span>
+                <span class="n">dial</span><span class="o">.</span><span class="n">xvalue</span><span class="o">.</span><span class="n">Insert</span><span class="p">(</span><span class="s2">&quot;log10(x)&quot;</span><span class="p">,</span> <span class="mi">1</span><span class="p">)</span>
+                <span class="n">dial</span><span class="o">.</span><span class="n">yvalue</span><span class="o">.</span><span class="n">Insert</span><span class="p">(</span><span class="s2">&quot;y&quot;</span><span class="p">,</span> <span class="mi">0</span><span class="p">)</span>
+                <span class="n">dial</span><span class="o">.</span><span class="n">yvalue</span><span class="o">.</span><span class="n">Insert</span><span class="p">(</span><span class="s2">&quot;log10(y)&quot;</span><span class="p">,</span> <span class="mi">1</span><span class="p">)</span>
+                <span class="n">dial</span><span class="o">.</span><span class="n">view</span><span class="o">.</span><span class="n">Insert</span><span class="p">(</span><span class="s2">&quot;--&quot;</span><span class="p">,</span> <span class="mi">0</span><span class="p">)</span>
+                <span class="n">dial</span><span class="o">.</span><span class="n">view</span><span class="o">.</span><span class="n">Insert</span><span class="p">(</span><span class="s2">&quot;Linear y vs x&quot;</span><span class="p">,</span> <span class="mi">1</span><span class="p">)</span>
+                <span class="n">dial</span><span class="o">.</span><span class="n">setValues</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">prevXtrans</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">prevYtrans</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">viewModel</span><span class="p">)</span>
+                <span class="n">dial</span><span class="o">.</span><span class="n">Update</span><span class="p">()</span>
+                <span class="k">if</span> <span class="n">dial</span><span class="o">.</span><span class="n">ShowModal</span><span class="p">()</span> <span class="o">==</span> <span class="n">wx</span><span class="o">.</span><span class="n">ID_OK</span><span class="p">:</span>
+                    <span class="bp">self</span><span class="o">.</span><span class="n">xLabel</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">yLabel</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">viewModel</span> <span class="o">=</span> <span class="n">dial</span><span class="o">.</span><span class="n">getValues</span><span class="p">()</span>
+                    <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">viewModel</span> <span class="o">==</span> <span class="s2">&quot;Linear y vs x&quot;</span><span class="p">:</span>
+                        <span class="bp">self</span><span class="o">.</span><span class="n">xLabel</span> <span class="o">=</span> <span class="s2">&quot;x&quot;</span>
+                        <span class="bp">self</span><span class="o">.</span><span class="n">yLabel</span> <span class="o">=</span> <span class="s2">&quot;y&quot;</span>
+                        <span class="bp">self</span><span class="o">.</span><span class="n">viewModel</span> <span class="o">=</span> <span class="s2">&quot;--&quot;</span>
+                        <span class="n">dial</span><span class="o">.</span><span class="n">setValues</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">xLabel</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">yLabel</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">viewModel</span><span class="p">)</span>
+                    <span class="bp">self</span><span class="o">.</span><span class="n">_onEVT_FUNC_PROPERTY</span><span class="p">()</span>
+                <span class="n">dial</span><span class="o">.</span><span class="n">Destroy</span><span class="p">()</span>
+
+    <span class="k">def</span> <span class="nf">_onEVT_FUNC_PROPERTY</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">remove_fit</span><span class="o">=</span><span class="bp">True</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Receive the x and y transformation from myDialog,</span>
+<span class="sd">        Transforms x and y in View</span>
+<span class="sd">        and set the scale</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="nb">list</span> <span class="o">=</span> <span class="p">[]</span>
+        <span class="nb">list</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">graph</span><span class="o">.</span><span class="n">returnPlottable</span><span class="p">()</span>
+        <span class="c1"># Changing the scale might be incompatible with</span>
+        <span class="c1"># currently displayed data (for instance, going</span>
+        <span class="c1"># from ln to log when all plotted values have</span>
+        <span class="c1"># negative natural logs).</span>
+        <span class="c1"># Go linear and only change the scale at the end.</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">set_xscale</span><span class="p">(</span><span class="s2">&quot;linear&quot;</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">set_yscale</span><span class="p">(</span><span class="s2">&quot;linear&quot;</span><span class="p">)</span>
+        <span class="n">_xscale</span> <span class="o">=</span> <span class="s1">&#39;linear&#39;</span>
+        <span class="n">_yscale</span> <span class="o">=</span> <span class="s1">&#39;linear&#39;</span>
+        <span class="k">for</span> <span class="n">item</span> <span class="ow">in</span> <span class="nb">list</span><span class="p">:</span>
+            <span class="n">item</span><span class="o">.</span><span class="n">setLabel</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">xLabel</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">yLabel</span><span class="p">)</span>
+            <span class="c1"># control axis labels from the panel itself</span>
+            <span class="n">yname</span><span class="p">,</span> <span class="n">yunits</span> <span class="o">=</span> <span class="n">item</span><span class="o">.</span><span class="n">get_yaxis</span><span class="p">()</span>
+            <span class="n">xname</span><span class="p">,</span> <span class="n">xunits</span> <span class="o">=</span> <span class="n">item</span><span class="o">.</span><span class="n">get_xaxis</span><span class="p">()</span>
+            <span class="c1"># Goes through all possible scales</span>
+            <span class="c1"># Goes through all possible scales</span>
+            <span class="k">if</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">xLabel</span> <span class="o">==</span> <span class="s2">&quot;x&quot;</span><span class="p">):</span>
+                <span class="n">item</span><span class="o">.</span><span class="n">transformX</span><span class="p">(</span><span class="n">transform</span><span class="o">.</span><span class="n">toX</span><span class="p">,</span> <span class="n">transform</span><span class="o">.</span><span class="n">errToX</span><span class="p">)</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">graph</span><span class="o">.</span><span class="n">_xaxis_transformed</span><span class="p">(</span><span class="s2">&quot;</span><span class="si">%s</span><span class="s2">&quot;</span> <span class="o">%</span> <span class="n">xname</span><span class="p">,</span> <span class="s2">&quot;</span><span class="si">%s</span><span class="s2">&quot;</span> <span class="o">%</span> <span class="n">xunits</span><span class="p">)</span>
+            <span class="k">if</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">xLabel</span> <span class="o">==</span> <span class="s2">&quot;log10(x)&quot;</span><span class="p">):</span>
+                <span class="n">item</span><span class="o">.</span><span class="n">transformX</span><span class="p">(</span><span class="n">transform</span><span class="o">.</span><span class="n">toX_pos</span><span class="p">,</span> <span class="n">transform</span><span class="o">.</span><span class="n">errToX_pos</span><span class="p">)</span>
+                <span class="n">_xscale</span> <span class="o">=</span> <span class="s1">&#39;log&#39;</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">graph</span><span class="o">.</span><span class="n">_xaxis_transformed</span><span class="p">(</span><span class="s2">&quot;</span><span class="si">%s</span><span class="s2">&quot;</span> <span class="o">%</span> <span class="n">xname</span><span class="p">,</span> <span class="s2">&quot;</span><span class="si">%s</span><span class="s2">&quot;</span> <span class="o">%</span> <span class="n">xunits</span><span class="p">)</span>
+            <span class="k">if</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">yLabel</span> <span class="o">==</span> <span class="s2">&quot;y&quot;</span><span class="p">):</span>
+                <span class="n">item</span><span class="o">.</span><span class="n">transformY</span><span class="p">(</span><span class="n">transform</span><span class="o">.</span><span class="n">toX</span><span class="p">,</span> <span class="n">transform</span><span class="o">.</span><span class="n">errToX</span><span class="p">)</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">graph</span><span class="o">.</span><span class="n">_yaxis_transformed</span><span class="p">(</span><span class="s2">&quot;</span><span class="si">%s</span><span class="s2">&quot;</span> <span class="o">%</span> <span class="n">yname</span><span class="p">,</span> <span class="s2">&quot;</span><span class="si">%s</span><span class="s2">&quot;</span> <span class="o">%</span> <span class="n">yunits</span><span class="p">)</span>
+            <span class="k">if</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">yLabel</span> <span class="o">==</span> <span class="s2">&quot;log10(y)&quot;</span><span class="p">):</span>
+                <span class="n">item</span><span class="o">.</span><span class="n">transformY</span><span class="p">(</span><span class="n">transform</span><span class="o">.</span><span class="n">toX_pos</span><span class="p">,</span> <span class="n">transform</span><span class="o">.</span><span class="n">errToX_pos</span><span class="p">)</span>
+                <span class="n">_yscale</span> <span class="o">=</span> <span class="s1">&#39;log&#39;</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">graph</span><span class="o">.</span><span class="n">_yaxis_transformed</span><span class="p">(</span><span class="s2">&quot;</span><span class="si">%s</span><span class="s2">&quot;</span> <span class="o">%</span> <span class="n">yname</span><span class="p">,</span> <span class="s2">&quot;</span><span class="si">%s</span><span class="s2">&quot;</span> <span class="o">%</span> <span class="n">yunits</span><span class="p">)</span>
+            <span class="n">item</span><span class="o">.</span><span class="n">transformView</span><span class="p">()</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">prevXtrans</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">xLabel</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">prevYtrans</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">yLabel</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">set_xscale</span><span class="p">(</span><span class="n">_xscale</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">set_yscale</span><span class="p">(</span><span class="n">_yscale</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">draw</span><span class="p">()</span></div>
+
+<div class="viewcode-block" id="DataOperatorWindow"><a class="viewcode-back" href="../../../../../dev/api/sas.sasgui.perspectives.calculator.html#sas.sasgui.perspectives.calculator.data_operator.DataOperatorWindow">[docs]</a><span class="k">class</span> <span class="nc">DataOperatorWindow</span><span class="p">(</span><span class="n">widget</span><span class="o">.</span><span class="n">CHILD_FRAME</span><span class="p">):</span>
+    <span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">parent</span><span class="p">,</span> <span class="n">manager</span><span class="p">,</span> <span class="o">*</span><span class="n">args</span><span class="p">,</span> <span class="o">**</span><span class="n">kwds</span><span class="p">):</span>
+        <span class="n">kwds</span><span class="p">[</span><span class="s2">&quot;size&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="p">(</span><span class="n">PANEL_WIDTH</span><span class="p">,</span> <span class="n">PANEL_HEIGTH</span><span class="p">)</span>
+        <span class="n">widget</span><span class="o">.</span><span class="n">CHILD_FRAME</span><span class="o">.</span><span class="n">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">parent</span><span class="p">,</span> <span class="o">*</span><span class="n">args</span><span class="p">,</span> <span class="o">**</span><span class="n">kwds</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">parent</span> <span class="o">=</span> <span class="n">parent</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">manager</span> <span class="o">=</span> <span class="n">manager</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">panel</span> <span class="o">=</span> <span class="n">DataOperPanel</span><span class="p">(</span><span class="n">parent</span><span class="o">=</span><span class="bp">self</span><span class="p">)</span>
+        <span class="n">wx</span><span class="o">.</span><span class="n">EVT_CLOSE</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">OnClose</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">SetPosition</span><span class="p">((</span><span class="n">wx</span><span class="o">.</span><span class="n">LEFT</span><span class="p">,</span> <span class="n">PANEL_TOP</span><span class="p">))</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">Show</span><span class="p">()</span>
+
+<div class="viewcode-block" id="DataOperatorWindow.OnClose"><a class="viewcode-back" href="../../../../../dev/api/sas.sasgui.perspectives.calculator.html#sas.sasgui.perspectives.calculator.data_operator.DataOperatorWindow.OnClose">[docs]</a>    <span class="k">def</span> <span class="nf">OnClose</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">event</span><span class="o">=</span><span class="bp">None</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        On close event</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">manager</span> <span class="o">!=</span> <span class="bp">None</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">manager</span><span class="o">.</span><span class="n">data_operator_frame</span> <span class="o">=</span> <span class="bp">None</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">panel</span><span class="o">.</span><span class="n">disconnect_panels</span><span class="p">()</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">Destroy</span><span class="p">()</span></div></div>
+
+
+<span class="k">if</span> <span class="n">__name__</span> <span class="o">==</span> <span class="s2">&quot;__main__&quot;</span><span class="p">:</span>
+
+    <span class="n">app</span> <span class="o">=</span> <span class="n">wx</span><span class="o">.</span><span class="n">App</span><span class="p">()</span>
+    <span class="n">widget</span><span class="o">.</span><span class="n">CHILD_FRAME</span> <span class="o">=</span> <span class="n">wx</span><span class="o">.</span><span class="n">Frame</span>
+    <span class="n">window</span> <span class="o">=</span> <span class="n">DataOperatorWindow</span><span class="p">(</span><span class="n">parent</span><span class="o">=</span><span class="bp">None</span><span class="p">,</span> <span class="n">data</span><span class="o">=</span><span class="p">[],</span> <span class="n">title</span><span class="o">=</span><span class="s2">&quot;Data Editor&quot;</span><span class="p">)</span>
+    <span class="n">app</span><span class="o">.</span><span class="n">MainLoop</span><span class="p">()</span>
+</pre></div>
+
+          </div>
+        </div>
+      </div>
+      <div class="sphinxsidebar" role="navigation" aria-label="main navigation">
+        <div class="sphinxsidebarwrapper">
+<div id="searchbox" style="display: none" role="search">
+  <h3>Quick search</h3>
+    <form class="search" action="../../../../../search.html" method="get">
+      <input type="text" name="q" />
+      <input type="submit" value="Go" />
+      <input type="hidden" name="check_keywords" value="yes" />
+      <input type="hidden" name="area" value="default" />
+    </form>
+</div>
+<script type="text/javascript">$('#searchbox').show(0);</script>
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="related" role="navigation" aria-label="related navigation">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="../../../../../genindex.html" title="General Index"
+             >index</a></li>
+        <li class="right" >
+          <a href="../../../../../py-modindex.html" title="Python Module Index"
+             >modules</a> |</li>
+        <li class="nav-item nav-item-0"><a href="../../../../../index.html">SasView 4.1.2 documentation</a> &raquo;</li>
+          <li class="nav-item nav-item-1"><a href="../../../../index.html" >Module code</a> &raquo;</li>
+          <li class="nav-item nav-item-2"><a href="../calculator.html" >sas.sasgui.perspectives.calculator</a> &raquo;</li> 
+      </ul>
+    </div>
+    <div class="footer" role="contentinfo">
+        &copy; Copyright 2017, The SasView Project.
+      Created using <a href="http://sphinx-doc.org/">Sphinx</a> 1.4.1.
+    </div>
+  </body>
+</html>

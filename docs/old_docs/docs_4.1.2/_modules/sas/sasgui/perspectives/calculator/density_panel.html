@@ -1,0 +1,552 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+  "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+    
+    <title>sas.sasgui.perspectives.calculator.density_panel &mdash; SasView 4.1.2 documentation</title>
+    
+    <link rel="stylesheet" href="../../../../../_static/classic.css" type="text/css" />
+    <link rel="stylesheet" href="../../../../../_static/pygments.css" type="text/css" />
+    
+    <script type="text/javascript">
+      var DOCUMENTATION_OPTIONS = {
+        URL_ROOT:    '../../../../../',
+        VERSION:     '4.1.2',
+        COLLAPSE_INDEX: false,
+        FILE_SUFFIX: '.html',
+        HAS_SOURCE:  true
+      };
+    </script>
+    <script type="text/javascript" src="../../../../../_static/jquery.js"></script>
+    <script type="text/javascript" src="../../../../../_static/underscore.js"></script>
+    <script type="text/javascript" src="../../../../../_static/doctools.js"></script>
+    <script type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.1/MathJax.js?config=TeX-MML-AM_CHTML"></script>
+    <link rel="top" title="SasView 4.1.2 documentation" href="../../../../../index.html" />
+    <link rel="up" title="sas.sasgui.perspectives.calculator" href="../calculator.html" /> 
+  </head>
+  <body role="document">
+    <div class="related" role="navigation" aria-label="related navigation">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="../../../../../genindex.html" title="General Index"
+             accesskey="I">index</a></li>
+        <li class="right" >
+          <a href="../../../../../py-modindex.html" title="Python Module Index"
+             >modules</a> |</li>
+        <li class="nav-item nav-item-0"><a href="../../../../../index.html">SasView 4.1.2 documentation</a> &raquo;</li>
+          <li class="nav-item nav-item-1"><a href="../../../../index.html" >Module code</a> &raquo;</li>
+          <li class="nav-item nav-item-2"><a href="../calculator.html" accesskey="U">sas.sasgui.perspectives.calculator</a> &raquo;</li> 
+      </ul>
+    </div>  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          <div class="body" role="main">
+            
+  <h1>Source code for sas.sasgui.perspectives.calculator.density_panel</h1><div class="highlight"><pre>
+<span></span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">This module provide GUI for the mass density calculator</span>
+
+<span class="sd">&quot;&quot;&quot;</span>
+<span class="kn">import</span> <span class="nn">wx</span>
+<span class="kn">import</span> <span class="nn">sys</span>
+<span class="kn">from</span> <span class="nn">sas.sasgui.guiframe.panel_base</span> <span class="kn">import</span> <span class="n">PanelBase</span>
+<span class="kn">from</span> <span class="nn">wx.lib.scrolledpanel</span> <span class="kn">import</span> <span class="n">ScrolledPanel</span>
+<span class="kn">from</span> <span class="nn">sas.sasgui.guiframe.utils</span> <span class="kn">import</span> <span class="n">check_float</span>
+<span class="kn">from</span> <span class="nn">sas.sasgui.guiframe.events</span> <span class="kn">import</span> <span class="n">StatusEvent</span>
+<span class="kn">from</span> <span class="nn">periodictable</span> <span class="kn">import</span> <span class="n">formula</span> <span class="k">as</span> <span class="n">Formula</span>
+<span class="kn">from</span> <span class="nn">sas.sasgui.perspectives.calculator</span> <span class="kn">import</span> <span class="n">calculator_widgets</span> <span class="k">as</span> <span class="n">widget</span>
+<span class="kn">from</span> <span class="nn">sas.sasgui.guiframe.documentation_window</span> <span class="kn">import</span> <span class="n">DocumentationWindow</span>
+
+<span class="n">AVOGADRO</span> <span class="o">=</span> <span class="mf">6.02214129e23</span>
+<span class="n">_INPUTS</span> <span class="o">=</span> <span class="p">[</span><span class="s1">&#39;Mass Density&#39;</span><span class="p">,</span> <span class="s1">&#39;Molar Volume&#39;</span><span class="p">]</span>
+<span class="n">_UNITS</span> <span class="o">=</span> <span class="p">[</span><span class="s1">&#39;g/cm^(3)     &#39;</span><span class="p">,</span> <span class="s1">&#39;cm^(3)/mol &#39;</span><span class="p">]</span>
+<span class="c1">#Density panel size </span>
+<span class="k">if</span> <span class="n">sys</span><span class="o">.</span><span class="n">platform</span><span class="o">.</span><span class="n">count</span><span class="p">(</span><span class="s2">&quot;win32&quot;</span><span class="p">)</span> <span class="o">&gt;</span> <span class="mi">0</span><span class="p">:</span>
+    <span class="n">PANEL_TOP</span> <span class="o">=</span> <span class="mi">0</span>
+    <span class="n">_STATICBOX_WIDTH</span> <span class="o">=</span> <span class="mi">410</span>
+    <span class="n">_BOX_WIDTH</span> <span class="o">=</span> <span class="mi">200</span>
+    <span class="n">PANEL_SIZE</span> <span class="o">=</span> <span class="mi">440</span>
+    <span class="n">FONT_VARIANT</span> <span class="o">=</span> <span class="mi">0</span>
+<span class="k">else</span><span class="p">:</span>
+    <span class="n">PANEL_TOP</span> <span class="o">=</span> <span class="mi">60</span>
+    <span class="n">_STATICBOX_WIDTH</span> <span class="o">=</span> <span class="mi">430</span>
+    <span class="n">_BOX_WIDTH</span> <span class="o">=</span> <span class="mi">200</span>
+    <span class="n">PANEL_SIZE</span> <span class="o">=</span> <span class="mi">460</span>
+    <span class="n">FONT_VARIANT</span> <span class="o">=</span> <span class="mi">1</span>
+
+<div class="viewcode-block" id="DensityPanel"><a class="viewcode-back" href="../../../../../dev/api/sas.sasgui.perspectives.calculator.html#sas.sasgui.perspectives.calculator.density_panel.DensityPanel">[docs]</a><span class="k">class</span> <span class="nc">DensityPanel</span><span class="p">(</span><span class="n">ScrolledPanel</span><span class="p">,</span> <span class="n">PanelBase</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Provides the mass density calculator GUI.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="c1">## Internal nickname for the window, used by the AUI manager</span>
+    <span class="n">window_name</span> <span class="o">=</span> <span class="s2">&quot;Mass Density Calculator&quot;</span>
+    <span class="c1">## Name to appear on the window title bar</span>
+    <span class="n">window_caption</span> <span class="o">=</span> <span class="s2">&quot;Mass Density Calculator&quot;</span>
+    <span class="c1">## Flag to tell the AUI manager to put this panel in the center pane</span>
+    <span class="n">CENTER_PANE</span> <span class="o">=</span> <span class="bp">True</span>
+
+    <span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">parent</span><span class="p">,</span> <span class="n">base</span><span class="o">=</span><span class="bp">None</span><span class="p">,</span> <span class="o">*</span><span class="n">args</span><span class="p">,</span> <span class="o">**</span><span class="n">kwds</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">ScrolledPanel</span><span class="o">.</span><span class="n">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">parent</span><span class="p">,</span> <span class="o">*</span><span class="n">args</span><span class="p">,</span> <span class="o">**</span><span class="n">kwds</span><span class="p">)</span>
+        <span class="n">PanelBase</span><span class="o">.</span><span class="n">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">SetupScrolling</span><span class="p">()</span>
+        <span class="c1">#Font size </span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">SetWindowVariant</span><span class="p">(</span><span class="n">variant</span><span class="o">=</span><span class="n">FONT_VARIANT</span><span class="p">)</span>
+        <span class="c1"># Object that receive status event</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">base</span> <span class="o">=</span> <span class="n">base</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">parent</span> <span class="o">=</span> <span class="n">parent</span>
+        <span class="c1"># chemeical formula, string</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">compound</span> <span class="o">=</span> <span class="s1">&#39;&#39;</span>
+        <span class="c1"># value of the density/volume, float</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">input</span> <span class="o">=</span> <span class="bp">None</span>
+        <span class="c1"># text controls</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">compound_ctl</span> <span class="o">=</span> <span class="bp">None</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">input_ctl</span> <span class="o">=</span> <span class="bp">None</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">molar_mass_ctl</span> <span class="o">=</span> <span class="bp">None</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">output_ctl</span> <span class="o">=</span> <span class="bp">None</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">ctr_color</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">GetBackgroundColour</span><span class="p">()</span>
+        <span class="c1"># button</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">button_calculate</span> <span class="o">=</span> <span class="bp">None</span>
+        <span class="c1"># list</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_input_list</span> <span class="o">=</span> <span class="n">_INPUTS</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_input</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_input_list</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_output</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_input_list</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_unit_list</span> <span class="o">=</span> <span class="n">_UNITS</span>
+        <span class="c1">#Draw the panel</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_do_layout</span><span class="p">()</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">SetAutoLayout</span><span class="p">(</span><span class="bp">True</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">Layout</span><span class="p">()</span>
+
+    <span class="k">def</span> <span class="nf">_do_layout</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Draw window content</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="c1"># units</span>
+        <span class="n">unit_density</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_unit_list</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
+        <span class="n">unit_volume</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_unit_list</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span>
+
+        <span class="c1"># sizers</span>
+        <span class="n">sizer_input</span> <span class="o">=</span> <span class="n">wx</span><span class="o">.</span><span class="n">GridBagSizer</span><span class="p">(</span><span class="mi">5</span><span class="p">,</span> <span class="mi">5</span><span class="p">)</span>
+        <span class="n">sizer_output</span> <span class="o">=</span> <span class="n">wx</span><span class="o">.</span><span class="n">GridBagSizer</span><span class="p">(</span><span class="mi">5</span><span class="p">,</span> <span class="mi">5</span><span class="p">)</span>
+        <span class="n">sizer_button</span> <span class="o">=</span> <span class="n">wx</span><span class="o">.</span><span class="n">BoxSizer</span><span class="p">(</span><span class="n">wx</span><span class="o">.</span><span class="n">HORIZONTAL</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">sizer1</span> <span class="o">=</span> <span class="n">wx</span><span class="o">.</span><span class="n">BoxSizer</span><span class="p">(</span><span class="n">wx</span><span class="o">.</span><span class="n">HORIZONTAL</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">sizer2</span> <span class="o">=</span> <span class="n">wx</span><span class="o">.</span><span class="n">BoxSizer</span><span class="p">(</span><span class="n">wx</span><span class="o">.</span><span class="n">HORIZONTAL</span><span class="p">)</span>
+        <span class="n">sizer3</span> <span class="o">=</span> <span class="n">wx</span><span class="o">.</span><span class="n">BoxSizer</span><span class="p">(</span><span class="n">wx</span><span class="o">.</span><span class="n">HORIZONTAL</span><span class="p">)</span>
+        <span class="n">vbox</span> <span class="o">=</span> <span class="n">wx</span><span class="o">.</span><span class="n">BoxSizer</span><span class="p">(</span><span class="n">wx</span><span class="o">.</span><span class="n">VERTICAL</span><span class="p">)</span>
+
+        <span class="c1"># inputs</span>
+        <span class="n">inputbox</span> <span class="o">=</span> <span class="n">wx</span><span class="o">.</span><span class="n">StaticBox</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="o">-</span><span class="mi">1</span><span class="p">,</span> <span class="s2">&quot;Inputs&quot;</span><span class="p">)</span>
+        <span class="n">boxsizer1</span> <span class="o">=</span> <span class="n">wx</span><span class="o">.</span><span class="n">StaticBoxSizer</span><span class="p">(</span><span class="n">inputbox</span><span class="p">,</span> <span class="n">wx</span><span class="o">.</span><span class="n">VERTICAL</span><span class="p">)</span>
+        <span class="n">boxsizer1</span><span class="o">.</span><span class="n">SetMinSize</span><span class="p">((</span><span class="n">_STATICBOX_WIDTH</span><span class="p">,</span> <span class="o">-</span><span class="mi">1</span><span class="p">))</span>
+        <span class="n">compound_txt</span> <span class="o">=</span> <span class="n">wx</span><span class="o">.</span><span class="n">StaticText</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="o">-</span><span class="mi">1</span><span class="p">,</span> <span class="s1">&#39;Molecular Formula &#39;</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">compound_ctl</span> <span class="o">=</span> <span class="n">wx</span><span class="o">.</span><span class="n">TextCtrl</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="o">-</span><span class="mi">1</span><span class="p">,</span> <span class="n">size</span><span class="o">=</span><span class="p">(</span><span class="n">_BOX_WIDTH</span><span class="p">,</span> <span class="o">-</span><span class="mi">1</span><span class="p">))</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">compound_eg1</span> <span class="o">=</span> <span class="n">wx</span><span class="o">.</span><span class="n">StaticText</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="o">-</span><span class="mi">1</span><span class="p">,</span> <span class="s1">&#39;     e.g., H2O&#39;</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">compound_eg2</span> <span class="o">=</span> <span class="n">wx</span><span class="o">.</span><span class="n">StaticText</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="o">-</span><span class="mi">1</span><span class="p">,</span> <span class="s1">&#39;e.g., D2O&#39;</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">input_cb</span> <span class="o">=</span> <span class="n">wx</span><span class="o">.</span><span class="n">ComboBox</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="o">-</span><span class="mi">1</span><span class="p">,</span> <span class="n">style</span><span class="o">=</span><span class="n">wx</span><span class="o">.</span><span class="n">CB_READONLY</span><span class="p">)</span>
+        <span class="n">wx</span><span class="o">.</span><span class="n">EVT_COMBOBOX</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">input_cb</span><span class="p">,</span> <span class="o">-</span><span class="mi">1</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">on_select_input</span><span class="p">)</span>
+        <span class="n">hint_input_name_txt</span> <span class="o">=</span> <span class="s1">&#39;Mass or volume.&#39;</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">input_cb</span><span class="o">.</span><span class="n">SetToolTipString</span><span class="p">(</span><span class="n">hint_input_name_txt</span><span class="p">)</span>
+        <span class="n">unit_density1</span> <span class="o">=</span> <span class="s2">&quot;     &quot;</span> <span class="o">+</span> <span class="n">unit_density</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">input_ctl</span> <span class="o">=</span> <span class="n">wx</span><span class="o">.</span><span class="n">TextCtrl</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="o">-</span><span class="mi">1</span><span class="p">,</span> <span class="n">size</span><span class="o">=</span><span class="p">(</span><span class="n">_BOX_WIDTH</span><span class="p">,</span> <span class="o">-</span><span class="mi">1</span><span class="p">))</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">unit_input_density</span> <span class="o">=</span> <span class="n">wx</span><span class="o">.</span><span class="n">StaticText</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="o">-</span><span class="mi">1</span><span class="p">,</span> <span class="n">unit_density1</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">unit_input_volume</span> <span class="o">=</span> <span class="n">wx</span><span class="o">.</span><span class="n">StaticText</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="o">-</span><span class="mi">1</span><span class="p">,</span> <span class="n">unit_volume</span><span class="p">)</span>
+        <span class="n">iy</span> <span class="o">=</span> <span class="mi">0</span>
+        <span class="n">ix</span> <span class="o">=</span> <span class="mi">0</span>
+        <span class="n">sizer_input</span><span class="o">.</span><span class="n">Add</span><span class="p">(</span><span class="n">compound_txt</span><span class="p">,</span> <span class="p">(</span><span class="n">iy</span><span class="p">,</span> <span class="n">ix</span><span class="p">),</span> <span class="p">(</span><span class="mi">1</span><span class="p">,</span> <span class="mi">1</span><span class="p">),</span>
+                             <span class="n">wx</span><span class="o">.</span><span class="n">LEFT</span> <span class="o">|</span> <span class="n">wx</span><span class="o">.</span><span class="n">EXPAND</span> <span class="o">|</span> <span class="n">wx</span><span class="o">.</span><span class="n">ADJUST_MINSIZE</span><span class="p">,</span> <span class="mi">15</span><span class="p">)</span>
+        <span class="n">ix</span> <span class="o">+=</span> <span class="mi">1</span>
+        <span class="n">sizer_input</span><span class="o">.</span><span class="n">Add</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">compound_ctl</span><span class="p">,</span> <span class="p">(</span><span class="n">iy</span><span class="p">,</span> <span class="n">ix</span><span class="p">),</span> <span class="p">(</span><span class="mi">1</span><span class="p">,</span> <span class="mi">1</span><span class="p">),</span>
+                            <span class="n">wx</span><span class="o">.</span><span class="n">EXPAND</span> <span class="o">|</span> <span class="n">wx</span><span class="o">.</span><span class="n">ADJUST_MINSIZE</span><span class="p">,</span> <span class="mi">0</span><span class="p">)</span>
+        <span class="n">ix</span> <span class="o">+=</span> <span class="mi">1</span>
+        <span class="n">sizer_input</span><span class="o">.</span><span class="n">Add</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">compound_eg1</span><span class="p">,</span> <span class="p">(</span><span class="n">iy</span><span class="p">,</span> <span class="n">ix</span><span class="p">),</span> <span class="p">(</span><span class="mi">1</span><span class="p">,</span> <span class="mi">1</span><span class="p">),</span>
+                            <span class="n">wx</span><span class="o">.</span><span class="n">EXPAND</span> <span class="o">|</span> <span class="n">wx</span><span class="o">.</span><span class="n">ADJUST_MINSIZE</span><span class="p">,</span> <span class="mi">0</span><span class="p">)</span>
+
+        <span class="n">ix</span> <span class="o">+=</span> <span class="mi">1</span>
+        <span class="n">sizer_input</span><span class="o">.</span><span class="n">Add</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">compound_eg2</span><span class="p">,</span> <span class="p">(</span><span class="n">iy</span><span class="p">,</span> <span class="n">ix</span><span class="p">),</span> <span class="p">(</span><span class="mi">1</span><span class="p">,</span> <span class="mi">1</span><span class="p">),</span>
+                            <span class="n">wx</span><span class="o">.</span><span class="n">EXPAND</span> <span class="o">|</span> <span class="n">wx</span><span class="o">.</span><span class="n">ADJUST_MINSIZE</span><span class="p">,</span> <span class="mi">0</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">compound_eg1</span><span class="o">.</span><span class="n">Show</span><span class="p">(</span><span class="bp">False</span><span class="p">)</span>
+        <span class="n">iy</span> <span class="o">+=</span> <span class="mi">1</span>
+        <span class="n">ix</span> <span class="o">=</span> <span class="mi">0</span>
+        <span class="n">sizer_input</span><span class="o">.</span><span class="n">Add</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">input_cb</span><span class="p">,</span> <span class="p">(</span><span class="n">iy</span><span class="p">,</span> <span class="n">ix</span><span class="p">),</span> <span class="p">(</span><span class="mi">1</span><span class="p">,</span> <span class="mi">1</span><span class="p">),</span>
+                             <span class="n">wx</span><span class="o">.</span><span class="n">LEFT</span> <span class="o">|</span> <span class="n">wx</span><span class="o">.</span><span class="n">EXPAND</span> <span class="o">|</span> <span class="n">wx</span><span class="o">.</span><span class="n">ADJUST_MINSIZE</span><span class="p">,</span> <span class="mi">15</span><span class="p">)</span>
+        <span class="n">ix</span> <span class="o">+=</span> <span class="mi">1</span>
+        <span class="n">sizer_input</span><span class="o">.</span><span class="n">Add</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">input_ctl</span><span class="p">,</span> <span class="p">(</span><span class="n">iy</span><span class="p">,</span> <span class="n">ix</span><span class="p">),</span> <span class="p">(</span><span class="mi">1</span><span class="p">,</span> <span class="mi">1</span><span class="p">),</span>
+                            <span class="n">wx</span><span class="o">.</span><span class="n">EXPAND</span> <span class="o">|</span> <span class="n">wx</span><span class="o">.</span><span class="n">ADJUST_MINSIZE</span><span class="p">,</span> <span class="mi">0</span><span class="p">)</span>
+        <span class="n">ix</span> <span class="o">+=</span> <span class="mi">1</span>
+        <span class="n">sizer_input</span><span class="o">.</span><span class="n">Add</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">unit_input_density</span><span class="p">,</span> <span class="p">(</span><span class="n">iy</span><span class="p">,</span> <span class="n">ix</span><span class="p">),</span> <span class="p">(</span><span class="mi">1</span><span class="p">,</span> <span class="mi">1</span><span class="p">),</span>
+                            <span class="n">wx</span><span class="o">.</span><span class="n">EXPAND</span> <span class="o">|</span> <span class="n">wx</span><span class="o">.</span><span class="n">ADJUST_MINSIZE</span><span class="p">,</span> <span class="mi">0</span><span class="p">)</span>
+        <span class="n">ix</span> <span class="o">+=</span> <span class="mi">1</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">unit_input_density</span><span class="o">.</span><span class="n">Show</span><span class="p">(</span><span class="bp">False</span><span class="p">)</span>
+        <span class="n">sizer_input</span><span class="o">.</span><span class="n">Add</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">unit_input_volume</span><span class="p">,</span> <span class="p">(</span><span class="n">iy</span><span class="p">,</span> <span class="n">ix</span><span class="p">),</span> <span class="p">(</span><span class="mi">1</span><span class="p">,</span> <span class="mi">1</span><span class="p">),</span>
+                            <span class="n">wx</span><span class="o">.</span><span class="n">EXPAND</span> <span class="o">|</span> <span class="n">wx</span><span class="o">.</span><span class="n">ADJUST_MINSIZE</span><span class="p">,</span> <span class="mi">0</span><span class="p">)</span>
+        <span class="n">boxsizer1</span><span class="o">.</span><span class="n">Add</span><span class="p">(</span><span class="n">sizer_input</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">sizer1</span><span class="o">.</span><span class="n">Add</span><span class="p">(</span><span class="n">boxsizer1</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="n">wx</span><span class="o">.</span><span class="n">EXPAND</span> <span class="o">|</span> <span class="n">wx</span><span class="o">.</span><span class="n">ALL</span><span class="p">,</span> <span class="mi">10</span><span class="p">)</span>
+
+        <span class="c1"># outputs</span>
+        <span class="n">outputbox</span> <span class="o">=</span> <span class="n">wx</span><span class="o">.</span><span class="n">StaticBox</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="o">-</span><span class="mi">1</span><span class="p">,</span> <span class="s2">&quot;Outputs&quot;</span><span class="p">)</span>
+        <span class="n">boxsizer2</span> <span class="o">=</span> <span class="n">wx</span><span class="o">.</span><span class="n">StaticBoxSizer</span><span class="p">(</span><span class="n">outputbox</span><span class="p">,</span> <span class="n">wx</span><span class="o">.</span><span class="n">VERTICAL</span><span class="p">)</span>
+        <span class="n">boxsizer2</span><span class="o">.</span><span class="n">SetMinSize</span><span class="p">((</span><span class="n">_STATICBOX_WIDTH</span><span class="p">,</span> <span class="o">-</span><span class="mi">1</span><span class="p">))</span>
+
+        <span class="n">molar_mass_txt</span> <span class="o">=</span> <span class="n">wx</span><span class="o">.</span><span class="n">StaticText</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="o">-</span><span class="mi">1</span><span class="p">,</span> <span class="s1">&#39;Molar Mass &#39;</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">molar_mass_ctl</span> <span class="o">=</span> <span class="n">wx</span><span class="o">.</span><span class="n">TextCtrl</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="o">-</span><span class="mi">1</span><span class="p">,</span> <span class="n">size</span><span class="o">=</span><span class="p">(</span><span class="n">_BOX_WIDTH</span><span class="p">,</span> <span class="o">-</span><span class="mi">1</span><span class="p">))</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">molar_mass_ctl</span><span class="o">.</span><span class="n">SetEditable</span><span class="p">(</span><span class="bp">False</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">molar_mass_ctl</span><span class="o">.</span><span class="n">SetBackgroundColour</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">ctr_color</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">molar_mass_unit1</span> <span class="o">=</span> <span class="n">wx</span><span class="o">.</span><span class="n">StaticText</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="o">-</span><span class="mi">1</span><span class="p">,</span> <span class="s1">&#39;     g/mol&#39;</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">molar_mass_unit2</span> <span class="o">=</span> <span class="n">wx</span><span class="o">.</span><span class="n">StaticText</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="o">-</span><span class="mi">1</span><span class="p">,</span> <span class="s1">&#39;g/mol&#39;</span><span class="p">)</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">output_cb</span> <span class="o">=</span> <span class="n">wx</span><span class="o">.</span><span class="n">ComboBox</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="o">-</span><span class="mi">1</span><span class="p">,</span> <span class="n">style</span><span class="o">=</span><span class="n">wx</span><span class="o">.</span><span class="n">CB_READONLY</span><span class="p">)</span>
+        <span class="n">wx</span><span class="o">.</span><span class="n">EVT_COMBOBOX</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">output_cb</span><span class="p">,</span> <span class="o">-</span><span class="mi">1</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">on_select_output</span><span class="p">)</span>
+        <span class="n">hint_output_name_txt</span> <span class="o">=</span> <span class="s1">&#39;Mass or volume.&#39;</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">output_cb</span><span class="o">.</span><span class="n">SetToolTipString</span><span class="p">(</span><span class="n">hint_output_name_txt</span><span class="p">)</span>
+        <span class="nb">list</span> <span class="o">=</span> <span class="p">[]</span>
+        <span class="k">for</span> <span class="n">item</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">_input_list</span><span class="p">:</span>
+            <span class="n">name</span> <span class="o">=</span> <span class="nb">str</span><span class="p">(</span><span class="n">item</span><span class="p">)</span>
+            <span class="nb">list</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">name</span><span class="p">)</span>
+        <span class="nb">list</span><span class="o">.</span><span class="n">sort</span><span class="p">()</span>
+        <span class="k">for</span> <span class="n">idx</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="nb">list</span><span class="p">)):</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">input_cb</span><span class="o">.</span><span class="n">Append</span><span class="p">(</span><span class="nb">list</span><span class="p">[</span><span class="n">idx</span><span class="p">],</span> <span class="n">idx</span><span class="p">)</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">output_cb</span><span class="o">.</span><span class="n">Append</span><span class="p">(</span><span class="nb">list</span><span class="p">[</span><span class="n">idx</span><span class="p">],</span> <span class="n">idx</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">input_cb</span><span class="o">.</span><span class="n">SetStringSelection</span><span class="p">(</span><span class="s2">&quot;Molar Volume&quot;</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">output_cb</span><span class="o">.</span><span class="n">SetStringSelection</span><span class="p">(</span><span class="s2">&quot;Mass Density&quot;</span><span class="p">)</span>
+        <span class="n">unit_volume</span> <span class="o">=</span> <span class="s2">&quot;     &quot;</span> <span class="o">+</span> <span class="n">unit_volume</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">output_ctl</span> <span class="o">=</span> <span class="n">wx</span><span class="o">.</span><span class="n">TextCtrl</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="o">-</span><span class="mi">1</span><span class="p">,</span> <span class="n">size</span><span class="o">=</span><span class="p">(</span><span class="n">_BOX_WIDTH</span><span class="p">,</span> <span class="o">-</span><span class="mi">1</span><span class="p">))</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">output_ctl</span><span class="o">.</span><span class="n">SetEditable</span><span class="p">(</span><span class="bp">False</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">output_ctl</span><span class="o">.</span><span class="n">SetBackgroundColour</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">ctr_color</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">unit_output_density</span> <span class="o">=</span> <span class="n">wx</span><span class="o">.</span><span class="n">StaticText</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="o">-</span><span class="mi">1</span><span class="p">,</span> <span class="n">unit_density</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">unit_output_volume</span> <span class="o">=</span> <span class="n">wx</span><span class="o">.</span><span class="n">StaticText</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="o">-</span><span class="mi">1</span><span class="p">,</span> <span class="n">unit_volume</span><span class="p">)</span>
+        <span class="n">iy</span> <span class="o">=</span> <span class="mi">0</span>
+        <span class="n">ix</span> <span class="o">=</span> <span class="mi">0</span>
+        <span class="n">sizer_output</span><span class="o">.</span><span class="n">Add</span><span class="p">(</span><span class="n">molar_mass_txt</span><span class="p">,</span> <span class="p">(</span><span class="n">iy</span><span class="p">,</span> <span class="n">ix</span><span class="p">),</span> <span class="p">(</span><span class="mi">1</span><span class="p">,</span> <span class="mi">1</span><span class="p">),</span>
+                             <span class="n">wx</span><span class="o">.</span><span class="n">LEFT</span> <span class="o">|</span> <span class="n">wx</span><span class="o">.</span><span class="n">EXPAND</span> <span class="o">|</span> <span class="n">wx</span><span class="o">.</span><span class="n">ADJUST_MINSIZE</span><span class="p">,</span> <span class="mi">15</span><span class="p">)</span>
+        <span class="n">ix</span> <span class="o">+=</span> <span class="mi">1</span>
+        <span class="n">sizer_output</span><span class="o">.</span><span class="n">Add</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">molar_mass_ctl</span><span class="p">,</span> <span class="p">(</span><span class="n">iy</span><span class="p">,</span> <span class="n">ix</span><span class="p">),</span> <span class="p">(</span><span class="mi">1</span><span class="p">,</span> <span class="mi">1</span><span class="p">),</span>
+                            <span class="n">wx</span><span class="o">.</span><span class="n">EXPAND</span> <span class="o">|</span> <span class="n">wx</span><span class="o">.</span><span class="n">ADJUST_MINSIZE</span><span class="p">,</span> <span class="mi">0</span><span class="p">)</span>
+        <span class="n">ix</span> <span class="o">+=</span> <span class="mi">1</span>
+        <span class="n">sizer_output</span><span class="o">.</span><span class="n">Add</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">molar_mass_unit1</span><span class="p">,</span> <span class="p">(</span><span class="n">iy</span><span class="p">,</span> <span class="n">ix</span><span class="p">),</span> <span class="p">(</span><span class="mi">1</span><span class="p">,</span> <span class="mi">1</span><span class="p">),</span>
+                            <span class="n">wx</span><span class="o">.</span><span class="n">EXPAND</span> <span class="o">|</span> <span class="n">wx</span><span class="o">.</span><span class="n">ADJUST_MINSIZE</span><span class="p">,</span> <span class="mi">0</span><span class="p">)</span>
+        <span class="n">ix</span> <span class="o">+=</span> <span class="mi">1</span>
+        <span class="n">sizer_output</span><span class="o">.</span><span class="n">Add</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">molar_mass_unit2</span><span class="p">,</span> <span class="p">(</span><span class="n">iy</span><span class="p">,</span> <span class="n">ix</span><span class="p">),</span> <span class="p">(</span><span class="mi">1</span><span class="p">,</span> <span class="mi">1</span><span class="p">),</span>
+                            <span class="n">wx</span><span class="o">.</span><span class="n">EXPAND</span> <span class="o">|</span> <span class="n">wx</span><span class="o">.</span><span class="n">ADJUST_MINSIZE</span><span class="p">,</span> <span class="mi">0</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">molar_mass_unit1</span><span class="o">.</span><span class="n">Show</span><span class="p">(</span><span class="bp">False</span><span class="p">)</span>
+        <span class="n">iy</span> <span class="o">+=</span> <span class="mi">1</span>
+        <span class="n">ix</span> <span class="o">=</span> <span class="mi">0</span>
+        <span class="n">sizer_output</span><span class="o">.</span><span class="n">Add</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">output_cb</span><span class="p">,</span> <span class="p">(</span><span class="n">iy</span><span class="p">,</span> <span class="n">ix</span><span class="p">),</span> <span class="p">(</span><span class="mi">1</span><span class="p">,</span> <span class="mi">1</span><span class="p">),</span>
+                             <span class="n">wx</span><span class="o">.</span><span class="n">LEFT</span> <span class="o">|</span> <span class="n">wx</span><span class="o">.</span><span class="n">EXPAND</span> <span class="o">|</span> <span class="n">wx</span><span class="o">.</span><span class="n">ADJUST_MINSIZE</span><span class="p">,</span> <span class="mi">15</span><span class="p">)</span>
+        <span class="n">ix</span> <span class="o">+=</span> <span class="mi">1</span>
+        <span class="n">sizer_output</span><span class="o">.</span><span class="n">Add</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">output_ctl</span><span class="p">,</span> <span class="p">(</span><span class="n">iy</span><span class="p">,</span> <span class="n">ix</span><span class="p">),</span> <span class="p">(</span><span class="mi">1</span><span class="p">,</span> <span class="mi">1</span><span class="p">),</span>
+                            <span class="n">wx</span><span class="o">.</span><span class="n">EXPAND</span> <span class="o">|</span> <span class="n">wx</span><span class="o">.</span><span class="n">ADJUST_MINSIZE</span><span class="p">,</span> <span class="mi">0</span><span class="p">)</span>
+        <span class="n">ix</span> <span class="o">+=</span> <span class="mi">1</span>
+        <span class="n">sizer_output</span><span class="o">.</span><span class="n">Add</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">unit_output_volume</span><span class="p">,</span>
+                         <span class="p">(</span><span class="n">iy</span><span class="p">,</span> <span class="n">ix</span><span class="p">),</span> <span class="p">(</span><span class="mi">1</span><span class="p">,</span> <span class="mi">1</span><span class="p">),</span> <span class="n">wx</span><span class="o">.</span><span class="n">EXPAND</span> <span class="o">|</span> <span class="n">wx</span><span class="o">.</span><span class="n">ADJUST_MINSIZE</span><span class="p">,</span> <span class="mi">0</span><span class="p">)</span>
+        <span class="n">ix</span> <span class="o">+=</span> <span class="mi">1</span>
+        <span class="n">sizer_output</span><span class="o">.</span><span class="n">Add</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">unit_output_density</span><span class="p">,</span>
+                         <span class="p">(</span><span class="n">iy</span><span class="p">,</span> <span class="n">ix</span><span class="p">),</span> <span class="p">(</span><span class="mi">1</span><span class="p">,</span> <span class="mi">1</span><span class="p">),</span> <span class="n">wx</span><span class="o">.</span><span class="n">EXPAND</span> <span class="o">|</span> <span class="n">wx</span><span class="o">.</span><span class="n">ADJUST_MINSIZE</span><span class="p">,</span> <span class="mi">0</span><span class="p">)</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">unit_output_volume</span><span class="o">.</span><span class="n">Show</span><span class="p">(</span><span class="bp">False</span><span class="p">)</span>
+        <span class="n">boxsizer2</span><span class="o">.</span><span class="n">Add</span><span class="p">(</span><span class="n">sizer_output</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">sizer2</span><span class="o">.</span><span class="n">Add</span><span class="p">(</span><span class="n">boxsizer2</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="n">wx</span><span class="o">.</span><span class="n">EXPAND</span> <span class="o">|</span> <span class="n">wx</span><span class="o">.</span><span class="n">ALL</span><span class="p">,</span> <span class="mi">10</span><span class="p">)</span>
+
+        <span class="c1"># buttons</span>
+        <span class="nb">id</span> <span class="o">=</span> <span class="n">wx</span><span class="o">.</span><span class="n">NewId</span><span class="p">()</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">button_calculate</span> <span class="o">=</span> <span class="n">wx</span><span class="o">.</span><span class="n">Button</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="nb">id</span><span class="p">,</span> <span class="s2">&quot;Calculate&quot;</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">button_calculate</span><span class="o">.</span><span class="n">SetToolTipString</span><span class="p">(</span><span class="s2">&quot;Calculate.&quot;</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">Bind</span><span class="p">(</span><span class="n">wx</span><span class="o">.</span><span class="n">EVT_BUTTON</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">calculate</span><span class="p">,</span> <span class="nb">id</span><span class="o">=</span><span class="nb">id</span><span class="p">)</span>
+
+        <span class="nb">id</span> <span class="o">=</span> <span class="n">wx</span><span class="o">.</span><span class="n">NewId</span><span class="p">()</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">button_help</span> <span class="o">=</span> <span class="n">wx</span><span class="o">.</span><span class="n">Button</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="nb">id</span><span class="p">,</span> <span class="s2">&quot;HELP&quot;</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">button_help</span><span class="o">.</span><span class="n">SetToolTipString</span><span class="p">(</span><span class="s2">&quot;Help for density calculator.&quot;</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">Bind</span><span class="p">(</span><span class="n">wx</span><span class="o">.</span><span class="n">EVT_BUTTON</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">on_help</span><span class="p">,</span> <span class="nb">id</span><span class="o">=</span><span class="nb">id</span><span class="p">)</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">button_close</span> <span class="o">=</span> <span class="n">wx</span><span class="o">.</span><span class="n">Button</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">wx</span><span class="o">.</span><span class="n">ID_CANCEL</span><span class="p">,</span> <span class="s1">&#39;Close&#39;</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">button_close</span><span class="o">.</span><span class="n">Bind</span><span class="p">(</span><span class="n">wx</span><span class="o">.</span><span class="n">EVT_BUTTON</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">on_close</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">button_close</span><span class="o">.</span><span class="n">SetToolTipString</span><span class="p">(</span><span class="s2">&quot;Close this window.&quot;</span><span class="p">)</span>
+
+        <span class="n">sizer_button</span><span class="o">.</span><span class="n">Add</span><span class="p">((</span><span class="mi">100</span><span class="p">,</span> <span class="mi">20</span><span class="p">),</span> <span class="mi">1</span><span class="p">,</span> <span class="n">wx</span><span class="o">.</span><span class="n">EXPAND</span> <span class="o">|</span> <span class="n">wx</span><span class="o">.</span><span class="n">ADJUST_MINSIZE</span><span class="p">,</span> <span class="mi">0</span><span class="p">)</span>
+        <span class="n">sizer_button</span><span class="o">.</span><span class="n">Add</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">button_calculate</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span>
+                                        <span class="n">wx</span><span class="o">.</span><span class="n">RIGHT</span> <span class="o">|</span> <span class="n">wx</span><span class="o">.</span><span class="n">ADJUST_MINSIZE</span><span class="p">,</span> <span class="mi">20</span><span class="p">)</span>
+        <span class="n">sizer_button</span><span class="o">.</span><span class="n">Add</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">button_help</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span>
+                                        <span class="n">wx</span><span class="o">.</span><span class="n">RIGHT</span> <span class="o">|</span> <span class="n">wx</span><span class="o">.</span><span class="n">ADJUST_MINSIZE</span><span class="p">,</span> <span class="mi">20</span><span class="p">)</span>
+        <span class="n">sizer_button</span><span class="o">.</span><span class="n">Add</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">button_close</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span>
+                                        <span class="n">wx</span><span class="o">.</span><span class="n">RIGHT</span> <span class="o">|</span> <span class="n">wx</span><span class="o">.</span><span class="n">ADJUST_MINSIZE</span><span class="p">,</span> <span class="mi">20</span><span class="p">)</span>
+        <span class="n">sizer3</span><span class="o">.</span><span class="n">Add</span><span class="p">(</span><span class="n">sizer_button</span><span class="p">)</span>
+
+        <span class="c1"># layout</span>
+        <span class="n">vbox</span><span class="o">.</span><span class="n">Add</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">sizer1</span><span class="p">)</span>
+        <span class="n">vbox</span><span class="o">.</span><span class="n">Add</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">sizer2</span><span class="p">)</span>
+        <span class="n">vbox</span><span class="o">.</span><span class="n">Add</span><span class="p">(</span><span class="n">sizer3</span><span class="p">)</span>
+        <span class="n">vbox</span><span class="o">.</span><span class="n">Fit</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">SetSizer</span><span class="p">(</span><span class="n">vbox</span><span class="p">)</span>
+
+<div class="viewcode-block" id="DensityPanel.on_select_input"><a class="viewcode-back" href="../../../../../dev/api/sas.sasgui.perspectives.calculator.html#sas.sasgui.perspectives.calculator.density_panel.DensityPanel.on_select_input">[docs]</a>    <span class="k">def</span> <span class="nf">on_select_input</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">event</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        On selection of input combobox,</span>
+<span class="sd">        update units and output combobox</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">if</span> <span class="n">event</span> <span class="o">==</span> <span class="bp">None</span><span class="p">:</span>
+            <span class="k">return</span>
+        <span class="n">event</span><span class="o">.</span><span class="n">Skip</span><span class="p">()</span>
+
+        <span class="n">combo</span> <span class="o">=</span> <span class="n">event</span><span class="o">.</span><span class="n">GetEventObject</span><span class="p">()</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_input</span> <span class="o">=</span> <span class="n">combo</span><span class="o">.</span><span class="n">GetValue</span><span class="p">()</span>
+        <span class="k">for</span> <span class="n">name</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">_input_list</span><span class="p">:</span>
+            <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">_input</span> <span class="o">!=</span> <span class="n">name</span><span class="p">:</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">_output</span> <span class="o">=</span> <span class="n">name</span>
+                <span class="k">break</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">set_values</span><span class="p">()</span></div>
+
+<div class="viewcode-block" id="DensityPanel.on_select_output"><a class="viewcode-back" href="../../../../../dev/api/sas.sasgui.perspectives.calculator.html#sas.sasgui.perspectives.calculator.density_panel.DensityPanel.on_select_output">[docs]</a>    <span class="k">def</span> <span class="nf">on_select_output</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">event</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        On selection of output combobox,</span>
+<span class="sd">        update units and input combobox</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">if</span> <span class="n">event</span> <span class="o">==</span> <span class="bp">None</span><span class="p">:</span>
+            <span class="k">return</span>
+        <span class="n">event</span><span class="o">.</span><span class="n">Skip</span><span class="p">()</span>
+
+        <span class="n">combo</span> <span class="o">=</span> <span class="n">event</span><span class="o">.</span><span class="n">GetEventObject</span><span class="p">()</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_output</span> <span class="o">=</span> <span class="n">combo</span><span class="o">.</span><span class="n">GetValue</span><span class="p">()</span>
+        <span class="k">for</span> <span class="n">name</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">_input_list</span><span class="p">:</span>
+            <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">_output</span> <span class="o">!=</span> <span class="n">name</span><span class="p">:</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">_input</span> <span class="o">=</span> <span class="n">name</span>
+                <span class="k">break</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">set_values</span><span class="p">()</span></div>
+
+<div class="viewcode-block" id="DensityPanel.set_values"><a class="viewcode-back" href="../../../../../dev/api/sas.sasgui.perspectives.calculator.html#sas.sasgui.perspectives.calculator.density_panel.DensityPanel.set_values">[docs]</a>    <span class="k">def</span> <span class="nf">set_values</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Sets units and combobox values</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="nb">input</span><span class="p">,</span> <span class="n">output</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">get_input</span><span class="p">()</span>
+        <span class="k">if</span> <span class="nb">input</span> <span class="ow">is</span> <span class="bp">None</span><span class="p">:</span>
+            <span class="k">return</span>
+        <span class="c1"># input</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">input_cb</span><span class="o">.</span><span class="n">SetValue</span><span class="p">(</span><span class="nb">str</span><span class="p">(</span><span class="nb">input</span><span class="p">))</span>
+        <span class="c1"># output</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">output_cb</span><span class="o">.</span><span class="n">SetValue</span><span class="p">(</span><span class="nb">str</span><span class="p">(</span><span class="n">output</span><span class="p">))</span>
+        <span class="c1"># unit</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">_input_list</span><span class="o">.</span><span class="n">index</span><span class="p">(</span><span class="nb">input</span><span class="p">)</span> <span class="o">==</span> <span class="mi">0</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">molar_mass_unit1</span><span class="o">.</span><span class="n">Show</span><span class="p">(</span><span class="bp">True</span><span class="p">)</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">molar_mass_unit2</span><span class="o">.</span><span class="n">Show</span><span class="p">(</span><span class="bp">False</span><span class="p">)</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">compound_eg1</span><span class="o">.</span><span class="n">Show</span><span class="p">(</span><span class="bp">True</span><span class="p">)</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">compound_eg2</span><span class="o">.</span><span class="n">Show</span><span class="p">(</span><span class="bp">False</span><span class="p">)</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">unit_input_density</span><span class="o">.</span><span class="n">Show</span><span class="p">(</span><span class="bp">True</span><span class="p">)</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">unit_output_volume</span><span class="o">.</span><span class="n">Show</span><span class="p">(</span><span class="bp">True</span><span class="p">)</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">unit_input_volume</span><span class="o">.</span><span class="n">Show</span><span class="p">(</span><span class="bp">False</span><span class="p">)</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">unit_output_density</span><span class="o">.</span><span class="n">Show</span><span class="p">(</span><span class="bp">False</span><span class="p">)</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">molar_mass_unit1</span><span class="o">.</span><span class="n">Show</span><span class="p">(</span><span class="bp">False</span><span class="p">)</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">molar_mass_unit2</span><span class="o">.</span><span class="n">Show</span><span class="p">(</span><span class="bp">True</span><span class="p">)</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">compound_eg1</span><span class="o">.</span><span class="n">Show</span><span class="p">(</span><span class="bp">False</span><span class="p">)</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">compound_eg2</span><span class="o">.</span><span class="n">Show</span><span class="p">(</span><span class="bp">True</span><span class="p">)</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">unit_input_volume</span><span class="o">.</span><span class="n">Show</span><span class="p">(</span><span class="bp">True</span><span class="p">)</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">unit_output_density</span><span class="o">.</span><span class="n">Show</span><span class="p">(</span><span class="bp">True</span><span class="p">)</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">unit_input_density</span><span class="o">.</span><span class="n">Show</span><span class="p">(</span><span class="bp">False</span><span class="p">)</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">unit_output_volume</span><span class="o">.</span><span class="n">Show</span><span class="p">(</span><span class="bp">False</span><span class="p">)</span>
+        <span class="c1"># layout    </span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">clear_outputs</span><span class="p">()</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">sizer1</span><span class="o">.</span><span class="n">Layout</span><span class="p">()</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">sizer2</span><span class="o">.</span><span class="n">Layout</span><span class="p">()</span></div>
+
+<div class="viewcode-block" id="DensityPanel.get_input"><a class="viewcode-back" href="../../../../../dev/api/sas.sasgui.perspectives.calculator.html#sas.sasgui.perspectives.calculator.density_panel.DensityPanel.get_input">[docs]</a>    <span class="k">def</span> <span class="nf">get_input</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Return the current input and output combobox values</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_input</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">_output</span></div>
+
+<div class="viewcode-block" id="DensityPanel.check_inputs"><a class="viewcode-back" href="../../../../../dev/api/sas.sasgui.perspectives.calculator.html#sas.sasgui.perspectives.calculator.density_panel.DensityPanel.check_inputs">[docs]</a>    <span class="k">def</span> <span class="nf">check_inputs</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Check validity user inputs</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">flag</span> <span class="o">=</span> <span class="bp">True</span>
+        <span class="n">msg</span> <span class="o">=</span> <span class="s2">&quot;&quot;</span>
+        <span class="k">if</span> <span class="n">check_float</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">input_ctl</span><span class="p">):</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">input</span> <span class="o">=</span> <span class="nb">float</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">input_ctl</span><span class="o">.</span><span class="n">GetValue</span><span class="p">())</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">flag</span> <span class="o">=</span> <span class="bp">False</span>
+            <span class="n">input_type</span> <span class="o">=</span> <span class="nb">str</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">input_cb</span><span class="o">.</span><span class="n">GetValue</span><span class="p">())</span>
+            <span class="n">msg</span> <span class="o">+=</span> <span class="s2">&quot;Error for </span><span class="si">%s</span><span class="s2"> value :expect float&quot;</span> <span class="o">%</span> <span class="n">input_type</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">compound</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">compound_ctl</span><span class="o">.</span><span class="n">GetValue</span><span class="p">()</span><span class="o">.</span><span class="n">lstrip</span><span class="p">()</span><span class="o">.</span><span class="n">rstrip</span><span class="p">()</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">compound</span> <span class="o">!=</span> <span class="s2">&quot;&quot;</span><span class="p">:</span>
+            <span class="k">try</span> <span class="p">:</span>
+                <span class="n">Formula</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">compound</span><span class="p">)</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">compound_ctl</span><span class="o">.</span><span class="n">SetBackgroundColour</span><span class="p">(</span><span class="n">wx</span><span class="o">.</span><span class="n">WHITE</span><span class="p">)</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">compound_ctl</span><span class="o">.</span><span class="n">Refresh</span><span class="p">()</span>
+            <span class="k">except</span><span class="p">:</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">compound_ctl</span><span class="o">.</span><span class="n">SetBackgroundColour</span><span class="p">(</span><span class="s2">&quot;pink&quot;</span><span class="p">)</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">compound_ctl</span><span class="o">.</span><span class="n">Refresh</span><span class="p">()</span>
+                <span class="n">flag</span> <span class="o">=</span> <span class="bp">False</span>
+                <span class="n">msg</span> <span class="o">+=</span> <span class="s2">&quot;Enter correct formula&quot;</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">compound_ctl</span><span class="o">.</span><span class="n">SetBackgroundColour</span><span class="p">(</span><span class="s2">&quot;pink&quot;</span><span class="p">)</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">compound_ctl</span><span class="o">.</span><span class="n">Refresh</span><span class="p">()</span>
+            <span class="n">flag</span> <span class="o">=</span> <span class="bp">False</span>
+            <span class="n">msg</span> <span class="o">+=</span> <span class="s2">&quot;Enter Formula&quot;</span>
+        <span class="k">return</span> <span class="n">flag</span><span class="p">,</span> <span class="n">msg</span></div>
+
+
+<div class="viewcode-block" id="DensityPanel.calculate"><a class="viewcode-back" href="../../../../../dev/api/sas.sasgui.perspectives.calculator.html#sas.sasgui.perspectives.calculator.density_panel.DensityPanel.calculate">[docs]</a>    <span class="k">def</span> <span class="nf">calculate</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">event</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Calculate the mass Density/molar Volume of the molecules</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">clear_outputs</span><span class="p">()</span>
+        <span class="k">try</span><span class="p">:</span>
+            <span class="c1">#Check validity user inputs</span>
+            <span class="n">flag</span><span class="p">,</span> <span class="n">msg</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">check_inputs</span><span class="p">()</span>
+            <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">base</span> <span class="ow">is</span> <span class="ow">not</span> <span class="bp">None</span> <span class="ow">and</span> <span class="n">msg</span><span class="o">.</span><span class="n">lstrip</span><span class="p">()</span><span class="o">.</span><span class="n">rstrip</span><span class="p">()</span> <span class="o">!=</span> <span class="s2">&quot;&quot;</span><span class="p">:</span>
+                <span class="n">msg</span> <span class="o">=</span> <span class="s2">&quot;Density/Volume Calculator: </span><span class="si">%s</span><span class="s2">&quot;</span> <span class="o">%</span> <span class="nb">str</span><span class="p">(</span><span class="n">msg</span><span class="p">)</span>
+                <span class="n">wx</span><span class="o">.</span><span class="n">PostEvent</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">base</span><span class="p">,</span> <span class="n">StatusEvent</span><span class="p">(</span><span class="n">status</span><span class="o">=</span><span class="n">msg</span><span class="p">))</span>
+            <span class="k">if</span> <span class="ow">not</span> <span class="n">flag</span><span class="p">:</span>
+               <span class="k">return</span>
+            <span class="c1">#get ready to compute</span>
+            <span class="n">mol_formula</span> <span class="o">=</span> <span class="n">Formula</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">compound</span><span class="p">)</span>
+            <span class="n">molar_mass</span> <span class="o">=</span> <span class="nb">float</span><span class="p">(</span><span class="n">mol_formula</span><span class="o">.</span><span class="n">molecular_mass</span><span class="p">)</span> <span class="o">*</span> <span class="n">AVOGADRO</span>
+            <span class="n">output</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_format_number</span><span class="p">(</span><span class="n">molar_mass</span> <span class="o">/</span> <span class="bp">self</span><span class="o">.</span><span class="n">input</span><span class="p">)</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">molar_mass_ctl</span><span class="o">.</span><span class="n">SetValue</span><span class="p">(</span><span class="nb">str</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_format_number</span><span class="p">(</span><span class="n">molar_mass</span><span class="p">)))</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">output_ctl</span><span class="o">.</span><span class="n">SetValue</span><span class="p">(</span><span class="nb">str</span><span class="p">(</span><span class="n">output</span><span class="p">))</span>
+        <span class="k">except</span><span class="p">:</span>
+            <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">base</span> <span class="ow">is</span> <span class="ow">not</span> <span class="bp">None</span><span class="p">:</span>
+                <span class="n">msg</span> <span class="o">=</span> <span class="s2">&quot;Density/Volume Calculator: </span><span class="si">%s</span><span class="s2">&quot;</span> <span class="o">%</span> <span class="p">(</span><span class="n">sys</span><span class="o">.</span><span class="n">exc_value</span><span class="p">)</span>
+                <span class="n">wx</span><span class="o">.</span><span class="n">PostEvent</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">base</span><span class="p">,</span> <span class="n">StatusEvent</span><span class="p">(</span><span class="n">status</span><span class="o">=</span><span class="n">msg</span><span class="p">))</span>
+        <span class="k">if</span> <span class="n">event</span> <span class="ow">is</span> <span class="ow">not</span> <span class="bp">None</span><span class="p">:</span>
+            <span class="n">event</span><span class="o">.</span><span class="n">Skip</span><span class="p">()</span></div>
+
+<div class="viewcode-block" id="DensityPanel.on_help"><a class="viewcode-back" href="../../../../../dev/api/sas.sasgui.perspectives.calculator.html#sas.sasgui.perspectives.calculator.density_panel.DensityPanel.on_help">[docs]</a>    <span class="k">def</span> <span class="nf">on_help</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">event</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Bring up the density/volume calculator Documentation whenever</span>
+<span class="sd">        the HELP button is clicked.</span>
+
+<span class="sd">        Calls DocumentationWindow with the path of the location within the</span>
+<span class="sd">        documentation tree (after /doc/ ....&quot;.  Note that when using old</span>
+<span class="sd">        versions of Wx (before 2.9) and thus not the release version of</span>
+<span class="sd">        installers, the help comes up at the top level of the file as</span>
+<span class="sd">        webbrowser does not pass anything past the # to the browser when it is</span>
+<span class="sd">        running &quot;file:///....&quot;</span>
+
+<span class="sd">    :param evt: Triggers on clicking the help button</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+
+        <span class="n">_TreeLocation</span> <span class="o">=</span> <span class="s2">&quot;user/sasgui/perspectives/calculator/&quot;</span>
+        <span class="n">_TreeLocation</span> <span class="o">+=</span> <span class="s2">&quot;density_calculator_help.html&quot;</span>
+        <span class="n">_doc_viewer</span> <span class="o">=</span> <span class="n">DocumentationWindow</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="o">-</span><span class="mi">1</span><span class="p">,</span> <span class="n">_TreeLocation</span><span class="p">,</span> <span class="s2">&quot;&quot;</span><span class="p">,</span>
+                                          <span class="s2">&quot;Density/Volume Calculator Help&quot;</span><span class="p">)</span></div>
+
+<div class="viewcode-block" id="DensityPanel.on_close"><a class="viewcode-back" href="../../../../../dev/api/sas.sasgui.perspectives.calculator.html#sas.sasgui.perspectives.calculator.density_panel.DensityPanel.on_close">[docs]</a>    <span class="k">def</span> <span class="nf">on_close</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">event</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        close the window containing this panel</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">parent</span><span class="o">.</span><span class="n">Close</span><span class="p">()</span></div>
+
+<div class="viewcode-block" id="DensityPanel.clear_outputs"><a class="viewcode-back" href="../../../../../dev/api/sas.sasgui.perspectives.calculator.html#sas.sasgui.perspectives.calculator.density_panel.DensityPanel.clear_outputs">[docs]</a>    <span class="k">def</span> <span class="nf">clear_outputs</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Clear the outputs textctrl</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">molar_mass_ctl</span><span class="o">.</span><span class="n">SetValue</span><span class="p">(</span><span class="s2">&quot;&quot;</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">output_ctl</span><span class="o">.</span><span class="n">SetValue</span><span class="p">(</span><span class="s2">&quot;&quot;</span><span class="p">)</span></div>
+
+    <span class="k">def</span> <span class="nf">_format_number</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">value</span><span class="o">=</span><span class="bp">None</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Return a float in a standardized, human-readable formatted string</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">try</span><span class="p">:</span>
+            <span class="n">value</span> <span class="o">=</span> <span class="nb">float</span><span class="p">(</span><span class="n">value</span><span class="p">)</span>
+        <span class="k">except</span><span class="p">:</span>
+            <span class="n">output</span> <span class="o">=</span> <span class="s1">&#39;&#39;</span>
+            <span class="k">return</span> <span class="n">output</span>
+
+        <span class="n">output</span> <span class="o">=</span> <span class="s2">&quot;</span><span class="si">%-12.5f</span><span class="s2">&quot;</span> <span class="o">%</span> <span class="n">value</span>
+        <span class="k">return</span> <span class="n">output</span><span class="o">.</span><span class="n">lstrip</span><span class="p">()</span><span class="o">.</span><span class="n">rstrip</span><span class="p">()</span></div>
+
+<div class="viewcode-block" id="DensityWindow"><a class="viewcode-back" href="../../../../../dev/api/sas.sasgui.perspectives.calculator.html#sas.sasgui.perspectives.calculator.density_panel.DensityWindow">[docs]</a><span class="k">class</span> <span class="nc">DensityWindow</span><span class="p">(</span><span class="n">widget</span><span class="o">.</span><span class="n">CHILD_FRAME</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">parent</span><span class="o">=</span><span class="bp">None</span><span class="p">,</span> <span class="n">title</span><span class="o">=</span><span class="s2">&quot;Density/Volume Calculator&quot;</span><span class="p">,</span>
+                  <span class="n">base</span><span class="o">=</span><span class="bp">None</span><span class="p">,</span> <span class="n">manager</span><span class="o">=</span><span class="bp">None</span><span class="p">,</span>
+                  <span class="n">size</span><span class="o">=</span><span class="p">(</span><span class="n">PANEL_SIZE</span> <span class="o">*</span> <span class="mf">1.05</span><span class="p">,</span> <span class="n">PANEL_SIZE</span> <span class="o">/</span> <span class="mf">1.55</span><span class="p">),</span> <span class="o">*</span><span class="n">args</span><span class="p">,</span> <span class="o">**</span><span class="n">kwds</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">kwds</span><span class="p">[</span><span class="s1">&#39;title&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="n">title</span>
+        <span class="n">kwds</span><span class="p">[</span><span class="s1">&#39;size&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="n">size</span>
+        <span class="n">widget</span><span class="o">.</span><span class="n">CHILD_FRAME</span><span class="o">.</span><span class="n">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">parent</span><span class="p">,</span> <span class="o">*</span><span class="n">args</span><span class="p">,</span> <span class="o">**</span><span class="n">kwds</span><span class="p">)</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">manager</span> <span class="o">=</span> <span class="n">manager</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">panel</span> <span class="o">=</span> <span class="n">DensityPanel</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">base</span><span class="o">=</span><span class="n">base</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">Bind</span><span class="p">(</span><span class="n">wx</span><span class="o">.</span><span class="n">EVT_CLOSE</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">on_close</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">SetPosition</span><span class="p">((</span><span class="n">wx</span><span class="o">.</span><span class="n">LEFT</span><span class="p">,</span> <span class="n">PANEL_TOP</span><span class="p">))</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">Show</span><span class="p">(</span><span class="bp">True</span><span class="p">)</span>
+
+<div class="viewcode-block" id="DensityWindow.on_close"><a class="viewcode-back" href="../../../../../dev/api/sas.sasgui.perspectives.calculator.html#sas.sasgui.perspectives.calculator.density_panel.DensityWindow.on_close">[docs]</a>    <span class="k">def</span> <span class="nf">on_close</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">event</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        On close event</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">manager</span> <span class="o">!=</span> <span class="bp">None</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">manager</span><span class="o">.</span><span class="n">cal_md_frame</span> <span class="o">=</span> <span class="bp">None</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">Destroy</span><span class="p">()</span></div></div>
+
+
+<div class="viewcode-block" id="ViewApp"><a class="viewcode-back" href="../../../../../dev/api/sas.sasgui.perspectives.calculator.html#sas.sasgui.perspectives.calculator.density_panel.ViewApp">[docs]</a><span class="k">class</span> <span class="nc">ViewApp</span><span class="p">(</span><span class="n">wx</span><span class="o">.</span><span class="n">App</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+<div class="viewcode-block" id="ViewApp.OnInit"><a class="viewcode-back" href="../../../../../dev/api/sas.sasgui.perspectives.calculator.html#sas.sasgui.perspectives.calculator.density_panel.ViewApp.OnInit">[docs]</a>    <span class="k">def</span> <span class="nf">OnInit</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">widget</span><span class="o">.</span><span class="n">CHILD_FRAME</span> <span class="o">=</span> <span class="n">wx</span><span class="o">.</span><span class="n">Frame</span>
+        <span class="n">frame</span> <span class="o">=</span> <span class="n">DensityWindow</span><span class="p">(</span><span class="bp">None</span><span class="p">,</span> <span class="n">title</span><span class="o">=</span><span class="s2">&quot;Density/Volume Calculator&quot;</span><span class="p">)</span>
+        <span class="n">frame</span><span class="o">.</span><span class="n">Show</span><span class="p">(</span><span class="bp">True</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">SetTopWindow</span><span class="p">(</span><span class="n">frame</span><span class="p">)</span>
+        <span class="k">return</span> <span class="bp">True</span></div></div>
+
+
+<span class="k">if</span> <span class="n">__name__</span> <span class="o">==</span> <span class="s2">&quot;__main__&quot;</span><span class="p">:</span>
+    <span class="n">app</span> <span class="o">=</span> <span class="n">ViewApp</span><span class="p">(</span><span class="mi">0</span><span class="p">)</span>
+    <span class="n">app</span><span class="o">.</span><span class="n">MainLoop</span><span class="p">()</span>
+</pre></div>
+
+          </div>
+        </div>
+      </div>
+      <div class="sphinxsidebar" role="navigation" aria-label="main navigation">
+        <div class="sphinxsidebarwrapper">
+<div id="searchbox" style="display: none" role="search">
+  <h3>Quick search</h3>
+    <form class="search" action="../../../../../search.html" method="get">
+      <input type="text" name="q" />
+      <input type="submit" value="Go" />
+      <input type="hidden" name="check_keywords" value="yes" />
+      <input type="hidden" name="area" value="default" />
+    </form>
+</div>
+<script type="text/javascript">$('#searchbox').show(0);</script>
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="related" role="navigation" aria-label="related navigation">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="../../../../../genindex.html" title="General Index"
+             >index</a></li>
+        <li class="right" >
+          <a href="../../../../../py-modindex.html" title="Python Module Index"
+             >modules</a> |</li>
+        <li class="nav-item nav-item-0"><a href="../../../../../index.html">SasView 4.1.2 documentation</a> &raquo;</li>
+          <li class="nav-item nav-item-1"><a href="../../../../index.html" >Module code</a> &raquo;</li>
+          <li class="nav-item nav-item-2"><a href="../calculator.html" >sas.sasgui.perspectives.calculator</a> &raquo;</li> 
+      </ul>
+    </div>
+    <div class="footer" role="contentinfo">
+        &copy; Copyright 2017, The SasView Project.
+      Created using <a href="http://sphinx-doc.org/">Sphinx</a> 1.4.1.
+    </div>
+  </body>
+</html>
