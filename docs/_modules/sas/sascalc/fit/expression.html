@@ -1,0 +1,497 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+  "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+    
+    <title>sas.sascalc.fit.expression &mdash; SasView 4.2.0 documentation</title>
+    
+    <link rel="stylesheet" href="../../../../_static/classic.css" type="text/css" />
+    <link rel="stylesheet" href="../../../../_static/pygments.css" type="text/css" />
+    
+    <script type="text/javascript">
+      var DOCUMENTATION_OPTIONS = {
+        URL_ROOT:    '../../../../',
+        VERSION:     '4.2.0',
+        COLLAPSE_INDEX: false,
+        FILE_SUFFIX: '.html',
+        HAS_SOURCE:  true
+      };
+    </script>
+    <script type="text/javascript" src="../../../../_static/jquery.js"></script>
+    <script type="text/javascript" src="../../../../_static/underscore.js"></script>
+    <script type="text/javascript" src="../../../../_static/doctools.js"></script>
+    <script type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.1/MathJax.js?config=TeX-MML-AM_CHTML"></script>
+    <link rel="top" title="SasView 4.2.0 documentation" href="../../../../index.html" />
+    <link rel="up" title="sas" href="../../../sas.html" /> 
+  </head>
+  <body role="document">
+    <div class="related" role="navigation" aria-label="related navigation">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="../../../../genindex.html" title="General Index"
+             accesskey="I">index</a></li>
+        <li class="right" >
+          <a href="../../../../py-modindex.html" title="Python Module Index"
+             >modules</a> |</li>
+        <li class="nav-item nav-item-0"><a href="../../../../index.html">SasView 4.2.0 documentation</a> &raquo;</li>
+          <li class="nav-item nav-item-1"><a href="../../../index.html" >Module code</a> &raquo;</li>
+          <li class="nav-item nav-item-2"><a href="../../../sas.html" accesskey="U">sas</a> &raquo;</li> 
+      </ul>
+    </div>  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          <div class="body" role="main">
+            
+  <h1>Source code for sas.sascalc.fit.expression</h1><div class="highlight"><pre>
+<span></span><span class="c1"># This program is public domain</span>
+<span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">Parameter expression evaluator.</span>
+
+<span class="sd">For systems in which constraints are expressed as string expressions rather</span>
+<span class="sd">than python code, :func:`compile_constraints` can construct an expression</span>
+<span class="sd">evaluator that substitutes the computed values of the expressions into the</span>
+<span class="sd">parameters.</span>
+
+<span class="sd">The compiler requires a symbol table, an expression set and a context.</span>
+<span class="sd">The symbol table maps strings containing fully qualified names such as</span>
+<span class="sd">&#39;M1.c[3].full_width&#39; to parameter objects with a &#39;value&#39; property that</span>
+<span class="sd">can be queried and set.  The expression set maps symbol names from the</span>
+<span class="sd">symbol table to string expressions.  The context provides additional symbols</span>
+<span class="sd">for the expressions in addition to the usual mathematical functions and</span>
+<span class="sd">constants.</span>
+
+<span class="sd">The expressions are compiled and interpreted by python, with only minimal</span>
+<span class="sd">effort to make sure that they don&#39;t contain bad code.  The resulting</span>
+<span class="sd">constraints function returns 0 so it can be used directly in a fit problem</span>
+<span class="sd">definition.</span>
+
+<span class="sd">Extracting the symbol table from the model depends on the structure of the</span>
+<span class="sd">model.  If fitness.parameters() is set correctly, then this should simply</span>
+<span class="sd">be a matter of walking the parameter data, remembering the path to each</span>
+<span class="sd">parameter in the symbol table.  For compactness, dictionary elements should</span>
+<span class="sd">be referenced by .name rather than [&quot;name&quot;].  Model name can be used as the</span>
+<span class="sd">top level.</span>
+
+<span class="sd">Getting the parameter expressions applied correctly is challenging.</span>
+<span class="sd">The following monkey patch works by overriding model_update in FitProblem</span>
+<span class="sd">so that after setp(p) is called and, the constraints expression can be</span>
+<span class="sd">applied before telling the underlying fitness function that the model</span>
+<span class="sd">is out of date::</span>
+
+<span class="sd">        # Override model update so that parameter constraints are applied</span>
+<span class="sd">        problem._model_update = problem.model_update</span>
+<span class="sd">        def model_update():</span>
+<span class="sd">            constraints()</span>
+<span class="sd">            problem._model_update()</span>
+<span class="sd">        problem.model_update = model_update</span>
+
+<span class="sd">Ideally, this interface will change</span>
+<span class="sd">&quot;&quot;&quot;</span>
+<span class="kn">from</span> <span class="nn">__future__</span> <span class="kn">import</span> <span class="n">print_function</span>
+
+<span class="kn">import</span> <span class="nn">math</span>
+<span class="kn">import</span> <span class="nn">re</span>
+
+<span class="c1"># simple pattern which matches symbols.  Note that it will also match</span>
+<span class="c1"># invalid substrings such as a3...9, but given syntactically correct</span>
+<span class="c1"># input it will only match symbols.</span>
+<span class="n">_symbol_pattern</span> <span class="o">=</span> <span class="n">re</span><span class="o">.</span><span class="n">compile</span><span class="p">(</span><span class="s1">&#39;([a-zA-Z_][a-zA-Z_0-9.]*)&#39;</span><span class="p">)</span>
+
+<span class="k">def</span> <span class="nf">_symbols</span><span class="p">(</span><span class="n">expr</span><span class="p">,</span><span class="n">symtab</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Given an expression string and a symbol table, return the set of symbols</span>
+<span class="sd">    used in the expression.  Symbols are only returned once even if they</span>
+<span class="sd">    occur multiple times.  The return value is a set with the elements in</span>
+<span class="sd">    no particular order.</span>
+
+<span class="sd">    This is the first step in computing a dependency graph.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">matches</span> <span class="o">=</span> <span class="p">[</span><span class="n">m</span><span class="o">.</span><span class="n">group</span><span class="p">(</span><span class="mi">0</span><span class="p">)</span> <span class="k">for</span> <span class="n">m</span> <span class="ow">in</span> <span class="n">_symbol_pattern</span><span class="o">.</span><span class="n">finditer</span><span class="p">(</span><span class="n">expr</span><span class="p">)]</span>
+    <span class="k">return</span> <span class="nb">set</span><span class="p">([</span><span class="n">symtab</span><span class="p">[</span><span class="n">m</span><span class="p">]</span> <span class="k">for</span> <span class="n">m</span> <span class="ow">in</span> <span class="n">matches</span> <span class="k">if</span> <span class="n">m</span> <span class="ow">in</span> <span class="n">symtab</span><span class="p">])</span>
+
+<span class="k">def</span> <span class="nf">_substitute</span><span class="p">(</span><span class="n">expr</span><span class="p">,</span><span class="n">mapping</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Replace all occurrences of symbol s with mapping[s] for s in mapping.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="c1"># Find the symbols and the mapping</span>
+    <span class="n">matches</span> <span class="o">=</span> <span class="p">[(</span><span class="n">m</span><span class="o">.</span><span class="n">start</span><span class="p">(),</span><span class="n">m</span><span class="o">.</span><span class="n">end</span><span class="p">(),</span><span class="n">mapping</span><span class="p">[</span><span class="n">m</span><span class="o">.</span><span class="n">group</span><span class="p">(</span><span class="mi">1</span><span class="p">)])</span>
+               <span class="k">for</span> <span class="n">m</span> <span class="ow">in</span> <span class="n">_symbol_pattern</span><span class="o">.</span><span class="n">finditer</span><span class="p">(</span><span class="n">expr</span><span class="p">)</span>
+               <span class="k">if</span> <span class="n">m</span><span class="o">.</span><span class="n">group</span><span class="p">(</span><span class="mi">1</span><span class="p">)</span> <span class="ow">in</span> <span class="n">mapping</span><span class="p">]</span>
+
+    <span class="c1"># Split the expression in to pieces, with new symbols replacing old</span>
+    <span class="n">pieces</span> <span class="o">=</span> <span class="p">[]</span>
+    <span class="n">offset</span> <span class="o">=</span> <span class="mi">0</span>
+    <span class="k">for</span> <span class="n">start</span><span class="p">,</span><span class="n">end</span><span class="p">,</span><span class="n">text</span> <span class="ow">in</span> <span class="n">matches</span><span class="p">:</span>
+        <span class="n">pieces</span> <span class="o">+=</span> <span class="p">[</span><span class="n">expr</span><span class="p">[</span><span class="n">offset</span><span class="p">:</span><span class="n">start</span><span class="p">],</span><span class="n">text</span><span class="p">]</span>
+        <span class="n">offset</span> <span class="o">=</span> <span class="n">end</span>
+    <span class="n">pieces</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">expr</span><span class="p">[</span><span class="n">offset</span><span class="p">:])</span>
+
+    <span class="c1"># Join the pieces and return them</span>
+    <span class="k">return</span> <span class="s2">&quot;&quot;</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">pieces</span><span class="p">)</span>
+
+<span class="k">def</span> <span class="nf">_find_dependencies</span><span class="p">(</span><span class="n">symtab</span><span class="p">,</span> <span class="n">exprs</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Returns a list of pair-wise dependencies from the parameter expressions.</span>
+
+<span class="sd">    For example, if p3 = p1+p2, then find_dependencies([p1,p2,p3]) will</span>
+<span class="sd">    return [(p3,p1),(p3,p2)].  For base expressions without dependencies,</span>
+<span class="sd">    such as p4 = 2*pi, this should return [(p4, None)]</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">deps</span> <span class="o">=</span> <span class="p">[(</span><span class="n">target</span><span class="p">,</span><span class="n">source</span><span class="p">)</span>
+            <span class="k">for</span> <span class="n">target</span><span class="p">,</span><span class="n">expr</span> <span class="ow">in</span> <span class="n">exprs</span><span class="o">.</span><span class="n">items</span><span class="p">()</span>
+            <span class="k">for</span> <span class="n">source</span> <span class="ow">in</span> <span class="n">_symbols_or_none</span><span class="p">(</span><span class="n">expr</span><span class="p">,</span><span class="n">symtab</span><span class="p">)]</span>
+    <span class="k">return</span> <span class="n">deps</span>
+
+<span class="c1"># Hack to deal with expressions without dependencies --- return a fake</span>
+<span class="c1"># dependency of None.</span>
+<span class="c1"># The better solution is fix order_dependencies so that it takes a</span>
+<span class="c1"># dictionary of {symbol: dependency_list}, for which no dependencies</span>
+<span class="c1"># is simply []; fix in parameter_mapping as well</span>
+<span class="k">def</span> <span class="nf">_symbols_or_none</span><span class="p">(</span><span class="n">expr</span><span class="p">,</span><span class="n">symtab</span><span class="p">):</span>
+    <span class="n">syms</span> <span class="o">=</span> <span class="n">_symbols</span><span class="p">(</span><span class="n">expr</span><span class="p">,</span><span class="n">symtab</span><span class="p">)</span>
+    <span class="k">return</span> <span class="n">syms</span> <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">syms</span><span class="p">)</span> <span class="k">else</span> <span class="p">[</span><span class="bp">None</span><span class="p">]</span>
+
+<span class="k">def</span> <span class="nf">_parameter_mapping</span><span class="p">(</span><span class="n">pairs</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Find the parameter substitution we need so that expressions can</span>
+<span class="sd">    be evaluated without having to traverse a chain of</span>
+<span class="sd">    model.layer.parameter.value</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">left</span><span class="p">,</span><span class="n">right</span> <span class="o">=</span> <span class="nb">zip</span><span class="p">(</span><span class="o">*</span><span class="n">pairs</span><span class="p">)</span>
+    <span class="n">pars</span> <span class="o">=</span> <span class="nb">list</span><span class="p">(</span><span class="nb">sorted</span><span class="p">(</span><span class="n">p</span> <span class="k">for</span> <span class="n">p</span> <span class="ow">in</span> <span class="nb">set</span><span class="p">(</span><span class="n">left</span><span class="o">+</span><span class="n">right</span><span class="p">)</span> <span class="k">if</span> <span class="n">p</span> <span class="ow">is</span> <span class="ow">not</span> <span class="bp">None</span><span class="p">))</span>
+    <span class="n">definition</span> <span class="o">=</span> <span class="nb">dict</span><span class="p">(</span> <span class="p">(</span><span class="s1">&#39;P</span><span class="si">%d</span><span class="s1">&#39;</span><span class="o">%</span><span class="n">i</span><span class="p">,</span><span class="n">p</span><span class="p">)</span>  <span class="k">for</span> <span class="n">i</span><span class="p">,</span><span class="n">p</span> <span class="ow">in</span> <span class="nb">enumerate</span><span class="p">(</span><span class="n">pars</span><span class="p">)</span> <span class="p">)</span>
+    <span class="c1"># p is None when there is an expression with no dependencies</span>
+    <span class="n">substitution</span> <span class="o">=</span> <span class="nb">dict</span><span class="p">(</span> <span class="p">(</span><span class="n">p</span><span class="p">,</span><span class="s1">&#39;P</span><span class="si">%d</span><span class="s1">.value&#39;</span><span class="o">%</span><span class="n">i</span><span class="p">)</span>
+                    <span class="k">for</span> <span class="n">i</span><span class="p">,</span><span class="n">p</span> <span class="ow">in</span> <span class="nb">enumerate</span><span class="p">(</span><span class="nb">sorted</span><span class="p">(</span><span class="n">pars</span><span class="p">))</span>
+                    <span class="k">if</span> <span class="n">p</span> <span class="ow">is</span> <span class="ow">not</span> <span class="bp">None</span><span class="p">)</span>
+    <span class="k">return</span> <span class="n">definition</span><span class="p">,</span> <span class="n">substitution</span>
+
+<div class="viewcode-block" id="no_constraints"><a class="viewcode-back" href="../../../../dev/sasview-api/sas.sascalc.fit.html#sas.sascalc.fit.expression.no_constraints">[docs]</a><span class="k">def</span> <span class="nf">no_constraints</span><span class="p">():</span>
+    <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    This parameter set has no constraints between the parameters.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="k">pass</span></div>
+
+<div class="viewcode-block" id="compile_constraints"><a class="viewcode-back" href="../../../../dev/sasview-api/sas.sascalc.fit.html#sas.sascalc.fit.expression.compile_constraints">[docs]</a><span class="k">def</span> <span class="nf">compile_constraints</span><span class="p">(</span><span class="n">symtab</span><span class="p">,</span> <span class="n">exprs</span><span class="p">,</span> <span class="n">context</span><span class="o">=</span><span class="p">{}):</span>
+    <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Build and return a function to evaluate all parameter expressions in</span>
+<span class="sd">    the proper order.</span>
+
+<span class="sd">    Input:</span>
+
+<span class="sd">        *symtab* is the symbol table for the model: { &#39;name&#39;: parameter }</span>
+
+<span class="sd">        *exprs* is the set of computed symbols: { &#39;name&#39;: &#39;expression&#39; }</span>
+
+<span class="sd">        *context* is any additional context needed to evaluate the expression</span>
+
+<span class="sd">    Return:</span>
+
+<span class="sd">        updater function which sets parameter.value for each expression</span>
+
+<span class="sd">    Raises:</span>
+
+<span class="sd">       AssertionError - model, parameter or function is missing</span>
+
+<span class="sd">       SyntaxError - improper expression syntax</span>
+
+<span class="sd">       ValueError - expressions have circular dependencies</span>
+
+<span class="sd">    This function is not terribly sophisticated, and it would be easy to</span>
+<span class="sd">    trick.  However it handles the common cases cleanly and generates</span>
+<span class="sd">    reasonable messages for the common errors.</span>
+
+<span class="sd">    This code has not been fully audited for security.  While we have</span>
+<span class="sd">    removed the builtins and the ability to import modules, there may</span>
+<span class="sd">    be other vectors for users to perform more than simple function</span>
+<span class="sd">    evaluations.  Unauthenticated users should not be running this code.</span>
+
+<span class="sd">    Parameter names are assumed to contain only _.a-zA-Z0-9#[]</span>
+
+<span class="sd">    Both names are provided for inverse functions, e.g., acos and arccos.</span>
+
+<span class="sd">    Should try running the function to identify syntax errors before</span>
+<span class="sd">    running it in a fit.</span>
+
+<span class="sd">    Use help(fn) to see the code generated for the returned function fn.</span>
+<span class="sd">    dis.dis(fn) will show the corresponding python vm instructions.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+
+    <span class="c1"># Sort the parameters in the order they need to be evaluated</span>
+    <span class="n">deps</span> <span class="o">=</span> <span class="n">_find_dependencies</span><span class="p">(</span><span class="n">symtab</span><span class="p">,</span> <span class="n">exprs</span><span class="p">)</span>
+    <span class="k">if</span> <span class="n">deps</span> <span class="o">==</span> <span class="p">[]:</span> <span class="k">return</span> <span class="n">no_constraints</span>
+    <span class="n">order</span> <span class="o">=</span> <span class="n">order_dependencies</span><span class="p">(</span><span class="n">deps</span><span class="p">)</span>
+
+
+    <span class="c1"># Rather than using the full path to the parameters in the parameter</span>
+    <span class="c1"># expressions, instead use Pn, and substitute Pn.value for each occurrence</span>
+    <span class="c1"># of the parameter in the expression.</span>
+    <span class="n">names</span> <span class="o">=</span> <span class="nb">list</span><span class="p">(</span><span class="nb">sorted</span><span class="p">(</span><span class="n">symtab</span><span class="o">.</span><span class="n">keys</span><span class="p">()))</span>
+    <span class="n">parameters</span> <span class="o">=</span> <span class="nb">dict</span><span class="p">((</span><span class="s1">&#39;P</span><span class="si">%d</span><span class="s1">&#39;</span><span class="o">%</span><span class="n">i</span><span class="p">,</span> <span class="n">symtab</span><span class="p">[</span><span class="n">k</span><span class="p">])</span> <span class="k">for</span> <span class="n">i</span><span class="p">,</span><span class="n">k</span> <span class="ow">in</span> <span class="nb">enumerate</span><span class="p">(</span><span class="n">names</span><span class="p">))</span>
+    <span class="n">mapping</span> <span class="o">=</span> <span class="nb">dict</span><span class="p">((</span><span class="n">k</span><span class="p">,</span> <span class="s1">&#39;P</span><span class="si">%d</span><span class="s1">.value&#39;</span><span class="o">%</span><span class="n">i</span><span class="p">)</span> <span class="k">for</span> <span class="n">i</span><span class="p">,</span><span class="n">k</span> <span class="ow">in</span> <span class="nb">enumerate</span><span class="p">(</span><span class="n">names</span><span class="p">))</span>
+
+
+    <span class="c1"># Initialize dictionary with available functions</span>
+    <span class="nb">globals</span> <span class="o">=</span> <span class="p">{}</span>
+    <span class="nb">globals</span><span class="o">.</span><span class="n">update</span><span class="p">(</span><span class="n">math</span><span class="o">.</span><span class="n">__dict__</span><span class="p">)</span>
+    <span class="nb">globals</span><span class="o">.</span><span class="n">update</span><span class="p">(</span><span class="nb">dict</span><span class="p">(</span><span class="n">arcsin</span><span class="o">=</span><span class="n">math</span><span class="o">.</span><span class="n">asin</span><span class="p">,</span><span class="n">arccos</span><span class="o">=</span><span class="n">math</span><span class="o">.</span><span class="n">acos</span><span class="p">,</span>
+                        <span class="n">arctan</span><span class="o">=</span><span class="n">math</span><span class="o">.</span><span class="n">atan</span><span class="p">,</span><span class="n">arctan2</span><span class="o">=</span><span class="n">math</span><span class="o">.</span><span class="n">atan2</span><span class="p">))</span>
+    <span class="nb">globals</span><span class="o">.</span><span class="n">update</span><span class="p">(</span><span class="n">context</span><span class="p">)</span>
+    <span class="nb">globals</span><span class="o">.</span><span class="n">update</span><span class="p">(</span><span class="n">parameters</span><span class="p">)</span>
+    <span class="nb">globals</span><span class="p">[</span><span class="s1">&#39;id&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="nb">id</span>
+    <span class="nb">locals</span> <span class="o">=</span> <span class="p">{}</span>
+
+    <span class="c1"># Define the constraints function</span>
+    <span class="n">assignments</span> <span class="o">=</span> <span class="p">[</span><span class="s2">&quot;=&quot;</span><span class="o">.</span><span class="n">join</span><span class="p">((</span><span class="n">p</span><span class="p">,</span><span class="n">exprs</span><span class="p">[</span><span class="n">p</span><span class="p">]))</span> <span class="k">for</span> <span class="n">p</span> <span class="ow">in</span> <span class="n">order</span><span class="p">]</span>
+    <span class="n">code</span> <span class="o">=</span> <span class="p">[</span><span class="n">_substitute</span><span class="p">(</span><span class="n">s</span><span class="p">,</span> <span class="n">mapping</span><span class="p">)</span> <span class="k">for</span> <span class="n">s</span> <span class="ow">in</span> <span class="n">assignments</span><span class="p">]</span>
+    <span class="n">functiondef</span> <span class="o">=</span> <span class="s2">&quot;&quot;&quot;</span>
+<span class="s2">def eval_expressions():</span>
+<span class="s2">    &#39;&#39;&#39;</span>
+<span class="s2">    </span><span class="si">%s</span><span class="s2"></span>
+<span class="s2">    &#39;&#39;&#39;</span>
+<span class="s2">    </span><span class="si">%s</span><span class="s2"></span>
+<span class="s2">    return 0</span>
+<span class="s2">&quot;&quot;&quot;</span><span class="o">%</span><span class="p">(</span><span class="s2">&quot;</span><span class="se">\n</span><span class="s2">    &quot;</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">assignments</span><span class="p">),</span><span class="s2">&quot;</span><span class="se">\n</span><span class="s2">    &quot;</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">code</span><span class="p">))</span>
+
+    <span class="c1">#print(&quot;Function: &quot;+functiondef)</span>
+    <span class="k">exec</span> <span class="n">functiondef</span> <span class="ow">in</span> <span class="nb">globals</span><span class="p">,</span><span class="nb">locals</span>
+    <span class="n">retfn</span> <span class="o">=</span> <span class="nb">locals</span><span class="p">[</span><span class="s1">&#39;eval_expressions&#39;</span><span class="p">]</span>
+
+    <span class="c1"># Remove garbage added to globals by exec</span>
+    <span class="nb">globals</span><span class="o">.</span><span class="n">pop</span><span class="p">(</span><span class="s1">&#39;__doc__&#39;</span><span class="p">,</span><span class="bp">None</span><span class="p">)</span>
+    <span class="nb">globals</span><span class="o">.</span><span class="n">pop</span><span class="p">(</span><span class="s1">&#39;__name__&#39;</span><span class="p">,</span><span class="bp">None</span><span class="p">)</span>
+    <span class="nb">globals</span><span class="o">.</span><span class="n">pop</span><span class="p">(</span><span class="s1">&#39;__file__&#39;</span><span class="p">,</span><span class="bp">None</span><span class="p">)</span>
+    <span class="nb">globals</span><span class="o">.</span><span class="n">pop</span><span class="p">(</span><span class="s1">&#39;__builtins__&#39;</span><span class="p">)</span>
+    <span class="c1">#print globals.keys()</span>
+
+    <span class="k">return</span> <span class="n">retfn</span></div>
+
+<div class="viewcode-block" id="order_dependencies"><a class="viewcode-back" href="../../../../dev/sasview-api/sas.sascalc.fit.html#sas.sascalc.fit.expression.order_dependencies">[docs]</a><span class="k">def</span> <span class="nf">order_dependencies</span><span class="p">(</span><span class="n">pairs</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Order elements from pairs so that b comes before a in the</span>
+<span class="sd">    ordered list for all pairs (a,b).</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="c1">#print &quot;order_dependencies&quot;,pairs</span>
+    <span class="n">emptyset</span> <span class="o">=</span> <span class="nb">set</span><span class="p">()</span>
+    <span class="n">order</span> <span class="o">=</span> <span class="p">[]</span>
+
+    <span class="c1"># Break pairs into left set and right set</span>
+    <span class="n">left</span><span class="p">,</span><span class="n">right</span> <span class="o">=</span> <span class="p">[</span><span class="nb">set</span><span class="p">(</span><span class="n">s</span><span class="p">)</span> <span class="k">for</span> <span class="n">s</span> <span class="ow">in</span> <span class="nb">zip</span><span class="p">(</span><span class="o">*</span><span class="n">pairs</span><span class="p">)]</span> <span class="k">if</span> <span class="n">pairs</span> <span class="o">!=</span> <span class="p">[]</span> <span class="k">else</span> <span class="p">([],[])</span>
+    <span class="k">while</span> <span class="n">pairs</span> <span class="o">!=</span> <span class="p">[]:</span>
+        <span class="c1">#print &quot;within&quot;,pairs</span>
+        <span class="c1"># Find which items only occur on the right</span>
+        <span class="n">independent</span> <span class="o">=</span> <span class="n">right</span> <span class="o">-</span> <span class="n">left</span>
+        <span class="k">if</span> <span class="n">independent</span> <span class="o">==</span> <span class="n">emptyset</span><span class="p">:</span>
+            <span class="n">cycleset</span> <span class="o">=</span> <span class="s2">&quot;, &quot;</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="nb">str</span><span class="p">(</span><span class="n">s</span><span class="p">)</span> <span class="k">for</span> <span class="n">s</span> <span class="ow">in</span> <span class="n">left</span><span class="p">)</span>
+            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s2">&quot;Cyclic dependencies amongst </span><span class="si">%s</span><span class="s2">&quot;</span><span class="o">%</span><span class="n">cycleset</span><span class="p">)</span>
+
+        <span class="c1"># The possibly resolvable items are those that depend on the independents</span>
+        <span class="n">dependent</span> <span class="o">=</span> <span class="nb">set</span><span class="p">([</span><span class="n">a</span> <span class="k">for</span> <span class="n">a</span><span class="p">,</span><span class="n">b</span> <span class="ow">in</span> <span class="n">pairs</span> <span class="k">if</span> <span class="n">b</span> <span class="ow">in</span> <span class="n">independent</span><span class="p">])</span>
+        <span class="n">pairs</span> <span class="o">=</span> <span class="p">[(</span><span class="n">a</span><span class="p">,</span><span class="n">b</span><span class="p">)</span> <span class="k">for</span> <span class="n">a</span><span class="p">,</span><span class="n">b</span> <span class="ow">in</span> <span class="n">pairs</span> <span class="k">if</span> <span class="n">b</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">independent</span><span class="p">]</span>
+        <span class="k">if</span> <span class="n">pairs</span> <span class="o">==</span> <span class="p">[]:</span>
+            <span class="n">resolved</span> <span class="o">=</span> <span class="n">dependent</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">left</span><span class="p">,</span><span class="n">right</span> <span class="o">=</span> <span class="p">[</span><span class="nb">set</span><span class="p">(</span><span class="n">s</span><span class="p">)</span> <span class="k">for</span> <span class="n">s</span> <span class="ow">in</span> <span class="nb">zip</span><span class="p">(</span><span class="o">*</span><span class="n">pairs</span><span class="p">)]</span>
+            <span class="n">resolved</span> <span class="o">=</span> <span class="n">dependent</span> <span class="o">-</span> <span class="n">left</span>
+        <span class="c1">#print &quot;independent&quot;,independent,&quot;dependent&quot;,dependent,&quot;resolvable&quot;,resolved</span>
+        <span class="n">order</span> <span class="o">+=</span> <span class="n">resolved</span>
+        <span class="c1">#print &quot;new order&quot;,order</span>
+    <span class="n">order</span><span class="o">.</span><span class="n">reverse</span><span class="p">()</span>
+    <span class="k">return</span> <span class="n">order</span></div>
+
+<span class="c1"># ========= Test code ========</span>
+<span class="k">def</span> <span class="nf">_check</span><span class="p">(</span><span class="n">msg</span><span class="p">,</span><span class="n">pairs</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Verify that the list n contains the given items, and that the list</span>
+<span class="sd">    satisfies the partial ordering given by the pairs in partial order.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">left</span><span class="p">,</span><span class="n">right</span> <span class="o">=</span> <span class="nb">zip</span><span class="p">(</span><span class="o">*</span><span class="n">pairs</span><span class="p">)</span> <span class="k">if</span> <span class="n">pairs</span> <span class="o">!=</span> <span class="p">[]</span> <span class="k">else</span> <span class="p">([],[])</span>
+    <span class="n">items</span> <span class="o">=</span> <span class="nb">set</span><span class="p">(</span><span class="n">left</span><span class="p">)</span>
+    <span class="n">n</span> <span class="o">=</span> <span class="n">order_dependencies</span><span class="p">(</span><span class="n">pairs</span><span class="p">)</span>
+    <span class="k">if</span> <span class="nb">set</span><span class="p">(</span><span class="n">n</span><span class="p">)</span> <span class="o">!=</span> <span class="n">items</span> <span class="ow">or</span> <span class="nb">len</span><span class="p">(</span><span class="n">n</span><span class="p">)</span> <span class="o">!=</span> <span class="nb">len</span><span class="p">(</span><span class="n">items</span><span class="p">):</span>
+        <span class="n">n</span><span class="o">.</span><span class="n">sort</span><span class="p">()</span>
+        <span class="n">items</span> <span class="o">=</span> <span class="nb">list</span><span class="p">(</span><span class="n">items</span><span class="p">);</span> <span class="n">items</span><span class="o">.</span><span class="n">sort</span><span class="p">()</span>
+        <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s2">&quot;</span><span class="si">%s</span><span class="s2"> expect </span><span class="si">%s</span><span class="s2"> to contain </span><span class="si">%s</span><span class="s2"> for </span><span class="si">%s</span><span class="s2">&quot;</span><span class="o">%</span><span class="p">(</span><span class="n">msg</span><span class="p">,</span><span class="n">n</span><span class="p">,</span><span class="n">items</span><span class="p">,</span><span class="n">pairs</span><span class="p">))</span>
+    <span class="k">for</span> <span class="n">lo</span><span class="p">,</span><span class="n">hi</span> <span class="ow">in</span> <span class="n">pairs</span><span class="p">:</span>
+        <span class="k">if</span> <span class="n">lo</span> <span class="ow">in</span> <span class="n">n</span> <span class="ow">and</span> <span class="n">hi</span> <span class="ow">in</span> <span class="n">n</span> <span class="ow">and</span> <span class="n">n</span><span class="o">.</span><span class="n">index</span><span class="p">(</span><span class="n">lo</span><span class="p">)</span> <span class="o">&gt;=</span> <span class="n">n</span><span class="o">.</span><span class="n">index</span><span class="p">(</span><span class="n">hi</span><span class="p">):</span>
+            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s2">&quot;</span><span class="si">%s</span><span class="s2"> expect </span><span class="si">%s</span><span class="s2"> before </span><span class="si">%s</span><span class="s2"> in </span><span class="si">%s</span><span class="s2"> for </span><span class="si">%s</span><span class="s2">&quot;</span><span class="o">%</span><span class="p">(</span><span class="n">msg</span><span class="p">,</span><span class="n">lo</span><span class="p">,</span><span class="n">hi</span><span class="p">,</span><span class="n">n</span><span class="p">,</span><span class="n">pairs</span><span class="p">))</span>
+
+<div class="viewcode-block" id="test_deps"><a class="viewcode-back" href="../../../../dev/sasview-api/sas.sascalc.fit.html#sas.sascalc.fit.expression.test_deps">[docs]</a><span class="k">def</span> <span class="nf">test_deps</span><span class="p">():</span>
+    <span class="kn">import</span> <span class="nn">numpy</span> <span class="kn">as</span> <span class="nn">np</span>
+
+    <span class="c1"># Null case</span>
+    <span class="n">_check</span><span class="p">(</span><span class="s2">&quot;test empty&quot;</span><span class="p">,[])</span>
+
+    <span class="c1"># Some dependencies</span>
+    <span class="n">_check</span><span class="p">(</span><span class="s2">&quot;test1&quot;</span><span class="p">,[(</span><span class="mi">2</span><span class="p">,</span><span class="mi">7</span><span class="p">),(</span><span class="mi">1</span><span class="p">,</span><span class="mi">5</span><span class="p">),(</span><span class="mi">1</span><span class="p">,</span><span class="mi">4</span><span class="p">),(</span><span class="mi">2</span><span class="p">,</span><span class="mi">1</span><span class="p">),(</span><span class="mi">3</span><span class="p">,</span><span class="mi">1</span><span class="p">),(</span><span class="mi">5</span><span class="p">,</span><span class="mi">6</span><span class="p">)])</span>
+    <span class="n">_check</span><span class="p">(</span><span class="s2">&quot;test1 renumbered&quot;</span><span class="p">,[(</span><span class="mi">6</span><span class="p">,</span><span class="mi">1</span><span class="p">),(</span><span class="mi">7</span><span class="p">,</span><span class="mi">3</span><span class="p">),(</span><span class="mi">7</span><span class="p">,</span><span class="mi">4</span><span class="p">),(</span><span class="mi">6</span><span class="p">,</span><span class="mi">7</span><span class="p">),(</span><span class="mi">5</span><span class="p">,</span><span class="mi">7</span><span class="p">),(</span><span class="mi">3</span><span class="p">,</span><span class="mi">2</span><span class="p">)])</span>
+    <span class="n">_check</span><span class="p">(</span><span class="s2">&quot;test1 numpy&quot;</span><span class="p">,</span><span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">([(</span><span class="mi">2</span><span class="p">,</span><span class="mi">7</span><span class="p">),(</span><span class="mi">1</span><span class="p">,</span><span class="mi">5</span><span class="p">),(</span><span class="mi">1</span><span class="p">,</span><span class="mi">4</span><span class="p">),(</span><span class="mi">2</span><span class="p">,</span><span class="mi">1</span><span class="p">),(</span><span class="mi">3</span><span class="p">,</span><span class="mi">1</span><span class="p">),(</span><span class="mi">5</span><span class="p">,</span><span class="mi">6</span><span class="p">)]))</span>
+
+    <span class="c1"># No dependencies</span>
+    <span class="n">_check</span><span class="p">(</span><span class="s2">&quot;test2&quot;</span><span class="p">,[(</span><span class="mi">4</span><span class="p">,</span><span class="mi">1</span><span class="p">),(</span><span class="mi">3</span><span class="p">,</span><span class="mi">2</span><span class="p">),(</span><span class="mi">8</span><span class="p">,</span><span class="mi">4</span><span class="p">)])</span>
+
+    <span class="c1"># Cycle test</span>
+    <span class="n">pairs</span> <span class="o">=</span> <span class="p">[(</span><span class="mi">1</span><span class="p">,</span><span class="mi">4</span><span class="p">),(</span><span class="mi">4</span><span class="p">,</span><span class="mi">3</span><span class="p">),(</span><span class="mi">4</span><span class="p">,</span><span class="mi">5</span><span class="p">),(</span><span class="mi">5</span><span class="p">,</span><span class="mi">1</span><span class="p">)]</span>
+    <span class="k">try</span><span class="p">:</span>
+        <span class="n">n</span> <span class="o">=</span> <span class="n">order_dependencies</span><span class="p">(</span><span class="n">pairs</span><span class="p">)</span>
+    <span class="k">except</span> <span class="ne">ValueError</span><span class="p">:</span>
+        <span class="k">pass</span>
+    <span class="k">else</span><span class="p">:</span>
+        <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s2">&quot;test3 expect ValueError exception for </span><span class="si">%s</span><span class="s2">&quot;</span><span class="o">%</span><span class="p">(</span><span class="n">pairs</span><span class="p">,))</span>
+
+    <span class="c1"># large test for gross speed check</span>
+    <span class="n">A</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">random</span><span class="o">.</span><span class="n">randint</span><span class="p">(</span><span class="mi">4000</span><span class="p">,</span><span class="n">size</span><span class="o">=</span><span class="p">(</span><span class="mi">1000</span><span class="p">,</span><span class="mi">2</span><span class="p">))</span>
+    <span class="n">A</span><span class="p">[:,</span><span class="mi">1</span><span class="p">]</span> <span class="o">+=</span> <span class="mi">4000</span>  <span class="c1"># Avoid cycles</span>
+    <span class="n">_check</span><span class="p">(</span><span class="s2">&quot;test-large&quot;</span><span class="p">,</span><span class="n">A</span><span class="p">)</span>
+
+    <span class="c1"># depth tests</span>
+    <span class="n">k</span> <span class="o">=</span> <span class="mi">200</span>
+    <span class="n">A</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">([</span><span class="nb">range</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span><span class="n">k</span><span class="p">),</span><span class="nb">range</span><span class="p">(</span><span class="mi">1</span><span class="p">,</span><span class="n">k</span><span class="o">+</span><span class="mi">1</span><span class="p">)])</span><span class="o">.</span><span class="n">T</span>
+    <span class="n">_check</span><span class="p">(</span><span class="s2">&quot;depth-1&quot;</span><span class="p">,</span><span class="n">A</span><span class="p">)</span>
+
+    <span class="n">A</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">([</span><span class="nb">range</span><span class="p">(</span><span class="mi">1</span><span class="p">,</span><span class="n">k</span><span class="o">+</span><span class="mi">1</span><span class="p">),</span><span class="nb">range</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span><span class="n">k</span><span class="p">)])</span><span class="o">.</span><span class="n">T</span>
+    <span class="n">_check</span><span class="p">(</span><span class="s2">&quot;depth-2&quot;</span><span class="p">,</span><span class="n">A</span><span class="p">)</span></div>
+
+<div class="viewcode-block" id="test_expr"><a class="viewcode-back" href="../../../../dev/sasview-api/sas.sascalc.fit.html#sas.sascalc.fit.expression.test_expr">[docs]</a><span class="k">def</span> <span class="nf">test_expr</span><span class="p">():</span>
+    <span class="kn">import</span> <span class="nn">inspect</span><span class="o">,</span> <span class="nn">dis</span>
+    <span class="kn">import</span> <span class="nn">math</span>
+
+    <span class="n">symtab</span> <span class="o">=</span> <span class="p">{</span><span class="s1">&#39;a.b.x&#39;</span><span class="p">:</span><span class="mi">1</span><span class="p">,</span> <span class="s1">&#39;a.c&#39;</span><span class="p">:</span><span class="mi">2</span><span class="p">,</span> <span class="s1">&#39;a.b&#39;</span><span class="p">:</span><span class="mi">3</span><span class="p">,</span> <span class="s1">&#39;b.x&#39;</span><span class="p">:</span><span class="mi">4</span><span class="p">}</span>
+    <span class="n">expr</span> <span class="o">=</span> <span class="s1">&#39;a.b.x + sin(4*pi*a.c) + a.b.x/a.b&#39;</span>
+
+    <span class="c1"># Check symbol lookup</span>
+    <span class="k">assert</span> <span class="n">_symbols</span><span class="p">(</span><span class="n">expr</span><span class="p">,</span> <span class="n">symtab</span><span class="p">)</span> <span class="o">==</span> <span class="nb">set</span><span class="p">([</span><span class="mi">1</span><span class="p">,</span><span class="mi">2</span><span class="p">,</span><span class="mi">3</span><span class="p">])</span>
+
+    <span class="c1"># Check symbol rename</span>
+    <span class="k">assert</span> <span class="n">_substitute</span><span class="p">(</span><span class="n">expr</span><span class="p">,{</span><span class="s1">&#39;a.b.x&#39;</span><span class="p">:</span><span class="s1">&#39;Q&#39;</span><span class="p">})</span> <span class="o">==</span> <span class="s1">&#39;Q + sin(4*pi*a.c) + Q/a.b&#39;</span>
+    <span class="k">assert</span> <span class="n">_substitute</span><span class="p">(</span><span class="n">expr</span><span class="p">,{</span><span class="s1">&#39;a.b&#39;</span><span class="p">:</span><span class="s1">&#39;Q&#39;</span><span class="p">})</span> <span class="o">==</span> <span class="s1">&#39;a.b.x + sin(4*pi*a.c) + a.b.x/Q&#39;</span>
+
+
+    <span class="c1"># Check dependency builder</span>
+    <span class="c1"># Fake parameter class</span>
+    <span class="k">class</span> <span class="nc">Parameter</span><span class="p">:</span>
+        <span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">name</span><span class="p">,</span> <span class="n">value</span><span class="o">=</span><span class="mi">0</span><span class="p">,</span> <span class="n">expression</span><span class="o">=</span><span class="s1">&#39;&#39;</span><span class="p">):</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">path</span> <span class="o">=</span> <span class="n">name</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">value</span> <span class="o">=</span> <span class="n">value</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">expression</span> <span class="o">=</span> <span class="n">expression</span>
+        <span class="k">def</span> <span class="nf">iscomputed</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span> <span class="k">return</span> <span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">expression</span> <span class="o">!=</span> <span class="s1">&#39;&#39;</span><span class="p">)</span>
+        <span class="k">def</span> <span class="nf">__repr__</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span> <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">path</span>
+    <span class="k">def</span> <span class="nf">world</span><span class="p">(</span><span class="o">*</span><span class="n">pars</span><span class="p">):</span>
+        <span class="n">symtab</span> <span class="o">=</span> <span class="nb">dict</span><span class="p">((</span><span class="n">p</span><span class="o">.</span><span class="n">path</span><span class="p">,</span><span class="n">p</span><span class="p">)</span> <span class="k">for</span> <span class="n">p</span> <span class="ow">in</span> <span class="n">pars</span><span class="p">)</span>
+        <span class="n">exprs</span> <span class="o">=</span> <span class="nb">dict</span><span class="p">((</span><span class="n">p</span><span class="o">.</span><span class="n">path</span><span class="p">,</span><span class="n">p</span><span class="o">.</span><span class="n">expression</span><span class="p">)</span> <span class="k">for</span> <span class="n">p</span> <span class="ow">in</span> <span class="n">pars</span> <span class="k">if</span> <span class="n">p</span><span class="o">.</span><span class="n">iscomputed</span><span class="p">())</span>
+        <span class="k">return</span> <span class="n">symtab</span><span class="p">,</span> <span class="n">exprs</span>
+    <span class="n">p1</span> <span class="o">=</span> <span class="n">Parameter</span><span class="p">(</span><span class="s1">&#39;G0.sigma&#39;</span><span class="p">,</span><span class="mi">5</span><span class="p">)</span>
+    <span class="n">p2</span> <span class="o">=</span> <span class="n">Parameter</span><span class="p">(</span><span class="s1">&#39;other&#39;</span><span class="p">,</span><span class="n">expression</span><span class="o">=</span><span class="s1">&#39;2*pi*sin(G0.sigma/.1875) + M1.G1&#39;</span><span class="p">)</span>
+    <span class="n">p3</span> <span class="o">=</span> <span class="n">Parameter</span><span class="p">(</span><span class="s1">&#39;M1.G1&#39;</span><span class="p">,</span><span class="mi">6</span><span class="p">)</span>
+    <span class="n">p4</span> <span class="o">=</span> <span class="n">Parameter</span><span class="p">(</span><span class="s1">&#39;constant&#39;</span><span class="p">,</span><span class="n">expression</span><span class="o">=</span><span class="s1">&#39;2*pi*35&#39;</span><span class="p">)</span>
+    <span class="c1"># Simple chain</span>
+    <span class="k">assert</span> <span class="nb">set</span><span class="p">(</span><span class="n">_find_dependencies</span><span class="p">(</span><span class="o">*</span><span class="n">world</span><span class="p">(</span><span class="n">p1</span><span class="p">,</span><span class="n">p2</span><span class="p">,</span><span class="n">p3</span><span class="p">)))</span> <span class="o">==</span> <span class="nb">set</span><span class="p">([(</span><span class="n">p2</span><span class="o">.</span><span class="n">path</span><span class="p">,</span><span class="n">p1</span><span class="p">),(</span><span class="n">p2</span><span class="o">.</span><span class="n">path</span><span class="p">,</span><span class="n">p3</span><span class="p">)])</span>
+    <span class="c1"># Constant expression</span>
+    <span class="k">assert</span> <span class="nb">set</span><span class="p">(</span><span class="n">_find_dependencies</span><span class="p">(</span><span class="o">*</span><span class="n">world</span><span class="p">(</span><span class="n">p1</span><span class="p">,</span><span class="n">p4</span><span class="p">)))</span> <span class="o">==</span> <span class="nb">set</span><span class="p">([(</span><span class="n">p4</span><span class="o">.</span><span class="n">path</span><span class="p">,</span><span class="bp">None</span><span class="p">)])</span>
+    <span class="c1"># No dependencies</span>
+    <span class="k">assert</span> <span class="nb">set</span><span class="p">(</span><span class="n">_find_dependencies</span><span class="p">(</span><span class="o">*</span><span class="n">world</span><span class="p">(</span><span class="n">p1</span><span class="p">,</span><span class="n">p3</span><span class="p">)))</span> <span class="o">==</span> <span class="nb">set</span><span class="p">([])</span>
+
+    <span class="c1"># Check function builder</span>
+    <span class="n">fn</span> <span class="o">=</span> <span class="n">compile_constraints</span><span class="p">(</span><span class="o">*</span><span class="n">world</span><span class="p">(</span><span class="n">p1</span><span class="p">,</span><span class="n">p2</span><span class="p">,</span><span class="n">p3</span><span class="p">))</span>
+
+    <span class="c1"># Inspect the resulting function</span>
+    <span class="k">if</span> <span class="mi">0</span><span class="p">:</span>
+        <span class="k">print</span><span class="p">(</span><span class="n">inspect</span><span class="o">.</span><span class="n">getdoc</span><span class="p">(</span><span class="n">fn</span><span class="p">))</span>
+        <span class="k">print</span><span class="p">(</span><span class="n">dis</span><span class="o">.</span><span class="n">dis</span><span class="p">(</span><span class="n">fn</span><span class="p">))</span>
+
+    <span class="c1"># Evaluate the function and see if it updates the</span>
+    <span class="c1"># target value as expected</span>
+    <span class="n">fn</span><span class="p">()</span>
+    <span class="n">expected</span> <span class="o">=</span> <span class="mi">2</span><span class="o">*</span><span class="n">math</span><span class="o">.</span><span class="n">pi</span><span class="o">*</span><span class="n">math</span><span class="o">.</span><span class="n">sin</span><span class="p">(</span><span class="mi">5</span><span class="o">/.</span><span class="mi">1875</span><span class="p">)</span> <span class="o">+</span> <span class="mi">6</span>
+    <span class="k">assert</span> <span class="n">p2</span><span class="o">.</span><span class="n">value</span> <span class="o">==</span> <span class="n">expected</span><span class="p">,</span><span class="s2">&quot;Value was </span><span class="si">%s</span><span class="s2">, not </span><span class="si">%s</span><span class="s2">&quot;</span><span class="o">%</span><span class="p">(</span><span class="n">p2</span><span class="o">.</span><span class="n">value</span><span class="p">,</span><span class="n">expected</span><span class="p">)</span>
+
+    <span class="c1"># Check empty dependency set doesn&#39;t crash</span>
+    <span class="n">fn</span> <span class="o">=</span> <span class="n">compile_constraints</span><span class="p">(</span><span class="o">*</span><span class="n">world</span><span class="p">(</span><span class="n">p1</span><span class="p">,</span><span class="n">p3</span><span class="p">))</span>
+    <span class="n">fn</span><span class="p">()</span>
+
+    <span class="c1"># Check that constants are evaluated properly</span>
+    <span class="n">fn</span> <span class="o">=</span> <span class="n">compile_constraints</span><span class="p">(</span><span class="o">*</span><span class="n">world</span><span class="p">(</span><span class="n">p4</span><span class="p">))</span>
+    <span class="n">fn</span><span class="p">()</span>
+    <span class="k">assert</span> <span class="n">p4</span><span class="o">.</span><span class="n">value</span> <span class="o">==</span> <span class="mi">2</span><span class="o">*</span><span class="n">math</span><span class="o">.</span><span class="n">pi</span><span class="o">*</span><span class="mi">35</span>
+
+    <span class="c1"># Check additional context example; this also tests multiple</span>
+    <span class="c1"># expressions</span>
+    <span class="k">class</span> <span class="nc">Table</span><span class="p">:</span>
+        <span class="n">Si</span> <span class="o">=</span> <span class="mf">2.09</span>
+        <span class="n">values</span> <span class="o">=</span> <span class="p">{</span><span class="s1">&#39;Si&#39;</span><span class="p">:</span> <span class="mf">2.07</span><span class="p">}</span>
+    <span class="n">tbl</span> <span class="o">=</span> <span class="n">Table</span><span class="p">()</span>
+    <span class="n">p5</span> <span class="o">=</span> <span class="n">Parameter</span><span class="p">(</span><span class="s1">&#39;lookup&#39;</span><span class="p">,</span><span class="n">expression</span><span class="o">=</span><span class="s2">&quot;tbl.Si&quot;</span><span class="p">)</span>
+    <span class="n">fn</span> <span class="o">=</span> <span class="n">compile_constraints</span><span class="p">(</span><span class="o">*</span><span class="n">world</span><span class="p">(</span><span class="n">p1</span><span class="p">,</span><span class="n">p2</span><span class="p">,</span><span class="n">p3</span><span class="p">,</span><span class="n">p5</span><span class="p">),</span><span class="n">context</span><span class="o">=</span><span class="nb">dict</span><span class="p">(</span><span class="n">tbl</span><span class="o">=</span><span class="n">tbl</span><span class="p">))</span>
+    <span class="n">fn</span><span class="p">()</span>
+    <span class="k">assert</span> <span class="n">p5</span><span class="o">.</span><span class="n">value</span> <span class="o">==</span> <span class="mf">2.09</span><span class="p">,</span><span class="s2">&quot;Value for </span><span class="si">%s</span><span class="s2"> was </span><span class="si">%s</span><span class="s2">&quot;</span><span class="o">%</span><span class="p">(</span><span class="n">p5</span><span class="o">.</span><span class="n">expression</span><span class="p">,</span><span class="n">p5</span><span class="o">.</span><span class="n">value</span><span class="p">)</span>
+    <span class="n">p5</span><span class="o">.</span><span class="n">expression</span> <span class="o">=</span> <span class="s2">&quot;tbl.values[&#39;Si&#39;]&quot;</span>
+    <span class="n">fn</span> <span class="o">=</span> <span class="n">compile_constraints</span><span class="p">(</span><span class="o">*</span><span class="n">world</span><span class="p">(</span><span class="n">p1</span><span class="p">,</span><span class="n">p2</span><span class="p">,</span><span class="n">p3</span><span class="p">,</span><span class="n">p5</span><span class="p">),</span><span class="n">context</span><span class="o">=</span><span class="nb">dict</span><span class="p">(</span><span class="n">tbl</span><span class="o">=</span><span class="n">tbl</span><span class="p">))</span>
+    <span class="n">fn</span><span class="p">()</span>
+    <span class="k">assert</span> <span class="n">p5</span><span class="o">.</span><span class="n">value</span> <span class="o">==</span> <span class="mf">2.07</span><span class="p">,</span><span class="s2">&quot;Value for </span><span class="si">%s</span><span class="s2"> was </span><span class="si">%s</span><span class="s2">&quot;</span><span class="o">%</span><span class="p">(</span><span class="n">p5</span><span class="o">.</span><span class="n">expression</span><span class="p">,</span><span class="n">p5</span><span class="o">.</span><span class="n">value</span><span class="p">)</span>
+
+
+    <span class="c1"># Verify that we capture invalid expressions</span>
+    <span class="k">for</span> <span class="n">expr</span> <span class="ow">in</span> <span class="p">[</span><span class="s1">&#39;G4.cage&#39;</span><span class="p">,</span> <span class="s1">&#39;M0.cage&#39;</span><span class="p">,</span> <span class="s1">&#39;M1.G1 + *2&#39;</span><span class="p">,</span>
+                 <span class="s1">&#39;piddle&#39;</span><span class="p">,</span>
+                 <span class="s1">&#39;5; import sys; print &quot;p0wned&quot;&#39;</span><span class="p">,</span>
+                 <span class="s1">&#39;__import__(&quot;sys&quot;).argv&#39;</span><span class="p">]:</span>
+        <span class="k">try</span><span class="p">:</span>
+            <span class="n">p6</span> <span class="o">=</span> <span class="n">Parameter</span><span class="p">(</span><span class="s1">&#39;broken&#39;</span><span class="p">,</span><span class="n">expression</span><span class="o">=</span><span class="n">expr</span><span class="p">)</span>
+            <span class="n">fn</span> <span class="o">=</span> <span class="n">compile_constraints</span><span class="p">(</span><span class="o">*</span><span class="n">world</span><span class="p">(</span><span class="n">p6</span><span class="p">))</span>
+            <span class="n">fn</span><span class="p">()</span>
+        <span class="k">except</span> <span class="ne">Exception</span> <span class="k">as</span> <span class="n">msg</span><span class="p">:</span>
+            <span class="c1">#print(msg)</span>
+            <span class="k">pass</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="s2">&quot;Failed to raise error for </span><span class="si">%s</span><span class="s2">&quot;</span><span class="o">%</span><span class="n">expr</span></div>
+
+<span class="k">if</span> <span class="n">__name__</span> <span class="o">==</span> <span class="s2">&quot;__main__&quot;</span><span class="p">:</span>
+    <span class="n">test_expr</span><span class="p">()</span>
+    <span class="n">test_deps</span><span class="p">()</span>
+</pre></div>
+
+          </div>
+        </div>
+      </div>
+      <div class="sphinxsidebar" role="navigation" aria-label="main navigation">
+        <div class="sphinxsidebarwrapper">
+<div id="searchbox" style="display: none" role="search">
+  <h3>Quick search</h3>
+    <form class="search" action="../../../../search.html" method="get">
+      <input type="text" name="q" />
+      <input type="submit" value="Go" />
+      <input type="hidden" name="check_keywords" value="yes" />
+      <input type="hidden" name="area" value="default" />
+    </form>
+</div>
+<script type="text/javascript">$('#searchbox').show(0);</script>
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="related" role="navigation" aria-label="related navigation">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="../../../../genindex.html" title="General Index"
+             >index</a></li>
+        <li class="right" >
+          <a href="../../../../py-modindex.html" title="Python Module Index"
+             >modules</a> |</li>
+        <li class="nav-item nav-item-0"><a href="../../../../index.html">SasView 4.2.0 documentation</a> &raquo;</li>
+          <li class="nav-item nav-item-1"><a href="../../../index.html" >Module code</a> &raquo;</li>
+          <li class="nav-item nav-item-2"><a href="../../../sas.html" >sas</a> &raquo;</li> 
+      </ul>
+    </div>
+    <div class="footer" role="contentinfo">
+        &copy; Copyright 2018, The SasView Project.
+      Created using <a href="http://sphinx-doc.org/">Sphinx</a> 1.4.1.
+    </div>
+  </body>
+</html>

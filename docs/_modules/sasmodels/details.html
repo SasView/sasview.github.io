@@ -1,0 +1,436 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+  "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+    
+    <title>sasmodels.details &mdash; SasView 4.2.0 documentation</title>
+    
+    <link rel="stylesheet" href="../../_static/classic.css" type="text/css" />
+    <link rel="stylesheet" href="../../_static/pygments.css" type="text/css" />
+    
+    <script type="text/javascript">
+      var DOCUMENTATION_OPTIONS = {
+        URL_ROOT:    '../../',
+        VERSION:     '4.2.0',
+        COLLAPSE_INDEX: false,
+        FILE_SUFFIX: '.html',
+        HAS_SOURCE:  true
+      };
+    </script>
+    <script type="text/javascript" src="../../_static/jquery.js"></script>
+    <script type="text/javascript" src="../../_static/underscore.js"></script>
+    <script type="text/javascript" src="../../_static/doctools.js"></script>
+    <script type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.1/MathJax.js?config=TeX-MML-AM_CHTML"></script>
+    <link rel="top" title="SasView 4.2.0 documentation" href="../../index.html" />
+    <link rel="up" title="sasmodels" href="../sasmodels.html" /> 
+  </head>
+  <body role="document">
+    <div class="related" role="navigation" aria-label="related navigation">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="../../genindex.html" title="General Index"
+             accesskey="I">index</a></li>
+        <li class="right" >
+          <a href="../../py-modindex.html" title="Python Module Index"
+             >modules</a> |</li>
+        <li class="nav-item nav-item-0"><a href="../../index.html">SasView 4.2.0 documentation</a> &raquo;</li>
+          <li class="nav-item nav-item-1"><a href="../index.html" >Module code</a> &raquo;</li>
+          <li class="nav-item nav-item-2"><a href="../sasmodels.html" accesskey="U">sasmodels</a> &raquo;</li> 
+      </ul>
+    </div>  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          <div class="body" role="main">
+            
+  <h1>Source code for sasmodels.details</h1><div class="highlight"><pre>
+<span></span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">Kernel Call Details</span>
+<span class="sd">===================</span>
+
+<span class="sd">When calling sas computational kernels with polydispersity there are a</span>
+<span class="sd">number of details that need to be sent to the caller.  This includes the</span>
+<span class="sd">list of polydisperse parameters, the number of points in the polydispersity</span>
+<span class="sd">weight distribution, and which parameter is the &quot;theta&quot; parameter for</span>
+<span class="sd">polar coordinate integration.  The :class:`CallDetails` object maintains</span>
+<span class="sd">this data.  Use :func:`build_details` to build a *details* object which</span>
+<span class="sd">can be passed to one of the computational kernels.</span>
+<span class="sd">&quot;&quot;&quot;</span>
+
+<span class="kn">from</span> <span class="nn">__future__</span> <span class="kn">import</span> <span class="n">print_function</span>
+
+<span class="kn">import</span> <span class="nn">numpy</span> <span class="kn">as</span> <span class="nn">np</span>  <span class="c1"># type: ignore</span>
+<span class="kn">from</span> <span class="nn">numpy</span> <span class="kn">import</span> <span class="n">cos</span><span class="p">,</span> <span class="n">sin</span><span class="p">,</span> <span class="n">radians</span>
+
+<span class="k">try</span><span class="p">:</span>
+    <span class="n">np</span><span class="o">.</span><span class="n">meshgrid</span><span class="p">([])</span>
+    <span class="n">meshgrid</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">meshgrid</span>
+<span class="k">except</span> <span class="ne">Exception</span><span class="p">:</span>
+    <span class="c1"># CRUFT: np.meshgrid requires multiple vectors</span>
+    <span class="k">def</span> <span class="nf">meshgrid</span><span class="p">(</span><span class="o">*</span><span class="n">args</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;See docs from a recent version of numpy&quot;&quot;&quot;</span>
+        <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">args</span><span class="p">)</span> <span class="o">&gt;</span> <span class="mi">1</span><span class="p">:</span>
+            <span class="k">return</span> <span class="n">np</span><span class="o">.</span><span class="n">meshgrid</span><span class="p">(</span><span class="o">*</span><span class="n">args</span><span class="p">)</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="k">return</span> <span class="p">[</span><span class="n">np</span><span class="o">.</span><span class="n">asarray</span><span class="p">(</span><span class="n">v</span><span class="p">)</span> <span class="k">for</span> <span class="n">v</span> <span class="ow">in</span> <span class="n">args</span><span class="p">]</span>
+
+<span class="c1"># pylint: disable=unused-import</span>
+<span class="k">try</span><span class="p">:</span>
+    <span class="kn">from</span> <span class="nn">typing</span> <span class="kn">import</span> <span class="n">List</span><span class="p">,</span> <span class="n">Tuple</span><span class="p">,</span> <span class="n">Sequence</span>
+<span class="k">except</span> <span class="ne">ImportError</span><span class="p">:</span>
+    <span class="k">pass</span>
+<span class="k">else</span><span class="p">:</span>
+    <span class="kn">from</span> <span class="nn">.modelinfo</span> <span class="kn">import</span> <span class="n">ModelInfo</span>
+    <span class="kn">from</span> <span class="nn">.modelinfo</span> <span class="kn">import</span> <span class="n">ParameterTable</span>
+<span class="c1"># pylint: enable=unused-import</span>
+
+
+<div class="viewcode-block" id="CallDetails"><a class="viewcode-back" href="../../dev/sasmodels-api/sasmodels.html#sasmodels.details.CallDetails">[docs]</a><span class="k">class</span> <span class="nc">CallDetails</span><span class="p">(</span><span class="nb">object</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Manage the polydispersity information for the kernel call.</span>
+
+<span class="sd">    Conceptually, a polydispersity calculation is an integral over a mesh</span>
+<span class="sd">    in n-D space where n is the number of polydisperse parameters.  In order</span>
+<span class="sd">    to keep the program responsive, and not crash the GPU, only a portion</span>
+<span class="sd">    of the mesh is computed at a time.  Meshes with a large number of points</span>
+<span class="sd">    will therefore require many calls to the polydispersity loop.  Restarting</span>
+<span class="sd">    a nested loop in the middle requires that the indices of the individual</span>
+<span class="sd">    mesh dimensions can be computed for the current loop location.  This</span>
+<span class="sd">    is handled by the *pd_stride* vector, with n//stride giving the loop</span>
+<span class="sd">    index and n%stride giving the position in the sub loops.</span>
+
+<span class="sd">    One of the parameters may be the latitude.  When integrating in polar</span>
+<span class="sd">    coordinates, the total circumference decreases as latitude varies from</span>
+<span class="sd">    pi r^2 at the equator to 0 at the pole, and the weight associated</span>
+<span class="sd">    with a range of latitude values needs to be scaled by this circumference.</span>
+<span class="sd">    This scale factor needs to be updated each time the theta value</span>
+<span class="sd">    changes.  *theta_par* indicates which of the values in the parameter</span>
+<span class="sd">    vector is the latitude parameter, or -1 if there is no latitude</span>
+<span class="sd">    parameter in the model.  In practice, the normalization term cancels</span>
+<span class="sd">    if the latitude is not a polydisperse parameter.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">parts</span> <span class="o">=</span> <span class="bp">None</span>  <span class="c1"># type: List[&quot;CallDetails&quot;]</span>
+    <span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">model_info</span><span class="p">):</span>
+        <span class="c1"># type: (ModelInfo) -&gt; None</span>
+        <span class="n">parameters</span> <span class="o">=</span> <span class="n">model_info</span><span class="o">.</span><span class="n">parameters</span>
+        <span class="n">max_pd</span> <span class="o">=</span> <span class="n">parameters</span><span class="o">.</span><span class="n">max_pd</span>
+
+        <span class="c1"># Structure of the call details buffer:</span>
+        <span class="c1">#   pd_par[max_pd]     pd params in order of length</span>
+        <span class="c1">#   pd_length[max_pd]  length of each pd param</span>
+        <span class="c1">#   pd_offset[max_pd]  offset of pd values in parameter array</span>
+        <span class="c1">#   pd_stride[max_pd]  index of pd value in loop = n//stride[k]</span>
+        <span class="c1">#   num_eval           total length of pd loop</span>
+        <span class="c1">#   num_weights        total length of the weight vector</span>
+        <span class="c1">#   num_active         number of pd params</span>
+        <span class="c1">#   theta_par          parameter number for theta parameter</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">buffer</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">empty</span><span class="p">(</span><span class="mi">4</span><span class="o">*</span><span class="n">max_pd</span> <span class="o">+</span> <span class="mi">4</span><span class="p">,</span> <span class="s1">&#39;i4&#39;</span><span class="p">)</span>
+
+        <span class="c1"># generate views on different parts of the array</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_pd_par</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">buffer</span><span class="p">[</span><span class="mi">0</span> <span class="o">*</span> <span class="n">max_pd</span><span class="p">:</span><span class="mi">1</span> <span class="o">*</span> <span class="n">max_pd</span><span class="p">]</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_pd_length</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">buffer</span><span class="p">[</span><span class="mi">1</span> <span class="o">*</span> <span class="n">max_pd</span><span class="p">:</span><span class="mi">2</span> <span class="o">*</span> <span class="n">max_pd</span><span class="p">]</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_pd_offset</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">buffer</span><span class="p">[</span><span class="mi">2</span> <span class="o">*</span> <span class="n">max_pd</span><span class="p">:</span><span class="mi">3</span> <span class="o">*</span> <span class="n">max_pd</span><span class="p">]</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_pd_stride</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">buffer</span><span class="p">[</span><span class="mi">3</span> <span class="o">*</span> <span class="n">max_pd</span><span class="p">:</span><span class="mi">4</span> <span class="o">*</span> <span class="n">max_pd</span><span class="p">]</span>
+
+        <span class="c1"># theta_par is fixed</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">theta_par</span> <span class="o">=</span> <span class="n">parameters</span><span class="o">.</span><span class="n">theta_offset</span>
+
+        <span class="c1"># offset and length are for all parameters, not just pd parameters</span>
+        <span class="c1"># They are not sent to the kernel function, though they could be.</span>
+        <span class="c1"># They are used by the composite models (sum and product) to</span>
+        <span class="c1"># figure out offsets into the combined value list.</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">offset</span> <span class="o">=</span> <span class="bp">None</span>  <span class="c1"># type: np.ndarray</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">length</span> <span class="o">=</span> <span class="bp">None</span>  <span class="c1"># type: np.ndarray</span>
+
+        <span class="c1"># keep hold of ifno show() so we can break a values vector</span>
+        <span class="c1"># into the individual components</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">info</span> <span class="o">=</span> <span class="n">model_info</span>
+
+    <span class="nd">@property</span>
+    <span class="k">def</span> <span class="nf">pd_par</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;List of polydisperse parameters&quot;&quot;&quot;</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_pd_par</span>
+
+    <span class="nd">@property</span>
+    <span class="k">def</span> <span class="nf">pd_length</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Number of weights for each polydisperse parameter&quot;&quot;&quot;</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_pd_length</span>
+
+    <span class="nd">@property</span>
+    <span class="k">def</span> <span class="nf">pd_offset</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Offsets for the individual weight vectors in the set of weights&quot;&quot;&quot;</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_pd_offset</span>
+
+    <span class="nd">@property</span>
+    <span class="k">def</span> <span class="nf">pd_stride</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Stride in the pd mesh for each pd dimension&quot;&quot;&quot;</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_pd_stride</span>
+
+    <span class="nd">@property</span>
+    <span class="k">def</span> <span class="nf">num_eval</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Total size of the pd mesh&quot;&quot;&quot;</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">buffer</span><span class="p">[</span><span class="o">-</span><span class="mi">4</span><span class="p">]</span>
+
+    <span class="nd">@num_eval.setter</span>
+    <span class="k">def</span> <span class="nf">num_eval</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">v</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Total size of the pd mesh&quot;&quot;&quot;</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">buffer</span><span class="p">[</span><span class="o">-</span><span class="mi">4</span><span class="p">]</span> <span class="o">=</span> <span class="n">v</span>
+
+    <span class="nd">@property</span>
+    <span class="k">def</span> <span class="nf">num_weights</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Total length of all the weight vectors&quot;&quot;&quot;</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">buffer</span><span class="p">[</span><span class="o">-</span><span class="mi">3</span><span class="p">]</span>
+
+    <span class="nd">@num_weights.setter</span>
+    <span class="k">def</span> <span class="nf">num_weights</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">v</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Total length of all the weight vectors&quot;&quot;&quot;</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">buffer</span><span class="p">[</span><span class="o">-</span><span class="mi">3</span><span class="p">]</span> <span class="o">=</span> <span class="n">v</span>
+
+    <span class="nd">@property</span>
+    <span class="k">def</span> <span class="nf">num_active</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Number of active polydispersity loops&quot;&quot;&quot;</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">buffer</span><span class="p">[</span><span class="o">-</span><span class="mi">2</span><span class="p">]</span>
+
+    <span class="nd">@num_active.setter</span>
+    <span class="k">def</span> <span class="nf">num_active</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">v</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Number of active polydispersity loops&quot;&quot;&quot;</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">buffer</span><span class="p">[</span><span class="o">-</span><span class="mi">2</span><span class="p">]</span> <span class="o">=</span> <span class="n">v</span>
+
+    <span class="nd">@property</span>
+    <span class="k">def</span> <span class="nf">theta_par</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Location of the theta parameter in the parameter vector&quot;&quot;&quot;</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">buffer</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span>
+
+    <span class="nd">@theta_par.setter</span>
+    <span class="k">def</span> <span class="nf">theta_par</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">v</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Location of the theta parameter in the parameter vector&quot;&quot;&quot;</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">buffer</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span> <span class="o">=</span> <span class="n">v</span>
+
+<div class="viewcode-block" id="CallDetails.show"><a class="viewcode-back" href="../../dev/sasmodels-api/sasmodels.html#sasmodels.details.CallDetails.show">[docs]</a>    <span class="k">def</span> <span class="nf">show</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">values</span><span class="o">=</span><span class="bp">None</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Print the polydispersity call details to the console&quot;&quot;&quot;</span>
+        <span class="k">print</span><span class="p">(</span><span class="s2">&quot;===== </span><span class="si">%s</span><span class="s2"> details ====&quot;</span><span class="o">%</span><span class="bp">self</span><span class="o">.</span><span class="n">info</span><span class="o">.</span><span class="n">name</span><span class="p">)</span>
+        <span class="k">print</span><span class="p">(</span><span class="s2">&quot;num_active:</span><span class="si">%d</span><span class="s2">  num_eval:</span><span class="si">%d</span><span class="s2">  num_weights:</span><span class="si">%d</span><span class="s2">  theta=</span><span class="si">%d</span><span class="s2">&quot;</span>
+              <span class="o">%</span> <span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">num_active</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">num_eval</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">num_weights</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">theta_par</span><span class="p">))</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">pd_par</span><span class="o">.</span><span class="n">size</span><span class="p">:</span>
+            <span class="k">print</span><span class="p">(</span><span class="s2">&quot;pd_par&quot;</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">pd_par</span><span class="p">)</span>
+            <span class="k">print</span><span class="p">(</span><span class="s2">&quot;pd_length&quot;</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">pd_length</span><span class="p">)</span>
+            <span class="k">print</span><span class="p">(</span><span class="s2">&quot;pd_offset&quot;</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">pd_offset</span><span class="p">)</span>
+            <span class="k">print</span><span class="p">(</span><span class="s2">&quot;pd_stride&quot;</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">pd_stride</span><span class="p">)</span>
+        <span class="k">if</span> <span class="n">values</span> <span class="ow">is</span> <span class="ow">not</span> <span class="bp">None</span><span class="p">:</span>
+            <span class="n">nvalues</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">info</span><span class="o">.</span><span class="n">parameters</span><span class="o">.</span><span class="n">nvalues</span>
+            <span class="k">print</span><span class="p">(</span><span class="s2">&quot;scale, background&quot;</span><span class="p">,</span> <span class="n">values</span><span class="p">[:</span><span class="mi">2</span><span class="p">])</span>
+            <span class="k">print</span><span class="p">(</span><span class="s2">&quot;val&quot;</span><span class="p">,</span> <span class="n">values</span><span class="p">[</span><span class="mi">2</span><span class="p">:</span><span class="n">nvalues</span><span class="p">])</span>
+            <span class="k">print</span><span class="p">(</span><span class="s2">&quot;pd&quot;</span><span class="p">,</span> <span class="n">values</span><span class="p">[</span><span class="n">nvalues</span><span class="p">:</span><span class="n">nvalues</span><span class="o">+</span><span class="bp">self</span><span class="o">.</span><span class="n">num_weights</span><span class="p">])</span>
+            <span class="k">print</span><span class="p">(</span><span class="s2">&quot;wt&quot;</span><span class="p">,</span> <span class="n">values</span><span class="p">[</span><span class="n">nvalues</span><span class="o">+</span><span class="bp">self</span><span class="o">.</span><span class="n">num_weights</span><span class="p">:</span><span class="n">nvalues</span><span class="o">+</span><span class="mi">2</span><span class="o">*</span><span class="bp">self</span><span class="o">.</span><span class="n">num_weights</span><span class="p">])</span>
+            <span class="k">print</span><span class="p">(</span><span class="s2">&quot;offsets&quot;</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">offset</span><span class="p">)</span></div></div>
+
+
+<div class="viewcode-block" id="make_details"><a class="viewcode-back" href="../../dev/sasmodels-api/sasmodels.html#sasmodels.details.make_details">[docs]</a><span class="k">def</span> <span class="nf">make_details</span><span class="p">(</span><span class="n">model_info</span><span class="p">,</span> <span class="n">length</span><span class="p">,</span> <span class="n">offset</span><span class="p">,</span> <span class="n">num_weights</span><span class="p">):</span>
+    <span class="c1"># type: (ModelInfo, np.ndarray, np.ndarray, int) -&gt; CallDetails</span>
+    <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Return a :class:`CallDetails` object for a polydisperse calculation</span>
+<span class="sd">    of the model defined by *model_info*.  Polydispersity is defined by</span>
+<span class="sd">    the *length* of the polydispersity distribution for each parameter</span>
+<span class="sd">    and the *offset* of the distribution in the polydispersity array.</span>
+<span class="sd">    Monodisperse parameters should use a polydispersity length of one</span>
+<span class="sd">    with weight 1.0. *num_weights* is the total length of the polydispersity</span>
+<span class="sd">    array.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="c1">#pars = model_info.parameters.call_parameters[2:model_info.parameters.npars+2]</span>
+    <span class="c1">#print(&quot;, &quot;.join(str(i)+&quot;-&quot;+p.id for i,p in enumerate(pars)))</span>
+    <span class="c1">#print(&quot;len:&quot;,length)</span>
+    <span class="c1">#print(&quot;off:&quot;,offset)</span>
+
+    <span class="c1"># Check that we aren&#39;t using too many polydispersity loops</span>
+    <span class="n">num_active</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">sum</span><span class="p">(</span><span class="n">length</span> <span class="o">&gt;</span> <span class="mi">1</span><span class="p">)</span>
+    <span class="n">max_pd</span> <span class="o">=</span> <span class="n">model_info</span><span class="o">.</span><span class="n">parameters</span><span class="o">.</span><span class="n">max_pd</span>
+    <span class="k">if</span> <span class="n">num_active</span> <span class="o">&gt;</span> <span class="n">max_pd</span><span class="p">:</span>
+        <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s2">&quot;Too many polydisperse parameters&quot;</span><span class="p">)</span>
+
+    <span class="c1"># Decreasing list of polydpersity lengths</span>
+    <span class="c1"># Note: the reversing view, x[::-1], does not require a copy</span>
+    <span class="n">idx</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">argsort</span><span class="p">(</span><span class="n">length</span><span class="p">)[::</span><span class="o">-</span><span class="mi">1</span><span class="p">][:</span><span class="n">max_pd</span><span class="p">]</span>
+    <span class="n">pd_stride</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">cumprod</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">hstack</span><span class="p">((</span><span class="mi">1</span><span class="p">,</span> <span class="n">length</span><span class="p">[</span><span class="n">idx</span><span class="p">])))</span>
+
+    <span class="n">call_details</span> <span class="o">=</span> <span class="n">CallDetails</span><span class="p">(</span><span class="n">model_info</span><span class="p">)</span>
+    <span class="n">call_details</span><span class="o">.</span><span class="n">pd_par</span><span class="p">[:</span><span class="n">max_pd</span><span class="p">]</span> <span class="o">=</span> <span class="n">idx</span>
+    <span class="n">call_details</span><span class="o">.</span><span class="n">pd_length</span><span class="p">[:</span><span class="n">max_pd</span><span class="p">]</span> <span class="o">=</span> <span class="n">length</span><span class="p">[</span><span class="n">idx</span><span class="p">]</span>
+    <span class="n">call_details</span><span class="o">.</span><span class="n">pd_offset</span><span class="p">[:</span><span class="n">max_pd</span><span class="p">]</span> <span class="o">=</span> <span class="n">offset</span><span class="p">[</span><span class="n">idx</span><span class="p">]</span>
+    <span class="n">call_details</span><span class="o">.</span><span class="n">pd_stride</span><span class="p">[:</span><span class="n">max_pd</span><span class="p">]</span> <span class="o">=</span> <span class="n">pd_stride</span><span class="p">[:</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span>
+    <span class="n">call_details</span><span class="o">.</span><span class="n">num_eval</span> <span class="o">=</span> <span class="n">pd_stride</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span>
+    <span class="n">call_details</span><span class="o">.</span><span class="n">num_weights</span> <span class="o">=</span> <span class="n">num_weights</span>
+    <span class="n">call_details</span><span class="o">.</span><span class="n">num_active</span> <span class="o">=</span> <span class="n">num_active</span>
+    <span class="n">call_details</span><span class="o">.</span><span class="n">length</span> <span class="o">=</span> <span class="n">length</span>
+    <span class="n">call_details</span><span class="o">.</span><span class="n">offset</span> <span class="o">=</span> <span class="n">offset</span>
+    <span class="c1">#call_details.show()</span>
+    <span class="k">return</span> <span class="n">call_details</span></div>
+
+
+<span class="n">ZEROS</span> <span class="o">=</span> <span class="nb">tuple</span><span class="p">([</span><span class="mf">0.</span><span class="p">]</span><span class="o">*</span><span class="mi">31</span><span class="p">)</span>
+<div class="viewcode-block" id="make_kernel_args"><a class="viewcode-back" href="../../dev/sasmodels-api/sasmodels.html#sasmodels.details.make_kernel_args">[docs]</a><span class="k">def</span> <span class="nf">make_kernel_args</span><span class="p">(</span><span class="n">kernel</span><span class="p">,</span> <span class="c1"># type: Kernel</span>
+                     <span class="n">mesh</span>    <span class="c1"># type: Tuple[List[np.ndarray], List[np.ndarray]]</span>
+                    <span class="p">):</span>
+    <span class="c1"># type: (...) -&gt; Tuple[CallDetails, np.ndarray, bool]</span>
+    <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Converts (value, dispersity, weight) for each parameter into kernel pars.</span>
+
+<span class="sd">    Returns a CallDetails object indicating the polydispersity, a data object</span>
+<span class="sd">    containing the different values, and the magnetic flag indicating whether</span>
+<span class="sd">    any magnetic magnitudes are non-zero. Magnetic vectors (M0, phi, theta) are</span>
+<span class="sd">    converted to rectangular coordinates (mx, my, mz).</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">npars</span> <span class="o">=</span> <span class="n">kernel</span><span class="o">.</span><span class="n">info</span><span class="o">.</span><span class="n">parameters</span><span class="o">.</span><span class="n">npars</span>
+    <span class="n">nvalues</span> <span class="o">=</span> <span class="n">kernel</span><span class="o">.</span><span class="n">info</span><span class="o">.</span><span class="n">parameters</span><span class="o">.</span><span class="n">nvalues</span>
+    <span class="n">scalars</span> <span class="o">=</span> <span class="p">[</span><span class="n">value</span> <span class="k">for</span> <span class="n">value</span><span class="p">,</span> <span class="n">_dispersity</span><span class="p">,</span> <span class="n">_weight</span> <span class="ow">in</span> <span class="n">mesh</span><span class="p">]</span>
+    <span class="c1"># skipping scale and background when building values and weights</span>
+    <span class="n">_values</span><span class="p">,</span> <span class="n">dispersity</span><span class="p">,</span> <span class="n">weights</span> <span class="o">=</span> <span class="nb">zip</span><span class="p">(</span><span class="o">*</span><span class="n">mesh</span><span class="p">[</span><span class="mi">2</span><span class="p">:</span><span class="n">npars</span><span class="o">+</span><span class="mi">2</span><span class="p">])</span> <span class="k">if</span> <span class="n">npars</span> <span class="k">else</span> <span class="p">((),</span> <span class="p">(),</span> <span class="p">())</span>
+    <span class="c1">#weights = correct_theta_weights(kernel.info.parameters, dispersity, weights)</span>
+    <span class="n">length</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">([</span><span class="nb">len</span><span class="p">(</span><span class="n">w</span><span class="p">)</span> <span class="k">for</span> <span class="n">w</span> <span class="ow">in</span> <span class="n">weights</span><span class="p">])</span>
+    <span class="n">offset</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">cumsum</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">hstack</span><span class="p">((</span><span class="mi">0</span><span class="p">,</span> <span class="n">length</span><span class="p">)))</span>
+    <span class="n">call_details</span> <span class="o">=</span> <span class="n">make_details</span><span class="p">(</span><span class="n">kernel</span><span class="o">.</span><span class="n">info</span><span class="p">,</span> <span class="n">length</span><span class="p">,</span> <span class="n">offset</span><span class="p">[:</span><span class="o">-</span><span class="mi">1</span><span class="p">],</span> <span class="n">offset</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">])</span>
+    <span class="c1"># Pad value array to a 32 value boundary</span>
+    <span class="n">data_len</span> <span class="o">=</span> <span class="n">nvalues</span> <span class="o">+</span> <span class="mi">2</span><span class="o">*</span><span class="nb">sum</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">v</span><span class="p">)</span> <span class="k">for</span> <span class="n">v</span> <span class="ow">in</span> <span class="n">dispersity</span><span class="p">)</span>
+    <span class="n">extra</span> <span class="o">=</span> <span class="p">(</span><span class="mi">32</span> <span class="o">-</span> <span class="n">data_len</span><span class="o">%</span><span class="mi">32</span><span class="p">)</span><span class="o">%</span><span class="mi">32</span>
+    <span class="n">data</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">hstack</span><span class="p">((</span><span class="n">scalars</span><span class="p">,)</span> <span class="o">+</span> <span class="n">dispersity</span> <span class="o">+</span> <span class="n">weights</span> <span class="o">+</span> <span class="n">ZEROS</span><span class="p">[:</span><span class="n">extra</span><span class="p">])</span>
+    <span class="n">data</span> <span class="o">=</span> <span class="n">data</span><span class="o">.</span><span class="n">astype</span><span class="p">(</span><span class="n">kernel</span><span class="o">.</span><span class="n">dtype</span><span class="p">)</span>
+    <span class="n">is_magnetic</span> <span class="o">=</span> <span class="n">convert_magnetism</span><span class="p">(</span><span class="n">kernel</span><span class="o">.</span><span class="n">info</span><span class="o">.</span><span class="n">parameters</span><span class="p">,</span> <span class="n">data</span><span class="p">)</span>
+    <span class="c1">#call_details.show()</span>
+    <span class="c1">#print(&quot;data&quot;, data)</span>
+    <span class="k">return</span> <span class="n">call_details</span><span class="p">,</span> <span class="n">data</span><span class="p">,</span> <span class="n">is_magnetic</span></div>
+
+<div class="viewcode-block" id="correct_theta_weights"><a class="viewcode-back" href="../../dev/sasmodels-api/sasmodels.html#sasmodels.details.correct_theta_weights">[docs]</a><span class="k">def</span> <span class="nf">correct_theta_weights</span><span class="p">(</span><span class="n">parameters</span><span class="p">,</span> <span class="c1"># type: ParameterTable</span>
+                          <span class="n">dispersity</span><span class="p">,</span> <span class="c1"># type: Sequence[np.ndarray]</span>
+                          <span class="n">weights</span>     <span class="c1"># type: Sequence[np.ndarray]</span>
+                         <span class="p">):</span>
+    <span class="c1"># type: (...) -&gt; Sequence[np.ndarray]</span>
+    <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    **Deprecated** Theta weights will be computed in the kernel wrapper if</span>
+<span class="sd">    they are needed.</span>
+
+<span class="sd">    If there is a theta parameter, update the weights of that parameter so that</span>
+<span class="sd">    the cosine weighting required for polar integration is preserved.</span>
+
+<span class="sd">    Avoid evaluation strictly at the pole, which would otherwise send the</span>
+<span class="sd">    weight to zero.  This is probably not a problem in practice (if dispersity</span>
+<span class="sd">    is +/- 90, then you probably should be using a 1-D model of the circular</span>
+<span class="sd">    average).</span>
+
+<span class="sd">    Note: scale and background parameters are not include in the tuples for</span>
+<span class="sd">    dispersity and weights, so index is parameters.theta_offset, not</span>
+<span class="sd">    parameters.theta_offset+2</span>
+
+<span class="sd">    Returns updated weights vectors</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="c1"># Apparently the parameters.theta_offset similarly skips scale and</span>
+    <span class="c1"># and background, so the indexing works out, but they are still shipped</span>
+    <span class="c1"># to the kernel, so we need to add two there.</span>
+    <span class="k">if</span> <span class="n">parameters</span><span class="o">.</span><span class="n">theta_offset</span> <span class="o">&gt;=</span> <span class="mi">0</span><span class="p">:</span>
+        <span class="n">index</span> <span class="o">=</span> <span class="n">parameters</span><span class="o">.</span><span class="n">theta_offset</span>
+        <span class="n">theta</span> <span class="o">=</span> <span class="n">dispersity</span><span class="p">[</span><span class="n">index</span><span class="p">]</span>
+        <span class="n">theta_weight</span> <span class="o">=</span> <span class="nb">abs</span><span class="p">(</span><span class="n">cos</span><span class="p">(</span><span class="n">radians</span><span class="p">(</span><span class="n">theta</span><span class="p">)))</span>
+        <span class="n">weights</span> <span class="o">=</span> <span class="nb">tuple</span><span class="p">(</span><span class="n">theta_weight</span><span class="o">*</span><span class="n">w</span> <span class="k">if</span> <span class="n">k</span> <span class="o">==</span> <span class="n">index</span> <span class="k">else</span> <span class="n">w</span>
+                        <span class="k">for</span> <span class="n">k</span><span class="p">,</span> <span class="n">w</span> <span class="ow">in</span> <span class="nb">enumerate</span><span class="p">(</span><span class="n">weights</span><span class="p">))</span>
+    <span class="k">return</span> <span class="n">weights</span></div>
+
+
+<div class="viewcode-block" id="convert_magnetism"><a class="viewcode-back" href="../../dev/sasmodels-api/sasmodels.html#sasmodels.details.convert_magnetism">[docs]</a><span class="k">def</span> <span class="nf">convert_magnetism</span><span class="p">(</span><span class="n">parameters</span><span class="p">,</span> <span class="n">values</span><span class="p">):</span>
+    <span class="c1"># type: (ParameterTable, Sequence[np.ndarray]) -&gt; bool</span>
+    <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Convert magnetism values from polar to rectangular coordinates.</span>
+
+<span class="sd">    Returns True if any magnetism is present.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">mag</span> <span class="o">=</span> <span class="n">values</span><span class="p">[</span><span class="n">parameters</span><span class="o">.</span><span class="n">nvalues</span><span class="o">-</span><span class="mi">3</span><span class="o">*</span><span class="n">parameters</span><span class="o">.</span><span class="n">nmagnetic</span><span class="p">:</span><span class="n">parameters</span><span class="o">.</span><span class="n">nvalues</span><span class="p">]</span>
+    <span class="n">mag</span> <span class="o">=</span> <span class="n">mag</span><span class="o">.</span><span class="n">reshape</span><span class="p">(</span><span class="o">-</span><span class="mi">1</span><span class="p">,</span> <span class="mi">3</span><span class="p">)</span>
+    <span class="k">if</span> <span class="n">np</span><span class="o">.</span><span class="n">any</span><span class="p">(</span><span class="n">mag</span><span class="p">[:,</span> <span class="mi">0</span><span class="p">]</span> <span class="o">!=</span> <span class="mf">0.0</span><span class="p">):</span>
+        <span class="n">M0</span> <span class="o">=</span> <span class="n">mag</span><span class="p">[:,</span> <span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">copy</span><span class="p">()</span>
+        <span class="n">theta</span><span class="p">,</span> <span class="n">phi</span> <span class="o">=</span> <span class="n">radians</span><span class="p">(</span><span class="n">mag</span><span class="p">[:,</span> <span class="mi">1</span><span class="p">]),</span> <span class="n">radians</span><span class="p">(</span><span class="n">mag</span><span class="p">[:,</span> <span class="mi">2</span><span class="p">])</span>
+        <span class="n">mag</span><span class="p">[:,</span> <span class="mi">0</span><span class="p">]</span> <span class="o">=</span> <span class="o">+</span><span class="n">M0</span><span class="o">*</span><span class="n">cos</span><span class="p">(</span><span class="n">theta</span><span class="p">)</span><span class="o">*</span><span class="n">cos</span><span class="p">(</span><span class="n">phi</span><span class="p">)</span>  <span class="c1"># mx</span>
+        <span class="n">mag</span><span class="p">[:,</span> <span class="mi">1</span><span class="p">]</span> <span class="o">=</span> <span class="o">+</span><span class="n">M0</span><span class="o">*</span><span class="n">sin</span><span class="p">(</span><span class="n">theta</span><span class="p">)</span> <span class="c1"># my</span>
+        <span class="n">mag</span><span class="p">[:,</span> <span class="mi">2</span><span class="p">]</span> <span class="o">=</span> <span class="o">-</span><span class="n">M0</span><span class="o">*</span><span class="n">cos</span><span class="p">(</span><span class="n">theta</span><span class="p">)</span><span class="o">*</span><span class="n">sin</span><span class="p">(</span><span class="n">phi</span><span class="p">)</span>  <span class="c1"># mz</span>
+        <span class="k">return</span> <span class="bp">True</span>
+    <span class="k">else</span><span class="p">:</span>
+        <span class="k">return</span> <span class="bp">False</span></div>
+
+
+<div class="viewcode-block" id="dispersion_mesh"><a class="viewcode-back" href="../../dev/sasmodels-api/sasmodels.html#sasmodels.details.dispersion_mesh">[docs]</a><span class="k">def</span> <span class="nf">dispersion_mesh</span><span class="p">(</span><span class="n">model_info</span><span class="p">,</span> <span class="n">mesh</span><span class="p">):</span>
+    <span class="c1"># type: (ModelInfo) -&gt; Tuple[List[np.ndarray], List[np.ndarray]]</span>
+    <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Create a mesh grid of dispersion parameters and weights.</span>
+
+<span class="sd">    *mesh* is a list of (value, dispersity, weights), where the values</span>
+<span class="sd">    are the individual parameter values, and (dispersity, weights) is</span>
+<span class="sd">    the distribution of parameter values.</span>
+
+<span class="sd">    Only the volume parameters should be included in this list.  Orientation</span>
+<span class="sd">    parameters do not affect the calculation of effective radius or volume</span>
+<span class="sd">    ratio.  This is convenient since it avoids the distinction between</span>
+<span class="sd">    value and dispersity that is present in orientation parameters but not</span>
+<span class="sd">    shape parameters.</span>
+
+<span class="sd">    Returns [p1,p2,...],w where pj is a vector of values for parameter j</span>
+<span class="sd">    and w is a vector containing the products for weights for each</span>
+<span class="sd">    parameter set in the vector.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">_</span><span class="p">,</span> <span class="n">dispersity</span><span class="p">,</span> <span class="n">weight</span> <span class="o">=</span> <span class="nb">zip</span><span class="p">(</span><span class="o">*</span><span class="n">mesh</span><span class="p">)</span>
+    <span class="c1">#weight = [w if len(w)&gt;0 else [1.] for w in weight]</span>
+    <span class="n">weight</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">vstack</span><span class="p">([</span><span class="n">v</span><span class="o">.</span><span class="n">flatten</span><span class="p">()</span> <span class="k">for</span> <span class="n">v</span> <span class="ow">in</span> <span class="n">meshgrid</span><span class="p">(</span><span class="o">*</span><span class="n">weight</span><span class="p">)])</span>
+    <span class="n">weight</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">prod</span><span class="p">(</span><span class="n">weight</span><span class="p">,</span> <span class="n">axis</span><span class="o">=</span><span class="mi">0</span><span class="p">)</span>
+    <span class="n">dispersity</span> <span class="o">=</span> <span class="p">[</span><span class="n">v</span><span class="o">.</span><span class="n">flatten</span><span class="p">()</span> <span class="k">for</span> <span class="n">v</span> <span class="ow">in</span> <span class="n">meshgrid</span><span class="p">(</span><span class="o">*</span><span class="n">dispersity</span><span class="p">)]</span>
+    <span class="n">lengths</span> <span class="o">=</span> <span class="p">[</span><span class="n">par</span><span class="o">.</span><span class="n">length</span> <span class="k">for</span> <span class="n">par</span> <span class="ow">in</span> <span class="n">model_info</span><span class="o">.</span><span class="n">parameters</span><span class="o">.</span><span class="n">kernel_parameters</span>
+               <span class="k">if</span> <span class="n">par</span><span class="o">.</span><span class="n">type</span> <span class="o">==</span> <span class="s1">&#39;volume&#39;</span><span class="p">]</span>
+    <span class="k">if</span> <span class="nb">any</span><span class="p">(</span><span class="n">n</span> <span class="o">&gt;</span> <span class="mi">1</span> <span class="k">for</span> <span class="n">n</span> <span class="ow">in</span> <span class="n">lengths</span><span class="p">):</span>
+        <span class="n">pars</span> <span class="o">=</span> <span class="p">[]</span>
+        <span class="n">offset</span> <span class="o">=</span> <span class="mi">0</span>
+        <span class="k">for</span> <span class="n">n</span> <span class="ow">in</span> <span class="n">lengths</span><span class="p">:</span>
+            <span class="n">pars</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">vstack</span><span class="p">(</span><span class="n">dispersity</span><span class="p">[</span><span class="n">offset</span><span class="p">:</span><span class="n">offset</span><span class="o">+</span><span class="n">n</span><span class="p">])</span>
+                        <span class="k">if</span> <span class="n">n</span> <span class="o">&gt;</span> <span class="mi">1</span> <span class="k">else</span> <span class="n">dispersity</span><span class="p">[</span><span class="n">offset</span><span class="p">])</span>
+            <span class="n">offset</span> <span class="o">+=</span> <span class="n">n</span>
+        <span class="n">dispersity</span> <span class="o">=</span> <span class="n">pars</span>
+    <span class="k">return</span> <span class="n">dispersity</span><span class="p">,</span> <span class="n">weight</span></div>
+</pre></div>
+
+          </div>
+        </div>
+      </div>
+      <div class="sphinxsidebar" role="navigation" aria-label="main navigation">
+        <div class="sphinxsidebarwrapper">
+<div id="searchbox" style="display: none" role="search">
+  <h3>Quick search</h3>
+    <form class="search" action="../../search.html" method="get">
+      <input type="text" name="q" />
+      <input type="submit" value="Go" />
+      <input type="hidden" name="check_keywords" value="yes" />
+      <input type="hidden" name="area" value="default" />
+    </form>
+</div>
+<script type="text/javascript">$('#searchbox').show(0);</script>
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="related" role="navigation" aria-label="related navigation">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="../../genindex.html" title="General Index"
+             >index</a></li>
+        <li class="right" >
+          <a href="../../py-modindex.html" title="Python Module Index"
+             >modules</a> |</li>
+        <li class="nav-item nav-item-0"><a href="../../index.html">SasView 4.2.0 documentation</a> &raquo;</li>
+          <li class="nav-item nav-item-1"><a href="../index.html" >Module code</a> &raquo;</li>
+          <li class="nav-item nav-item-2"><a href="../sasmodels.html" >sasmodels</a> &raquo;</li> 
+      </ul>
+    </div>
+    <div class="footer" role="contentinfo">
+        &copy; Copyright 2018, The SasView Project.
+      Created using <a href="http://sphinx-doc.org/">Sphinx</a> 1.4.1.
+    </div>
+  </body>
+</html>

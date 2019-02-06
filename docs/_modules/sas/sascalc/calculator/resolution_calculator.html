@@ -1,0 +1,1261 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+  "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+    
+    <title>sas.sascalc.calculator.resolution_calculator &mdash; SasView 4.2.0 documentation</title>
+    
+    <link rel="stylesheet" href="../../../../_static/classic.css" type="text/css" />
+    <link rel="stylesheet" href="../../../../_static/pygments.css" type="text/css" />
+    
+    <script type="text/javascript">
+      var DOCUMENTATION_OPTIONS = {
+        URL_ROOT:    '../../../../',
+        VERSION:     '4.2.0',
+        COLLAPSE_INDEX: false,
+        FILE_SUFFIX: '.html',
+        HAS_SOURCE:  true
+      };
+    </script>
+    <script type="text/javascript" src="../../../../_static/jquery.js"></script>
+    <script type="text/javascript" src="../../../../_static/underscore.js"></script>
+    <script type="text/javascript" src="../../../../_static/doctools.js"></script>
+    <script type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.1/MathJax.js?config=TeX-MML-AM_CHTML"></script>
+    <link rel="top" title="SasView 4.2.0 documentation" href="../../../../index.html" />
+    <link rel="up" title="sas" href="../../../sas.html" /> 
+  </head>
+  <body role="document">
+    <div class="related" role="navigation" aria-label="related navigation">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="../../../../genindex.html" title="General Index"
+             accesskey="I">index</a></li>
+        <li class="right" >
+          <a href="../../../../py-modindex.html" title="Python Module Index"
+             >modules</a> |</li>
+        <li class="nav-item nav-item-0"><a href="../../../../index.html">SasView 4.2.0 documentation</a> &raquo;</li>
+          <li class="nav-item nav-item-1"><a href="../../../index.html" >Module code</a> &raquo;</li>
+          <li class="nav-item nav-item-2"><a href="../../../sas.html" accesskey="U">sas</a> &raquo;</li> 
+      </ul>
+    </div>  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          <div class="body" role="main">
+            
+  <h1>Source code for sas.sascalc.calculator.resolution_calculator</h1><div class="highlight"><pre>
+<span></span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">This object is a small tool to allow user to quickly</span>
+<span class="sd">determine the variance in q  from the</span>
+<span class="sd">instrumental parameters.</span>
+<span class="sd">&quot;&quot;&quot;</span>
+<span class="kn">import</span> <span class="nn">sys</span>
+<span class="kn">from</span> <span class="nn">math</span> <span class="kn">import</span> <span class="n">pi</span><span class="p">,</span> <span class="n">sqrt</span>
+<span class="kn">import</span> <span class="nn">math</span>
+<span class="kn">import</span> <span class="nn">logging</span>
+
+<span class="kn">import</span> <span class="nn">numpy</span> <span class="kn">as</span> <span class="nn">np</span>
+
+<span class="kn">from</span> <span class="nn">.instrument</span> <span class="kn">import</span> <span class="n">Sample</span>
+<span class="kn">from</span> <span class="nn">.instrument</span> <span class="kn">import</span> <span class="n">Detector</span>
+<span class="kn">from</span> <span class="nn">.instrument</span> <span class="kn">import</span> <span class="n">TOF</span> <span class="k">as</span> <span class="n">Neutron</span>
+<span class="kn">from</span> <span class="nn">.instrument</span> <span class="kn">import</span> <span class="n">Aperture</span>
+
+<span class="n">logger</span> <span class="o">=</span> <span class="n">logging</span><span class="o">.</span><span class="n">getLogger</span><span class="p">(</span><span class="n">__name__</span><span class="p">)</span>
+
+<span class="c1">#Plank&#39;s constant in cgs unit</span>
+<span class="n">_PLANK_H</span> <span class="o">=</span> <span class="mf">6.62606896E-27</span>
+<span class="c1">#Gravitational acc. in cgs unit</span>
+<span class="n">_GRAVITY</span> <span class="o">=</span> <span class="mf">981.0</span>
+
+
+<div class="viewcode-block" id="ResolutionCalculator"><a class="viewcode-back" href="../../../../dev/sasview-api/sas.sascalc.calculator.html#sas.sascalc.calculator.resolution_calculator.ResolutionCalculator">[docs]</a><span class="k">class</span> <span class="nc">ResolutionCalculator</span><span class="p">(</span><span class="nb">object</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    compute resolution in 2D</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+
+        <span class="c1"># wavelength</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">wave</span> <span class="o">=</span> <span class="n">Neutron</span><span class="p">()</span>
+        <span class="c1"># sample</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">sample</span> <span class="o">=</span> <span class="n">Sample</span><span class="p">()</span>
+        <span class="c1"># aperture</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">aperture</span> <span class="o">=</span> <span class="n">Aperture</span><span class="p">()</span>
+        <span class="c1"># detector</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">detector</span> <span class="o">=</span> <span class="n">Detector</span><span class="p">()</span>
+        <span class="c1"># 2d image of the resolution</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">image</span> <span class="o">=</span> <span class="p">[]</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">image_lam</span> <span class="o">=</span> <span class="p">[]</span>
+        <span class="c1"># resolutions</span>
+        <span class="c1"># lamda in r-direction</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">sigma_lamd</span> <span class="o">=</span> <span class="mi">0</span>
+        <span class="c1"># x-dir (no lamda)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">sigma_1</span> <span class="o">=</span> <span class="mi">0</span>
+        <span class="c1">#y-dir (no lamda)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">sigma_2</span> <span class="o">=</span> <span class="mi">0</span>
+        <span class="c1"># 1D total</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">sigma_1d</span> <span class="o">=</span> <span class="mi">0</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">gravity_phi</span> <span class="o">=</span> <span class="bp">None</span>
+        <span class="c1"># q min and max</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">qx_min</span> <span class="o">=</span> <span class="o">-</span><span class="mf">0.3</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">qx_max</span> <span class="o">=</span> <span class="mf">0.3</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">qy_min</span> <span class="o">=</span> <span class="o">-</span><span class="mf">0.3</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">qy_max</span> <span class="o">=</span> <span class="mf">0.3</span>
+        <span class="c1"># q min and max of the detector</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">detector_qx_min</span> <span class="o">=</span> <span class="o">-</span><span class="mf">0.3</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">detector_qx_max</span> <span class="o">=</span> <span class="mf">0.3</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">detector_qy_min</span> <span class="o">=</span> <span class="o">-</span><span class="mf">0.3</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">detector_qy_max</span> <span class="o">=</span> <span class="mf">0.3</span>
+        <span class="c1"># possible max qrange</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">qxmin_limit</span> <span class="o">=</span> <span class="mi">0</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">qxmax_limit</span> <span class="o">=</span> <span class="mi">0</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">qymin_limit</span> <span class="o">=</span> <span class="mi">0</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">qymax_limit</span> <span class="o">=</span> <span class="mi">0</span>
+
+        <span class="c1"># plots</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">plot</span> <span class="o">=</span> <span class="bp">None</span>
+        <span class="c1"># instrumental params defaults</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">mass</span> <span class="o">=</span> <span class="mi">0</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">intensity</span> <span class="o">=</span> <span class="mi">0</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">wavelength</span> <span class="o">=</span> <span class="mi">0</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">wavelength_spread</span> <span class="o">=</span> <span class="mi">0</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">source_aperture_size</span> <span class="o">=</span> <span class="p">[]</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">source2sample_distance</span> <span class="o">=</span> <span class="p">[]</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">sample2sample_distance</span> <span class="o">=</span> <span class="p">[]</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">sample_aperture_size</span> <span class="o">=</span> <span class="p">[]</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">sample2detector_distance</span> <span class="o">=</span> <span class="p">[]</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">detector_pix_size</span> <span class="o">=</span> <span class="p">[]</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">detector_size</span> <span class="o">=</span> <span class="p">[]</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">get_all_instrument_params</span><span class="p">()</span>
+        <span class="c1"># max q range for all lambdas</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">qxrange</span> <span class="o">=</span> <span class="p">[]</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">qyrange</span> <span class="o">=</span> <span class="p">[]</span>
+
+<div class="viewcode-block" id="ResolutionCalculator.compute_and_plot"><a class="viewcode-back" href="../../../../dev/sasview-api/sas.sascalc.calculator.html#sas.sascalc.calculator.resolution_calculator.ResolutionCalculator.compute_and_plot">[docs]</a>    <span class="k">def</span> <span class="nf">compute_and_plot</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">qx_value</span><span class="p">,</span> <span class="n">qy_value</span><span class="p">,</span> <span class="n">qx_min</span><span class="p">,</span> <span class="n">qx_max</span><span class="p">,</span>
+                         <span class="n">qy_min</span><span class="p">,</span> <span class="n">qy_max</span><span class="p">,</span> <span class="n">coord</span><span class="o">=</span><span class="s1">&#39;cartesian&#39;</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Compute the resolution</span>
+<span class="sd">        : qx_value: x component of q</span>
+<span class="sd">        : qy_value: y component of q</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="c1"># make sure to update all the variables need.</span>
+        <span class="c1"># except lambda, dlambda, and intensity</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">get_all_instrument_params</span><span class="p">()</span>
+        <span class="c1"># wavelength etc.</span>
+        <span class="n">lamda_list</span><span class="p">,</span> <span class="n">dlamb_list</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">get_wave_list</span><span class="p">()</span>
+        <span class="n">intens_list</span> <span class="o">=</span> <span class="p">[]</span>
+        <span class="n">sig1_list</span> <span class="o">=</span> <span class="p">[]</span>
+        <span class="n">sig2_list</span> <span class="o">=</span> <span class="p">[]</span>
+        <span class="n">sigr_list</span> <span class="o">=</span> <span class="p">[]</span>
+        <span class="n">sigma1d_list</span> <span class="o">=</span> <span class="p">[]</span>
+        <span class="n">num_lamda</span> <span class="o">=</span> <span class="nb">len</span><span class="p">(</span><span class="n">lamda_list</span><span class="p">)</span>
+        <span class="k">for</span> <span class="n">num</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">num_lamda</span><span class="p">):</span>
+            <span class="n">lam</span> <span class="o">=</span> <span class="n">lamda_list</span><span class="p">[</span><span class="n">num</span><span class="p">]</span>
+            <span class="c1"># wavelength spread</span>
+            <span class="n">dlam</span> <span class="o">=</span> <span class="n">dlamb_list</span><span class="p">[</span><span class="n">num</span><span class="p">]</span>
+            <span class="n">intens</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">setup_tof</span><span class="p">(</span><span class="n">lam</span><span class="p">,</span> <span class="n">dlam</span><span class="p">)</span>
+            <span class="n">intens_list</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">intens</span><span class="p">)</span>
+            <span class="c1"># cehck if tof</span>
+            <span class="k">if</span> <span class="n">num_lamda</span> <span class="o">&gt;</span> <span class="mi">1</span><span class="p">:</span>
+                <span class="n">tof</span> <span class="o">=</span> <span class="bp">True</span>
+            <span class="k">else</span><span class="p">:</span>
+                <span class="n">tof</span> <span class="o">=</span> <span class="bp">False</span>
+            <span class="c1"># compute 2d resolution</span>
+            <span class="n">_</span><span class="p">,</span> <span class="n">_</span><span class="p">,</span> <span class="n">sigma_1</span><span class="p">,</span> <span class="n">sigma_2</span><span class="p">,</span> <span class="n">sigma_r</span><span class="p">,</span> <span class="n">sigma1d</span> <span class="o">=</span> \
+                        <span class="bp">self</span><span class="o">.</span><span class="n">compute</span><span class="p">(</span><span class="n">lam</span><span class="p">,</span> <span class="n">dlam</span><span class="p">,</span> <span class="n">qx_value</span><span class="p">,</span> <span class="n">qy_value</span><span class="p">,</span> <span class="n">coord</span><span class="p">,</span> <span class="n">tof</span><span class="p">)</span>
+            <span class="c1"># make image</span>
+            <span class="n">image</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">get_image</span><span class="p">(</span><span class="n">qx_value</span><span class="p">,</span> <span class="n">qy_value</span><span class="p">,</span> <span class="n">sigma_1</span><span class="p">,</span> <span class="n">sigma_2</span><span class="p">,</span>
+                                   <span class="n">sigma_r</span><span class="p">,</span> <span class="n">qx_min</span><span class="p">,</span> <span class="n">qx_max</span><span class="p">,</span> <span class="n">qy_min</span><span class="p">,</span> <span class="n">qy_max</span><span class="p">,</span>
+                                   <span class="n">coord</span><span class="p">,</span> <span class="bp">False</span><span class="p">)</span>
+            <span class="k">if</span> <span class="n">qx_min</span> <span class="o">&gt;</span> <span class="bp">self</span><span class="o">.</span><span class="n">qx_min</span><span class="p">:</span>
+                <span class="n">qx_min</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">qx_min</span>
+            <span class="k">if</span> <span class="n">qx_max</span> <span class="o">&lt;</span> <span class="bp">self</span><span class="o">.</span><span class="n">qx_max</span><span class="p">:</span>
+                <span class="n">qx_max</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">qx_max</span>
+            <span class="k">if</span> <span class="n">qy_min</span> <span class="o">&gt;</span> <span class="bp">self</span><span class="o">.</span><span class="n">qy_min</span><span class="p">:</span>
+                <span class="n">qy_min</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">qy_min</span>
+            <span class="k">if</span> <span class="n">qy_max</span> <span class="o">&lt;</span> <span class="bp">self</span><span class="o">.</span><span class="n">qy_max</span><span class="p">:</span>
+                <span class="n">qy_max</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">qy_max</span>
+
+            <span class="c1"># set max qranges</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">qxrange</span> <span class="o">=</span> <span class="p">[</span><span class="n">qx_min</span><span class="p">,</span> <span class="n">qx_max</span><span class="p">]</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">qyrange</span> <span class="o">=</span> <span class="p">[</span><span class="n">qy_min</span><span class="p">,</span> <span class="n">qy_max</span><span class="p">]</span>
+            <span class="n">sig1_list</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">sigma_1</span><span class="p">)</span>
+            <span class="n">sig2_list</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">sigma_2</span><span class="p">)</span>
+            <span class="n">sigr_list</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">sigma_r</span><span class="p">)</span>
+            <span class="n">sigma1d_list</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">sigma1d</span><span class="p">)</span>
+        <span class="c1"># redraw image in global 2d q-space.</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">image_lam</span> <span class="o">=</span> <span class="p">[]</span>
+        <span class="n">total_intensity</span> <span class="o">=</span> <span class="mi">0</span>
+        <span class="n">sigma_1</span> <span class="o">=</span> <span class="mi">0</span>
+        <span class="n">sigma_r</span> <span class="o">=</span> <span class="mi">0</span>
+        <span class="n">sigma_2</span> <span class="o">=</span> <span class="mi">0</span>
+        <span class="n">sigma1d</span> <span class="o">=</span> <span class="mi">0</span>
+        <span class="k">for</span> <span class="n">ind</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">num_lamda</span><span class="p">):</span>
+            <span class="n">lam</span> <span class="o">=</span> <span class="n">lamda_list</span><span class="p">[</span><span class="n">ind</span><span class="p">]</span>
+            <span class="n">dlam</span> <span class="o">=</span> <span class="n">dlamb_list</span><span class="p">[</span><span class="n">ind</span><span class="p">]</span>
+            <span class="n">intens</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">setup_tof</span><span class="p">(</span><span class="n">lam</span><span class="p">,</span> <span class="n">dlam</span><span class="p">)</span>
+            <span class="n">out</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">get_image</span><span class="p">(</span><span class="n">qx_value</span><span class="p">,</span> <span class="n">qy_value</span><span class="p">,</span> <span class="n">sig1_list</span><span class="p">[</span><span class="n">ind</span><span class="p">],</span>
+                                 <span class="n">sig2_list</span><span class="p">[</span><span class="n">ind</span><span class="p">],</span> <span class="n">sigr_list</span><span class="p">[</span><span class="n">ind</span><span class="p">],</span>
+                                 <span class="n">qx_min</span><span class="p">,</span> <span class="n">qx_max</span><span class="p">,</span> <span class="n">qy_min</span><span class="p">,</span> <span class="n">qy_max</span><span class="p">,</span> <span class="n">coord</span><span class="p">)</span>
+            <span class="c1"># this is the case of q being outside the detector</span>
+            <span class="c1">#if numpy.all(out==0.0):</span>
+            <span class="c1">#    continue</span>
+            <span class="n">image</span> <span class="o">=</span> <span class="n">out</span>
+            <span class="c1"># set variance as sigmas</span>
+            <span class="n">sigma_1</span> <span class="o">+=</span> <span class="n">sig1_list</span><span class="p">[</span><span class="n">ind</span><span class="p">]</span> <span class="o">*</span> <span class="n">sig1_list</span><span class="p">[</span><span class="n">ind</span><span class="p">]</span> <span class="o">*</span> <span class="bp">self</span><span class="o">.</span><span class="n">intensity</span>
+            <span class="n">sigma_r</span> <span class="o">+=</span> <span class="n">sigr_list</span><span class="p">[</span><span class="n">ind</span><span class="p">]</span> <span class="o">*</span> <span class="n">sigr_list</span><span class="p">[</span><span class="n">ind</span><span class="p">]</span> <span class="o">*</span> <span class="bp">self</span><span class="o">.</span><span class="n">intensity</span>
+            <span class="n">sigma_2</span> <span class="o">+=</span> <span class="n">sig2_list</span><span class="p">[</span><span class="n">ind</span><span class="p">]</span> <span class="o">*</span> <span class="n">sig2_list</span><span class="p">[</span><span class="n">ind</span><span class="p">]</span> <span class="o">*</span> <span class="bp">self</span><span class="o">.</span><span class="n">intensity</span>
+            <span class="n">sigma1d</span> <span class="o">+=</span> <span class="n">sigma1d_list</span><span class="p">[</span><span class="n">ind</span><span class="p">]</span> <span class="o">*</span> <span class="n">sigma1d_list</span><span class="p">[</span><span class="n">ind</span><span class="p">]</span> <span class="o">*</span> <span class="bp">self</span><span class="o">.</span><span class="n">intensity</span>
+            <span class="n">total_intensity</span> <span class="o">+=</span> <span class="bp">self</span><span class="o">.</span><span class="n">intensity</span>
+
+        <span class="k">if</span> <span class="n">total_intensity</span> <span class="o">!=</span> <span class="mi">0</span><span class="p">:</span>
+            <span class="c1"># average variance</span>
+            <span class="n">image_out</span> <span class="o">=</span> <span class="n">image</span> <span class="o">/</span> <span class="n">total_intensity</span>
+            <span class="n">sigma_1</span> <span class="o">=</span> <span class="n">sigma_1</span> <span class="o">/</span> <span class="n">total_intensity</span>
+            <span class="n">sigma_r</span> <span class="o">=</span> <span class="n">sigma_r</span> <span class="o">/</span> <span class="n">total_intensity</span>
+            <span class="n">sigma_2</span> <span class="o">=</span> <span class="n">sigma_2</span> <span class="o">/</span> <span class="n">total_intensity</span>
+            <span class="n">sigma1d</span> <span class="o">=</span> <span class="n">sigma1d</span> <span class="o">/</span> <span class="n">total_intensity</span>
+            <span class="c1"># set sigmas</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">sigma_1</span> <span class="o">=</span> <span class="n">sqrt</span><span class="p">(</span><span class="n">sigma_1</span><span class="p">)</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">sigma_lamd</span> <span class="o">=</span> <span class="n">sqrt</span><span class="p">(</span><span class="n">sigma_r</span><span class="p">)</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">sigma_2</span> <span class="o">=</span> <span class="n">sqrt</span><span class="p">(</span><span class="n">sigma_2</span><span class="p">)</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">sigma_1d</span> <span class="o">=</span> <span class="n">sqrt</span><span class="p">(</span><span class="n">sigma1d</span><span class="p">)</span>
+            <span class="c1"># rescale</span>
+            <span class="n">max_im_val</span> <span class="o">=</span> <span class="mi">1</span>
+            <span class="k">if</span> <span class="n">max_im_val</span> <span class="o">&gt;</span> <span class="mi">0</span><span class="p">:</span>
+                <span class="n">image_out</span> <span class="o">/=</span> <span class="n">max_im_val</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">image_out</span> <span class="o">=</span> <span class="n">image</span> <span class="o">*</span> <span class="mf">0.0</span>
+            <span class="c1"># Don&#39;t calculate sigmas nor set self.sigmas!</span>
+            <span class="n">sigma_1</span> <span class="o">=</span> <span class="mi">0</span>
+            <span class="n">sigma_r</span> <span class="o">=</span> <span class="mi">0</span>
+            <span class="n">sigma_2</span> <span class="o">=</span> <span class="mi">0</span>
+            <span class="n">sigma1d</span> <span class="o">=</span> <span class="mi">0</span>
+        <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">image</span><span class="p">)</span> <span class="o">&gt;</span> <span class="mi">0</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">image</span> <span class="o">+=</span> <span class="n">image_out</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">image</span> <span class="o">=</span> <span class="n">image_out</span>
+
+        <span class="c1"># plot image</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">plot_image</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">image</span><span class="p">)</span></div>
+
+<div class="viewcode-block" id="ResolutionCalculator.setup_tof"><a class="viewcode-back" href="../../../../dev/sasview-api/sas.sascalc.calculator.html#sas.sascalc.calculator.resolution_calculator.ResolutionCalculator.setup_tof">[docs]</a>    <span class="k">def</span> <span class="nf">setup_tof</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">wavelength</span><span class="p">,</span> <span class="n">wavelength_spread</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Setup all parameters in instrument</span>
+
+<span class="sd">        : param ind: index of lambda, etc</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+
+        <span class="c1"># set wave.wavelength</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">set_wavelength</span><span class="p">(</span><span class="n">wavelength</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">set_wavelength_spread</span><span class="p">(</span><span class="n">wavelength_spread</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">intensity</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">wave</span><span class="o">.</span><span class="n">get_intensity</span><span class="p">()</span>
+
+        <span class="k">if</span> <span class="n">wavelength</span> <span class="o">==</span> <span class="mi">0</span><span class="p">:</span>
+            <span class="n">msg</span> <span class="o">=</span> <span class="s2">&quot;Can&#39;t compute the resolution: the wavelength is zero...&quot;</span>
+            <span class="k">raise</span> <span class="ne">RuntimeError</span><span class="p">(</span><span class="n">msg</span><span class="p">)</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">intensity</span></div>
+
+<div class="viewcode-block" id="ResolutionCalculator.compute"><a class="viewcode-back" href="../../../../dev/sasview-api/sas.sascalc.calculator.html#sas.sascalc.calculator.resolution_calculator.ResolutionCalculator.compute">[docs]</a>    <span class="k">def</span> <span class="nf">compute</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">wavelength</span><span class="p">,</span> <span class="n">wavelength_spread</span><span class="p">,</span> <span class="n">qx_value</span><span class="p">,</span> <span class="n">qy_value</span><span class="p">,</span>
+                <span class="n">coord</span><span class="o">=</span><span class="s1">&#39;cartesian&#39;</span><span class="p">,</span> <span class="n">tof</span><span class="o">=</span><span class="bp">False</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Compute the Q resoltuion in || and + direction of 2D</span>
+<span class="sd">        : qx_value: x component of q</span>
+<span class="sd">        : qy_value: y component of q</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">coord</span> <span class="o">=</span> <span class="s1">&#39;cartesian&#39;</span>
+        <span class="n">lamb</span> <span class="o">=</span> <span class="n">wavelength</span>
+        <span class="n">lamb_spread</span> <span class="o">=</span> <span class="n">wavelength_spread</span>
+        <span class="c1"># the shape of wavelength distribution</span>
+
+        <span class="k">if</span> <span class="n">tof</span><span class="p">:</span>
+            <span class="c1"># rectangular</span>
+            <span class="n">tof_factor</span> <span class="o">=</span> <span class="mi">2</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="c1"># triangular</span>
+            <span class="n">tof_factor</span> <span class="o">=</span> <span class="mi">1</span>
+        <span class="c1"># Find polar values</span>
+        <span class="n">qr_value</span><span class="p">,</span> <span class="n">phi</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_get_polar_value</span><span class="p">(</span><span class="n">qx_value</span><span class="p">,</span> <span class="n">qy_value</span><span class="p">)</span>
+        <span class="c1"># vacuum wave transfer</span>
+        <span class="n">knot</span> <span class="o">=</span> <span class="mi">2</span><span class="o">*</span><span class="n">pi</span><span class="o">/</span><span class="n">lamb</span>
+        <span class="c1"># scattering angle theta; always true for plane detector</span>
+        <span class="c1"># aligned vertically to the ko direction</span>
+        <span class="k">if</span> <span class="n">qr_value</span> <span class="o">&gt;</span> <span class="n">knot</span><span class="p">:</span>
+            <span class="n">theta</span> <span class="o">=</span> <span class="n">pi</span><span class="o">/</span><span class="mi">2</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">theta</span> <span class="o">=</span> <span class="n">math</span><span class="o">.</span><span class="n">asin</span><span class="p">(</span><span class="n">qr_value</span><span class="o">/</span><span class="n">knot</span><span class="p">)</span>
+        <span class="c1"># source aperture size</span>
+        <span class="n">rone</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">source_aperture_size</span>
+        <span class="c1"># sample aperture size</span>
+        <span class="n">rtwo</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">sample_aperture_size</span>
+        <span class="c1"># detector pixel size</span>
+        <span class="n">rthree</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">detector_pix_size</span>
+        <span class="c1"># source to sample(aperture) distance</span>
+        <span class="n">l_ssa</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">source2sample_distance</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
+        <span class="c1"># sample(aperture) to detector distance</span>
+        <span class="n">l_sad</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">sample2detector_distance</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
+        <span class="c1"># sample (aperture) to sample distance</span>
+        <span class="n">l_sas</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">sample2sample_distance</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
+        <span class="c1"># source to sample distance</span>
+        <span class="n">l_one</span> <span class="o">=</span> <span class="n">l_ssa</span> <span class="o">+</span> <span class="n">l_sas</span>
+        <span class="c1"># sample to detector distance</span>
+        <span class="n">l_two</span> <span class="o">=</span> <span class="n">l_sad</span> <span class="o">-</span> <span class="n">l_sas</span>
+
+        <span class="c1"># Sample offset correction for l_one and Lp on variance calculation</span>
+        <span class="n">l1_cor</span> <span class="o">=</span> <span class="p">(</span><span class="n">l_ssa</span> <span class="o">*</span> <span class="n">l_two</span><span class="p">)</span> <span class="o">/</span> <span class="p">(</span><span class="n">l_sas</span> <span class="o">+</span> <span class="n">l_two</span><span class="p">)</span>
+        <span class="n">lp_cor</span> <span class="o">=</span> <span class="p">(</span><span class="n">l_ssa</span> <span class="o">*</span> <span class="n">l_two</span><span class="p">)</span> <span class="o">/</span> <span class="p">(</span><span class="n">l_one</span> <span class="o">+</span> <span class="n">l_two</span><span class="p">)</span>
+        <span class="c1"># the radial distance to the pixel from the center of the detector</span>
+        <span class="n">radius</span> <span class="o">=</span> <span class="n">math</span><span class="o">.</span><span class="n">tan</span><span class="p">(</span><span class="n">theta</span><span class="p">)</span> <span class="o">*</span> <span class="n">l_two</span>
+        <span class="c1">#Lp = l_one*l_two/(l_one+l_two)</span>
+        <span class="c1"># default polar coordinate</span>
+        <span class="n">comp1</span> <span class="o">=</span> <span class="s1">&#39;radial&#39;</span>
+        <span class="n">comp2</span> <span class="o">=</span> <span class="s1">&#39;phi&#39;</span>
+        <span class="c1"># in the case of the cartesian coordinate</span>
+        <span class="k">if</span> <span class="n">coord</span> <span class="o">==</span> <span class="s1">&#39;cartesian&#39;</span><span class="p">:</span>
+            <span class="n">comp1</span> <span class="o">=</span> <span class="s1">&#39;x&#39;</span>
+            <span class="n">comp2</span> <span class="o">=</span> <span class="s1">&#39;y&#39;</span>
+
+        <span class="c1"># sigma in the radial/x direction</span>
+        <span class="c1"># for source aperture</span>
+        <span class="n">sigma_1</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">get_variance</span><span class="p">(</span><span class="n">rone</span><span class="p">,</span> <span class="n">l1_cor</span><span class="p">,</span> <span class="n">phi</span><span class="p">,</span> <span class="n">comp1</span><span class="p">)</span>
+        <span class="c1"># for sample apperture</span>
+        <span class="n">sigma_1</span> <span class="o">+=</span> <span class="bp">self</span><span class="o">.</span><span class="n">get_variance</span><span class="p">(</span><span class="n">rtwo</span><span class="p">,</span> <span class="n">lp_cor</span><span class="p">,</span> <span class="n">phi</span><span class="p">,</span> <span class="n">comp1</span><span class="p">)</span>
+        <span class="c1"># for detector pix</span>
+        <span class="n">sigma_1</span> <span class="o">+=</span> <span class="bp">self</span><span class="o">.</span><span class="n">get_variance</span><span class="p">(</span><span class="n">rthree</span><span class="p">,</span> <span class="n">l_two</span><span class="p">,</span> <span class="n">phi</span><span class="p">,</span> <span class="n">comp1</span><span class="p">)</span>
+        <span class="c1"># for gravity term for 1d</span>
+        <span class="n">sigma_1grav1d</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">get_variance_gravity</span><span class="p">(</span><span class="n">l_ssa</span><span class="p">,</span> <span class="n">l_sad</span><span class="p">,</span> <span class="n">lamb</span><span class="p">,</span>
+                                                  <span class="n">lamb_spread</span><span class="p">,</span> <span class="n">phi</span><span class="p">,</span> <span class="n">comp1</span><span class="p">,</span> <span class="s1">&#39;on&#39;</span><span class="p">)</span> <span class="o">/</span> <span class="n">tof_factor</span>
+        <span class="c1"># for wavelength spread</span>
+        <span class="c1"># reserve for 1d calculation</span>
+        <span class="n">A_value</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_cal_A_value</span><span class="p">(</span><span class="n">lamb</span><span class="p">,</span> <span class="n">l_ssa</span><span class="p">,</span> <span class="n">l_sad</span><span class="p">)</span>
+        <span class="n">sigma_wave_1</span><span class="p">,</span> <span class="n">sigma_wave_1_1d</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">get_variance_wave</span><span class="p">(</span><span class="n">A_value</span><span class="p">,</span>
+                                                               <span class="n">radius</span><span class="p">,</span> <span class="n">l_two</span><span class="p">,</span> <span class="n">lamb_spread</span><span class="p">,</span>
+                                                               <span class="n">phi</span><span class="p">,</span> <span class="s1">&#39;radial&#39;</span><span class="p">,</span> <span class="s1">&#39;on&#39;</span><span class="p">)</span>
+        <span class="n">sigma_wave_1</span> <span class="o">/=</span> <span class="n">tof_factor</span>
+        <span class="n">sigma_wave_1_1d</span> <span class="o">/=</span> <span class="n">tof_factor</span>
+        <span class="c1"># for 1d</span>
+        <span class="n">variance_1d_1</span> <span class="o">=</span> <span class="p">(</span><span class="n">sigma_1</span> <span class="o">+</span> <span class="n">sigma_1grav1d</span><span class="p">)</span> <span class="o">/</span> <span class="mi">2</span> <span class="o">+</span> <span class="n">sigma_wave_1_1d</span>
+        <span class="c1"># normalize</span>
+        <span class="n">variance_1d_1</span> <span class="o">=</span> <span class="n">knot</span> <span class="o">*</span> <span class="n">knot</span> <span class="o">*</span> <span class="n">variance_1d_1</span> <span class="o">/</span> <span class="mi">12</span>
+
+        <span class="c1"># for 2d</span>
+        <span class="c1">#sigma_1 += sigma_wave_1</span>
+        <span class="c1"># normalize</span>
+        <span class="n">sigma_1</span> <span class="o">=</span> <span class="n">knot</span> <span class="o">*</span> <span class="n">sqrt</span><span class="p">(</span><span class="n">sigma_1</span> <span class="o">/</span> <span class="mi">12</span><span class="p">)</span>
+        <span class="n">sigma_r</span> <span class="o">=</span> <span class="n">knot</span> <span class="o">*</span> <span class="n">sqrt</span><span class="p">(</span><span class="n">sigma_wave_1</span> <span class="o">/</span> <span class="p">(</span><span class="n">tof_factor</span> <span class="o">*</span><span class="mi">12</span><span class="p">))</span>
+        <span class="c1"># sigma in the phi/y direction</span>
+        <span class="c1"># for source apperture</span>
+        <span class="n">sigma_2</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">get_variance</span><span class="p">(</span><span class="n">rone</span><span class="p">,</span> <span class="n">l1_cor</span><span class="p">,</span> <span class="n">phi</span><span class="p">,</span> <span class="n">comp2</span><span class="p">)</span>
+
+        <span class="c1"># for sample apperture</span>
+        <span class="n">sigma_2</span> <span class="o">+=</span> <span class="bp">self</span><span class="o">.</span><span class="n">get_variance</span><span class="p">(</span><span class="n">rtwo</span><span class="p">,</span> <span class="n">lp_cor</span><span class="p">,</span> <span class="n">phi</span><span class="p">,</span> <span class="n">comp2</span><span class="p">)</span>
+
+        <span class="c1"># for detector pix</span>
+        <span class="n">sigma_2</span> <span class="o">+=</span> <span class="bp">self</span><span class="o">.</span><span class="n">get_variance</span><span class="p">(</span><span class="n">rthree</span><span class="p">,</span> <span class="n">l_two</span><span class="p">,</span> <span class="n">phi</span><span class="p">,</span> <span class="n">comp2</span><span class="p">)</span>
+
+        <span class="c1"># for gravity term for 1d</span>
+        <span class="n">sigma_2grav1d</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">get_variance_gravity</span><span class="p">(</span><span class="n">l_ssa</span><span class="p">,</span> <span class="n">l_sad</span><span class="p">,</span> <span class="n">lamb</span><span class="p">,</span>
+                                                  <span class="n">lamb_spread</span><span class="p">,</span> <span class="n">phi</span><span class="p">,</span> <span class="n">comp2</span><span class="p">,</span> <span class="s1">&#39;on&#39;</span><span class="p">)</span> <span class="o">/</span> <span class="n">tof_factor</span>
+
+        <span class="c1"># for wavelength spread</span>
+        <span class="c1"># reserve for 1d calculation</span>
+        <span class="n">sigma_wave_2</span><span class="p">,</span> <span class="n">sigma_wave_2_1d</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">get_variance_wave</span><span class="p">(</span><span class="n">A_value</span><span class="p">,</span>
+                                                               <span class="n">radius</span><span class="p">,</span> <span class="n">l_two</span><span class="p">,</span> <span class="n">lamb_spread</span><span class="p">,</span>
+                                                               <span class="n">phi</span><span class="p">,</span> <span class="s1">&#39;phi&#39;</span><span class="p">,</span> <span class="s1">&#39;on&#39;</span><span class="p">)</span>
+        <span class="n">sigma_wave_2</span> <span class="o">/=</span> <span class="n">tof_factor</span>
+        <span class="n">sigma_wave_2_1d</span> <span class="o">/=</span> <span class="n">tof_factor</span>
+        <span class="c1"># for 1d</span>
+        <span class="n">variance_1d_2</span> <span class="o">=</span> <span class="p">(</span><span class="n">sigma_2</span> <span class="o">+</span> <span class="n">sigma_2grav1d</span><span class="p">)</span> <span class="o">/</span> <span class="mi">2</span> <span class="o">+</span> <span class="n">sigma_wave_2_1d</span>
+        <span class="c1"># normalize</span>
+        <span class="n">variance_1d_2</span> <span class="o">=</span> <span class="n">knot</span> <span class="o">*</span> <span class="n">knot</span> <span class="o">*</span> <span class="n">variance_1d_2</span> <span class="o">/</span> <span class="mi">12</span>
+
+        <span class="c1"># for 2d</span>
+        <span class="c1">#sigma_2 =  knot*sqrt(sigma_2/12)</span>
+        <span class="c1">#sigma_2 += sigma_wave_2</span>
+        <span class="c1"># normalize</span>
+        <span class="n">sigma_2</span> <span class="o">=</span> <span class="n">knot</span> <span class="o">*</span> <span class="n">sqrt</span><span class="p">(</span><span class="n">sigma_2</span> <span class="o">/</span> <span class="mi">12</span><span class="p">)</span>
+        <span class="n">sigma1d</span> <span class="o">=</span> <span class="n">sqrt</span><span class="p">(</span><span class="n">variance_1d_1</span> <span class="o">+</span> <span class="n">variance_1d_2</span><span class="p">)</span>
+        <span class="c1"># set sigmas</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">sigma_1</span> <span class="o">=</span> <span class="n">sigma_1</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">sigma_lamd</span> <span class="o">=</span> <span class="n">sigma_r</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">sigma_2</span> <span class="o">=</span> <span class="n">sigma_2</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">sigma_1d</span> <span class="o">=</span> <span class="n">sigma1d</span>
+        <span class="k">return</span> <span class="n">qr_value</span><span class="p">,</span> <span class="n">phi</span><span class="p">,</span> <span class="n">sigma_1</span><span class="p">,</span> <span class="n">sigma_2</span><span class="p">,</span> <span class="n">sigma_r</span><span class="p">,</span> <span class="n">sigma1d</span></div>
+
+    <span class="k">def</span> <span class="nf">_within_detector_range</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">qx_value</span><span class="p">,</span> <span class="n">qy_value</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        check if qvalues are within detector range</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="c1"># detector range</span>
+        <span class="n">detector_qx_min</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">detector_qx_min</span>
+        <span class="n">detector_qx_max</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">detector_qx_max</span>
+        <span class="n">detector_qy_min</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">detector_qy_min</span>
+        <span class="n">detector_qy_max</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">detector_qy_max</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">qxmin_limit</span> <span class="o">&gt;</span> <span class="n">detector_qx_min</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">qxmin_limit</span> <span class="o">=</span> <span class="n">detector_qx_min</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">qxmax_limit</span> <span class="o">&lt;</span> <span class="n">detector_qx_max</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">qxmax_limit</span> <span class="o">=</span> <span class="n">detector_qx_max</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">qymin_limit</span> <span class="o">&gt;</span> <span class="n">detector_qy_min</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">qymin_limit</span> <span class="o">=</span> <span class="n">detector_qy_min</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">qymax_limit</span> <span class="o">&lt;</span> <span class="n">detector_qy_max</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">qymax_limit</span> <span class="o">=</span> <span class="n">detector_qy_max</span>
+        <span class="k">if</span> <span class="n">qx_value</span> <span class="o">&lt;</span> <span class="n">detector_qx_min</span> <span class="ow">or</span> <span class="n">qx_value</span> <span class="o">&gt;</span> <span class="n">detector_qx_max</span><span class="p">:</span>
+            <span class="k">return</span> <span class="bp">False</span>
+        <span class="k">if</span> <span class="n">qy_value</span> <span class="o">&lt;</span> <span class="n">detector_qy_min</span> <span class="ow">or</span> <span class="n">qy_value</span> <span class="o">&gt;</span> <span class="n">detector_qy_max</span><span class="p">:</span>
+            <span class="k">return</span> <span class="bp">False</span>
+        <span class="k">return</span> <span class="bp">True</span>
+
+<div class="viewcode-block" id="ResolutionCalculator.get_image"><a class="viewcode-back" href="../../../../dev/sasview-api/sas.sascalc.calculator.html#sas.sascalc.calculator.resolution_calculator.ResolutionCalculator.get_image">[docs]</a>    <span class="k">def</span> <span class="nf">get_image</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">qx_value</span><span class="p">,</span> <span class="n">qy_value</span><span class="p">,</span> <span class="n">sigma_1</span><span class="p">,</span> <span class="n">sigma_2</span><span class="p">,</span> <span class="n">sigma_r</span><span class="p">,</span>
+                  <span class="n">qx_min</span><span class="p">,</span> <span class="n">qx_max</span><span class="p">,</span> <span class="n">qy_min</span><span class="p">,</span> <span class="n">qy_max</span><span class="p">,</span>
+                  <span class="n">coord</span><span class="o">=</span><span class="s1">&#39;cartesian&#39;</span><span class="p">,</span> <span class="n">full_cal</span><span class="o">=</span><span class="bp">True</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Get the resolution in polar coordinate ready to plot</span>
+<span class="sd">        : qx_value: qx_value value</span>
+<span class="sd">        : qy_value: qy_value value</span>
+<span class="sd">        : sigma_1: variance in r direction</span>
+<span class="sd">        : sigma_2: variance in phi direction</span>
+<span class="sd">        : coord: coordinate system of image, &#39;polar&#39; or &#39;cartesian&#39;</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="c1"># Get  qx_max and qy_max...</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_get_detector_qxqy_pixels</span><span class="p">()</span>
+
+        <span class="n">qr_value</span><span class="p">,</span> <span class="n">phi</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_get_polar_value</span><span class="p">(</span><span class="n">qx_value</span><span class="p">,</span> <span class="n">qy_value</span><span class="p">)</span>
+
+        <span class="c1"># Check whether the q value is within the detector range</span>
+        <span class="k">if</span> <span class="n">qx_min</span> <span class="o">&lt;</span> <span class="bp">self</span><span class="o">.</span><span class="n">qx_min</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">qx_min</span> <span class="o">=</span> <span class="n">qx_min</span>
+            <span class="c1">#raise ValueError(msg)</span>
+        <span class="k">if</span> <span class="n">qx_max</span> <span class="o">&gt;</span> <span class="bp">self</span><span class="o">.</span><span class="n">qx_max</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">qx_max</span> <span class="o">=</span> <span class="n">qx_max</span>
+            <span class="c1">#raise ValueError(msg)</span>
+        <span class="k">if</span> <span class="n">qy_min</span> <span class="o">&lt;</span> <span class="bp">self</span><span class="o">.</span><span class="n">qy_min</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">qy_min</span> <span class="o">=</span> <span class="n">qy_min</span>
+            <span class="c1">#raise ValueError(msg)</span>
+        <span class="k">if</span> <span class="n">qy_max</span> <span class="o">&gt;</span> <span class="bp">self</span><span class="o">.</span><span class="n">qy_max</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">qy_max</span> <span class="o">=</span> <span class="n">qy_max</span>
+            <span class="c1">#raise ValueError(msg)</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="n">full_cal</span><span class="p">:</span>
+            <span class="k">return</span> <span class="bp">None</span>
+
+        <span class="c1"># Make an empty graph in the detector scale</span>
+        <span class="n">dx_size</span> <span class="o">=</span> <span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">qx_max</span> <span class="o">-</span> <span class="bp">self</span><span class="o">.</span><span class="n">qx_min</span><span class="p">)</span> <span class="o">/</span> <span class="p">(</span><span class="mi">1000</span> <span class="o">-</span> <span class="mi">1</span><span class="p">)</span>
+        <span class="n">dy_size</span> <span class="o">=</span> <span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">qy_max</span> <span class="o">-</span> <span class="bp">self</span><span class="o">.</span><span class="n">qy_min</span><span class="p">)</span> <span class="o">/</span> <span class="p">(</span><span class="mi">1000</span> <span class="o">-</span> <span class="mi">1</span><span class="p">)</span>
+        <span class="n">x_val</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">arange</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">qx_min</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">qx_max</span><span class="p">,</span> <span class="n">dx_size</span><span class="p">)</span>
+        <span class="n">y_val</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">arange</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">qy_max</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">qy_min</span><span class="p">,</span> <span class="o">-</span><span class="n">dy_size</span><span class="p">)</span>
+        <span class="n">q_1</span><span class="p">,</span> <span class="n">q_2</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">meshgrid</span><span class="p">(</span><span class="n">x_val</span><span class="p">,</span> <span class="n">y_val</span><span class="p">)</span>
+        <span class="c1">#q_phi = numpy.arctan(q_1,q_2)</span>
+        <span class="c1"># check whether polar or cartesian</span>
+        <span class="k">if</span> <span class="n">coord</span> <span class="o">==</span> <span class="s1">&#39;polar&#39;</span><span class="p">:</span>
+            <span class="c1"># Find polar values</span>
+            <span class="n">qr_value</span><span class="p">,</span> <span class="n">phi</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_get_polar_value</span><span class="p">(</span><span class="n">qx_value</span><span class="p">,</span> <span class="n">qy_value</span><span class="p">)</span>
+            <span class="n">q_1</span><span class="p">,</span> <span class="n">q_2</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_rotate_z</span><span class="p">(</span><span class="n">q_1</span><span class="p">,</span> <span class="n">q_2</span><span class="p">,</span> <span class="n">phi</span><span class="p">)</span>
+            <span class="n">qc_1</span> <span class="o">=</span> <span class="n">qr_value</span>
+            <span class="n">qc_2</span> <span class="o">=</span> <span class="mf">0.0</span>
+            <span class="c1"># Calculate the 2D Gaussian distribution image</span>
+            <span class="n">image</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_gaussian2d_polar</span><span class="p">(</span><span class="n">q_1</span><span class="p">,</span> <span class="n">q_2</span><span class="p">,</span> <span class="n">qc_1</span><span class="p">,</span> <span class="n">qc_2</span><span class="p">,</span>
+                                           <span class="n">sigma_1</span><span class="p">,</span> <span class="n">sigma_2</span><span class="p">,</span> <span class="n">sigma_r</span><span class="p">)</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="c1"># catesian coordinate</span>
+            <span class="c1"># qx_center</span>
+            <span class="n">qc_1</span> <span class="o">=</span> <span class="n">qx_value</span>
+            <span class="c1"># qy_center</span>
+            <span class="n">qc_2</span> <span class="o">=</span> <span class="n">qy_value</span>
+
+            <span class="c1"># Calculate the 2D Gaussian distribution image</span>
+            <span class="n">image</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_gaussian2d</span><span class="p">(</span><span class="n">q_1</span><span class="p">,</span> <span class="n">q_2</span><span class="p">,</span> <span class="n">qc_1</span><span class="p">,</span> <span class="n">qc_2</span><span class="p">,</span>
+                                     <span class="n">sigma_1</span><span class="p">,</span> <span class="n">sigma_2</span><span class="p">,</span> <span class="n">sigma_r</span><span class="p">)</span>
+        <span class="c1"># out side of detector</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="bp">self</span><span class="o">.</span><span class="n">_within_detector_range</span><span class="p">(</span><span class="n">qx_value</span><span class="p">,</span> <span class="n">qy_value</span><span class="p">):</span>
+            <span class="n">image</span> <span class="o">*=</span> <span class="mf">0.0</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">intensity</span> <span class="o">=</span> <span class="mf">0.0</span>
+            <span class="c1">#return self.image</span>
+
+        <span class="c1"># Add it if there are more than one inputs.</span>
+        <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">image_lam</span><span class="p">)</span> <span class="o">&gt;</span> <span class="mi">0</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">image_lam</span> <span class="o">+=</span> <span class="n">image</span> <span class="o">*</span> <span class="bp">self</span><span class="o">.</span><span class="n">intensity</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">image_lam</span> <span class="o">=</span> <span class="n">image</span> <span class="o">*</span> <span class="bp">self</span><span class="o">.</span><span class="n">intensity</span>
+
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">image_lam</span></div>
+
+<div class="viewcode-block" id="ResolutionCalculator.plot_image"><a class="viewcode-back" href="../../../../dev/sasview-api/sas.sascalc.calculator.html#sas.sascalc.calculator.resolution_calculator.ResolutionCalculator.plot_image">[docs]</a>    <span class="k">def</span> <span class="nf">plot_image</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">image</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Plot image using pyplot</span>
+<span class="sd">        : image: 2d resolution image</span>
+
+<span class="sd">        : return plt: pylab object</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="kn">import</span> <span class="nn">matplotlib.pyplot</span> <span class="kn">as</span> <span class="nn">plt</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">plot</span> <span class="o">=</span> <span class="n">plt</span>
+        <span class="n">plt</span><span class="o">.</span><span class="n">xlabel</span><span class="p">(</span><span class="s1">&#39;$</span><span class="se">\\</span><span class="s1">rm{Q}_{x} [A^{-1}]$&#39;</span><span class="p">)</span>
+        <span class="n">plt</span><span class="o">.</span><span class="n">ylabel</span><span class="p">(</span><span class="s1">&#39;$</span><span class="se">\\</span><span class="s1">rm{Q}_{y} [A^{-1}]$&#39;</span><span class="p">)</span>
+        <span class="c1"># Max value of the image</span>
+        <span class="c1"># max = numpy.max(image)</span>
+        <span class="n">qx_min</span><span class="p">,</span> <span class="n">qx_max</span><span class="p">,</span> <span class="n">qy_min</span><span class="p">,</span> <span class="n">qy_max</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">get_detector_qrange</span><span class="p">()</span>
+
+        <span class="c1"># Image</span>
+        <span class="n">im</span> <span class="o">=</span> <span class="n">plt</span><span class="o">.</span><span class="n">imshow</span><span class="p">(</span><span class="n">image</span><span class="p">,</span>
+                        <span class="n">extent</span><span class="o">=</span><span class="p">[</span><span class="n">qx_min</span><span class="p">,</span> <span class="n">qx_max</span><span class="p">,</span> <span class="n">qy_min</span><span class="p">,</span> <span class="n">qy_max</span><span class="p">])</span>
+
+        <span class="c1"># bilinear interpolation to make it smoother</span>
+        <span class="n">im</span><span class="o">.</span><span class="n">set_interpolation</span><span class="p">(</span><span class="s1">&#39;bilinear&#39;</span><span class="p">)</span>
+
+        <span class="k">return</span> <span class="n">plt</span></div>
+
+<div class="viewcode-block" id="ResolutionCalculator.reset_image"><a class="viewcode-back" href="../../../../dev/sasview-api/sas.sascalc.calculator.html#sas.sascalc.calculator.resolution_calculator.ResolutionCalculator.reset_image">[docs]</a>    <span class="k">def</span> <span class="nf">reset_image</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Reset image to default (=[])</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">image</span> <span class="o">=</span> <span class="p">[]</span></div>
+
+<div class="viewcode-block" id="ResolutionCalculator.get_variance"><a class="viewcode-back" href="../../../../dev/sasview-api/sas.sascalc.calculator.html#sas.sascalc.calculator.resolution_calculator.ResolutionCalculator.get_variance">[docs]</a>    <span class="k">def</span> <span class="nf">get_variance</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">size</span><span class="o">=</span><span class="p">[],</span> <span class="n">distance</span><span class="o">=</span><span class="mi">0</span><span class="p">,</span> <span class="n">phi</span><span class="o">=</span><span class="mi">0</span><span class="p">,</span> <span class="n">comp</span><span class="o">=</span><span class="s1">&#39;radial&#39;</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Get the variance when the slit/pinhole size is given</span>
+<span class="sd">        : size: list that can be one(diameter for circular) or two components(lengths for rectangular)</span>
+<span class="sd">        : distance: [z, x] where z along the incident beam, x // qx_value</span>
+<span class="sd">        : comp: direction of the sigma; can be &#39;phi&#39;, &#39;y&#39;, &#39;x&#39;, and &#39;radial&#39;</span>
+
+<span class="sd">        : return variance: sigma^2</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="c1"># check the length of size (list)</span>
+        <span class="n">len_size</span> <span class="o">=</span> <span class="nb">len</span><span class="p">(</span><span class="n">size</span><span class="p">)</span>
+
+        <span class="c1"># define sigma component direction</span>
+        <span class="k">if</span> <span class="n">comp</span> <span class="o">==</span> <span class="s1">&#39;radial&#39;</span><span class="p">:</span>
+            <span class="n">phi_x</span> <span class="o">=</span> <span class="n">math</span><span class="o">.</span><span class="n">cos</span><span class="p">(</span><span class="n">phi</span><span class="p">)</span>
+            <span class="n">phi_y</span> <span class="o">=</span> <span class="n">math</span><span class="o">.</span><span class="n">sin</span><span class="p">(</span><span class="n">phi</span><span class="p">)</span>
+        <span class="k">elif</span> <span class="n">comp</span> <span class="o">==</span> <span class="s1">&#39;phi&#39;</span><span class="p">:</span>
+            <span class="n">phi_x</span> <span class="o">=</span> <span class="n">math</span><span class="o">.</span><span class="n">sin</span><span class="p">(</span><span class="n">phi</span><span class="p">)</span>
+            <span class="n">phi_y</span> <span class="o">=</span> <span class="n">math</span><span class="o">.</span><span class="n">cos</span><span class="p">(</span><span class="n">phi</span><span class="p">)</span>
+        <span class="k">elif</span> <span class="n">comp</span> <span class="o">==</span> <span class="s1">&#39;x&#39;</span><span class="p">:</span>
+            <span class="n">phi_x</span> <span class="o">=</span> <span class="mi">1</span>
+            <span class="n">phi_y</span> <span class="o">=</span> <span class="mi">0</span>
+        <span class="k">elif</span> <span class="n">comp</span> <span class="o">==</span> <span class="s1">&#39;y&#39;</span><span class="p">:</span>
+            <span class="n">phi_x</span> <span class="o">=</span> <span class="mi">0</span>
+            <span class="n">phi_y</span> <span class="o">=</span> <span class="mi">1</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">phi_x</span> <span class="o">=</span> <span class="mi">0</span>
+            <span class="n">phi_y</span> <span class="o">=</span> <span class="mi">0</span>
+        <span class="c1"># calculate each component</span>
+        <span class="c1"># for pinhole w/ radius = size[0]/2</span>
+        <span class="k">if</span> <span class="n">len_size</span> <span class="o">==</span> <span class="mi">1</span><span class="p">:</span>
+            <span class="n">x_comp</span> <span class="o">=</span> <span class="p">(</span><span class="mf">0.5</span> <span class="o">*</span> <span class="n">size</span><span class="p">[</span><span class="mi">0</span><span class="p">])</span> <span class="o">*</span> <span class="n">sqrt</span><span class="p">(</span><span class="mi">3</span><span class="p">)</span>
+            <span class="n">y_comp</span> <span class="o">=</span> <span class="mi">0</span>
+        <span class="c1"># for rectangular slit</span>
+        <span class="k">elif</span> <span class="n">len_size</span> <span class="o">==</span> <span class="mi">2</span><span class="p">:</span>
+            <span class="n">x_comp</span> <span class="o">=</span> <span class="n">size</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="o">*</span> <span class="n">phi_x</span>
+            <span class="n">y_comp</span> <span class="o">=</span> <span class="n">size</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span> <span class="o">*</span> <span class="n">phi_y</span>
+        <span class="c1"># otherwise</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s2">&quot; Improper input...&quot;</span><span class="p">)</span>
+        <span class="c1"># get them squared</span>
+        <span class="n">sigma</span> <span class="o">=</span> <span class="n">x_comp</span> <span class="o">*</span> <span class="n">x_comp</span>
+        <span class="n">sigma</span> <span class="o">+=</span> <span class="n">y_comp</span> <span class="o">*</span> <span class="n">y_comp</span>
+        <span class="c1"># normalize by distance</span>
+        <span class="n">sigma</span> <span class="o">/=</span> <span class="p">(</span><span class="n">distance</span> <span class="o">*</span> <span class="n">distance</span><span class="p">)</span>
+
+        <span class="k">return</span> <span class="n">sigma</span></div>
+
+<div class="viewcode-block" id="ResolutionCalculator.get_variance_wave"><a class="viewcode-back" href="../../../../dev/sasview-api/sas.sascalc.calculator.html#sas.sascalc.calculator.resolution_calculator.ResolutionCalculator.get_variance_wave">[docs]</a>    <span class="k">def</span> <span class="nf">get_variance_wave</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">A_value</span><span class="p">,</span> <span class="n">radius</span><span class="p">,</span> <span class="n">distance</span><span class="p">,</span> <span class="n">spread</span><span class="p">,</span> <span class="n">phi</span><span class="p">,</span>
+                          <span class="n">comp</span><span class="o">=</span><span class="s1">&#39;radial&#39;</span><span class="p">,</span> <span class="n">switch</span><span class="o">=</span><span class="s1">&#39;on&#39;</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Get the variance when the wavelength spread is given</span>
+
+<span class="sd">        : radius: the radial distance from the beam center to the pix of q</span>
+<span class="sd">        : distance: sample to detector distance</span>
+<span class="sd">        : spread: wavelength spread (ratio)</span>
+<span class="sd">        : comp: direction of the sigma; can be &#39;phi&#39;, &#39;y&#39;, &#39;x&#39;, and &#39;radial&#39;</span>
+
+<span class="sd">        : return variance: sigma^2 for 2d, sigma^2 for 1d [tuple]</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">if</span> <span class="n">switch</span><span class="o">.</span><span class="n">lower</span><span class="p">()</span> <span class="o">==</span> <span class="s1">&#39;off&#39;</span><span class="p">:</span>
+            <span class="k">return</span> <span class="mi">0</span><span class="p">,</span> <span class="mi">0</span>
+        <span class="c1"># check the singular point</span>
+        <span class="k">if</span> <span class="n">distance</span> <span class="o">==</span> <span class="mi">0</span> <span class="ow">or</span> <span class="n">comp</span> <span class="o">==</span> <span class="s1">&#39;phi&#39;</span><span class="p">:</span>
+            <span class="k">return</span> <span class="mi">0</span><span class="p">,</span> <span class="mi">0</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="c1"># calculate sigma^2 for 1d</span>
+            <span class="n">sigma1d</span> <span class="o">=</span> <span class="mi">2</span> <span class="o">*</span> <span class="n">math</span><span class="o">.</span><span class="n">pow</span><span class="p">(</span><span class="n">radius</span><span class="o">/</span><span class="n">distance</span><span class="o">*</span><span class="n">spread</span><span class="p">,</span> <span class="mi">2</span><span class="p">)</span>
+            <span class="k">if</span> <span class="n">comp</span> <span class="o">==</span> <span class="s1">&#39;x&#39;</span><span class="p">:</span>
+                <span class="n">sigma1d</span> <span class="o">*=</span> <span class="p">(</span><span class="n">math</span><span class="o">.</span><span class="n">cos</span><span class="p">(</span><span class="n">phi</span><span class="p">)</span><span class="o">*</span><span class="n">math</span><span class="o">.</span><span class="n">cos</span><span class="p">(</span><span class="n">phi</span><span class="p">))</span>
+            <span class="k">elif</span> <span class="n">comp</span> <span class="o">==</span> <span class="s1">&#39;y&#39;</span><span class="p">:</span>
+                <span class="n">sigma1d</span> <span class="o">*=</span> <span class="p">(</span><span class="n">math</span><span class="o">.</span><span class="n">sin</span><span class="p">(</span><span class="n">phi</span><span class="p">)</span><span class="o">*</span><span class="n">math</span><span class="o">.</span><span class="n">sin</span><span class="p">(</span><span class="n">phi</span><span class="p">))</span>
+            <span class="k">else</span><span class="p">:</span>
+                <span class="n">sigma1d</span> <span class="o">*=</span> <span class="mi">1</span>
+            <span class="c1"># sigma^2 for 2d</span>
+            <span class="c1"># shift the coordinate due to the gravitational shift</span>
+            <span class="n">rad_x</span> <span class="o">=</span> <span class="n">radius</span> <span class="o">*</span> <span class="n">math</span><span class="o">.</span><span class="n">cos</span><span class="p">(</span><span class="n">phi</span><span class="p">)</span>
+            <span class="n">rad_y</span> <span class="o">=</span> <span class="n">A_value</span> <span class="o">-</span> <span class="n">radius</span> <span class="o">*</span> <span class="n">math</span><span class="o">.</span><span class="n">sin</span><span class="p">(</span><span class="n">phi</span><span class="p">)</span>
+            <span class="n">radius</span> <span class="o">=</span> <span class="n">math</span><span class="o">.</span><span class="n">sqrt</span><span class="p">(</span><span class="n">rad_x</span> <span class="o">*</span> <span class="n">rad_x</span> <span class="o">+</span> <span class="n">rad_y</span> <span class="o">*</span> <span class="n">rad_y</span><span class="p">)</span>
+            <span class="c1"># new phi</span>
+            <span class="n">phi</span> <span class="o">=</span> <span class="n">math</span><span class="o">.</span><span class="n">atan2</span><span class="p">(</span><span class="o">-</span><span class="n">rad_y</span><span class="p">,</span> <span class="n">rad_x</span><span class="p">)</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">gravity_phi</span> <span class="o">=</span> <span class="n">phi</span>
+            <span class="c1"># calculate sigma^2</span>
+            <span class="n">sigma</span> <span class="o">=</span> <span class="mi">2</span> <span class="o">*</span> <span class="n">math</span><span class="o">.</span><span class="n">pow</span><span class="p">(</span><span class="n">radius</span><span class="o">/</span><span class="n">distance</span><span class="o">*</span><span class="n">spread</span><span class="p">,</span> <span class="mi">2</span><span class="p">)</span>
+            <span class="k">if</span> <span class="n">comp</span> <span class="o">==</span> <span class="s1">&#39;x&#39;</span><span class="p">:</span>
+                <span class="n">sigma</span> <span class="o">*=</span> <span class="p">(</span><span class="n">math</span><span class="o">.</span><span class="n">cos</span><span class="p">(</span><span class="n">phi</span><span class="p">)</span><span class="o">*</span><span class="n">math</span><span class="o">.</span><span class="n">cos</span><span class="p">(</span><span class="n">phi</span><span class="p">))</span>
+            <span class="k">elif</span> <span class="n">comp</span> <span class="o">==</span> <span class="s1">&#39;y&#39;</span><span class="p">:</span>
+                <span class="n">sigma</span> <span class="o">*=</span> <span class="p">(</span><span class="n">math</span><span class="o">.</span><span class="n">sin</span><span class="p">(</span><span class="n">phi</span><span class="p">)</span><span class="o">*</span><span class="n">math</span><span class="o">.</span><span class="n">sin</span><span class="p">(</span><span class="n">phi</span><span class="p">))</span>
+            <span class="k">else</span><span class="p">:</span>
+                <span class="n">sigma</span> <span class="o">*=</span> <span class="mi">1</span>
+
+            <span class="k">return</span> <span class="n">sigma</span><span class="p">,</span> <span class="n">sigma1d</span></div>
+
+<div class="viewcode-block" id="ResolutionCalculator.get_variance_gravity"><a class="viewcode-back" href="../../../../dev/sasview-api/sas.sascalc.calculator.html#sas.sascalc.calculator.resolution_calculator.ResolutionCalculator.get_variance_gravity">[docs]</a>    <span class="k">def</span> <span class="nf">get_variance_gravity</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">s_distance</span><span class="p">,</span> <span class="n">d_distance</span><span class="p">,</span> <span class="n">wavelength</span><span class="p">,</span> <span class="n">spread</span><span class="p">,</span>
+                             <span class="n">phi</span><span class="p">,</span> <span class="n">comp</span><span class="o">=</span><span class="s1">&#39;radial&#39;</span><span class="p">,</span> <span class="n">switch</span><span class="o">=</span><span class="s1">&#39;on&#39;</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Get the variance from gravity when the wavelength spread is given</span>
+
+<span class="sd">        : s_distance: source to sample distance</span>
+<span class="sd">        : d_distance: sample to detector distance</span>
+<span class="sd">        : wavelength: wavelength</span>
+<span class="sd">        : spread: wavelength spread (ratio)</span>
+<span class="sd">        : comp: direction of the sigma; can be &#39;phi&#39;, &#39;y&#39;, &#39;x&#39;, and &#39;radial&#39;</span>
+
+<span class="sd">        : return variance: sigma^2</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">if</span> <span class="n">switch</span><span class="o">.</span><span class="n">lower</span><span class="p">()</span> <span class="o">==</span> <span class="s1">&#39;off&#39;</span><span class="p">:</span>
+            <span class="k">return</span> <span class="mi">0</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">mass</span> <span class="o">==</span> <span class="mf">0.0</span><span class="p">:</span>
+            <span class="k">return</span> <span class="mi">0</span>
+        <span class="c1"># check the singular point</span>
+        <span class="k">if</span> <span class="n">d_distance</span> <span class="o">==</span> <span class="mi">0</span> <span class="ow">or</span> <span class="n">comp</span> <span class="o">==</span> <span class="s1">&#39;x&#39;</span><span class="p">:</span>
+            <span class="k">return</span> <span class="mi">0</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">a_value</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_cal_A_value</span><span class="p">(</span><span class="bp">None</span><span class="p">,</span> <span class="n">s_distance</span><span class="p">,</span> <span class="n">d_distance</span><span class="p">)</span>
+            <span class="c1"># calculate sigma^2</span>
+            <span class="n">sigma</span> <span class="o">=</span> <span class="n">math</span><span class="o">.</span><span class="n">pow</span><span class="p">(</span><span class="n">a_value</span> <span class="o">/</span> <span class="n">d_distance</span><span class="p">,</span> <span class="mi">2</span><span class="p">)</span>
+            <span class="n">sigma</span> <span class="o">*=</span> <span class="n">math</span><span class="o">.</span><span class="n">pow</span><span class="p">(</span><span class="n">wavelength</span><span class="p">,</span> <span class="mi">4</span><span class="p">)</span>
+            <span class="n">sigma</span> <span class="o">*=</span> <span class="n">math</span><span class="o">.</span><span class="n">pow</span><span class="p">(</span><span class="n">spread</span><span class="p">,</span> <span class="mi">2</span><span class="p">)</span>
+            <span class="n">sigma</span> <span class="o">*=</span> <span class="mi">8</span>
+            <span class="k">return</span> <span class="n">sigma</span></div>
+
+    <span class="k">def</span> <span class="nf">_cal_A_value</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">lamda</span><span class="p">,</span> <span class="n">s_distance</span><span class="p">,</span> <span class="n">d_distance</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Calculate A value for gravity</span>
+
+<span class="sd">        : s_distance: source to sample distance</span>
+<span class="sd">        : d_distance: sample to detector distance</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="c1"># neutron mass in cgs unit</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">mass</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">get_neutron_mass</span><span class="p">()</span>
+        <span class="c1"># plank constant in cgs unit</span>
+        <span class="n">h_constant</span> <span class="o">=</span> <span class="n">_PLANK_H</span>
+        <span class="c1"># gravity in cgs unit</span>
+        <span class="n">gravy</span> <span class="o">=</span> <span class="n">_GRAVITY</span>
+        <span class="c1"># m/h</span>
+        <span class="n">m_over_h</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">mass</span> <span class="o">/</span> <span class="n">h_constant</span>
+        <span class="c1"># A value</span>
+        <span class="n">a_value</span> <span class="o">=</span> <span class="n">d_distance</span> <span class="o">*</span> <span class="p">(</span><span class="n">s_distance</span> <span class="o">+</span> <span class="n">d_distance</span><span class="p">)</span>
+        <span class="n">a_value</span> <span class="o">*=</span> <span class="n">math</span><span class="o">.</span><span class="n">pow</span><span class="p">(</span><span class="n">m_over_h</span> <span class="o">/</span> <span class="mi">2</span><span class="p">,</span> <span class="mi">2</span><span class="p">)</span>
+        <span class="n">a_value</span> <span class="o">*=</span> <span class="n">gravy</span>
+        <span class="c1"># unit correction (1/cm to 1/A) for A and d_distance below</span>
+        <span class="n">a_value</span> <span class="o">*=</span> <span class="mf">1.0E-16</span>
+        <span class="c1"># if lamda is give (broad meanning of A)  return 2* lamda^2 * A</span>
+        <span class="k">if</span> <span class="n">lamda</span> <span class="ow">is</span> <span class="ow">not</span> <span class="bp">None</span><span class="p">:</span>
+            <span class="n">a_value</span> <span class="o">*=</span> <span class="p">(</span><span class="mi">4</span> <span class="o">*</span> <span class="n">lamda</span> <span class="o">*</span> <span class="n">lamda</span><span class="p">)</span>
+        <span class="k">return</span> <span class="n">a_value</span>
+
+<div class="viewcode-block" id="ResolutionCalculator.get_intensity"><a class="viewcode-back" href="../../../../dev/sasview-api/sas.sascalc.calculator.html#sas.sascalc.calculator.resolution_calculator.ResolutionCalculator.get_intensity">[docs]</a>    <span class="k">def</span> <span class="nf">get_intensity</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Get intensity</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">wave</span><span class="o">.</span><span class="n">intensity</span></div>
+
+<div class="viewcode-block" id="ResolutionCalculator.get_wavelength"><a class="viewcode-back" href="../../../../dev/sasview-api/sas.sascalc.calculator.html#sas.sascalc.calculator.resolution_calculator.ResolutionCalculator.get_wavelength">[docs]</a>    <span class="k">def</span> <span class="nf">get_wavelength</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Get wavelength</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">wave</span><span class="o">.</span><span class="n">wavelength</span></div>
+
+<div class="viewcode-block" id="ResolutionCalculator.get_default_spectrum"><a class="viewcode-back" href="../../../../dev/sasview-api/sas.sascalc.calculator.html#sas.sascalc.calculator.resolution_calculator.ResolutionCalculator.get_default_spectrum">[docs]</a>    <span class="k">def</span> <span class="nf">get_default_spectrum</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Get default_spectrum</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">wave</span><span class="o">.</span><span class="n">get_default_spectrum</span><span class="p">()</span></div>
+
+<div class="viewcode-block" id="ResolutionCalculator.get_spectrum"><a class="viewcode-back" href="../../../../dev/sasview-api/sas.sascalc.calculator.html#sas.sascalc.calculator.resolution_calculator.ResolutionCalculator.get_spectrum">[docs]</a>    <span class="k">def</span> <span class="nf">get_spectrum</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Get _spectrum</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">wave</span><span class="o">.</span><span class="n">get_spectrum</span><span class="p">()</span></div>
+
+<div class="viewcode-block" id="ResolutionCalculator.get_wavelength_spread"><a class="viewcode-back" href="../../../../dev/sasview-api/sas.sascalc.calculator.html#sas.sascalc.calculator.resolution_calculator.ResolutionCalculator.get_wavelength_spread">[docs]</a>    <span class="k">def</span> <span class="nf">get_wavelength_spread</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Get wavelength spread</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">wave</span><span class="o">.</span><span class="n">wavelength_spread</span></div>
+
+<div class="viewcode-block" id="ResolutionCalculator.get_neutron_mass"><a class="viewcode-back" href="../../../../dev/sasview-api/sas.sascalc.calculator.html#sas.sascalc.calculator.resolution_calculator.ResolutionCalculator.get_neutron_mass">[docs]</a>    <span class="k">def</span> <span class="nf">get_neutron_mass</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Get Neutron mass</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">wave</span><span class="o">.</span><span class="n">mass</span></div>
+
+<div class="viewcode-block" id="ResolutionCalculator.get_source_aperture_size"><a class="viewcode-back" href="../../../../dev/sasview-api/sas.sascalc.calculator.html#sas.sascalc.calculator.resolution_calculator.ResolutionCalculator.get_source_aperture_size">[docs]</a>    <span class="k">def</span> <span class="nf">get_source_aperture_size</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Get source aperture size</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">aperture</span><span class="o">.</span><span class="n">source_size</span></div>
+
+<div class="viewcode-block" id="ResolutionCalculator.get_sample_aperture_size"><a class="viewcode-back" href="../../../../dev/sasview-api/sas.sascalc.calculator.html#sas.sascalc.calculator.resolution_calculator.ResolutionCalculator.get_sample_aperture_size">[docs]</a>    <span class="k">def</span> <span class="nf">get_sample_aperture_size</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Get sample aperture size</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">aperture</span><span class="o">.</span><span class="n">sample_size</span></div>
+
+<div class="viewcode-block" id="ResolutionCalculator.get_detector_pix_size"><a class="viewcode-back" href="../../../../dev/sasview-api/sas.sascalc.calculator.html#sas.sascalc.calculator.resolution_calculator.ResolutionCalculator.get_detector_pix_size">[docs]</a>    <span class="k">def</span> <span class="nf">get_detector_pix_size</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Get detector pixel size</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">detector</span><span class="o">.</span><span class="n">pix_size</span></div>
+
+<div class="viewcode-block" id="ResolutionCalculator.get_detector_size"><a class="viewcode-back" href="../../../../dev/sasview-api/sas.sascalc.calculator.html#sas.sascalc.calculator.resolution_calculator.ResolutionCalculator.get_detector_size">[docs]</a>    <span class="k">def</span> <span class="nf">get_detector_size</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Get detector size</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">detector</span><span class="o">.</span><span class="n">size</span></div>
+
+<div class="viewcode-block" id="ResolutionCalculator.get_source2sample_distance"><a class="viewcode-back" href="../../../../dev/sasview-api/sas.sascalc.calculator.html#sas.sascalc.calculator.resolution_calculator.ResolutionCalculator.get_source2sample_distance">[docs]</a>    <span class="k">def</span> <span class="nf">get_source2sample_distance</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Get detector source2sample_distance</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">aperture</span><span class="o">.</span><span class="n">sample_distance</span></div>
+
+<div class="viewcode-block" id="ResolutionCalculator.get_sample2sample_distance"><a class="viewcode-back" href="../../../../dev/sasview-api/sas.sascalc.calculator.html#sas.sascalc.calculator.resolution_calculator.ResolutionCalculator.get_sample2sample_distance">[docs]</a>    <span class="k">def</span> <span class="nf">get_sample2sample_distance</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Get detector sampleslitsample_distance</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">sample</span><span class="o">.</span><span class="n">distance</span></div>
+
+<div class="viewcode-block" id="ResolutionCalculator.get_sample2detector_distance"><a class="viewcode-back" href="../../../../dev/sasview-api/sas.sascalc.calculator.html#sas.sascalc.calculator.resolution_calculator.ResolutionCalculator.get_sample2detector_distance">[docs]</a>    <span class="k">def</span> <span class="nf">get_sample2detector_distance</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Get detector sample2detector_distance</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">detector</span><span class="o">.</span><span class="n">distance</span></div>
+
+<div class="viewcode-block" id="ResolutionCalculator.set_intensity"><a class="viewcode-back" href="../../../../dev/sasview-api/sas.sascalc.calculator.html#sas.sascalc.calculator.resolution_calculator.ResolutionCalculator.set_intensity">[docs]</a>    <span class="k">def</span> <span class="nf">set_intensity</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">intensity</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Set intensity</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">wave</span><span class="o">.</span><span class="n">set_intensity</span><span class="p">(</span><span class="n">intensity</span><span class="p">)</span></div>
+
+<div class="viewcode-block" id="ResolutionCalculator.set_wave"><a class="viewcode-back" href="../../../../dev/sasview-api/sas.sascalc.calculator.html#sas.sascalc.calculator.resolution_calculator.ResolutionCalculator.set_wave">[docs]</a>    <span class="k">def</span> <span class="nf">set_wave</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">wavelength</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Set wavelength list or wavelength</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">if</span> <span class="n">wavelength</span><span class="o">.</span><span class="n">__class__</span><span class="o">.</span><span class="n">__name__</span> <span class="o">==</span> <span class="s1">&#39;list&#39;</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">wave</span><span class="o">.</span><span class="n">set_wave_list</span><span class="p">(</span><span class="n">wavelength</span><span class="p">)</span>
+        <span class="k">elif</span> <span class="n">wavelength</span><span class="o">.</span><span class="n">__class__</span><span class="o">.</span><span class="n">__name__</span> <span class="o">==</span> <span class="s1">&#39;float&#39;</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">wave</span><span class="o">.</span><span class="n">set_wave_list</span><span class="p">([</span><span class="n">wavelength</span><span class="p">])</span>
+            <span class="c1">#self.set_wavelength(wavelength)</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="ne">TypeError</span><span class="p">(</span><span class="s2">&quot;invalid wavlength---should be list or float&quot;</span><span class="p">)</span></div>
+
+<div class="viewcode-block" id="ResolutionCalculator.set_wave_spread"><a class="viewcode-back" href="../../../../dev/sasview-api/sas.sascalc.calculator.html#sas.sascalc.calculator.resolution_calculator.ResolutionCalculator.set_wave_spread">[docs]</a>    <span class="k">def</span> <span class="nf">set_wave_spread</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">wavelength_spread</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Set wavelength spread  or wavelength spread</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">if</span> <span class="n">wavelength_spread</span><span class="o">.</span><span class="n">__class__</span><span class="o">.</span><span class="n">__name__</span> <span class="o">==</span> <span class="s1">&#39;list&#39;</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">wave</span><span class="o">.</span><span class="n">set_wave_spread_list</span><span class="p">(</span><span class="n">wavelength_spread</span><span class="p">)</span>
+        <span class="k">elif</span> <span class="n">wavelength_spread</span><span class="o">.</span><span class="n">__class__</span><span class="o">.</span><span class="n">__name__</span> <span class="o">==</span> <span class="s1">&#39;float&#39;</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">wave</span><span class="o">.</span><span class="n">set_wave_spread_list</span><span class="p">([</span><span class="n">wavelength_spread</span><span class="p">])</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="ne">TypeError</span><span class="p">(</span><span class="s2">&quot;invalid wavelength spread---should be list or float&quot;</span><span class="p">)</span></div>
+
+<div class="viewcode-block" id="ResolutionCalculator.set_wavelength"><a class="viewcode-back" href="../../../../dev/sasview-api/sas.sascalc.calculator.html#sas.sascalc.calculator.resolution_calculator.ResolutionCalculator.set_wavelength">[docs]</a>    <span class="k">def</span> <span class="nf">set_wavelength</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">wavelength</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Set wavelength</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">wavelength</span> <span class="o">=</span> <span class="n">wavelength</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">wave</span><span class="o">.</span><span class="n">set_wavelength</span><span class="p">(</span><span class="n">wavelength</span><span class="p">)</span></div>
+
+<div class="viewcode-block" id="ResolutionCalculator.set_spectrum"><a class="viewcode-back" href="../../../../dev/sasview-api/sas.sascalc.calculator.html#sas.sascalc.calculator.resolution_calculator.ResolutionCalculator.set_spectrum">[docs]</a>    <span class="k">def</span> <span class="nf">set_spectrum</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">spectrum</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Set spectrum</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">spectrum</span> <span class="o">=</span> <span class="n">spectrum</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">wave</span><span class="o">.</span><span class="n">set_spectrum</span><span class="p">(</span><span class="n">spectrum</span><span class="p">)</span></div>
+
+<div class="viewcode-block" id="ResolutionCalculator.set_wavelength_spread"><a class="viewcode-back" href="../../../../dev/sasview-api/sas.sascalc.calculator.html#sas.sascalc.calculator.resolution_calculator.ResolutionCalculator.set_wavelength_spread">[docs]</a>    <span class="k">def</span> <span class="nf">set_wavelength_spread</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">wavelength_spread</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Set wavelength spread</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">wavelength_spread</span> <span class="o">=</span> <span class="n">wavelength_spread</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">wave</span><span class="o">.</span><span class="n">set_wavelength_spread</span><span class="p">(</span><span class="n">wavelength_spread</span><span class="p">)</span></div>
+
+<div class="viewcode-block" id="ResolutionCalculator.set_wave_list"><a class="viewcode-back" href="../../../../dev/sasview-api/sas.sascalc.calculator.html#sas.sascalc.calculator.resolution_calculator.ResolutionCalculator.set_wave_list">[docs]</a>    <span class="k">def</span> <span class="nf">set_wave_list</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">wavelength_list</span><span class="p">,</span> <span class="n">wavelengthspread_list</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Set wavelength and its spread list</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">wave</span><span class="o">.</span><span class="n">set_wave_list</span><span class="p">(</span><span class="n">wavelength_list</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">wave</span><span class="o">.</span><span class="n">set_wave_spread_list</span><span class="p">(</span><span class="n">wavelengthspread_list</span><span class="p">)</span></div>
+
+<div class="viewcode-block" id="ResolutionCalculator.get_wave_list"><a class="viewcode-back" href="../../../../dev/sasview-api/sas.sascalc.calculator.html#sas.sascalc.calculator.resolution_calculator.ResolutionCalculator.get_wave_list">[docs]</a>    <span class="k">def</span> <span class="nf">get_wave_list</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Set wavelength spread</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">wave</span><span class="o">.</span><span class="n">get_wave_list</span><span class="p">()</span></div>
+
+<div class="viewcode-block" id="ResolutionCalculator.get_intensity_list"><a class="viewcode-back" href="../../../../dev/sasview-api/sas.sascalc.calculator.html#sas.sascalc.calculator.resolution_calculator.ResolutionCalculator.get_intensity_list">[docs]</a>    <span class="k">def</span> <span class="nf">get_intensity_list</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Set wavelength spread</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">wave</span><span class="o">.</span><span class="n">get_intensity_list</span><span class="p">()</span></div>
+
+<div class="viewcode-block" id="ResolutionCalculator.set_source_aperture_size"><a class="viewcode-back" href="../../../../dev/sasview-api/sas.sascalc.calculator.html#sas.sascalc.calculator.resolution_calculator.ResolutionCalculator.set_source_aperture_size">[docs]</a>    <span class="k">def</span> <span class="nf">set_source_aperture_size</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">size</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Set source aperture size</span>
+
+<span class="sd">        : param size: [dia_value] or [x_value, y_value]</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">size</span><span class="p">)</span> <span class="o">&lt;</span> <span class="mi">1</span> <span class="ow">or</span> <span class="nb">len</span><span class="p">(</span><span class="n">size</span><span class="p">)</span> <span class="o">&gt;</span> <span class="mi">2</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="ne">RuntimeError</span><span class="p">(</span><span class="s2">&quot;The length of the size must be one or two.&quot;</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">aperture</span><span class="o">.</span><span class="n">set_source_size</span><span class="p">(</span><span class="n">size</span><span class="p">)</span></div>
+
+<div class="viewcode-block" id="ResolutionCalculator.set_neutron_mass"><a class="viewcode-back" href="../../../../dev/sasview-api/sas.sascalc.calculator.html#sas.sascalc.calculator.resolution_calculator.ResolutionCalculator.set_neutron_mass">[docs]</a>    <span class="k">def</span> <span class="nf">set_neutron_mass</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">mass</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Set Neutron mass</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">wave</span><span class="o">.</span><span class="n">set_mass</span><span class="p">(</span><span class="n">mass</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">mass</span> <span class="o">=</span> <span class="n">mass</span></div>
+
+<div class="viewcode-block" id="ResolutionCalculator.set_sample_aperture_size"><a class="viewcode-back" href="../../../../dev/sasview-api/sas.sascalc.calculator.html#sas.sascalc.calculator.resolution_calculator.ResolutionCalculator.set_sample_aperture_size">[docs]</a>    <span class="k">def</span> <span class="nf">set_sample_aperture_size</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">size</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Set sample aperture size</span>
+
+<span class="sd">        : param size: [dia_value] or [xheight_value, yheight_value]</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">size</span><span class="p">)</span> <span class="o">&lt;</span> <span class="mi">1</span> <span class="ow">or</span> <span class="nb">len</span><span class="p">(</span><span class="n">size</span><span class="p">)</span> <span class="o">&gt;</span> <span class="mi">2</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="ne">RuntimeError</span><span class="p">(</span><span class="s2">&quot;The length of the size must be one or two.&quot;</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">aperture</span><span class="o">.</span><span class="n">set_sample_size</span><span class="p">(</span><span class="n">size</span><span class="p">)</span></div>
+
+<div class="viewcode-block" id="ResolutionCalculator.set_detector_pix_size"><a class="viewcode-back" href="../../../../dev/sasview-api/sas.sascalc.calculator.html#sas.sascalc.calculator.resolution_calculator.ResolutionCalculator.set_detector_pix_size">[docs]</a>    <span class="k">def</span> <span class="nf">set_detector_pix_size</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">size</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Set detector pixel size</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">detector</span><span class="o">.</span><span class="n">set_pix_size</span><span class="p">(</span><span class="n">size</span><span class="p">)</span></div>
+
+<div class="viewcode-block" id="ResolutionCalculator.set_detector_size"><a class="viewcode-back" href="../../../../dev/sasview-api/sas.sascalc.calculator.html#sas.sascalc.calculator.resolution_calculator.ResolutionCalculator.set_detector_size">[docs]</a>    <span class="k">def</span> <span class="nf">set_detector_size</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">size</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Set detector size in number of pixels</span>
+<span class="sd">        : param size: [pixel_nums] or [x_pix_num, yx_pix_num]</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">detector</span><span class="o">.</span><span class="n">set_size</span><span class="p">(</span><span class="n">size</span><span class="p">)</span></div>
+
+<div class="viewcode-block" id="ResolutionCalculator.set_source2sample_distance"><a class="viewcode-back" href="../../../../dev/sasview-api/sas.sascalc.calculator.html#sas.sascalc.calculator.resolution_calculator.ResolutionCalculator.set_source2sample_distance">[docs]</a>    <span class="k">def</span> <span class="nf">set_source2sample_distance</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">distance</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Set detector source2sample_distance</span>
+
+<span class="sd">        : param distance: [distance, x_offset]</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">distance</span><span class="p">)</span> <span class="o">&lt;</span> <span class="mi">1</span> <span class="ow">or</span> <span class="nb">len</span><span class="p">(</span><span class="n">distance</span><span class="p">)</span> <span class="o">&gt;</span> <span class="mi">2</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="ne">RuntimeError</span><span class="p">(</span><span class="s2">&quot;The length of the size must be one or two.&quot;</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">aperture</span><span class="o">.</span><span class="n">set_sample_distance</span><span class="p">(</span><span class="n">distance</span><span class="p">)</span></div>
+
+<div class="viewcode-block" id="ResolutionCalculator.set_sample2sample_distance"><a class="viewcode-back" href="../../../../dev/sasview-api/sas.sascalc.calculator.html#sas.sascalc.calculator.resolution_calculator.ResolutionCalculator.set_sample2sample_distance">[docs]</a>    <span class="k">def</span> <span class="nf">set_sample2sample_distance</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">distance</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Set detector sample_slit2sample_distance</span>
+
+<span class="sd">        : param distance: [distance, x_offset]</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">distance</span><span class="p">)</span> <span class="o">&lt;</span> <span class="mi">1</span> <span class="ow">or</span> <span class="nb">len</span><span class="p">(</span><span class="n">distance</span><span class="p">)</span> <span class="o">&gt;</span> <span class="mi">2</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="ne">RuntimeError</span><span class="p">(</span><span class="s2">&quot;The length of the size must be one or two.&quot;</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">sample</span><span class="o">.</span><span class="n">set_distance</span><span class="p">(</span><span class="n">distance</span><span class="p">)</span></div>
+
+<div class="viewcode-block" id="ResolutionCalculator.set_sample2detector_distance"><a class="viewcode-back" href="../../../../dev/sasview-api/sas.sascalc.calculator.html#sas.sascalc.calculator.resolution_calculator.ResolutionCalculator.set_sample2detector_distance">[docs]</a>    <span class="k">def</span> <span class="nf">set_sample2detector_distance</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">distance</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Set detector sample2detector_distance</span>
+
+<span class="sd">        : param distance: [distance, x_offset]</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">distance</span><span class="p">)</span> <span class="o">&lt;</span> <span class="mi">1</span> <span class="ow">or</span> <span class="nb">len</span><span class="p">(</span><span class="n">distance</span><span class="p">)</span> <span class="o">&gt;</span> <span class="mi">2</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="ne">RuntimeError</span><span class="p">(</span><span class="s2">&quot;The length of the size must be one or two.&quot;</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">detector</span><span class="o">.</span><span class="n">set_distance</span><span class="p">(</span><span class="n">distance</span><span class="p">)</span></div>
+
+<div class="viewcode-block" id="ResolutionCalculator.get_all_instrument_params"><a class="viewcode-back" href="../../../../dev/sasview-api/sas.sascalc.calculator.html#sas.sascalc.calculator.resolution_calculator.ResolutionCalculator.get_all_instrument_params">[docs]</a>    <span class="k">def</span> <span class="nf">get_all_instrument_params</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Get all instrumental parameters</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">mass</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">get_neutron_mass</span><span class="p">()</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">spectrum</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">get_spectrum</span><span class="p">()</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">source_aperture_size</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">get_source_aperture_size</span><span class="p">()</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">sample_aperture_size</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">get_sample_aperture_size</span><span class="p">()</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">detector_pix_size</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">get_detector_pix_size</span><span class="p">()</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">detector_size</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">get_detector_size</span><span class="p">()</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">source2sample_distance</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">get_source2sample_distance</span><span class="p">()</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">sample2sample_distance</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">get_sample2sample_distance</span><span class="p">()</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">sample2detector_distance</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">get_sample2detector_distance</span><span class="p">()</span></div>
+
+<div class="viewcode-block" id="ResolutionCalculator.get_detector_qrange"><a class="viewcode-back" href="../../../../dev/sasview-api/sas.sascalc.calculator.html#sas.sascalc.calculator.resolution_calculator.ResolutionCalculator.get_detector_qrange">[docs]</a>    <span class="k">def</span> <span class="nf">get_detector_qrange</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        get max detector q ranges</span>
+
+<span class="sd">        : return: qx_min, qx_max, qy_min, qy_max tuple</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">qxrange</span><span class="p">)</span> <span class="o">!=</span> <span class="mi">2</span> <span class="ow">or</span> <span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">qyrange</span><span class="p">)</span> <span class="o">!=</span> <span class="mi">2</span><span class="p">:</span>
+            <span class="k">return</span> <span class="bp">None</span>
+        <span class="n">qx_min</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">qxrange</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
+        <span class="n">qx_max</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">qxrange</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span>
+        <span class="n">qy_min</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">qyrange</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
+        <span class="n">qy_max</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">qyrange</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span>
+
+        <span class="k">return</span> <span class="n">qx_min</span><span class="p">,</span> <span class="n">qx_max</span><span class="p">,</span> <span class="n">qy_min</span><span class="p">,</span> <span class="n">qy_max</span></div>
+
+    <span class="k">def</span> <span class="nf">_rotate_z</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">x_value</span><span class="p">,</span> <span class="n">y_value</span><span class="p">,</span> <span class="n">theta</span><span class="o">=</span><span class="mf">0.0</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Rotate x-y cordinate around z-axis by theta</span>
+<span class="sd">        : x_value: numpy array of x values</span>
+<span class="sd">        : y_value: numpy array of y values</span>
+<span class="sd">        : theta: angle to rotate by in rad</span>
+
+<span class="sd">        :return: x_prime, y-prime</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="c1"># rotate by theta</span>
+        <span class="n">x_prime</span> <span class="o">=</span> <span class="n">x_value</span> <span class="o">*</span> <span class="n">math</span><span class="o">.</span><span class="n">cos</span><span class="p">(</span><span class="n">theta</span><span class="p">)</span> <span class="o">+</span> <span class="n">y_value</span> <span class="o">*</span> <span class="n">math</span><span class="o">.</span><span class="n">sin</span><span class="p">(</span><span class="n">theta</span><span class="p">)</span>
+        <span class="n">y_prime</span> <span class="o">=</span> <span class="o">-</span><span class="n">x_value</span> <span class="o">*</span> <span class="n">math</span><span class="o">.</span><span class="n">sin</span><span class="p">(</span><span class="n">theta</span><span class="p">)</span> <span class="o">+</span> <span class="n">y_value</span> <span class="o">*</span> <span class="n">math</span><span class="o">.</span><span class="n">cos</span><span class="p">(</span><span class="n">theta</span><span class="p">)</span>
+
+        <span class="k">return</span> <span class="n">x_prime</span><span class="p">,</span> <span class="n">y_prime</span>
+
+    <span class="k">def</span> <span class="nf">_gaussian2d</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">x_val</span><span class="p">,</span> <span class="n">y_val</span><span class="p">,</span> <span class="n">x0_val</span><span class="p">,</span> <span class="n">y0_val</span><span class="p">,</span>
+                    <span class="n">sigma_x</span><span class="p">,</span> <span class="n">sigma_y</span><span class="p">,</span> <span class="n">sigma_r</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Calculate 2D Gaussian distribution</span>
+<span class="sd">        : x_val: x value</span>
+<span class="sd">        : y_val: y value</span>
+<span class="sd">        : x0_val: mean value in x-axis</span>
+<span class="sd">        : y0_val: mean value in y-axis</span>
+<span class="sd">        : sigma_x: variance in x-direction</span>
+<span class="sd">        : sigma_y: variance in y-direction</span>
+
+<span class="sd">        : return: gaussian (value)</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="c1"># phi values at each points (not at the center)</span>
+        <span class="n">x_value</span> <span class="o">=</span> <span class="n">x_val</span> <span class="o">-</span> <span class="n">x0_val</span>
+        <span class="n">y_value</span> <span class="o">=</span> <span class="n">y_val</span> <span class="o">-</span> <span class="n">y0_val</span>
+        <span class="n">phi_i</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">arctan2</span><span class="p">(</span><span class="n">y_val</span><span class="p">,</span> <span class="n">x_val</span><span class="p">)</span>
+
+        <span class="c1"># phi correction due to the gravity shift (in phi)</span>
+        <span class="n">phi_0</span> <span class="o">=</span> <span class="n">math</span><span class="o">.</span><span class="n">atan2</span><span class="p">(</span><span class="n">y0_val</span><span class="p">,</span> <span class="n">x0_val</span><span class="p">)</span>
+        <span class="n">phi_i</span> <span class="o">=</span> <span class="n">phi_i</span> <span class="o">-</span> <span class="n">phi_0</span> <span class="o">+</span> <span class="bp">self</span><span class="o">.</span><span class="n">gravity_phi</span>
+
+        <span class="n">sin_phi</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">sin</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">gravity_phi</span><span class="p">)</span>
+        <span class="n">cos_phi</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">cos</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">gravity_phi</span><span class="p">)</span>
+
+        <span class="n">x_p</span> <span class="o">=</span> <span class="n">x_value</span> <span class="o">*</span> <span class="n">cos_phi</span> <span class="o">+</span> <span class="n">y_value</span> <span class="o">*</span> <span class="n">sin_phi</span>
+        <span class="n">y_p</span> <span class="o">=</span> <span class="o">-</span><span class="n">x_value</span> <span class="o">*</span> <span class="n">sin_phi</span> <span class="o">+</span> <span class="n">y_value</span> <span class="o">*</span> <span class="n">cos_phi</span>
+
+        <span class="n">new_sig_x</span> <span class="o">=</span> <span class="n">sqrt</span><span class="p">(</span><span class="n">sigma_r</span> <span class="o">*</span> <span class="n">sigma_r</span> <span class="o">/</span> <span class="p">(</span><span class="n">sigma_x</span> <span class="o">*</span> <span class="n">sigma_x</span><span class="p">)</span> <span class="o">+</span> <span class="mi">1</span><span class="p">)</span>
+        <span class="n">new_sig_y</span> <span class="o">=</span> <span class="n">sqrt</span><span class="p">(</span><span class="n">sigma_r</span> <span class="o">*</span> <span class="n">sigma_r</span> <span class="o">/</span> <span class="p">(</span><span class="n">sigma_y</span> <span class="o">*</span> <span class="n">sigma_y</span><span class="p">)</span> <span class="o">+</span> <span class="mi">1</span><span class="p">)</span>
+        <span class="n">new_x</span> <span class="o">=</span> <span class="n">x_p</span> <span class="o">*</span> <span class="n">cos_phi</span> <span class="o">/</span> <span class="n">new_sig_x</span> <span class="o">-</span> <span class="n">y_p</span> <span class="o">*</span> <span class="n">sin_phi</span>
+        <span class="n">new_x</span> <span class="o">/=</span> <span class="n">sigma_x</span>
+        <span class="n">new_y</span> <span class="o">=</span> <span class="n">x_p</span> <span class="o">*</span> <span class="n">sin_phi</span> <span class="o">/</span> <span class="n">new_sig_y</span> <span class="o">+</span> <span class="n">y_p</span> <span class="o">*</span> <span class="n">cos_phi</span>
+        <span class="n">new_y</span> <span class="o">/=</span> <span class="n">sigma_y</span>
+
+        <span class="n">nu_value</span> <span class="o">=</span> <span class="o">-</span><span class="mf">0.5</span> <span class="o">*</span> <span class="p">(</span><span class="n">new_x</span> <span class="o">*</span> <span class="n">new_x</span> <span class="o">+</span> <span class="n">new_y</span> <span class="o">*</span> <span class="n">new_y</span><span class="p">)</span>
+
+        <span class="n">gaussian</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">exp</span><span class="p">(</span><span class="n">nu_value</span><span class="p">)</span>
+        <span class="c1"># normalizing factor correction</span>
+        <span class="n">gaussian</span> <span class="o">/=</span> <span class="n">gaussian</span><span class="o">.</span><span class="n">sum</span><span class="p">()</span>
+
+        <span class="k">return</span> <span class="n">gaussian</span>
+
+    <span class="k">def</span> <span class="nf">_gaussian2d_polar</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">x_val</span><span class="p">,</span> <span class="n">y_val</span><span class="p">,</span> <span class="n">x0_val</span><span class="p">,</span> <span class="n">y0_val</span><span class="p">,</span>
+                          <span class="n">sigma_x</span><span class="p">,</span> <span class="n">sigma_y</span><span class="p">,</span> <span class="n">sigma_r</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Calculate 2D Gaussian distribution for polar coodinate</span>
+<span class="sd">        : x_val: x value</span>
+<span class="sd">        : y_val: y value</span>
+<span class="sd">        : x0_val: mean value in x-axis</span>
+<span class="sd">        : y0_val: mean value in y-axis</span>
+<span class="sd">        : sigma_x: variance in r-direction</span>
+<span class="sd">        : sigma_y: variance in phi-direction</span>
+<span class="sd">        : sigma_r: wavelength variance in r-direction</span>
+
+<span class="sd">        : return: gaussian (value)</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">sigma_x</span> <span class="o">=</span> <span class="n">sqrt</span><span class="p">(</span><span class="n">sigma_x</span> <span class="o">*</span> <span class="n">sigma_x</span> <span class="o">+</span> <span class="n">sigma_r</span> <span class="o">*</span> <span class="n">sigma_r</span><span class="p">)</span>
+        <span class="c1"># call gaussian1d</span>
+        <span class="n">gaussian</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_gaussian1d</span><span class="p">(</span><span class="n">x_val</span><span class="p">,</span> <span class="n">x0_val</span><span class="p">,</span> <span class="n">sigma_x</span><span class="p">)</span>
+        <span class="n">gaussian</span> <span class="o">*=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_gaussian1d</span><span class="p">(</span><span class="n">y_val</span><span class="p">,</span> <span class="n">y0_val</span><span class="p">,</span> <span class="n">sigma_y</span><span class="p">)</span>
+
+        <span class="c1"># normalizing factor correction</span>
+        <span class="k">if</span> <span class="n">sigma_x</span> <span class="o">!=</span> <span class="mi">0</span> <span class="ow">and</span> <span class="n">sigma_y</span> <span class="o">!=</span> <span class="mi">0</span><span class="p">:</span>
+            <span class="n">gaussian</span> <span class="o">*=</span> <span class="n">sqrt</span><span class="p">(</span><span class="mi">2</span> <span class="o">*</span> <span class="n">pi</span><span class="p">)</span>
+        <span class="k">return</span> <span class="n">gaussian</span>
+
+    <span class="k">def</span> <span class="nf">_gaussian1d</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">value</span><span class="p">,</span> <span class="n">mean</span><span class="p">,</span> <span class="n">sigma</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Calculate 1D Gaussian distribution</span>
+<span class="sd">        : value: value</span>
+<span class="sd">        : mean: mean value</span>
+<span class="sd">        : sigma: variance</span>
+
+<span class="sd">        : return: gaussian (value)</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="c1"># default</span>
+        <span class="n">gaussian</span> <span class="o">=</span> <span class="mf">1.0</span>
+        <span class="k">if</span> <span class="n">sigma</span> <span class="o">!=</span> <span class="mi">0</span><span class="p">:</span>
+            <span class="c1"># get exponent</span>
+            <span class="n">nu_value</span> <span class="o">=</span> <span class="p">(</span><span class="n">value</span> <span class="o">-</span> <span class="n">mean</span><span class="p">)</span> <span class="o">/</span> <span class="n">sigma</span>
+            <span class="n">nu_value</span> <span class="o">*=</span> <span class="n">nu_value</span>
+            <span class="n">nu_value</span> <span class="o">*=</span> <span class="o">-</span><span class="mf">0.5</span>
+            <span class="n">gaussian</span> <span class="o">*=</span> <span class="n">np</span><span class="o">.</span><span class="n">exp</span><span class="p">(</span><span class="n">nu_value</span><span class="p">)</span>
+            <span class="n">gaussian</span> <span class="o">/=</span> <span class="n">sigma</span>
+            <span class="c1"># normalize</span>
+            <span class="n">gaussian</span> <span class="o">/=</span> <span class="n">sqrt</span><span class="p">(</span><span class="mi">2</span> <span class="o">*</span> <span class="n">pi</span><span class="p">)</span>
+
+        <span class="k">return</span> <span class="n">gaussian</span>
+
+    <span class="k">def</span> <span class="nf">_atan_phi</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">qy_value</span><span class="p">,</span> <span class="n">qx_value</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Find the angle phi of q on the detector plane for qx_value, qy_value given</span>
+<span class="sd">        : qx_value: x component of q</span>
+<span class="sd">        : qy_value: y component of q</span>
+
+<span class="sd">        : return phi: the azimuthal angle of q on x-y plane</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">phi</span> <span class="o">=</span> <span class="n">math</span><span class="o">.</span><span class="n">atan2</span><span class="p">(</span><span class="n">qy_value</span><span class="p">,</span> <span class="n">qx_value</span><span class="p">)</span>
+        <span class="k">return</span> <span class="n">phi</span>
+
+    <span class="k">def</span> <span class="nf">_get_detector_qxqy_pixels</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Get the pixel positions of the detector in the qx_value-qy_value space</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+
+        <span class="c1"># update all param values</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">get_all_instrument_params</span><span class="p">()</span>
+
+        <span class="c1"># wavelength</span>
+        <span class="n">wavelength</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">wave</span><span class="o">.</span><span class="n">wavelength</span>
+        <span class="c1"># Gavity correction</span>
+        <span class="n">delta_y</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_get_beamcenter_drop</span><span class="p">()</span>  <span class="c1"># in cm</span>
+
+        <span class="c1"># detector_pix size</span>
+        <span class="n">detector_pix_size</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">detector_pix_size</span>
+        <span class="c1"># Square or circular pixel</span>
+        <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">detector_pix_size</span><span class="p">)</span> <span class="o">==</span> <span class="mi">1</span><span class="p">:</span>
+            <span class="n">pix_x_size</span> <span class="o">=</span> <span class="n">detector_pix_size</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
+            <span class="n">pix_y_size</span> <span class="o">=</span> <span class="n">detector_pix_size</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
+        <span class="c1"># rectangular pixel pixel</span>
+        <span class="k">elif</span> <span class="nb">len</span><span class="p">(</span><span class="n">detector_pix_size</span><span class="p">)</span> <span class="o">==</span> <span class="mi">2</span><span class="p">:</span>
+            <span class="n">pix_x_size</span> <span class="o">=</span> <span class="n">detector_pix_size</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
+            <span class="n">pix_y_size</span> <span class="o">=</span> <span class="n">detector_pix_size</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s2">&quot; Input value format error...&quot;</span><span class="p">)</span>
+        <span class="c1"># Sample to detector distance = sample slit to detector</span>
+        <span class="c1"># minus sample offset</span>
+        <span class="n">sample2detector_distance</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">sample2detector_distance</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="o">-</span> \
+                                    <span class="bp">self</span><span class="o">.</span><span class="n">sample2sample_distance</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
+        <span class="c1"># detector offset in x-direction</span>
+        <span class="n">detector_offset</span> <span class="o">=</span> <span class="mi">0</span>
+        <span class="k">try</span><span class="p">:</span>
+            <span class="n">detector_offset</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">sample2detector_distance</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span>
+        <span class="k">except</span><span class="p">:</span>
+            <span class="n">logger</span><span class="o">.</span><span class="n">error</span><span class="p">(</span><span class="n">sys</span><span class="o">.</span><span class="n">exc_value</span><span class="p">)</span>
+
+        <span class="c1"># detector size in [no of pix_x,no of pix_y]</span>
+        <span class="n">detector_pix_nums_x</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">detector_size</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
+
+        <span class="c1"># get pix_y if it exists, otherwse take it from [0]</span>
+        <span class="k">try</span><span class="p">:</span>
+            <span class="n">detector_pix_nums_y</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">detector_size</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span>
+        <span class="k">except</span><span class="p">:</span>
+            <span class="n">detector_pix_nums_y</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">detector_size</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
+
+        <span class="c1"># detector offset in pix number</span>
+        <span class="n">offset_x</span> <span class="o">=</span> <span class="n">detector_offset</span> <span class="o">/</span> <span class="n">pix_x_size</span>
+        <span class="n">offset_y</span> <span class="o">=</span> <span class="n">delta_y</span> <span class="o">/</span> <span class="n">pix_y_size</span>
+
+        <span class="c1"># beam center position in pix number (start from 0)</span>
+        <span class="n">center_x</span><span class="p">,</span> <span class="n">center_y</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_get_beamcenter_position</span><span class="p">(</span><span class="n">detector_pix_nums_x</span><span class="p">,</span>
+                                                           <span class="n">detector_pix_nums_y</span><span class="p">,</span>
+                                                           <span class="n">offset_x</span><span class="p">,</span> <span class="n">offset_y</span><span class="p">)</span>
+        <span class="c1"># distance [cm] from the beam center on detector plane</span>
+        <span class="n">detector_ind_x</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">arange</span><span class="p">(</span><span class="n">detector_pix_nums_x</span><span class="p">)</span>
+        <span class="n">detector_ind_y</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">arange</span><span class="p">(</span><span class="n">detector_pix_nums_y</span><span class="p">)</span>
+
+        <span class="c1"># shif 0.5 pixel so that pix position is at the center of the pixel</span>
+        <span class="n">detector_ind_x</span> <span class="o">=</span> <span class="n">detector_ind_x</span> <span class="o">+</span> <span class="mf">0.5</span>
+        <span class="n">detector_ind_y</span> <span class="o">=</span> <span class="n">detector_ind_y</span> <span class="o">+</span> <span class="mf">0.5</span>
+
+        <span class="c1"># the relative postion from the beam center</span>
+        <span class="n">detector_ind_x</span> <span class="o">=</span> <span class="n">detector_ind_x</span> <span class="o">-</span> <span class="n">center_x</span>
+        <span class="n">detector_ind_y</span> <span class="o">=</span> <span class="n">detector_ind_y</span> <span class="o">-</span> <span class="n">center_y</span>
+
+        <span class="c1"># unit correction in cm</span>
+        <span class="n">detector_ind_x</span> <span class="o">=</span> <span class="n">detector_ind_x</span> <span class="o">*</span> <span class="n">pix_x_size</span>
+        <span class="n">detector_ind_y</span> <span class="o">=</span> <span class="n">detector_ind_y</span> <span class="o">*</span> <span class="n">pix_y_size</span>
+
+        <span class="n">qx_value</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">zeros</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">detector_ind_x</span><span class="p">))</span>
+        <span class="n">qy_value</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">zeros</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">detector_ind_y</span><span class="p">))</span>
+        <span class="n">i</span> <span class="o">=</span> <span class="mi">0</span>
+
+        <span class="k">for</span> <span class="n">indx</span> <span class="ow">in</span> <span class="n">detector_ind_x</span><span class="p">:</span>
+            <span class="n">qx_value</span><span class="p">[</span><span class="n">i</span><span class="p">]</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_get_qx</span><span class="p">(</span><span class="n">indx</span><span class="p">,</span> <span class="n">sample2detector_distance</span><span class="p">,</span> <span class="n">wavelength</span><span class="p">)</span>
+            <span class="n">i</span> <span class="o">+=</span> <span class="mi">1</span>
+        <span class="n">i</span> <span class="o">=</span> <span class="mi">0</span>
+        <span class="k">for</span> <span class="n">indy</span> <span class="ow">in</span> <span class="n">detector_ind_y</span><span class="p">:</span>
+            <span class="n">qy_value</span><span class="p">[</span><span class="n">i</span><span class="p">]</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_get_qx</span><span class="p">(</span><span class="n">indy</span><span class="p">,</span> <span class="n">sample2detector_distance</span><span class="p">,</span> <span class="n">wavelength</span><span class="p">)</span>
+            <span class="n">i</span> <span class="o">+=</span> <span class="mi">1</span>
+
+        <span class="c1"># qx_value and qy_value values in array</span>
+        <span class="n">qx_value</span> <span class="o">=</span> <span class="n">qx_value</span><span class="o">.</span><span class="n">repeat</span><span class="p">(</span><span class="n">detector_pix_nums_y</span><span class="p">)</span>
+        <span class="n">qx_value</span> <span class="o">=</span> <span class="n">qx_value</span><span class="o">.</span><span class="n">reshape</span><span class="p">(</span><span class="n">detector_pix_nums_x</span><span class="p">,</span> <span class="n">detector_pix_nums_y</span><span class="p">)</span>
+        <span class="n">qy_value</span> <span class="o">=</span> <span class="n">qy_value</span><span class="o">.</span><span class="n">repeat</span><span class="p">(</span><span class="n">detector_pix_nums_x</span><span class="p">)</span>
+        <span class="n">qy_value</span> <span class="o">=</span> <span class="n">qy_value</span><span class="o">.</span><span class="n">reshape</span><span class="p">(</span><span class="n">detector_pix_nums_y</span><span class="p">,</span> <span class="n">detector_pix_nums_x</span><span class="p">)</span>
+        <span class="n">qy_value</span> <span class="o">=</span> <span class="n">qy_value</span><span class="o">.</span><span class="n">transpose</span><span class="p">()</span>
+
+        <span class="c1"># p min and max values among the center of pixels</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">qx_min</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">min</span><span class="p">(</span><span class="n">qx_value</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">qx_max</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">max</span><span class="p">(</span><span class="n">qx_value</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">qy_min</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">min</span><span class="p">(</span><span class="n">qy_value</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">qy_max</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">max</span><span class="p">(</span><span class="n">qy_value</span><span class="p">)</span>
+
+        <span class="c1"># Appr. min and max values of the detector display limits</span>
+        <span class="c1"># i.e., edges of the last pixels.</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">qy_min</span> <span class="o">+=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_get_qx</span><span class="p">(</span><span class="o">-</span><span class="mf">0.5</span> <span class="o">*</span> <span class="n">pix_y_size</span><span class="p">,</span>
+                                    <span class="n">sample2detector_distance</span><span class="p">,</span> <span class="n">wavelength</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">qy_max</span> <span class="o">+=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_get_qx</span><span class="p">(</span><span class="mf">0.5</span> <span class="o">*</span> <span class="n">pix_y_size</span><span class="p">,</span>
+                                    <span class="n">sample2detector_distance</span><span class="p">,</span> <span class="n">wavelength</span><span class="p">)</span>
+        <span class="c1">#if self.qx_min == self.qx_max:</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">qx_min</span> <span class="o">+=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_get_qx</span><span class="p">(</span><span class="o">-</span><span class="mf">0.5</span> <span class="o">*</span> <span class="n">pix_x_size</span><span class="p">,</span>
+                                    <span class="n">sample2detector_distance</span><span class="p">,</span> <span class="n">wavelength</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">qx_max</span> <span class="o">+=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_get_qx</span><span class="p">(</span><span class="mf">0.5</span> <span class="o">*</span> <span class="n">pix_x_size</span><span class="p">,</span>
+                                    <span class="n">sample2detector_distance</span><span class="p">,</span> <span class="n">wavelength</span><span class="p">)</span>
+
+        <span class="c1"># min and max values of detecter</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">detector_qx_min</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">qx_min</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">detector_qx_max</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">qx_max</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">detector_qy_min</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">qy_min</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">detector_qy_max</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">qy_max</span>
+
+        <span class="c1"># try to set it as a Data2D otherwise pass (not required for now)</span>
+        <span class="k">try</span><span class="p">:</span>
+            <span class="kn">from</span> <span class="nn">sas.sascalc.dataloader.data_info</span> <span class="kn">import</span> <span class="n">Data2D</span>
+            <span class="n">output</span> <span class="o">=</span> <span class="n">Data2D</span><span class="p">()</span>
+            <span class="n">inten</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">zeros_like</span><span class="p">(</span><span class="n">qx_value</span><span class="p">)</span>
+            <span class="n">output</span><span class="o">.</span><span class="n">data</span> <span class="o">=</span> <span class="n">inten</span>
+            <span class="n">output</span><span class="o">.</span><span class="n">qx_data</span> <span class="o">=</span> <span class="n">qx_value</span>
+            <span class="n">output</span><span class="o">.</span><span class="n">qy_data</span> <span class="o">=</span> <span class="n">qy_value</span>
+        <span class="k">except</span><span class="p">:</span>
+            <span class="n">logger</span><span class="o">.</span><span class="n">error</span><span class="p">(</span><span class="n">sys</span><span class="o">.</span><span class="n">exc_value</span><span class="p">)</span>
+
+        <span class="k">return</span> <span class="n">output</span>
+
+    <span class="k">def</span> <span class="nf">_get_qx</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">dx_size</span><span class="p">,</span> <span class="n">det_dist</span><span class="p">,</span> <span class="n">wavelength</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        :param dx_size: x-distance from beam center [cm]</span>
+<span class="sd">        :param det_dist: sample to detector distance [cm]</span>
+
+<span class="sd">        :return: q-value at the given position</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="c1"># Distance from beam center in the plane of detector</span>
+        <span class="n">plane_dist</span> <span class="o">=</span> <span class="n">dx_size</span>
+        <span class="c1"># full scattering angle on the x-axis</span>
+        <span class="n">theta</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">arctan</span><span class="p">(</span><span class="n">plane_dist</span> <span class="o">/</span> <span class="n">det_dist</span><span class="p">)</span>
+        <span class="n">qx_value</span> <span class="o">=</span> <span class="p">(</span><span class="mf">2.0</span> <span class="o">*</span> <span class="n">pi</span> <span class="o">/</span> <span class="n">wavelength</span><span class="p">)</span> <span class="o">*</span> <span class="n">np</span><span class="o">.</span><span class="n">sin</span><span class="p">(</span><span class="n">theta</span><span class="p">)</span>
+        <span class="k">return</span> <span class="n">qx_value</span>
+
+    <span class="k">def</span> <span class="nf">_get_polar_value</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">qx_value</span><span class="p">,</span> <span class="n">qy_value</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Find qr_value and phi from qx_value and qy_value values</span>
+
+<span class="sd">        : return qr_value, phi</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="c1"># find |q| on detector plane</span>
+        <span class="n">qr_value</span> <span class="o">=</span> <span class="n">sqrt</span><span class="p">(</span><span class="n">qx_value</span><span class="o">*</span><span class="n">qx_value</span> <span class="o">+</span> <span class="n">qy_value</span><span class="o">*</span><span class="n">qy_value</span><span class="p">)</span>
+        <span class="c1"># find angle phi</span>
+        <span class="n">phi</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_atan_phi</span><span class="p">(</span><span class="n">qy_value</span><span class="p">,</span> <span class="n">qx_value</span><span class="p">)</span>
+
+        <span class="k">return</span> <span class="n">qr_value</span><span class="p">,</span> <span class="n">phi</span>
+
+    <span class="k">def</span> <span class="nf">_get_beamcenter_position</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">num_x</span><span class="p">,</span> <span class="n">num_y</span><span class="p">,</span> <span class="n">offset_x</span><span class="p">,</span> <span class="n">offset_y</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        :param num_x: number of pixel in x-direction</span>
+<span class="sd">        :param num_y: number of pixel in y-direction</span>
+<span class="sd">        :param offset: detector offset in x-direction in pix number</span>
+
+<span class="sd">        :return: pix number; pos_x, pos_y in pix index</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="c1"># beam center position</span>
+        <span class="n">pos_x</span> <span class="o">=</span> <span class="n">num_x</span> <span class="o">/</span> <span class="mi">2</span>
+        <span class="n">pos_y</span> <span class="o">=</span> <span class="n">num_y</span> <span class="o">/</span> <span class="mi">2</span>
+
+        <span class="c1"># correction for offset</span>
+        <span class="n">pos_x</span> <span class="o">+=</span> <span class="n">offset_x</span>
+        <span class="c1"># correction for gravity that is always negative</span>
+        <span class="n">pos_y</span> <span class="o">-=</span> <span class="n">offset_y</span>
+
+        <span class="k">return</span> <span class="n">pos_x</span><span class="p">,</span> <span class="n">pos_y</span>
+
+    <span class="k">def</span> <span class="nf">_get_beamcenter_drop</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Get the beam center drop (delta y) in y diection due to gravity</span>
+
+<span class="sd">        :return delta y: the beam center drop in cm</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="c1"># Check if mass == 0 (X-ray).</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">mass</span> <span class="o">==</span> <span class="mi">0</span><span class="p">:</span>
+            <span class="k">return</span> <span class="mi">0</span>
+        <span class="c1"># Covert unit from A to cm</span>
+        <span class="n">unit_cm</span> <span class="o">=</span> <span class="mf">1e-08</span>
+        <span class="c1"># Velocity of neutron in horizontal direction (~ actual velocity)</span>
+        <span class="n">velocity</span> <span class="o">=</span> <span class="n">_PLANK_H</span> <span class="o">/</span> <span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">mass</span> <span class="o">*</span> <span class="bp">self</span><span class="o">.</span><span class="n">wave</span><span class="o">.</span><span class="n">wavelength</span> <span class="o">*</span> <span class="n">unit_cm</span><span class="p">)</span>
+        <span class="c1"># Compute delta y</span>
+        <span class="n">delta_y</span> <span class="o">=</span> <span class="mf">0.5</span>
+        <span class="n">delta_y</span> <span class="o">*=</span> <span class="n">_GRAVITY</span>
+        <span class="n">sampletodetector</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">sample2detector_distance</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="o">-</span> \
+                                    <span class="bp">self</span><span class="o">.</span><span class="n">sample2sample_distance</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
+        <span class="n">delta_y</span> <span class="o">*=</span> <span class="n">sampletodetector</span>
+        <span class="n">delta_y</span> <span class="o">*=</span> <span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">source2sample_distance</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="o">+</span> <span class="bp">self</span><span class="o">.</span><span class="n">sample2detector_distance</span><span class="p">[</span><span class="mi">0</span><span class="p">])</span>
+        <span class="n">delta_y</span> <span class="o">/=</span> <span class="p">(</span><span class="n">velocity</span> <span class="o">*</span> <span class="n">velocity</span><span class="p">)</span>
+
+        <span class="k">return</span> <span class="n">delta_y</span></div>
+</pre></div>
+
+          </div>
+        </div>
+      </div>
+      <div class="sphinxsidebar" role="navigation" aria-label="main navigation">
+        <div class="sphinxsidebarwrapper">
+<div id="searchbox" style="display: none" role="search">
+  <h3>Quick search</h3>
+    <form class="search" action="../../../../search.html" method="get">
+      <input type="text" name="q" />
+      <input type="submit" value="Go" />
+      <input type="hidden" name="check_keywords" value="yes" />
+      <input type="hidden" name="area" value="default" />
+    </form>
+</div>
+<script type="text/javascript">$('#searchbox').show(0);</script>
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="related" role="navigation" aria-label="related navigation">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="../../../../genindex.html" title="General Index"
+             >index</a></li>
+        <li class="right" >
+          <a href="../../../../py-modindex.html" title="Python Module Index"
+             >modules</a> |</li>
+        <li class="nav-item nav-item-0"><a href="../../../../index.html">SasView 4.2.0 documentation</a> &raquo;</li>
+          <li class="nav-item nav-item-1"><a href="../../../index.html" >Module code</a> &raquo;</li>
+          <li class="nav-item nav-item-2"><a href="../../../sas.html" >sas</a> &raquo;</li> 
+      </ul>
+    </div>
+    <div class="footer" role="contentinfo">
+        &copy; Copyright 2018, The SasView Project.
+      Created using <a href="http://sphinx-doc.org/">Sphinx</a> 1.4.1.
+    </div>
+  </body>
+</html>

@@ -1,0 +1,199 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+  "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+    
+    <title>sas.sasgui.plottools.fittings &mdash; SasView 4.1.2 documentation</title>
+    
+    <link rel="stylesheet" href="../../../../_static/classic.css" type="text/css" />
+    <link rel="stylesheet" href="../../../../_static/pygments.css" type="text/css" />
+    
+    <script type="text/javascript">
+      var DOCUMENTATION_OPTIONS = {
+        URL_ROOT:    '../../../../',
+        VERSION:     '4.1.2',
+        COLLAPSE_INDEX: false,
+        FILE_SUFFIX: '.html',
+        HAS_SOURCE:  true
+      };
+    </script>
+    <script type="text/javascript" src="../../../../_static/jquery.js"></script>
+    <script type="text/javascript" src="../../../../_static/underscore.js"></script>
+    <script type="text/javascript" src="../../../../_static/doctools.js"></script>
+    <script type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.1/MathJax.js?config=TeX-MML-AM_CHTML"></script>
+    <link rel="top" title="SasView 4.1.2 documentation" href="../../../../index.html" />
+    <link rel="up" title="Module code" href="../../../index.html" /> 
+  </head>
+  <body role="document">
+    <div class="related" role="navigation" aria-label="related navigation">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="../../../../genindex.html" title="General Index"
+             accesskey="I">index</a></li>
+        <li class="right" >
+          <a href="../../../../py-modindex.html" title="Python Module Index"
+             >modules</a> |</li>
+        <li class="nav-item nav-item-0"><a href="../../../../index.html">SasView 4.1.2 documentation</a> &raquo;</li>
+          <li class="nav-item nav-item-1"><a href="../../../index.html" accesskey="U">Module code</a> &raquo;</li> 
+      </ul>
+    </div>  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          <div class="body" role="main">
+            
+  <h1>Source code for sas.sasgui.plottools.fittings</h1><div class="highlight"><pre>
+<span></span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">This module is used to fit a set of x,y data to a model passed to it. It is</span>
+<span class="sd">used to calculate the slope and intercepts for the linearized fits.  Two things</span>
+<span class="sd">should be noted:</span>
+
+<span class="sd">First, this fitting module uses the NLLSQ module of SciPy rather than a linear</span>
+<span class="sd">fit.  This along with a few other modules could probably be removed if we</span>
+<span class="sd">move to a linear regression approach.</span>
+
+<span class="sd">Second, this infrastructure does not allow for resolution smearing of the </span>
+<span class="sd">the models.  Hence the results are not that accurate even for pinhole</span>
+<span class="sd">collimation of SANS but may be good for SAXS.  It is completely wrong for </span>
+<span class="sd">slit smeared data. </span>
+
+<span class="sd">&quot;&quot;&quot;</span>
+<span class="kn">from</span> <span class="nn">scipy</span> <span class="kn">import</span> <span class="n">optimize</span>
+
+
+<div class="viewcode-block" id="Parameter"><a class="viewcode-back" href="../../../../dev/api/sas.sasgui.plottools.html#sas.sasgui.plottools.fittings.Parameter">[docs]</a><span class="k">class</span> <span class="nc">Parameter</span><span class="p">(</span><span class="nb">object</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Class to handle model parameters - sets the parameters and their</span>
+<span class="sd">    initial value from the model based to it.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">model</span><span class="p">,</span> <span class="n">name</span><span class="p">,</span> <span class="n">value</span><span class="o">=</span><span class="bp">None</span><span class="p">):</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">model</span> <span class="o">=</span> <span class="n">model</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">name</span> <span class="o">=</span> <span class="n">name</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="n">value</span> <span class="o">==</span> <span class="bp">None</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">model</span><span class="o">.</span><span class="n">setParam</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">name</span><span class="p">,</span> <span class="n">value</span><span class="p">)</span>
+
+<div class="viewcode-block" id="Parameter.set"><a class="viewcode-back" href="../../../../dev/api/sas.sasgui.plottools.html#sas.sasgui.plottools.fittings.Parameter.set">[docs]</a>    <span class="k">def</span> <span class="nf">set</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">value</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">            Set the value of the parameter</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">model</span><span class="o">.</span><span class="n">setParam</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">name</span><span class="p">,</span> <span class="n">value</span><span class="p">)</span></div>
+
+    <span class="k">def</span> <span class="nf">__call__</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">            Return the current value of the parameter</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">model</span><span class="o">.</span><span class="n">getParam</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">name</span><span class="p">)</span></div>
+
+
+<div class="viewcode-block" id="sasfit"><a class="viewcode-back" href="../../../../dev/api/sas.sasgui.plottools.html#sas.sasgui.plottools.fittings.sasfit">[docs]</a><span class="k">def</span> <span class="nf">sasfit</span><span class="p">(</span><span class="n">model</span><span class="p">,</span> <span class="n">pars</span><span class="p">,</span> <span class="n">x</span><span class="p">,</span> <span class="n">y</span><span class="p">,</span> <span class="n">err_y</span><span class="p">,</span> <span class="n">qmin</span><span class="o">=</span><span class="bp">None</span><span class="p">,</span> <span class="n">qmax</span><span class="o">=</span><span class="bp">None</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Fit function</span>
+
+<span class="sd">    :param model: sas model object</span>
+<span class="sd">    :param pars: list of parameters</span>
+<span class="sd">    :param x: vector of x data</span>
+<span class="sd">    :param y: vector of y data</span>
+<span class="sd">    :param err_y: vector of y errors</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="k">def</span> <span class="nf">f</span><span class="p">(</span><span class="n">params</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Calculates the vector of residuals for each point</span>
+<span class="sd">        in y for a given set of input parameters.</span>
+
+<span class="sd">        :param params: list of parameter values</span>
+<span class="sd">        :return: vector of residuals</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">i</span> <span class="o">=</span> <span class="mi">0</span>
+        <span class="k">for</span> <span class="n">p</span> <span class="ow">in</span> <span class="n">pars</span><span class="p">:</span>
+            <span class="n">p</span><span class="o">.</span><span class="n">set</span><span class="p">(</span><span class="n">params</span><span class="p">[</span><span class="n">i</span><span class="p">])</span>
+            <span class="n">i</span> <span class="o">+=</span> <span class="mi">1</span>
+
+        <span class="n">residuals</span> <span class="o">=</span> <span class="p">[]</span>
+        <span class="k">for</span> <span class="n">j</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">x</span><span class="p">)):</span>
+            <span class="k">if</span> <span class="n">x</span><span class="p">[</span><span class="n">j</span><span class="p">]</span> <span class="o">&gt;=</span> <span class="n">qmin</span> <span class="ow">and</span> <span class="n">x</span><span class="p">[</span><span class="n">j</span><span class="p">]</span> <span class="o">&lt;=</span> <span class="n">qmax</span><span class="p">:</span>
+                <span class="n">residuals</span><span class="o">.</span><span class="n">append</span><span class="p">((</span><span class="n">y</span><span class="p">[</span><span class="n">j</span><span class="p">]</span> <span class="o">-</span> <span class="n">model</span><span class="o">.</span><span class="n">runXY</span><span class="p">(</span><span class="n">x</span><span class="p">[</span><span class="n">j</span><span class="p">]))</span> <span class="o">/</span> <span class="n">err_y</span><span class="p">[</span><span class="n">j</span><span class="p">])</span>
+        <span class="k">return</span> <span class="n">residuals</span>
+
+    <span class="k">def</span> <span class="nf">chi2</span><span class="p">(</span><span class="n">params</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Calculates chi^2</span>
+
+<span class="sd">        :param params: list of parameter values</span>
+
+<span class="sd">        :return: chi^2</span>
+
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="nb">sum</span> <span class="o">=</span> <span class="mi">0</span>
+        <span class="n">res</span> <span class="o">=</span> <span class="n">f</span><span class="p">(</span><span class="n">params</span><span class="p">)</span>
+        <span class="k">for</span> <span class="n">item</span> <span class="ow">in</span> <span class="n">res</span><span class="p">:</span>
+            <span class="nb">sum</span> <span class="o">+=</span> <span class="n">item</span> <span class="o">*</span> <span class="n">item</span>
+        <span class="k">return</span> <span class="nb">sum</span>
+
+    <span class="n">p</span> <span class="o">=</span> <span class="p">[</span><span class="n">param</span><span class="p">()</span> <span class="k">for</span> <span class="n">param</span> <span class="ow">in</span> <span class="n">pars</span><span class="p">]</span>
+    <span class="n">out</span><span class="p">,</span> <span class="n">cov_x</span><span class="p">,</span> <span class="n">info</span><span class="p">,</span> <span class="n">mesg</span><span class="p">,</span> <span class="n">success</span> <span class="o">=</span> <span class="n">optimize</span><span class="o">.</span><span class="n">leastsq</span><span class="p">(</span><span class="n">f</span><span class="p">,</span> <span class="n">p</span><span class="p">,</span> <span class="n">full_output</span><span class="o">=</span><span class="mi">1</span><span class="p">)</span>
+    <span class="c1"># Calculate chi squared</span>
+    <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">pars</span><span class="p">)</span> <span class="o">&gt;</span> <span class="mi">1</span><span class="p">:</span>
+        <span class="n">chisqr</span> <span class="o">=</span> <span class="n">chi2</span><span class="p">(</span><span class="n">out</span><span class="p">)</span>
+    <span class="k">elif</span> <span class="nb">len</span><span class="p">(</span><span class="n">pars</span><span class="p">)</span> <span class="o">==</span> <span class="mi">1</span><span class="p">:</span>
+        <span class="n">chisqr</span> <span class="o">=</span> <span class="n">chi2</span><span class="p">([</span><span class="n">out</span><span class="p">])</span>
+
+    <span class="k">return</span> <span class="n">chisqr</span><span class="p">,</span> <span class="n">out</span><span class="p">,</span> <span class="n">cov_x</span></div>
+
+
+<div class="viewcode-block" id="calcCommandline"><a class="viewcode-back" href="../../../../dev/api/sas.sasgui.plottools.html#sas.sasgui.plottools.fittings.calcCommandline">[docs]</a><span class="k">def</span> <span class="nf">calcCommandline</span><span class="p">(</span><span class="n">event</span><span class="p">):</span>
+    <span class="c1"># Testing implementation</span>
+    <span class="c1"># Fit a Line model</span>
+    <span class="kn">from</span> <span class="nn">LineModel</span> <span class="kn">import</span> <span class="n">LineModel</span>
+    <span class="n">line</span> <span class="o">=</span> <span class="n">LineModel</span><span class="p">()</span>
+    <span class="n">cstA</span> <span class="o">=</span> <span class="n">Parameter</span><span class="p">(</span><span class="n">line</span><span class="p">,</span> <span class="s1">&#39;A&#39;</span><span class="p">,</span> <span class="n">event</span><span class="o">.</span><span class="n">cstA</span><span class="p">)</span>
+    <span class="n">cstB</span> <span class="o">=</span> <span class="n">Parameter</span><span class="p">(</span><span class="n">line</span><span class="p">,</span> <span class="s1">&#39;B&#39;</span><span class="p">,</span> <span class="n">event</span><span class="o">.</span><span class="n">cstB</span><span class="p">)</span>
+    <span class="n">y</span> <span class="o">=</span> <span class="n">line</span><span class="o">.</span><span class="n">run</span><span class="p">()</span>
+    <span class="n">chisqr</span><span class="p">,</span> <span class="n">out</span><span class="p">,</span> <span class="n">cov</span> <span class="o">=</span> <span class="n">sasfit</span><span class="p">(</span><span class="n">line</span><span class="p">,</span> <span class="p">[</span><span class="n">cstA</span><span class="p">,</span> <span class="n">cstB</span><span class="p">],</span> <span class="n">event</span><span class="o">.</span><span class="n">x</span><span class="p">,</span> <span class="n">y</span><span class="p">,</span> <span class="mi">0</span><span class="p">)</span>
+    <span class="c1"># print &quot;Output parameters:&quot;, out</span>
+    <span class="k">print</span> <span class="s2">&quot;The right answer is [70.0, 1.0]&quot;</span>
+    <span class="k">print</span> <span class="n">chisqr</span><span class="p">,</span> <span class="n">out</span><span class="p">,</span> <span class="n">cov</span></div>
+</pre></div>
+
+          </div>
+        </div>
+      </div>
+      <div class="sphinxsidebar" role="navigation" aria-label="main navigation">
+        <div class="sphinxsidebarwrapper">
+<div id="searchbox" style="display: none" role="search">
+  <h3>Quick search</h3>
+    <form class="search" action="../../../../search.html" method="get">
+      <input type="text" name="q" />
+      <input type="submit" value="Go" />
+      <input type="hidden" name="check_keywords" value="yes" />
+      <input type="hidden" name="area" value="default" />
+    </form>
+</div>
+<script type="text/javascript">$('#searchbox').show(0);</script>
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="related" role="navigation" aria-label="related navigation">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="../../../../genindex.html" title="General Index"
+             >index</a></li>
+        <li class="right" >
+          <a href="../../../../py-modindex.html" title="Python Module Index"
+             >modules</a> |</li>
+        <li class="nav-item nav-item-0"><a href="../../../../index.html">SasView 4.1.2 documentation</a> &raquo;</li>
+          <li class="nav-item nav-item-1"><a href="../../../index.html" >Module code</a> &raquo;</li> 
+      </ul>
+    </div>
+    <div class="footer" role="contentinfo">
+        &copy; Copyright 2017, The SasView Project.
+      Created using <a href="http://sphinx-doc.org/">Sphinx</a> 1.4.1.
+    </div>
+  </body>
+</html>

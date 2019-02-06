@@ -1,0 +1,210 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+  "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+    
+    <title>sas.sasgui.guiframe.custom_pstats &mdash; SasView 4.1.2 documentation</title>
+    
+    <link rel="stylesheet" href="../../../../_static/classic.css" type="text/css" />
+    <link rel="stylesheet" href="../../../../_static/pygments.css" type="text/css" />
+    
+    <script type="text/javascript">
+      var DOCUMENTATION_OPTIONS = {
+        URL_ROOT:    '../../../../',
+        VERSION:     '4.1.2',
+        COLLAPSE_INDEX: false,
+        FILE_SUFFIX: '.html',
+        HAS_SOURCE:  true
+      };
+    </script>
+    <script type="text/javascript" src="../../../../_static/jquery.js"></script>
+    <script type="text/javascript" src="../../../../_static/underscore.js"></script>
+    <script type="text/javascript" src="../../../../_static/doctools.js"></script>
+    <script type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.1/MathJax.js?config=TeX-MML-AM_CHTML"></script>
+    <link rel="top" title="SasView 4.1.2 documentation" href="../../../../index.html" />
+    <link rel="up" title="sas.sasgui.guiframe" href="../guiframe.html" /> 
+  </head>
+  <body role="document">
+    <div class="related" role="navigation" aria-label="related navigation">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="../../../../genindex.html" title="General Index"
+             accesskey="I">index</a></li>
+        <li class="right" >
+          <a href="../../../../py-modindex.html" title="Python Module Index"
+             >modules</a> |</li>
+        <li class="nav-item nav-item-0"><a href="../../../../index.html">SasView 4.1.2 documentation</a> &raquo;</li>
+          <li class="nav-item nav-item-1"><a href="../../../index.html" >Module code</a> &raquo;</li>
+          <li class="nav-item nav-item-2"><a href="../guiframe.html" accesskey="U">sas.sasgui.guiframe</a> &raquo;</li> 
+      </ul>
+    </div>  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          <div class="body" role="main">
+            
+  <h1>Source code for sas.sasgui.guiframe.custom_pstats</h1><div class="highlight"><pre>
+<span></span>
+<span class="kn">import</span> <span class="nn">cProfile</span><span class="o">,</span> <span class="nn">pstats</span><span class="o">,</span> <span class="nn">os</span>
+<div class="viewcode-block" id="func_std_string"><a class="viewcode-back" href="../../../../dev/api/sas.sasgui.guiframe.html#sas.sasgui.guiframe.custom_pstats.func_std_string">[docs]</a><span class="k">def</span> <span class="nf">func_std_string</span><span class="p">(</span><span class="n">func_name</span><span class="p">):</span> <span class="c1"># match what old profile produced</span>
+    <span class="k">if</span> <span class="n">func_name</span><span class="p">[:</span><span class="mi">2</span><span class="p">]</span> <span class="o">==</span> <span class="p">(</span><span class="s1">&#39;~&#39;</span><span class="p">,</span> <span class="mi">0</span><span class="p">):</span>
+        <span class="c1"># special case for built-in functions</span>
+        <span class="n">name</span> <span class="o">=</span> <span class="n">func_name</span><span class="p">[</span><span class="mi">2</span><span class="p">]</span>
+        <span class="k">if</span> <span class="n">name</span><span class="o">.</span><span class="n">startswith</span><span class="p">(</span><span class="s1">&#39;&lt;&#39;</span><span class="p">)</span> <span class="ow">and</span> <span class="n">name</span><span class="o">.</span><span class="n">endswith</span><span class="p">(</span><span class="s1">&#39;&gt;&#39;</span><span class="p">):</span>
+            <span class="k">return</span> <span class="s1">&#39;{</span><span class="si">%s</span><span class="s1">}&#39;</span> <span class="o">%</span> <span class="n">name</span><span class="p">[</span><span class="mi">1</span><span class="p">:</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="k">return</span> <span class="n">name</span>
+    <span class="k">else</span><span class="p">:</span>
+        <span class="k">return</span> <span class="s2">&quot;</span><span class="si">%s</span><span class="s2">:</span><span class="si">%d</span><span class="s2">(</span><span class="si">%s</span><span class="s2">)&quot;</span> <span class="o">%</span> <span class="n">func_name</span></div>
+
+<div class="viewcode-block" id="f8"><a class="viewcode-back" href="../../../../dev/api/sas.sasgui.guiframe.html#sas.sasgui.guiframe.custom_pstats.f8">[docs]</a><span class="k">def</span> <span class="nf">f8</span><span class="p">(</span><span class="n">x</span><span class="p">):</span>
+    <span class="k">return</span> <span class="s2">&quot;</span><span class="si">%8.3f</span><span class="s2">&quot;</span> <span class="o">%</span> <span class="n">x</span></div>
+
+<div class="viewcode-block" id="CustomPstats"><a class="viewcode-back" href="../../../../dev/api/sas.sasgui.guiframe.html#sas.sasgui.guiframe.custom_pstats.CustomPstats">[docs]</a><span class="k">class</span> <span class="nc">CustomPstats</span><span class="p">(</span><span class="n">pstats</span><span class="o">.</span><span class="n">Stats</span><span class="p">):</span>
+    <span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="o">*</span><span class="n">args</span><span class="p">,</span> <span class="o">**</span><span class="n">kwds</span><span class="p">):</span>
+        <span class="n">pstats</span><span class="o">.</span><span class="n">Stats</span><span class="o">.</span><span class="n">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="o">*</span><span class="n">args</span><span class="p">,</span> <span class="o">**</span><span class="n">kwds</span><span class="p">)</span>
+        
+<div class="viewcode-block" id="CustomPstats.write_stats"><a class="viewcode-back" href="../../../../dev/api/sas.sasgui.guiframe.html#sas.sasgui.guiframe.custom_pstats.CustomPstats.write_stats">[docs]</a>    <span class="k">def</span> <span class="nf">write_stats</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="o">*</span><span class="n">amount</span><span class="p">):</span>
+        <span class="n">msg</span> <span class="o">=</span> <span class="s1">&#39;&#39;</span>
+        <span class="k">for</span> <span class="n">filename</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">files</span><span class="p">:</span>
+            <span class="n">msg</span> <span class="o">+=</span>  <span class="nb">str</span><span class="p">(</span><span class="n">filename</span><span class="p">)</span> <span class="o">+</span> <span class="s1">&#39;</span><span class="se">\n</span><span class="s1">&#39;</span>
+        <span class="c1">#if self.files: msg += str(self.stream) + &#39;\n&#39;</span>
+        <span class="n">indent</span> <span class="o">=</span> <span class="s1">&#39; &#39;</span> <span class="o">*</span> <span class="mi">8</span>
+        <span class="k">for</span> <span class="n">func</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">top_level</span><span class="p">:</span>
+            <span class="n">msg</span> <span class="o">+=</span>   <span class="nb">str</span><span class="p">(</span><span class="n">indent</span><span class="p">)</span><span class="o">+</span> <span class="nb">str</span><span class="p">(</span><span class="n">func_get_function_name</span><span class="p">(</span><span class="n">func</span><span class="p">))</span><span class="o">+</span><span class="s2">&quot;</span><span class="se">\n</span><span class="s2">&quot;</span>
+
+        <span class="n">msg</span> <span class="o">+=</span> <span class="nb">str</span><span class="p">(</span><span class="n">indent</span><span class="p">)</span> <span class="o">+</span> <span class="nb">str</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">total_calls</span><span class="p">)</span><span class="o">+</span> <span class="s2">&quot;function calls&quot;</span> <span class="o">+</span> <span class="s1">&#39;</span><span class="se">\n</span><span class="s1">&#39;</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">total_calls</span> <span class="o">!=</span> <span class="bp">self</span><span class="o">.</span><span class="n">prim_calls</span><span class="p">:</span>
+            <span class="n">msg</span> <span class="o">+=</span>  <span class="s2">&quot;(</span><span class="si">%d</span><span class="s2"> primitive calls)&quot;</span> <span class="o">%</span> <span class="bp">self</span><span class="o">.</span><span class="n">prim_calls</span> <span class="o">+</span> <span class="s1">&#39;</span><span class="se">\n</span><span class="s1">&#39;</span>
+        <span class="n">msg</span> <span class="o">+=</span>  <span class="s2">&quot;in </span><span class="si">%.3f</span><span class="s2"> CPU seconds&quot;</span> <span class="o">%</span> <span class="bp">self</span><span class="o">.</span><span class="n">total_tt</span> <span class="o">+</span> <span class="s1">&#39;</span><span class="se">\n</span><span class="s1">&#39;</span>
+        <span class="c1">#msg +=  str(self.stream) + &#39;\n&#39;</span>
+       
+        <span class="n">width</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">max_name_len</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">fcn_list</span><span class="p">:</span>
+            <span class="nb">list</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">fcn_list</span><span class="p">[:]</span>
+            <span class="n">temp_msg</span> <span class="o">=</span> <span class="s2">&quot;   Ordered by: &quot;</span> <span class="o">+</span> <span class="bp">self</span><span class="o">.</span><span class="n">sort_type</span> <span class="o">+</span> <span class="s1">&#39;</span><span class="se">\n</span><span class="s1">&#39;</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="nb">list</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">stats</span><span class="o">.</span><span class="n">keys</span><span class="p">()</span>
+            <span class="n">temp_msg</span> <span class="o">=</span> <span class="s2">&quot;   Random listing order was used</span><span class="se">\n</span><span class="s2">&quot;</span>
+
+        <span class="k">for</span> <span class="n">selection</span> <span class="ow">in</span> <span class="n">amount</span><span class="p">:</span>
+            <span class="nb">list</span><span class="p">,</span> <span class="n">temp_msg</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">eval_print_amount</span><span class="p">(</span><span class="n">selection</span><span class="p">,</span> <span class="nb">list</span><span class="p">,</span> <span class="n">temp_msg</span><span class="p">)</span>
+
+        <span class="n">count</span> <span class="o">=</span> <span class="nb">len</span><span class="p">(</span><span class="nb">list</span><span class="p">)</span>
+
+        <span class="k">if</span> <span class="ow">not</span> <span class="nb">list</span><span class="p">:</span>
+            <span class="n">width</span><span class="p">,</span> <span class="nb">list</span> <span class="o">=</span> <span class="mi">0</span><span class="p">,</span> <span class="nb">list</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">msg</span> <span class="o">+=</span>   <span class="nb">str</span><span class="p">(</span><span class="n">temp_msg</span><span class="p">)</span> <span class="o">+</span> <span class="s1">&#39;</span><span class="se">\n</span><span class="s1">&#39;</span>
+            <span class="k">if</span> <span class="n">count</span> <span class="o">&lt;</span> <span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">stats</span><span class="p">):</span>
+                <span class="n">width</span> <span class="o">=</span> <span class="mi">0</span>
+                <span class="k">for</span> <span class="n">func</span> <span class="ow">in</span> <span class="nb">list</span><span class="p">:</span>
+                    <span class="k">if</span>  <span class="nb">len</span><span class="p">(</span><span class="n">func_std_string</span><span class="p">(</span><span class="n">func</span><span class="p">))</span> <span class="o">&gt;</span> <span class="n">width</span><span class="p">:</span>
+                        <span class="n">width</span> <span class="o">=</span> <span class="nb">len</span><span class="p">(</span><span class="n">func_std_string</span><span class="p">(</span><span class="n">func</span><span class="p">))</span>
+       
+            <span class="n">width</span><span class="p">,</span> <span class="nb">list</span> <span class="o">=</span> <span class="n">width</span><span class="o">+</span><span class="mi">2</span><span class="p">,</span> <span class="nb">list</span>
+        <span class="k">if</span> <span class="nb">list</span><span class="p">:</span>
+            <span class="n">msg</span> <span class="o">+=</span> <span class="s1">&#39;   ncalls  tottime  percall  cumtime  percall&#39;</span>
+            <span class="n">msg</span> <span class="o">+=</span>  <span class="s1">&#39; filename:lineno(function)&#39;</span> <span class="o">+</span> <span class="s2">&quot;</span><span class="se">\n</span><span class="s2">&quot;</span>
+            <span class="k">for</span> <span class="n">func</span> <span class="ow">in</span> <span class="nb">list</span><span class="p">:</span>
+                <span class="n">cc</span><span class="p">,</span> <span class="n">nc</span><span class="p">,</span> <span class="n">tt</span><span class="p">,</span> <span class="n">ct</span><span class="p">,</span> <span class="n">callers</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">stats</span><span class="p">[</span><span class="n">func</span><span class="p">]</span>
+                <span class="n">c</span> <span class="o">=</span> <span class="nb">str</span><span class="p">(</span><span class="n">nc</span><span class="p">)</span>
+                <span class="k">if</span> <span class="n">nc</span> <span class="o">!=</span> <span class="n">cc</span><span class="p">:</span>
+                    <span class="n">c</span> <span class="o">=</span> <span class="n">c</span> <span class="o">+</span> <span class="s1">&#39;/&#39;</span> <span class="o">+</span> <span class="nb">str</span><span class="p">(</span><span class="n">cc</span><span class="p">)</span>
+                <span class="n">msg</span> <span class="o">+=</span>  <span class="nb">str</span><span class="p">(</span> <span class="n">c</span><span class="o">.</span><span class="n">rjust</span><span class="p">(</span><span class="mi">9</span><span class="p">))</span> 
+                <span class="n">msg</span> <span class="o">+=</span>  <span class="nb">str</span><span class="p">(</span><span class="n">f8</span><span class="p">(</span><span class="n">tt</span><span class="p">))</span> 
+                <span class="k">if</span> <span class="n">nc</span> <span class="o">==</span> <span class="mi">0</span><span class="p">:</span>
+                    <span class="n">msg</span> <span class="o">+=</span> <span class="nb">str</span><span class="p">(</span><span class="s1">&#39; &#39;</span><span class="o">*</span><span class="mi">8</span><span class="p">)</span> 
+                <span class="k">else</span><span class="p">:</span>
+                    <span class="n">msg</span> <span class="o">+=</span>  <span class="nb">str</span><span class="p">(</span><span class="n">f8</span><span class="p">(</span><span class="n">tt</span><span class="o">/</span><span class="n">nc</span><span class="p">))</span> 
+                <span class="n">msg</span> <span class="o">+=</span> <span class="nb">str</span><span class="p">(</span><span class="n">f8</span><span class="p">(</span><span class="n">ct</span><span class="p">))</span> 
+                <span class="k">if</span> <span class="n">cc</span> <span class="o">==</span> <span class="mi">0</span><span class="p">:</span>
+                    <span class="n">msg</span> <span class="o">+=</span> <span class="nb">str</span><span class="p">(</span> <span class="s1">&#39; &#39;</span><span class="o">*</span><span class="mi">80</span><span class="p">)</span> 
+                <span class="k">else</span><span class="p">:</span>
+                    <span class="n">msg</span> <span class="o">+=</span> <span class="nb">str</span><span class="p">(</span><span class="n">f8</span><span class="p">(</span><span class="n">ct</span><span class="o">/</span><span class="n">cc</span><span class="p">))</span> 
+                <span class="n">msg</span> <span class="o">+=</span>  <span class="s2">&quot; &quot;</span> <span class="o">+</span> <span class="nb">str</span><span class="p">(</span><span class="n">func_std_string</span><span class="p">(</span><span class="n">func</span><span class="p">))</span> <span class="o">+</span> <span class="s1">&#39;</span><span class="se">\n</span><span class="s1">&#39;</span>
+            <span class="n">msg</span> <span class="o">+=</span> <span class="nb">str</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">stream</span><span class="p">)</span> <span class="o">+</span> <span class="s1">&#39;</span><span class="se">\n</span><span class="s1">&#39;</span>
+            <span class="c1">#msg += str(self.stream) + &#39;\n&#39;</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="p">,</span> <span class="n">msg</span></div></div>
+            
+<div class="viewcode-block" id="profile"><a class="viewcode-back" href="../../../../dev/api/sas.sasgui.guiframe.html#sas.sasgui.guiframe.custom_pstats.profile">[docs]</a><span class="k">def</span> <span class="nf">profile</span><span class="p">(</span> <span class="n">fn</span><span class="p">,</span> <span class="n">name</span><span class="o">=</span><span class="s1">&#39;profile.txt&#39;</span><span class="p">,</span><span class="o">*</span><span class="n">args</span><span class="p">,</span> <span class="o">**</span><span class="n">kw</span><span class="p">):</span>
+    <span class="kn">import</span> <span class="nn">cProfile</span><span class="o">,</span> <span class="nn">pstats</span><span class="o">,</span> <span class="nn">os</span>
+    <span class="k">global</span> <span class="n">call_result</span>
+    <span class="k">def</span> <span class="nf">call</span><span class="p">():</span>
+        <span class="k">global</span> <span class="n">call_result</span>
+        <span class="n">call_result</span> <span class="o">=</span> <span class="n">fn</span><span class="p">(</span><span class="o">*</span><span class="n">args</span><span class="p">,</span> <span class="o">**</span><span class="n">kw</span><span class="p">)</span>
+    <span class="n">cProfile</span><span class="o">.</span><span class="n">runctx</span><span class="p">(</span><span class="s1">&#39;call()&#39;</span><span class="p">,</span> <span class="nb">dict</span><span class="p">(</span><span class="n">call</span><span class="o">=</span><span class="n">call</span><span class="p">),</span> <span class="p">{},</span> <span class="s1">&#39;profile.txt&#39;</span><span class="p">)</span>
+    <span class="n">stats</span> <span class="o">=</span> <span class="n">CustomPstats</span><span class="p">(</span><span class="s1">&#39;profile.txt&#39;</span><span class="p">)</span>
+    <span class="c1">#sort by cumlative time</span>
+    <span class="n">stats</span><span class="o">.</span><span class="n">sort_stats</span><span class="p">(</span><span class="s1">&#39;time&#39;</span><span class="p">)</span>
+    <span class="n">stats</span><span class="o">.</span><span class="n">print_stats</span><span class="p">(</span><span class="mi">50</span><span class="p">)</span>
+    <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        filename = &#39;profile_cum_&#39; + name</span>
+<span class="sd">        _, msg = stats.write_stats(50)</span>
+<span class="sd">        f = file(filename, &#39;wb&#39;)</span>
+<span class="sd">        f.write(msg)</span>
+<span class="sd">        f.close()</span>
+<span class="sd">        #sort by time</span>
+<span class="sd">        stats.sort_stats(&#39;time&#39;)</span>
+<span class="sd">        _, msg = stats.write_stats(50)</span>
+<span class="sd">        filename = &#39;profile_time_&#39; + name</span>
+<span class="sd">        f = file(filename, &#39;wb&#39;)</span>
+<span class="sd">        f.write(msg)</span>
+<span class="sd">        f.close()</span>
+<span class="sd">        # sort by number of calls</span>
+<span class="sd">        stats.sort_stats(&#39;call&#39;)</span>
+<span class="sd">        _, msg = stats.write_stats(50)</span>
+<span class="sd">        filename = &#39;profile_call_&#39; + name</span>
+<span class="sd">        f = file(filename, &#39;wb&#39;)</span>
+<span class="sd">        f.write(msg)</span>
+<span class="sd">        f.close()</span>
+<span class="sd">        os.unlink(&#39;profile.txt&#39;)</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="k">return</span> <span class="n">call_result</span></div>
+
+</pre></div>
+
+          </div>
+        </div>
+      </div>
+      <div class="sphinxsidebar" role="navigation" aria-label="main navigation">
+        <div class="sphinxsidebarwrapper">
+<div id="searchbox" style="display: none" role="search">
+  <h3>Quick search</h3>
+    <form class="search" action="../../../../search.html" method="get">
+      <input type="text" name="q" />
+      <input type="submit" value="Go" />
+      <input type="hidden" name="check_keywords" value="yes" />
+      <input type="hidden" name="area" value="default" />
+    </form>
+</div>
+<script type="text/javascript">$('#searchbox').show(0);</script>
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="related" role="navigation" aria-label="related navigation">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="../../../../genindex.html" title="General Index"
+             >index</a></li>
+        <li class="right" >
+          <a href="../../../../py-modindex.html" title="Python Module Index"
+             >modules</a> |</li>
+        <li class="nav-item nav-item-0"><a href="../../../../index.html">SasView 4.1.2 documentation</a> &raquo;</li>
+          <li class="nav-item nav-item-1"><a href="../../../index.html" >Module code</a> &raquo;</li>
+          <li class="nav-item nav-item-2"><a href="../guiframe.html" >sas.sasgui.guiframe</a> &raquo;</li> 
+      </ul>
+    </div>
+    <div class="footer" role="contentinfo">
+        &copy; Copyright 2017, The SasView Project.
+      Created using <a href="http://sphinx-doc.org/">Sphinx</a> 1.4.1.
+    </div>
+  </body>
+</html>

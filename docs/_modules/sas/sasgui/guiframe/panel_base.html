@@ -1,0 +1,548 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+  "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+    
+    <title>sas.sasgui.guiframe.panel_base &mdash; SasView 4.2.0 documentation</title>
+    
+    <link rel="stylesheet" href="../../../../_static/classic.css" type="text/css" />
+    <link rel="stylesheet" href="../../../../_static/pygments.css" type="text/css" />
+    
+    <script type="text/javascript">
+      var DOCUMENTATION_OPTIONS = {
+        URL_ROOT:    '../../../../',
+        VERSION:     '4.2.0',
+        COLLAPSE_INDEX: false,
+        FILE_SUFFIX: '.html',
+        HAS_SOURCE:  true
+      };
+    </script>
+    <script type="text/javascript" src="../../../../_static/jquery.js"></script>
+    <script type="text/javascript" src="../../../../_static/underscore.js"></script>
+    <script type="text/javascript" src="../../../../_static/doctools.js"></script>
+    <script type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.1/MathJax.js?config=TeX-MML-AM_CHTML"></script>
+    <link rel="top" title="SasView 4.2.0 documentation" href="../../../../index.html" />
+    <link rel="up" title="sas.sasgui.guiframe" href="../guiframe.html" /> 
+  </head>
+  <body role="document">
+    <div class="related" role="navigation" aria-label="related navigation">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="../../../../genindex.html" title="General Index"
+             accesskey="I">index</a></li>
+        <li class="right" >
+          <a href="../../../../py-modindex.html" title="Python Module Index"
+             >modules</a> |</li>
+        <li class="nav-item nav-item-0"><a href="../../../../index.html">SasView 4.2.0 documentation</a> &raquo;</li>
+          <li class="nav-item nav-item-1"><a href="../../../index.html" >Module code</a> &raquo;</li>
+          <li class="nav-item nav-item-2"><a href="../../../sas.html" >sas</a> &raquo;</li>
+          <li class="nav-item nav-item-3"><a href="../guiframe.html" accesskey="U">sas.sasgui.guiframe</a> &raquo;</li> 
+      </ul>
+    </div>  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          <div class="body" role="main">
+            
+  <h1>Source code for sas.sasgui.guiframe.panel_base</h1><div class="highlight"><pre>
+<span></span>
+
+<span class="c1">################################################################################</span>
+<span class="c1">#This software was developed by the University of Tennessee as part of the</span>
+<span class="c1">#Distributed Data Analysis of Neutron Scattering Experiments (DANSE)</span>
+<span class="c1">#project funded by the US National Science Foundation. </span>
+<span class="c1">#</span>
+<span class="c1">#See the license text in license.txt</span>
+<span class="c1">#</span>
+<span class="c1">#copyright 2008, University of Tennessee</span>
+<span class="c1">################################################################################</span>
+
+
+<span class="kn">from</span> <span class="nn">sas.sasgui.guiframe.events</span> <span class="kn">import</span> <span class="n">PanelOnFocusEvent</span>
+<span class="kn">from</span> <span class="nn">sas.sasgui.guiframe.events</span> <span class="kn">import</span> <span class="n">EVT_NEW_BATCH</span>
+<span class="kn">import</span> <span class="nn">wx</span>
+
+<div class="viewcode-block" id="PanelBase"><a class="viewcode-back" href="../../../../dev/sasview-api/sas.sasgui.guiframe.html#sas.sasgui.guiframe.panel_base.PanelBase">[docs]</a><span class="k">class</span> <span class="nc">PanelBase</span><span class="p">:</span>
+    <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Defines the API for a panels to work with</span>
+<span class="sd">    the ViewerFrame toolbar and menu bar</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="c1">## Internal nickname for the window, used by the AUI manager</span>
+    <span class="c1">#window_name = &quot;default&quot;</span>
+    <span class="c1">## Name to appear on the window title bar</span>
+    <span class="c1">#window_caption = &quot;Welcome panel&quot;</span>
+    <span class="c1">## Flag to tell the AUI manager to put this panel in the center pane</span>
+    <span class="n">group_id</span> <span class="o">=</span> <span class="bp">None</span>
+    <span class="n">uid</span> <span class="o">=</span> <span class="bp">None</span>
+    
+    <span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">parent</span><span class="o">=</span><span class="bp">None</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Initialize some flag that Viewerframe used</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="c1">#panel manager</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_manager</span> <span class="o">=</span> <span class="bp">None</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">parent</span> <span class="o">=</span> <span class="n">parent</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">parent</span> <span class="ow">is</span> <span class="ow">not</span> <span class="bp">None</span> <span class="ow">and</span> <span class="nb">hasattr</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">parent</span><span class="p">,</span> <span class="s1">&#39;_manager&#39;</span><span class="p">):</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_manager</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">parent</span><span class="o">.</span><span class="n">_manager</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_print_flag</span> <span class="o">=</span> <span class="bp">False</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_undo_flag</span> <span class="o">=</span> <span class="bp">False</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_redo_flag</span> <span class="o">=</span> <span class="bp">False</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_copy_flag</span> <span class="o">=</span> <span class="bp">False</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_paste_flag</span> <span class="o">=</span> <span class="bp">False</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_preview_flag</span> <span class="o">=</span> <span class="bp">False</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_bookmark_flag</span> <span class="o">=</span> <span class="bp">False</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_zoom_in_flag</span> <span class="o">=</span> <span class="bp">False</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_zoom_out_flag</span> <span class="o">=</span> <span class="bp">False</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_zoom_flag</span> <span class="o">=</span> <span class="bp">False</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_save_flag</span> <span class="o">=</span> <span class="bp">False</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_drag_flag</span> <span class="o">=</span> <span class="bp">False</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_reset_flag</span> <span class="o">=</span> <span class="bp">False</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_has_changed</span> <span class="o">=</span> <span class="bp">False</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">batch_on</span> <span class="o">=</span> <span class="bp">False</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">parent</span> <span class="ow">is</span> <span class="ow">not</span> <span class="bp">None</span> <span class="ow">and</span> <span class="nb">hasattr</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">parent</span><span class="p">,</span> <span class="s2">&quot;batch_on&quot;</span><span class="p">):</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">batch_on</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">parent</span><span class="o">.</span><span class="n">batch_on</span>
+       
+        <span class="bp">self</span><span class="o">.</span><span class="n">group_id</span> <span class="o">=</span> <span class="bp">None</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">help_string</span> <span class="o">=</span> <span class="s1">&#39;&#39;</span>
+
+<div class="viewcode-block" id="PanelBase.on_batch_selection"><a class="viewcode-back" href="../../../../dev/sasview-api/sas.sasgui.guiframe.html#sas.sasgui.guiframe.panel_base.PanelBase.on_batch_selection">[docs]</a>    <span class="k">def</span> <span class="nf">on_batch_selection</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">event</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        :param event: contains parameter enable. When enable is set to True</span>
+<span class="sd">            the application is in Batch mode otherwise the application is</span>
+<span class="sd">            in Single mode.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">batch_on</span> <span class="o">=</span> <span class="n">event</span><span class="o">.</span><span class="n">enable</span></div>
+<div class="viewcode-block" id="PanelBase.save_project"><a class="viewcode-back" href="../../../../dev/sasview-api/sas.sasgui.guiframe.html#sas.sasgui.guiframe.panel_base.PanelBase.save_project">[docs]</a>    <span class="k">def</span> <span class="nf">save_project</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">doc</span><span class="o">=</span><span class="bp">None</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        return an xml node containing state of the panel</span>
+<span class="sd">        that guiframe can write to file</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">return</span> <span class="bp">None</span></div>
+    
+<div class="viewcode-block" id="PanelBase.has_changed"><a class="viewcode-back" href="../../../../dev/sasview-api/sas.sasgui.guiframe.html#sas.sasgui.guiframe.panel_base.PanelBase.has_changed">[docs]</a>    <span class="k">def</span> <span class="nf">has_changed</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_has_changed</span></div>
+            
+    <span class="k">def</span> <span class="nf">_set_print_flag</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">flag</span><span class="o">=</span><span class="bp">True</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        The derivative class sets the print flag value to indicate that it can </span>
+<span class="sd">        be printed</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">if</span> <span class="n">flag</span> <span class="o">==</span> <span class="bp">self</span><span class="o">.</span><span class="n">_print_flag</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_has_changed</span> <span class="o">=</span> <span class="bp">False</span>
+            <span class="k">return</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_has_changed</span> <span class="o">=</span> <span class="bp">True</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_print_flag</span> <span class="o">=</span> <span class="n">flag</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">_manager</span> <span class="ow">is</span> <span class="ow">not</span> <span class="bp">None</span> <span class="ow">and</span> <span class="bp">self</span><span class="o">.</span><span class="n">_manager</span><span class="o">.</span><span class="n">parent</span> <span class="ow">is</span> <span class="ow">not</span> <span class="bp">None</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_manager</span><span class="o">.</span><span class="n">parent</span><span class="o">.</span><span class="n">cpanel_on_focus</span> <span class="o">=</span> <span class="bp">self</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_manager</span><span class="o">.</span><span class="n">parent</span><span class="o">.</span><span class="n">enable_print</span><span class="p">()</span>
+     
+<div class="viewcode-block" id="PanelBase.get_print_flag"><a class="viewcode-back" href="../../../../dev/sasview-api/sas.sasgui.guiframe.html#sas.sasgui.guiframe.panel_base.PanelBase.get_print_flag">[docs]</a>    <span class="k">def</span> <span class="nf">get_print_flag</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Get the print flag to update appropriately the tool bar</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_print_flag</span></div>
+    
+    <span class="k">def</span> <span class="nf">_set_undo_flag</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">flag</span><span class="o">=</span><span class="bp">True</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        The derivative class sets the undo flag value to indicate that the </span>
+<span class="sd">        current action done can be canceled</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">if</span> <span class="n">flag</span> <span class="o">==</span> <span class="bp">self</span><span class="o">.</span><span class="n">_undo_flag</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_has_changed</span> <span class="o">=</span> <span class="bp">False</span>
+            <span class="k">return</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_has_changed</span> <span class="o">=</span> <span class="bp">True</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_undo_flag</span> <span class="o">=</span> <span class="n">flag</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">_manager</span> <span class="ow">is</span> <span class="ow">not</span> <span class="bp">None</span> <span class="ow">and</span> <span class="bp">self</span><span class="o">.</span><span class="n">_manager</span><span class="o">.</span><span class="n">parent</span> <span class="ow">is</span> <span class="ow">not</span> <span class="bp">None</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_manager</span><span class="o">.</span><span class="n">parent</span><span class="o">.</span><span class="n">cpanel_on_focus</span> <span class="o">=</span> <span class="bp">self</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_manager</span><span class="o">.</span><span class="n">parent</span><span class="o">.</span><span class="n">enable_undo</span><span class="p">()</span>
+      
+<div class="viewcode-block" id="PanelBase.get_undo_flag"><a class="viewcode-back" href="../../../../dev/sasview-api/sas.sasgui.guiframe.html#sas.sasgui.guiframe.panel_base.PanelBase.get_undo_flag">[docs]</a>    <span class="k">def</span> <span class="nf">get_undo_flag</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Get the undo flag to update appropriately the tool bar</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_undo_flag</span></div>
+    
+    <span class="k">def</span> <span class="nf">_set_redo_flag</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">flag</span><span class="o">=</span><span class="bp">True</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        The derivative class sets the redo flag value to indicate that the </span>
+<span class="sd">        action done can be recovered</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">if</span> <span class="n">flag</span> <span class="o">==</span> <span class="bp">self</span><span class="o">.</span><span class="n">_redo_flag</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_has_changed</span> <span class="o">=</span> <span class="bp">False</span>
+            <span class="k">return</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_has_changed</span> <span class="o">=</span> <span class="bp">True</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_redo_flag</span> <span class="o">=</span> <span class="n">flag</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">_manager</span> <span class="ow">is</span> <span class="ow">not</span> <span class="bp">None</span> <span class="ow">and</span> <span class="bp">self</span><span class="o">.</span><span class="n">_manager</span><span class="o">.</span><span class="n">parent</span> <span class="ow">is</span> <span class="ow">not</span> <span class="bp">None</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_manager</span><span class="o">.</span><span class="n">parent</span><span class="o">.</span><span class="n">cpanel_on_focus</span> <span class="o">=</span> <span class="bp">self</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_manager</span><span class="o">.</span><span class="n">parent</span><span class="o">.</span><span class="n">enable_redo</span><span class="p">()</span>
+      
+<div class="viewcode-block" id="PanelBase.get_redo_flag"><a class="viewcode-back" href="../../../../dev/sasview-api/sas.sasgui.guiframe.html#sas.sasgui.guiframe.panel_base.PanelBase.get_redo_flag">[docs]</a>    <span class="k">def</span> <span class="nf">get_redo_flag</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Get the redo flag to update appropriately the tool bar</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_redo_flag</span></div>
+
+    <span class="k">def</span> <span class="nf">_set_copy_flag</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">flag</span><span class="o">=</span><span class="bp">True</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        The derivative class sets the copy flag value to indicate that the </span>
+<span class="sd">        action done can be recovered</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">if</span> <span class="n">flag</span> <span class="o">==</span> <span class="bp">self</span><span class="o">.</span><span class="n">_copy_flag</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_has_changed</span> <span class="o">=</span> <span class="bp">False</span>
+            <span class="k">return</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_has_changed</span> <span class="o">=</span> <span class="bp">True</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_copy_flag</span> <span class="o">=</span> <span class="n">flag</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">_manager</span> <span class="ow">is</span> <span class="ow">not</span> <span class="bp">None</span> <span class="ow">and</span> <span class="bp">self</span><span class="o">.</span><span class="n">_manager</span><span class="o">.</span><span class="n">parent</span> <span class="ow">is</span> <span class="ow">not</span> <span class="bp">None</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_manager</span><span class="o">.</span><span class="n">parent</span><span class="o">.</span><span class="n">cpanel_on_focus</span> <span class="o">=</span> <span class="bp">self</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_manager</span><span class="o">.</span><span class="n">parent</span><span class="o">.</span><span class="n">enable_copy</span><span class="p">()</span>
+      
+<div class="viewcode-block" id="PanelBase.get_copy_flag"><a class="viewcode-back" href="../../../../dev/sasview-api/sas.sasgui.guiframe.html#sas.sasgui.guiframe.panel_base.PanelBase.get_copy_flag">[docs]</a>    <span class="k">def</span> <span class="nf">get_copy_flag</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Get the copy flag to update appropriately the tool bar</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_copy_flag</span></div>
+    
+    <span class="k">def</span> <span class="nf">_set_paste_flag</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">flag</span><span class="o">=</span><span class="bp">True</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        The derivative class sets the paste flag value to indicate that the </span>
+<span class="sd">        action done can be recovered</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">if</span> <span class="n">flag</span> <span class="o">==</span> <span class="bp">self</span><span class="o">.</span><span class="n">_paste_flag</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_has_changed</span> <span class="o">=</span> <span class="bp">False</span>
+            <span class="k">return</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_has_changed</span> <span class="o">=</span> <span class="bp">True</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_paste_flag</span> <span class="o">=</span> <span class="n">flag</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">_manager</span> <span class="ow">is</span> <span class="ow">not</span> <span class="bp">None</span> <span class="ow">and</span> <span class="bp">self</span><span class="o">.</span><span class="n">_manager</span><span class="o">.</span><span class="n">parent</span> <span class="ow">is</span> <span class="ow">not</span> <span class="bp">None</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_manager</span><span class="o">.</span><span class="n">parent</span><span class="o">.</span><span class="n">cpanel_on_focus</span> <span class="o">=</span> <span class="bp">self</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_manager</span><span class="o">.</span><span class="n">parent</span><span class="o">.</span><span class="n">enable_paste</span><span class="p">()</span>
+      
+<div class="viewcode-block" id="PanelBase.get_paste_flag"><a class="viewcode-back" href="../../../../dev/sasview-api/sas.sasgui.guiframe.html#sas.sasgui.guiframe.panel_base.PanelBase.get_paste_flag">[docs]</a>    <span class="k">def</span> <span class="nf">get_paste_flag</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Get the copy flag to update appropriately the tool bar</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_copy_flag</span></div>
+       
+    <span class="k">def</span> <span class="nf">_set_zoomed_in_flag</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">flag</span><span class="o">=</span><span class="bp">True</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        The derivative class sets the zoom in flag value to indicate that it</span>
+<span class="sd">        can be zoomed in</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">_zoom_in_flag</span> <span class="o">==</span> <span class="n">flag</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_has_changed</span> <span class="o">=</span> <span class="bp">False</span>
+            <span class="k">return</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_has_changed</span> <span class="o">=</span> <span class="bp">True</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_zoom_in_flag</span> <span class="o">=</span> <span class="n">flag</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">_manager</span> <span class="ow">is</span> <span class="ow">not</span> <span class="bp">None</span> <span class="ow">and</span> <span class="bp">self</span><span class="o">.</span><span class="n">_manager</span><span class="o">.</span><span class="n">parent</span> <span class="ow">is</span> <span class="ow">not</span> <span class="bp">None</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_manager</span><span class="o">.</span><span class="n">parent</span><span class="o">.</span><span class="n">cpanel_on_focus</span> <span class="o">=</span> <span class="bp">self</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_manager</span><span class="o">.</span><span class="n">parent</span><span class="o">.</span><span class="n">enable_zoom_in</span><span class="p">()</span>
+       
+<div class="viewcode-block" id="PanelBase.get_zoom_in_flag"><a class="viewcode-back" href="../../../../dev/sasview-api/sas.sasgui.guiframe.html#sas.sasgui.guiframe.panel_base.PanelBase.get_zoom_in_flag">[docs]</a>    <span class="k">def</span> <span class="nf">get_zoom_in_flag</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Get the zoom in flag to update appropriately the tool bar</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_zoom_in_flag</span></div>
+    
+    <span class="k">def</span> <span class="nf">_set_zoomed_out_flag</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">flag</span><span class="o">=</span><span class="bp">True</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        The derivative class sets the zoom out flag value to indicate that it</span>
+<span class="sd">        can be zoomed out</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">_zoom_out_flag</span> <span class="o">==</span> <span class="n">flag</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_has_changed</span> <span class="o">=</span> <span class="bp">False</span>
+            <span class="k">return</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_has_changed</span> <span class="o">=</span> <span class="bp">True</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_zoom_out_flag</span> <span class="o">=</span> <span class="n">flag</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">_manager</span> <span class="ow">is</span> <span class="ow">not</span> <span class="bp">None</span> <span class="ow">and</span> <span class="bp">self</span><span class="o">.</span><span class="n">_manager</span><span class="o">.</span><span class="n">parent</span> <span class="ow">is</span> <span class="ow">not</span> <span class="bp">None</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_manager</span><span class="o">.</span><span class="n">parent</span><span class="o">.</span><span class="n">panel_on_focus</span> <span class="o">=</span> <span class="bp">self</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_manager</span><span class="o">.</span><span class="n">parent</span><span class="o">.</span><span class="n">enable_zoom_out</span><span class="p">()</span>
+        
+<div class="viewcode-block" id="PanelBase.get_zoom_out_flag"><a class="viewcode-back" href="../../../../dev/sasview-api/sas.sasgui.guiframe.html#sas.sasgui.guiframe.panel_base.PanelBase.get_zoom_out_flag">[docs]</a>    <span class="k">def</span> <span class="nf">get_zoom_out_flag</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Get the zoom out flag to update appropriately the tool bar</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_zoom_out_flag</span></div>
+    
+    <span class="k">def</span> <span class="nf">_set_zoom_flag</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">flag</span><span class="o">=</span><span class="bp">True</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        The derivative class sets the zoom flag value to indicate that it</span>
+<span class="sd">        can be zoomed</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">if</span> <span class="n">flag</span> <span class="o">==</span> <span class="bp">self</span><span class="o">.</span><span class="n">_zoom_flag</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_has_changed</span> <span class="o">=</span> <span class="bp">False</span>
+            <span class="k">return</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_has_changed</span> <span class="o">=</span> <span class="bp">True</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_zoom_flag</span> <span class="o">=</span> <span class="n">flag</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">_manager</span> <span class="ow">is</span> <span class="ow">not</span> <span class="bp">None</span> <span class="ow">and</span> <span class="bp">self</span><span class="o">.</span><span class="n">_manager</span><span class="o">.</span><span class="n">parent</span> <span class="ow">is</span> <span class="ow">not</span> <span class="bp">None</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_manager</span><span class="o">.</span><span class="n">parent</span><span class="o">.</span><span class="n">cpanel_on_focus</span> <span class="o">=</span> <span class="bp">self</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_manager</span><span class="o">.</span><span class="n">parent</span><span class="o">.</span><span class="n">enable_zoom</span><span class="p">()</span>
+     
+<div class="viewcode-block" id="PanelBase.get_zoom_flag"><a class="viewcode-back" href="../../../../dev/sasview-api/sas.sasgui.guiframe.html#sas.sasgui.guiframe.panel_base.PanelBase.get_zoom_flag">[docs]</a>    <span class="k">def</span> <span class="nf">get_zoom_flag</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Get the zoom flag to update appropriately the tool bar</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_zoom_flag</span></div>
+    
+    <span class="k">def</span> <span class="nf">_set_bookmark_flag</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">flag</span><span class="o">=</span><span class="bp">True</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        The derivative class sets the bookmark flag value to indicate that it</span>
+<span class="sd">        can be bookmarked</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">if</span> <span class="n">flag</span> <span class="o">==</span> <span class="bp">self</span><span class="o">.</span><span class="n">_bookmark_flag</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_has_changed</span> <span class="o">=</span> <span class="bp">False</span>
+            <span class="k">return</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_has_changed</span> <span class="o">=</span> <span class="bp">True</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_bookmark_flag</span> <span class="o">=</span> <span class="n">flag</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">_manager</span> <span class="ow">is</span> <span class="ow">not</span> <span class="bp">None</span> <span class="ow">and</span> <span class="bp">self</span><span class="o">.</span><span class="n">_manager</span><span class="o">.</span><span class="n">parent</span> <span class="ow">is</span> <span class="ow">not</span> <span class="bp">None</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_manager</span><span class="o">.</span><span class="n">parent</span><span class="o">.</span><span class="n">cpanel_on_focus</span> <span class="o">=</span> <span class="bp">self</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_manager</span><span class="o">.</span><span class="n">parent</span><span class="o">.</span><span class="n">enable_bookmark</span><span class="p">()</span>
+       
+<div class="viewcode-block" id="PanelBase.get_bookmark_flag"><a class="viewcode-back" href="../../../../dev/sasview-api/sas.sasgui.guiframe.html#sas.sasgui.guiframe.panel_base.PanelBase.get_bookmark_flag">[docs]</a>    <span class="k">def</span> <span class="nf">get_bookmark_flag</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Get the bookmark flag to update appropriately the tool bar</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_bookmark_flag</span></div>
+    
+    <span class="k">def</span> <span class="nf">_set_preview_flag</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">flag</span><span class="o">=</span><span class="bp">True</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        The derivative class sets the preview flag value to indicate that it</span>
+<span class="sd">        can be previewed</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">if</span> <span class="n">flag</span> <span class="o">==</span> <span class="bp">self</span><span class="o">.</span><span class="n">_preview_flag</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_has_changed</span> <span class="o">=</span> <span class="bp">False</span>
+            <span class="k">return</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_has_changed</span> <span class="o">=</span> <span class="bp">True</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_preview_flag</span> <span class="o">=</span> <span class="n">flag</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">_manager</span> <span class="ow">is</span> <span class="ow">not</span> <span class="bp">None</span> <span class="ow">and</span> <span class="bp">self</span><span class="o">.</span><span class="n">_manager</span><span class="o">.</span><span class="n">parent</span> <span class="ow">is</span> <span class="ow">not</span> <span class="bp">None</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_manager</span><span class="o">.</span><span class="n">parent</span><span class="o">.</span><span class="n">cpanel_on_focus</span> <span class="o">=</span> <span class="bp">self</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_manager</span><span class="o">.</span><span class="n">parent</span><span class="o">.</span><span class="n">enable_preview</span><span class="p">()</span>
+       
+<div class="viewcode-block" id="PanelBase.get_preview_flag"><a class="viewcode-back" href="../../../../dev/sasview-api/sas.sasgui.guiframe.html#sas.sasgui.guiframe.panel_base.PanelBase.get_preview_flag">[docs]</a>    <span class="k">def</span> <span class="nf">get_preview_flag</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Get the preview flag to update appropriately the tool bar</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_preview_flag</span></div>
+    
+    <span class="k">def</span> <span class="nf">_set_save_flag</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">flag</span><span class="o">=</span><span class="bp">True</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        The derivative class sets the drag flag value to indicate that it</span>
+<span class="sd">        can be saved</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">if</span> <span class="n">flag</span> <span class="o">==</span> <span class="bp">self</span><span class="o">.</span><span class="n">_save_flag</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_has_changed</span> <span class="o">=</span> <span class="bp">False</span>
+            <span class="k">return</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_has_changed</span> <span class="o">=</span> <span class="bp">True</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_save_flag</span> <span class="o">=</span> <span class="n">flag</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">_manager</span> <span class="ow">is</span> <span class="ow">not</span> <span class="bp">None</span> <span class="ow">and</span> <span class="bp">self</span><span class="o">.</span><span class="n">_manager</span><span class="o">.</span><span class="n">parent</span> <span class="ow">is</span> <span class="ow">not</span> <span class="bp">None</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_manager</span><span class="o">.</span><span class="n">parent</span><span class="o">.</span><span class="n">cpanel_on_focus</span> <span class="o">=</span> <span class="bp">self</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_manager</span><span class="o">.</span><span class="n">parent</span><span class="o">.</span><span class="n">enable_save</span><span class="p">()</span>
+
+<div class="viewcode-block" id="PanelBase.get_save_flag"><a class="viewcode-back" href="../../../../dev/sasview-api/sas.sasgui.guiframe.html#sas.sasgui.guiframe.panel_base.PanelBase.get_save_flag">[docs]</a>    <span class="k">def</span> <span class="nf">get_save_flag</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Get the save flag to update appropriately the tool bar</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_save_flag</span></div>
+    
+    <span class="k">def</span> <span class="nf">_set_drag_flag</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">flag</span><span class="o">=</span><span class="bp">True</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        The derivative class sets the drag flag value to indicate that </span>
+<span class="sd">        dragging motion is possible</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">_drag_flag</span> <span class="o">==</span> <span class="n">flag</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_has_changed</span> <span class="o">=</span> <span class="bp">False</span>
+            <span class="k">return</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_has_changed</span> <span class="o">=</span> <span class="bp">True</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_drag_flag</span> <span class="o">=</span> <span class="n">flag</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">_manager</span> <span class="ow">is</span> <span class="ow">not</span> <span class="bp">None</span> <span class="ow">and</span> <span class="bp">self</span><span class="o">.</span><span class="n">_manager</span><span class="o">.</span><span class="n">parent</span> <span class="ow">is</span> <span class="ow">not</span> <span class="bp">None</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_manager</span><span class="o">.</span><span class="n">parent</span><span class="o">.</span><span class="n">cpanel_on_focus</span> <span class="o">=</span> <span class="bp">self</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_manager</span><span class="o">.</span><span class="n">parent</span><span class="o">.</span><span class="n">enable_drag</span><span class="p">()</span>
+       
+<div class="viewcode-block" id="PanelBase.get_drag_flag"><a class="viewcode-back" href="../../../../dev/sasview-api/sas.sasgui.guiframe.html#sas.sasgui.guiframe.panel_base.PanelBase.get_drag_flag">[docs]</a>    <span class="k">def</span> <span class="nf">get_drag_flag</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Get the drag flag to update appropriately the tool bar</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_drag_flag</span></div>
+
+    <span class="k">def</span> <span class="nf">_set_analysis</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">flag</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Set the Analysis Save state flag and informs the manager</span>
+<span class="sd">        so it refreshes the menu/whole panel</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_set_save_flag</span><span class="p">(</span><span class="n">flag</span><span class="p">)</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">_manager</span> <span class="ow">is</span> <span class="ow">not</span> <span class="bp">None</span><span class="p">:</span>
+            <span class="n">wx</span><span class="o">.</span><span class="n">PostEvent</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_manager</span><span class="o">.</span><span class="n">parent</span><span class="p">,</span> <span class="n">PanelOnFocusEvent</span><span class="p">(</span><span class="n">panel</span><span class="o">=</span><span class="bp">self</span><span class="p">))</span>
+
+    <span class="k">def</span> <span class="nf">_set_reset_flag</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">flag</span><span class="o">=</span><span class="bp">True</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        The derivative class sets the reset flag value to indicate that it</span>
+<span class="sd">        can be reset</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">_reset_flag</span> <span class="o">==</span> <span class="n">flag</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_has_changed</span> <span class="o">=</span> <span class="bp">False</span>
+            <span class="k">return</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_has_changed</span> <span class="o">=</span> <span class="bp">True</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_reset_flag</span> <span class="o">=</span> <span class="n">flag</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">_manager</span> <span class="ow">is</span> <span class="ow">not</span> <span class="bp">None</span> <span class="ow">and</span> <span class="bp">self</span><span class="o">.</span><span class="n">_manager</span><span class="o">.</span><span class="n">parent</span> <span class="ow">is</span> <span class="ow">not</span> <span class="bp">None</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_manager</span><span class="o">.</span><span class="n">parent</span><span class="o">.</span><span class="n">cpanel_on_focus</span> <span class="o">=</span> <span class="bp">self</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_manager</span><span class="o">.</span><span class="n">parent</span><span class="o">.</span><span class="n">enable_reset</span><span class="p">()</span>
+            
+<div class="viewcode-block" id="PanelBase.on_tap_focus"><a class="viewcode-back" href="../../../../dev/sasview-api/sas.sasgui.guiframe.html#sas.sasgui.guiframe.panel_base.PanelBase.on_tap_focus">[docs]</a>    <span class="k">def</span> <span class="nf">on_tap_focus</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Update menu on clicking the panel tap</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="c1">#Implemented only on fitting note book </span>
+        <span class="k">pass</span></div>
+      
+<div class="viewcode-block" id="PanelBase.get_reset_flag"><a class="viewcode-back" href="../../../../dev/sasview-api/sas.sasgui.guiframe.html#sas.sasgui.guiframe.panel_base.PanelBase.get_reset_flag">[docs]</a>    <span class="k">def</span> <span class="nf">get_reset_flag</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Get the reset flag to update appropriately the tool bar</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_reset_flag</span></div>
+
+<div class="viewcode-block" id="PanelBase.on_reset"><a class="viewcode-back" href="../../../../dev/sasview-api/sas.sasgui.guiframe.html#sas.sasgui.guiframe.panel_base.PanelBase.on_reset">[docs]</a>    <span class="k">def</span> <span class="nf">on_reset</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">event</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        The derivative class state is restored</span>
+<span class="sd">        &quot;&quot;&quot;</span></div>
+<div class="viewcode-block" id="PanelBase.on_drag"><a class="viewcode-back" href="../../../../dev/sasview-api/sas.sasgui.guiframe.html#sas.sasgui.guiframe.panel_base.PanelBase.on_drag">[docs]</a>    <span class="k">def</span> <span class="nf">on_drag</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">event</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        The derivative class allows dragging motion if implemented</span>
+<span class="sd">        &quot;&quot;&quot;</span></div>
+<div class="viewcode-block" id="PanelBase.on_preview"><a class="viewcode-back" href="../../../../dev/sasview-api/sas.sasgui.guiframe.html#sas.sasgui.guiframe.panel_base.PanelBase.on_preview">[docs]</a>    <span class="k">def</span> <span class="nf">on_preview</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">event</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Display a printable version of the class derivative</span>
+<span class="sd">        &quot;&quot;&quot;</span></div>
+<div class="viewcode-block" id="PanelBase.on_save"><a class="viewcode-back" href="../../../../dev/sasview-api/sas.sasgui.guiframe.html#sas.sasgui.guiframe.panel_base.PanelBase.on_save">[docs]</a>    <span class="k">def</span> <span class="nf">on_save</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">event</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        The state of the derivative class is restored</span>
+<span class="sd">        &quot;&quot;&quot;</span></div>
+<div class="viewcode-block" id="PanelBase.on_redo"><a class="viewcode-back" href="../../../../dev/sasview-api/sas.sasgui.guiframe.html#sas.sasgui.guiframe.panel_base.PanelBase.on_redo">[docs]</a>    <span class="k">def</span> <span class="nf">on_redo</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">event</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        The previous action is restored if possible</span>
+<span class="sd">        &quot;&quot;&quot;</span></div>
+<div class="viewcode-block" id="PanelBase.on_undo"><a class="viewcode-back" href="../../../../dev/sasview-api/sas.sasgui.guiframe.html#sas.sasgui.guiframe.panel_base.PanelBase.on_undo">[docs]</a>    <span class="k">def</span> <span class="nf">on_undo</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">event</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        The current action is canceled</span>
+<span class="sd">        &quot;&quot;&quot;</span></div>
+<div class="viewcode-block" id="PanelBase.on_copy"><a class="viewcode-back" href="../../../../dev/sasview-api/sas.sasgui.guiframe.html#sas.sasgui.guiframe.panel_base.PanelBase.on_copy">[docs]</a>    <span class="k">def</span> <span class="nf">on_copy</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">event</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        The copy action if possible</span>
+<span class="sd">        &quot;&quot;&quot;</span></div>
+<div class="viewcode-block" id="PanelBase.on_paste"><a class="viewcode-back" href="../../../../dev/sasview-api/sas.sasgui.guiframe.html#sas.sasgui.guiframe.panel_base.PanelBase.on_paste">[docs]</a>    <span class="k">def</span> <span class="nf">on_paste</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">event</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        The paste action if possible</span>
+<span class="sd">        &quot;&quot;&quot;</span></div>
+<div class="viewcode-block" id="PanelBase.on_bookmark"><a class="viewcode-back" href="../../../../dev/sasview-api/sas.sasgui.guiframe.html#sas.sasgui.guiframe.panel_base.PanelBase.on_bookmark">[docs]</a>    <span class="k">def</span> <span class="nf">on_bookmark</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">event</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        The derivative class is on bookmark mode if implemented</span>
+<span class="sd">        &quot;&quot;&quot;</span></div>
+<div class="viewcode-block" id="PanelBase.on_zoom_in"><a class="viewcode-back" href="../../../../dev/sasview-api/sas.sasgui.guiframe.html#sas.sasgui.guiframe.panel_base.PanelBase.on_zoom_in">[docs]</a>    <span class="k">def</span> <span class="nf">on_zoom_in</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">event</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        The derivative class is on zoom in mode if implemented</span>
+<span class="sd">        &quot;&quot;&quot;</span></div>
+<div class="viewcode-block" id="PanelBase.on_zoom_out"><a class="viewcode-back" href="../../../../dev/sasview-api/sas.sasgui.guiframe.html#sas.sasgui.guiframe.panel_base.PanelBase.on_zoom_out">[docs]</a>    <span class="k">def</span> <span class="nf">on_zoom_out</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">event</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        The derivative class is on zoom out mode if implemented</span>
+<span class="sd">        &quot;&quot;&quot;</span></div>
+<div class="viewcode-block" id="PanelBase.on_zoom"><a class="viewcode-back" href="../../../../dev/sasview-api/sas.sasgui.guiframe.html#sas.sasgui.guiframe.panel_base.PanelBase.on_zoom">[docs]</a>    <span class="k">def</span> <span class="nf">on_zoom</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">event</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        The derivative class is on zoom mode (using pane)</span>
+<span class="sd">        if zoom mode is implemented</span>
+<span class="sd">        &quot;&quot;&quot;</span></div>
+<div class="viewcode-block" id="PanelBase.on_set_focus"><a class="viewcode-back" href="../../../../dev/sasview-api/sas.sasgui.guiframe.html#sas.sasgui.guiframe.panel_base.PanelBase.on_set_focus">[docs]</a>    <span class="k">def</span> <span class="nf">on_set_focus</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">event</span><span class="o">=</span><span class="bp">None</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        The  derivative class is on focus if implemented</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">parent</span> <span class="ow">is</span> <span class="ow">not</span> <span class="bp">None</span><span class="p">:</span>
+            <span class="n">wx</span><span class="o">.</span><span class="n">PostEvent</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">parent</span><span class="p">,</span> <span class="n">PanelOnFocusEvent</span><span class="p">(</span><span class="n">panel</span><span class="o">=</span><span class="bp">self</span><span class="p">))</span></div>
+            
+<div class="viewcode-block" id="PanelBase.on_kill_focus"><a class="viewcode-back" href="../../../../dev/sasview-api/sas.sasgui.guiframe.html#sas.sasgui.guiframe.panel_base.PanelBase.on_kill_focus">[docs]</a>    <span class="k">def</span> <span class="nf">on_kill_focus</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">event</span><span class="o">=</span><span class="bp">None</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        The  derivative class is on unfocus if implemented</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">pass</span></div>
+                
+<div class="viewcode-block" id="PanelBase.get_data"><a class="viewcode-back" href="../../../../dev/sasview-api/sas.sasgui.guiframe.html#sas.sasgui.guiframe.panel_base.PanelBase.get_data">[docs]</a>    <span class="k">def</span> <span class="nf">get_data</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        return list of current data</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">return</span></div>
+    
+<div class="viewcode-block" id="PanelBase.get_state"><a class="viewcode-back" href="../../../../dev/sasview-api/sas.sasgui.guiframe.html#sas.sasgui.guiframe.panel_base.PanelBase.get_state">[docs]</a>    <span class="k">def</span> <span class="nf">get_state</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">         return the current state</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">return</span></div>
+
+<div class="viewcode-block" id="PanelBase.set_manager"><a class="viewcode-back" href="../../../../dev/sasview-api/sas.sasgui.guiframe.html#sas.sasgui.guiframe.panel_base.PanelBase.set_manager">[docs]</a>    <span class="k">def</span> <span class="nf">set_manager</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">manager</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_manager</span> <span class="o">=</span> <span class="n">manager</span> </div>
+        
+<div class="viewcode-block" id="PanelBase.get_manager"><a class="viewcode-back" href="../../../../dev/sasview-api/sas.sasgui.guiframe.html#sas.sasgui.guiframe.panel_base.PanelBase.get_manager">[docs]</a>    <span class="k">def</span> <span class="nf">get_manager</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_manager</span>  </div>
+      
+<div class="viewcode-block" id="PanelBase.get_frame"><a class="viewcode-back" href="../../../../dev/sasview-api/sas.sasgui.guiframe.html#sas.sasgui.guiframe.panel_base.PanelBase.get_frame">[docs]</a>    <span class="k">def</span> <span class="nf">get_frame</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">_manager</span> <span class="ow">is</span> <span class="bp">None</span><span class="p">:</span>
+            <span class="k">return</span> <span class="bp">None</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_manager</span><span class="o">.</span><span class="n">frame</span></div>
+    
+<div class="viewcode-block" id="PanelBase.on_close"><a class="viewcode-back" href="../../../../dev/sasview-api/sas.sasgui.guiframe.html#sas.sasgui.guiframe.panel_base.PanelBase.on_close">[docs]</a>    <span class="k">def</span> <span class="nf">on_close</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">event</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">            Close event. Hide the whole window.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">parent</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">GetParent</span><span class="p">()</span>
+        <span class="k">if</span> <span class="n">parent</span> <span class="ow">is</span> <span class="ow">not</span> <span class="bp">None</span><span class="p">:</span>
+            <span class="n">parent</span><span class="o">.</span><span class="n">Hide</span><span class="p">()</span></div></div>
+            
+</pre></div>
+
+          </div>
+        </div>
+      </div>
+      <div class="sphinxsidebar" role="navigation" aria-label="main navigation">
+        <div class="sphinxsidebarwrapper">
+<div id="searchbox" style="display: none" role="search">
+  <h3>Quick search</h3>
+    <form class="search" action="../../../../search.html" method="get">
+      <input type="text" name="q" />
+      <input type="submit" value="Go" />
+      <input type="hidden" name="check_keywords" value="yes" />
+      <input type="hidden" name="area" value="default" />
+    </form>
+</div>
+<script type="text/javascript">$('#searchbox').show(0);</script>
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="related" role="navigation" aria-label="related navigation">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="../../../../genindex.html" title="General Index"
+             >index</a></li>
+        <li class="right" >
+          <a href="../../../../py-modindex.html" title="Python Module Index"
+             >modules</a> |</li>
+        <li class="nav-item nav-item-0"><a href="../../../../index.html">SasView 4.2.0 documentation</a> &raquo;</li>
+          <li class="nav-item nav-item-1"><a href="../../../index.html" >Module code</a> &raquo;</li>
+          <li class="nav-item nav-item-2"><a href="../../../sas.html" >sas</a> &raquo;</li>
+          <li class="nav-item nav-item-3"><a href="../guiframe.html" >sas.sasgui.guiframe</a> &raquo;</li> 
+      </ul>
+    </div>
+    <div class="footer" role="contentinfo">
+        &copy; Copyright 2018, The SasView Project.
+      Created using <a href="http://sphinx-doc.org/">Sphinx</a> 1.4.1.
+    </div>
+  </body>
+</html>

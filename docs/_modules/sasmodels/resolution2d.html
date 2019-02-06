@@ -1,0 +1,329 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+  "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+    
+    <title>sasmodels.resolution2d &mdash; SasView 4.2.0 documentation</title>
+    
+    <link rel="stylesheet" href="../../_static/classic.css" type="text/css" />
+    <link rel="stylesheet" href="../../_static/pygments.css" type="text/css" />
+    
+    <script type="text/javascript">
+      var DOCUMENTATION_OPTIONS = {
+        URL_ROOT:    '../../',
+        VERSION:     '4.2.0',
+        COLLAPSE_INDEX: false,
+        FILE_SUFFIX: '.html',
+        HAS_SOURCE:  true
+      };
+    </script>
+    <script type="text/javascript" src="../../_static/jquery.js"></script>
+    <script type="text/javascript" src="../../_static/underscore.js"></script>
+    <script type="text/javascript" src="../../_static/doctools.js"></script>
+    <script type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.1/MathJax.js?config=TeX-MML-AM_CHTML"></script>
+    <link rel="top" title="SasView 4.2.0 documentation" href="../../index.html" />
+    <link rel="up" title="sasmodels" href="../sasmodels.html" /> 
+  </head>
+  <body role="document">
+    <div class="related" role="navigation" aria-label="related navigation">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="../../genindex.html" title="General Index"
+             accesskey="I">index</a></li>
+        <li class="right" >
+          <a href="../../py-modindex.html" title="Python Module Index"
+             >modules</a> |</li>
+        <li class="nav-item nav-item-0"><a href="../../index.html">SasView 4.2.0 documentation</a> &raquo;</li>
+          <li class="nav-item nav-item-1"><a href="../index.html" >Module code</a> &raquo;</li>
+          <li class="nav-item nav-item-2"><a href="../sasmodels.html" accesskey="U">sasmodels</a> &raquo;</li> 
+      </ul>
+    </div>  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          <div class="body" role="main">
+            
+  <h1>Source code for sasmodels.resolution2d</h1><div class="highlight"><pre>
+<span></span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">#This software was developed by the University of Tennessee as part of the</span>
+<span class="sd">#Distributed Data Analysis of Neutron Scattering Experiments (DANSE)</span>
+<span class="sd">#project funded by the US National Science Foundation.</span>
+<span class="sd">#See the license text in license.txt</span>
+<span class="sd">&quot;&quot;&quot;</span>
+<span class="kn">from</span> <span class="nn">__future__</span> <span class="kn">import</span> <span class="n">division</span>
+
+<span class="kn">import</span> <span class="nn">numpy</span> <span class="kn">as</span> <span class="nn">np</span>  <span class="c1"># type: ignore</span>
+<span class="kn">from</span> <span class="nn">numpy</span> <span class="kn">import</span> <span class="n">pi</span><span class="p">,</span> <span class="n">cos</span><span class="p">,</span> <span class="n">sin</span><span class="p">,</span> <span class="n">sqrt</span>  <span class="c1"># type: ignore</span>
+
+<span class="kn">from</span> <span class="nn">.</span> <span class="kn">import</span> <span class="n">resolution</span>
+<span class="kn">from</span> <span class="nn">.resolution</span> <span class="kn">import</span> <span class="n">Resolution</span>
+
+<span class="c1">## Singular point</span>
+<span class="n">SIGMA_ZERO</span> <span class="o">=</span> <span class="mf">1.0e-010</span>
+<span class="c1">## Limit of how many sigmas to be covered for the Gaussian smearing</span>
+<span class="c1"># default: 2.5 to cover 98.7% of Gaussian</span>
+<span class="n">NSIGMA</span> <span class="o">=</span> <span class="mf">3.0</span>
+<span class="c1">## Defaults</span>
+<span class="n">NR</span> <span class="o">=</span> <span class="p">{</span><span class="s1">&#39;xhigh&#39;</span><span class="p">:</span><span class="mi">10</span><span class="p">,</span> <span class="s1">&#39;high&#39;</span><span class="p">:</span><span class="mi">5</span><span class="p">,</span> <span class="s1">&#39;med&#39;</span><span class="p">:</span><span class="mi">5</span><span class="p">,</span> <span class="s1">&#39;low&#39;</span><span class="p">:</span><span class="mi">3</span><span class="p">}</span>
+<span class="n">NPHI</span> <span class="o">=</span> <span class="p">{</span><span class="s1">&#39;xhigh&#39;</span><span class="p">:</span><span class="mi">20</span><span class="p">,</span> <span class="s1">&#39;high&#39;</span><span class="p">:</span><span class="mi">12</span><span class="p">,</span> <span class="s1">&#39;med&#39;</span><span class="p">:</span><span class="mi">6</span><span class="p">,</span> <span class="s1">&#39;low&#39;</span><span class="p">:</span><span class="mi">4</span><span class="p">}</span>
+
+<span class="c1">## Defaults</span>
+<span class="n">N_SLIT_PERP</span> <span class="o">=</span> <span class="p">{</span><span class="s1">&#39;xhigh&#39;</span><span class="p">:</span><span class="mi">1000</span><span class="p">,</span> <span class="s1">&#39;high&#39;</span><span class="p">:</span><span class="mi">500</span><span class="p">,</span> <span class="s1">&#39;med&#39;</span><span class="p">:</span><span class="mi">200</span><span class="p">,</span> <span class="s1">&#39;low&#39;</span><span class="p">:</span><span class="mi">50</span><span class="p">}</span>
+<span class="n">N_SLIT_PERP_DOC</span> <span class="o">=</span> <span class="s2">&quot;, &quot;</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="s2">&quot;</span><span class="si">%s</span><span class="s2">=</span><span class="si">%d</span><span class="s2">&quot;</span><span class="o">%</span><span class="p">(</span><span class="n">name</span><span class="p">,</span> <span class="n">value</span><span class="p">)</span>
+                            <span class="k">for</span> <span class="n">value</span><span class="p">,</span> <span class="n">name</span> <span class="ow">in</span>
+                            <span class="nb">sorted</span><span class="p">((</span><span class="mi">2</span><span class="o">*</span><span class="n">v</span><span class="o">+</span><span class="mi">1</span><span class="p">,</span> <span class="n">k</span><span class="p">)</span> <span class="k">for</span> <span class="n">k</span><span class="p">,</span> <span class="n">v</span> <span class="ow">in</span> <span class="n">N_SLIT_PERP</span><span class="o">.</span><span class="n">items</span><span class="p">()))</span>
+
+<div class="viewcode-block" id="Pinhole2D"><a class="viewcode-back" href="../../dev/sasmodels-api/sasmodels.html#sasmodels.resolution2d.Pinhole2D">[docs]</a><span class="k">class</span> <span class="nc">Pinhole2D</span><span class="p">(</span><span class="n">Resolution</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Gaussian Q smearing class for SAS 2d data</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+
+    <span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">data</span><span class="o">=</span><span class="bp">None</span><span class="p">,</span> <span class="n">index</span><span class="o">=</span><span class="bp">None</span><span class="p">,</span>
+                 <span class="n">nsigma</span><span class="o">=</span><span class="n">NSIGMA</span><span class="p">,</span> <span class="n">accuracy</span><span class="o">=</span><span class="s1">&#39;Low&#39;</span><span class="p">,</span> <span class="n">coords</span><span class="o">=</span><span class="s1">&#39;polar&#39;</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Assumption: equally spaced bins in dq_r, dq_phi space.</span>
+
+<span class="sd">        :param data: 2d data used to set the smearing parameters</span>
+<span class="sd">        :param index: 1d array with len(data) to define the range</span>
+<span class="sd">         of the calculation: elements are given as True or False</span>
+<span class="sd">        :param nr: number of bins in dq_r-axis</span>
+<span class="sd">        :param nphi: number of bins in dq_phi-axis</span>
+<span class="sd">        :param coord: coordinates [string], &#39;polar&#39; or &#39;cartesian&#39;</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="c1">## Accuracy: Higher stands for more sampling points in both directions</span>
+        <span class="c1">## of r and phi.</span>
+        <span class="c1">## number of bins in r axis for over-sampling</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">nr</span> <span class="o">=</span> <span class="n">NR</span><span class="p">[</span><span class="n">accuracy</span><span class="o">.</span><span class="n">lower</span><span class="p">()]</span>
+        <span class="c1">## number of bins in phi axis for over-sampling</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">nphi</span> <span class="o">=</span> <span class="n">NPHI</span><span class="p">[</span><span class="n">accuracy</span><span class="o">.</span><span class="n">lower</span><span class="p">()]</span>
+        <span class="c1">## maximum nsigmas</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">nsigma</span> <span class="o">=</span> <span class="n">nsigma</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">coords</span> <span class="o">=</span> <span class="n">coords</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_init_data</span><span class="p">(</span><span class="n">data</span><span class="p">,</span> <span class="n">index</span><span class="p">)</span>
+
+    <span class="k">def</span> <span class="nf">_init_data</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">data</span><span class="p">,</span> <span class="n">index</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Get qx_data, qy_data, dqx_data,dqy_data,</span>
+<span class="sd">        and calculate phi_data=arctan(qx_data/qy_data)</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="c1"># TODO: maybe don&#39;t need to hold copy of qx,qy,dqx,dqy,data,index</span>
+        <span class="c1"># just need q_calc and weights</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">data</span> <span class="o">=</span> <span class="n">data</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">index</span> <span class="o">=</span> <span class="n">index</span> <span class="k">if</span> <span class="n">index</span> <span class="ow">is</span> <span class="ow">not</span> <span class="bp">None</span> <span class="k">else</span> <span class="nb">slice</span><span class="p">(</span><span class="bp">None</span><span class="p">)</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">qx_data</span> <span class="o">=</span> <span class="n">data</span><span class="o">.</span><span class="n">qx_data</span><span class="p">[</span><span class="bp">self</span><span class="o">.</span><span class="n">index</span><span class="p">]</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">qy_data</span> <span class="o">=</span> <span class="n">data</span><span class="o">.</span><span class="n">qy_data</span><span class="p">[</span><span class="bp">self</span><span class="o">.</span><span class="n">index</span><span class="p">]</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">q_data</span> <span class="o">=</span> <span class="n">data</span><span class="o">.</span><span class="n">q_data</span><span class="p">[</span><span class="bp">self</span><span class="o">.</span><span class="n">index</span><span class="p">]</span>
+
+        <span class="n">dqx</span> <span class="o">=</span> <span class="nb">getattr</span><span class="p">(</span><span class="n">data</span><span class="p">,</span> <span class="s1">&#39;dqx_data&#39;</span><span class="p">,</span> <span class="bp">None</span><span class="p">)</span>
+        <span class="n">dqy</span> <span class="o">=</span> <span class="nb">getattr</span><span class="p">(</span><span class="n">data</span><span class="p">,</span> <span class="s1">&#39;dqy_data&#39;</span><span class="p">,</span> <span class="bp">None</span><span class="p">)</span>
+        <span class="k">if</span> <span class="n">dqx</span> <span class="ow">is</span> <span class="ow">not</span> <span class="bp">None</span> <span class="ow">and</span> <span class="n">dqy</span> <span class="ow">is</span> <span class="ow">not</span> <span class="bp">None</span><span class="p">:</span>
+            <span class="c1"># Here dqx and dqy mean dq_parr and dq_perp</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">dqx_data</span> <span class="o">=</span> <span class="n">dqx</span><span class="p">[</span><span class="bp">self</span><span class="o">.</span><span class="n">index</span><span class="p">]</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">dqy_data</span> <span class="o">=</span> <span class="n">dqy</span><span class="p">[</span><span class="bp">self</span><span class="o">.</span><span class="n">index</span><span class="p">]</span>
+            <span class="c1">## Remove singular points if exists</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">dqx_data</span><span class="p">[</span><span class="bp">self</span><span class="o">.</span><span class="n">dqx_data</span> <span class="o">&lt;</span> <span class="n">SIGMA_ZERO</span><span class="p">]</span> <span class="o">=</span> <span class="n">SIGMA_ZERO</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">dqy_data</span><span class="p">[</span><span class="bp">self</span><span class="o">.</span><span class="n">dqy_data</span> <span class="o">&lt;</span> <span class="n">SIGMA_ZERO</span><span class="p">]</span> <span class="o">=</span> <span class="n">SIGMA_ZERO</span>
+            <span class="n">qx_calc</span><span class="p">,</span> <span class="n">qy_calc</span><span class="p">,</span> <span class="n">weights</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_calc_res</span><span class="p">()</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">q_calc</span> <span class="o">=</span> <span class="p">[</span><span class="n">qx_calc</span><span class="p">,</span> <span class="n">qy_calc</span><span class="p">]</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">q_calc_weights</span> <span class="o">=</span> <span class="n">weights</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="c1"># No resolution information</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">dqx_data</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">dqy_data</span> <span class="o">=</span> <span class="bp">None</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">q_calc</span> <span class="o">=</span> <span class="p">[</span><span class="bp">self</span><span class="o">.</span><span class="n">qx_data</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">qy_data</span><span class="p">]</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">q_calc_weights</span> <span class="o">=</span> <span class="bp">None</span>
+
+        <span class="c1">#self.phi_data = np.arctan(self.qx_data / self.qy_data)</span>
+
+    <span class="k">def</span> <span class="nf">_calc_res</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Over sampling of r_nbins times phi_nbins, calculate Gaussian weights,</span>
+<span class="sd">        then find smeared intensity</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">nr</span><span class="p">,</span> <span class="n">nphi</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">nr</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">nphi</span>
+        <span class="c1"># Total number of bins = # of bins</span>
+        <span class="n">nbins</span> <span class="o">=</span> <span class="n">nr</span> <span class="o">*</span> <span class="n">nphi</span>
+        <span class="c1"># Number of bins in the dqr direction (polar coordinate of dqx and dqy)</span>
+        <span class="n">bin_size</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">nsigma</span> <span class="o">/</span> <span class="n">nr</span>
+        <span class="c1"># in dq_r-direction times # of bins in dq_phi-direction</span>
+        <span class="c1"># data length in the range of self.index</span>
+        <span class="n">nq</span> <span class="o">=</span> <span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">qx_data</span><span class="p">)</span>
+
+        <span class="c1"># Mean values of dqr at each bins</span>
+        <span class="c1"># starting from the half of bin size</span>
+        <span class="n">r</span> <span class="o">=</span> <span class="n">bin_size</span> <span class="o">/</span> <span class="mf">2.0</span> <span class="o">+</span> <span class="n">np</span><span class="o">.</span><span class="n">arange</span><span class="p">(</span><span class="n">nr</span><span class="p">)</span> <span class="o">*</span> <span class="n">bin_size</span>
+        <span class="c1"># mean values of qphi at each bines</span>
+        <span class="n">phi</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">arange</span><span class="p">(</span><span class="n">nphi</span><span class="p">)</span>
+        <span class="n">dphi</span> <span class="o">=</span> <span class="n">phi</span> <span class="o">*</span> <span class="mf">2.0</span> <span class="o">*</span> <span class="n">pi</span> <span class="o">/</span> <span class="n">nphi</span>
+        <span class="n">dphi</span> <span class="o">=</span> <span class="n">dphi</span><span class="o">.</span><span class="n">repeat</span><span class="p">(</span><span class="n">nr</span><span class="p">)</span>
+
+        <span class="c1">## Transform to polar coordinate,</span>
+        <span class="c1">#  and set dphi at each data points ; 1d array</span>
+        <span class="n">dphi</span> <span class="o">=</span> <span class="n">dphi</span><span class="o">.</span><span class="n">repeat</span><span class="p">(</span><span class="n">nq</span><span class="p">)</span>
+        <span class="n">q_phi</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">qy_data</span> <span class="o">/</span> <span class="bp">self</span><span class="o">.</span><span class="n">qx_data</span>
+
+        <span class="c1"># Starting angle is different between polar</span>
+        <span class="c1">#  and cartesian coordinates.</span>
+        <span class="c1">#if self.coords != &#39;polar&#39;:</span>
+        <span class="c1">#    dphi += np.arctan( q_phi * self.dqx_data/ \</span>
+        <span class="c1">#                  self.dqy_data).repeat(nbins).reshape(nq,\</span>
+        <span class="c1">#                                nbins).transpose().flatten()</span>
+
+        <span class="c1"># The angle (phi) of the original q point</span>
+        <span class="n">q_phi</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">arctan</span><span class="p">(</span><span class="n">q_phi</span><span class="p">)</span><span class="o">.</span><span class="n">repeat</span><span class="p">(</span><span class="n">nbins</span><span class="p">)</span>\
+            <span class="o">.</span><span class="n">reshape</span><span class="p">([</span><span class="n">nq</span><span class="p">,</span> <span class="n">nbins</span><span class="p">])</span><span class="o">.</span><span class="n">transpose</span><span class="p">()</span><span class="o">.</span><span class="n">flatten</span><span class="p">()</span>
+        <span class="c1">## Find Gaussian weight for each dq bins: The weight depends only</span>
+        <span class="c1">#  on r-direction (The integration may not need)</span>
+        <span class="n">weight_res</span> <span class="o">=</span> <span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">exp</span><span class="p">(</span><span class="o">-</span><span class="mf">0.5</span> <span class="o">*</span> <span class="p">(</span><span class="n">r</span> <span class="o">-</span> <span class="n">bin_size</span> <span class="o">/</span> <span class="mf">2.0</span><span class="p">)</span><span class="o">**</span><span class="mi">2</span><span class="p">)</span>  <span class="o">-</span>
+                      <span class="n">np</span><span class="o">.</span><span class="n">exp</span><span class="p">(</span><span class="o">-</span><span class="mf">0.5</span> <span class="o">*</span> <span class="p">(</span><span class="n">r</span> <span class="o">+</span> <span class="n">bin_size</span> <span class="o">/</span> <span class="mf">2.0</span><span class="p">)</span><span class="o">**</span><span class="mi">2</span><span class="p">))</span>
+        <span class="c1"># No needs of normalization here.</span>
+        <span class="c1">#weight_res /= np.sum(weight_res)</span>
+        <span class="n">weight_res</span> <span class="o">=</span> <span class="n">weight_res</span><span class="o">.</span><span class="n">repeat</span><span class="p">(</span><span class="n">nphi</span><span class="p">)</span><span class="o">.</span><span class="n">reshape</span><span class="p">(</span><span class="n">nr</span><span class="p">,</span> <span class="n">nphi</span><span class="p">)</span>
+        <span class="n">weight_res</span> <span class="o">=</span> <span class="n">weight_res</span><span class="o">.</span><span class="n">transpose</span><span class="p">()</span><span class="o">.</span><span class="n">flatten</span><span class="p">()</span>
+
+        <span class="c1">## Set dr for all dq bins for averaging</span>
+        <span class="n">dr</span> <span class="o">=</span> <span class="n">r</span><span class="o">.</span><span class="n">repeat</span><span class="p">(</span><span class="n">nphi</span><span class="p">)</span><span class="o">.</span><span class="n">reshape</span><span class="p">(</span><span class="n">nr</span><span class="p">,</span> <span class="n">nphi</span><span class="p">)</span><span class="o">.</span><span class="n">transpose</span><span class="p">()</span><span class="o">.</span><span class="n">flatten</span><span class="p">()</span>
+        <span class="c1">## Set dqr for all data points</span>
+        <span class="n">dqx</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">outer</span><span class="p">(</span><span class="n">dr</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">dqx_data</span><span class="p">)</span><span class="o">.</span><span class="n">flatten</span><span class="p">()</span>
+        <span class="n">dqy</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">outer</span><span class="p">(</span><span class="n">dr</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">dqy_data</span><span class="p">)</span><span class="o">.</span><span class="n">flatten</span><span class="p">()</span>
+
+        <span class="n">qx</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">qx_data</span><span class="o">.</span><span class="n">repeat</span><span class="p">(</span><span class="n">nbins</span><span class="p">)</span>\
+            <span class="o">.</span><span class="n">reshape</span><span class="p">(</span><span class="n">nq</span><span class="p">,</span> <span class="n">nbins</span><span class="p">)</span><span class="o">.</span><span class="n">transpose</span><span class="p">()</span><span class="o">.</span><span class="n">flatten</span><span class="p">()</span>
+        <span class="n">qy</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">qy_data</span><span class="o">.</span><span class="n">repeat</span><span class="p">(</span><span class="n">nbins</span><span class="p">)</span>\
+            <span class="o">.</span><span class="n">reshape</span><span class="p">(</span><span class="n">nq</span><span class="p">,</span> <span class="n">nbins</span><span class="p">)</span><span class="o">.</span><span class="n">transpose</span><span class="p">()</span><span class="o">.</span><span class="n">flatten</span><span class="p">()</span>
+
+        <span class="c1"># The polar needs rotation by -q_phi</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">coords</span> <span class="o">==</span> <span class="s1">&#39;polar&#39;</span><span class="p">:</span>
+            <span class="n">q_r</span> <span class="o">=</span> <span class="n">sqrt</span><span class="p">(</span><span class="n">qx</span><span class="o">**</span><span class="mi">2</span> <span class="o">+</span> <span class="n">qy</span><span class="o">**</span><span class="mi">2</span><span class="p">)</span>
+            <span class="n">qx_res</span> <span class="o">=</span> <span class="p">((</span><span class="n">dqx</span><span class="o">*</span><span class="n">cos</span><span class="p">(</span><span class="n">dphi</span><span class="p">)</span> <span class="o">+</span> <span class="n">q_r</span><span class="p">)</span> <span class="o">*</span> <span class="n">cos</span><span class="p">(</span><span class="o">-</span><span class="n">q_phi</span><span class="p">)</span>
+                      <span class="o">+</span> <span class="n">dqy</span><span class="o">*</span><span class="n">sin</span><span class="p">(</span><span class="n">dphi</span><span class="p">)</span> <span class="o">*</span> <span class="n">sin</span><span class="p">(</span><span class="o">-</span><span class="n">q_phi</span><span class="p">))</span>
+            <span class="n">qy_res</span> <span class="o">=</span> <span class="p">(</span><span class="o">-</span><span class="p">(</span><span class="n">dqx</span><span class="o">*</span><span class="n">cos</span><span class="p">(</span><span class="n">dphi</span><span class="p">)</span> <span class="o">+</span> <span class="n">q_r</span><span class="p">)</span> <span class="o">*</span> <span class="n">sin</span><span class="p">(</span><span class="o">-</span><span class="n">q_phi</span><span class="p">)</span>
+                      <span class="o">+</span> <span class="n">dqy</span><span class="o">*</span><span class="n">sin</span><span class="p">(</span><span class="n">dphi</span><span class="p">)</span> <span class="o">*</span> <span class="n">cos</span><span class="p">(</span><span class="o">-</span><span class="n">q_phi</span><span class="p">))</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">qx_res</span> <span class="o">=</span> <span class="n">qx</span> <span class="o">+</span> <span class="n">dqx</span><span class="o">*</span><span class="n">cos</span><span class="p">(</span><span class="n">dphi</span><span class="p">)</span>
+            <span class="n">qy_res</span> <span class="o">=</span> <span class="n">qy</span> <span class="o">+</span> <span class="n">dqy</span><span class="o">*</span><span class="n">sin</span><span class="p">(</span><span class="n">dphi</span><span class="p">)</span>
+
+
+        <span class="k">return</span> <span class="n">qx_res</span><span class="p">,</span> <span class="n">qy_res</span><span class="p">,</span> <span class="n">weight_res</span>
+
+<div class="viewcode-block" id="Pinhole2D.apply"><a class="viewcode-back" href="../../dev/sasmodels-api/sasmodels.html#sasmodels.resolution2d.Pinhole2D.apply">[docs]</a>    <span class="k">def</span> <span class="nf">apply</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">theory</span><span class="p">):</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">q_calc_weights</span> <span class="ow">is</span> <span class="ow">not</span> <span class="bp">None</span><span class="p">:</span>
+            <span class="c1"># TODO: interpolate rather than recomputing all the different qx,qy</span>
+            <span class="c1"># Resolution needs to be applied</span>
+            <span class="n">nq</span><span class="p">,</span> <span class="n">nbins</span> <span class="o">=</span> <span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">qx_data</span><span class="p">),</span> <span class="bp">self</span><span class="o">.</span><span class="n">nr</span> <span class="o">*</span> <span class="bp">self</span><span class="o">.</span><span class="n">nphi</span>
+            <span class="c1">## Reshape into 2d array to use np weighted averaging</span>
+            <span class="n">theory</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">reshape</span><span class="p">(</span><span class="n">theory</span><span class="p">,</span> <span class="p">(</span><span class="n">nbins</span><span class="p">,</span> <span class="n">nq</span><span class="p">))</span>
+            <span class="c1">## Averaging with Gaussian weighting: normalization included.</span>
+            <span class="n">value</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">average</span><span class="p">(</span><span class="n">theory</span><span class="p">,</span> <span class="n">axis</span><span class="o">=</span><span class="mi">0</span><span class="p">,</span> <span class="n">weights</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">q_calc_weights</span><span class="p">)</span>
+            <span class="c1">## Return the smeared values in the range of self.index</span>
+            <span class="k">return</span> <span class="n">value</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="k">return</span> <span class="n">theory</span></div></div>
+
+
+<div class="viewcode-block" id="Slit2D"><a class="viewcode-back" href="../../dev/sasmodels-api/sasmodels.html#sasmodels.resolution2d.Slit2D">[docs]</a><span class="k">class</span> <span class="nc">Slit2D</span><span class="p">(</span><span class="n">Resolution</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Slit aperture with resolution function on an oriented sample.</span>
+
+<span class="sd">    *q* points at which the data is measured.</span>
+
+<span class="sd">    *qx_width* slit width in qx</span>
+
+<span class="sd">    *qy_width* slit height in qy; current implementation requires a fixed</span>
+<span class="sd">    qy_width for all q points.</span>
+
+<span class="sd">    *q_calc* is the list of q points to calculate, or None if this</span>
+<span class="sd">    should be estimated from the *q* and *qx_width*.</span>
+
+<span class="sd">    *accuracy* determines the number of *qy* points to compute for each *q*.</span>
+<span class="sd">    The values are stored in sasmodels.resolution2d.N_SLIT_PERP.  The default</span>
+<span class="sd">    values are: %s</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">__doc__</span> <span class="o">=</span> <span class="n">__doc__</span><span class="o">%</span><span class="n">N_SLIT_PERP_DOC</span>
+    <span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">q</span><span class="p">,</span> <span class="n">qx_width</span><span class="p">,</span> <span class="n">qy_width</span><span class="o">=</span><span class="mf">0.</span><span class="p">,</span> <span class="n">q_calc</span><span class="o">=</span><span class="bp">None</span><span class="p">,</span> <span class="n">accuracy</span><span class="o">=</span><span class="s1">&#39;low&#39;</span><span class="p">):</span>
+        <span class="c1"># Remember what q and width was used even though we won&#39;t need them</span>
+        <span class="c1"># after the weight matrix is constructed</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">q</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">qx_width</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">qy_width</span> <span class="o">=</span> <span class="n">q</span><span class="p">,</span> <span class="n">qx_width</span><span class="p">,</span> <span class="n">qy_width</span>
+
+        <span class="c1"># Allow independent resolution on each qx point even though it is not</span>
+        <span class="c1"># needed in practice.  Set qy_width to the maximum qy width.</span>
+        <span class="k">if</span> <span class="n">np</span><span class="o">.</span><span class="n">isscalar</span><span class="p">(</span><span class="n">qx_width</span><span class="p">):</span>
+            <span class="n">qx_width</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">ones</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">q</span><span class="p">))</span><span class="o">*</span><span class="n">qx_width</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">qx_width</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">asarray</span><span class="p">(</span><span class="n">qx_width</span><span class="p">)</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="n">np</span><span class="o">.</span><span class="n">isscalar</span><span class="p">(</span><span class="n">qy_width</span><span class="p">):</span>
+            <span class="n">qy_width</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">max</span><span class="p">(</span><span class="n">qy_width</span><span class="p">)</span>
+
+        <span class="c1"># Build grid of qx, qy points</span>
+        <span class="k">if</span> <span class="n">q_calc</span> <span class="ow">is</span> <span class="ow">not</span> <span class="bp">None</span><span class="p">:</span>
+            <span class="n">qx_calc</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">sort</span><span class="p">(</span><span class="n">q_calc</span><span class="p">)</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">qx_calc</span> <span class="o">=</span> <span class="n">resolution</span><span class="o">.</span><span class="n">pinhole_extend_q</span><span class="p">(</span><span class="n">q</span><span class="p">,</span> <span class="n">qx_width</span><span class="p">,</span> <span class="n">nsigma</span><span class="o">=</span><span class="mi">3</span><span class="p">)</span>
+        <span class="n">qy_min</span><span class="p">,</span> <span class="n">qy_max</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">log10</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">min</span><span class="p">(</span><span class="n">q</span><span class="p">)),</span> <span class="n">np</span><span class="o">.</span><span class="n">log10</span><span class="p">(</span><span class="n">qy_width</span><span class="p">)</span>
+        <span class="n">qy_calc</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">logspace</span><span class="p">(</span><span class="n">qy_min</span><span class="p">,</span> <span class="n">qy_max</span><span class="p">,</span> <span class="n">N_SLIT_PERP</span><span class="p">[</span><span class="n">accuracy</span><span class="p">])</span>
+        <span class="n">qy_calc</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">hstack</span><span class="p">((</span><span class="o">-</span><span class="n">qy_calc</span><span class="p">[::</span><span class="o">-</span><span class="mi">1</span><span class="p">],</span> <span class="mi">0</span><span class="p">,</span> <span class="n">qy_calc</span><span class="p">))</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">q_calc</span> <span class="o">=</span> <span class="p">[</span><span class="n">v</span><span class="o">.</span><span class="n">flatten</span><span class="p">()</span> <span class="k">for</span> <span class="n">v</span> <span class="ow">in</span> <span class="n">np</span><span class="o">.</span><span class="n">meshgrid</span><span class="p">(</span><span class="n">qx_calc</span><span class="p">,</span> <span class="n">qy_calc</span><span class="p">)]</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">qx_calc</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">qy_calc</span> <span class="o">=</span> <span class="n">qx_calc</span><span class="p">,</span> <span class="n">qy_calc</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">nx</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">ny</span> <span class="o">=</span> <span class="nb">len</span><span class="p">(</span><span class="n">qx_calc</span><span class="p">),</span> <span class="nb">len</span><span class="p">(</span><span class="n">qy_calc</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">dy</span> <span class="o">=</span> <span class="mi">2</span><span class="o">*</span><span class="n">qy_width</span><span class="o">/</span><span class="bp">self</span><span class="o">.</span><span class="n">ny</span>
+
+        <span class="c1"># Build weight matrix for resolution integration</span>
+        <span class="k">if</span> <span class="n">np</span><span class="o">.</span><span class="n">any</span><span class="p">(</span><span class="n">qx_width</span> <span class="o">&gt;</span> <span class="mi">0</span><span class="p">):</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">weights</span> <span class="o">=</span> <span class="n">resolution</span><span class="o">.</span><span class="n">pinhole_resolution</span><span class="p">(</span>
+                <span class="n">qx_calc</span><span class="p">,</span> <span class="n">q</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">maximum</span><span class="p">(</span><span class="n">qx_width</span><span class="p">,</span> <span class="n">resolution</span><span class="o">.</span><span class="n">MINIMUM_RESOLUTION</span><span class="p">))</span>
+        <span class="k">elif</span> <span class="nb">len</span><span class="p">(</span><span class="n">qx_calc</span><span class="p">)</span> <span class="o">==</span> <span class="nb">len</span><span class="p">(</span><span class="n">q</span><span class="p">)</span> <span class="ow">and</span> <span class="n">np</span><span class="o">.</span><span class="n">all</span><span class="p">(</span><span class="n">qx_calc</span> <span class="o">==</span> <span class="n">q</span><span class="p">):</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">weights</span> <span class="o">=</span> <span class="bp">None</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s2">&quot;Slit2D fails with q_calc != q&quot;</span><span class="p">)</span>
+
+<div class="viewcode-block" id="Slit2D.apply"><a class="viewcode-back" href="../../dev/sasmodels-api/sasmodels.html#sasmodels.resolution2d.Slit2D.apply">[docs]</a>    <span class="k">def</span> <span class="nf">apply</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">theory</span><span class="p">):</span>
+        <span class="n">Iq</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">trapz</span><span class="p">(</span><span class="n">theory</span><span class="o">.</span><span class="n">reshape</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">ny</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">nx</span><span class="p">),</span> <span class="n">axis</span><span class="o">=</span><span class="mi">0</span><span class="p">,</span> <span class="n">x</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">qy_calc</span><span class="p">)</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">weights</span> <span class="ow">is</span> <span class="ow">not</span> <span class="bp">None</span><span class="p">:</span>
+            <span class="n">Iq</span> <span class="o">=</span> <span class="n">resolution</span><span class="o">.</span><span class="n">apply_resolution_matrix</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">weights</span><span class="p">,</span> <span class="n">Iq</span><span class="p">)</span>
+        <span class="k">return</span> <span class="n">Iq</span></div></div>
+</pre></div>
+
+          </div>
+        </div>
+      </div>
+      <div class="sphinxsidebar" role="navigation" aria-label="main navigation">
+        <div class="sphinxsidebarwrapper">
+<div id="searchbox" style="display: none" role="search">
+  <h3>Quick search</h3>
+    <form class="search" action="../../search.html" method="get">
+      <input type="text" name="q" />
+      <input type="submit" value="Go" />
+      <input type="hidden" name="check_keywords" value="yes" />
+      <input type="hidden" name="area" value="default" />
+    </form>
+</div>
+<script type="text/javascript">$('#searchbox').show(0);</script>
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="related" role="navigation" aria-label="related navigation">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="../../genindex.html" title="General Index"
+             >index</a></li>
+        <li class="right" >
+          <a href="../../py-modindex.html" title="Python Module Index"
+             >modules</a> |</li>
+        <li class="nav-item nav-item-0"><a href="../../index.html">SasView 4.2.0 documentation</a> &raquo;</li>
+          <li class="nav-item nav-item-1"><a href="../index.html" >Module code</a> &raquo;</li>
+          <li class="nav-item nav-item-2"><a href="../sasmodels.html" >sasmodels</a> &raquo;</li> 
+      </ul>
+    </div>
+    <div class="footer" role="contentinfo">
+        &copy; Copyright 2018, The SasView Project.
+      Created using <a href="http://sphinx-doc.org/">Sphinx</a> 1.4.1.
+    </div>
+  </body>
+</html>

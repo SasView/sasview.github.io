@@ -1,0 +1,97 @@
+.. _triaxial-ellipsoid:
+
+triaxial_ellipsoid
+=======================================================
+
+Ellipsoid of uniform scattering length density with three independent axes.
+
+=========== =================================== ============ =============
+Parameter   Description                         Units        Default value
+=========== =================================== ============ =============
+scale       Source intensity                    None                     1
+background  Source background                   |cm^-1|              0.001
+sld         Ellipsoid scattering length density |1e-6Ang^-2|             4
+solvent_sld Solvent scattering length density   |1e-6Ang^-2|             1
+req_minor   Minor equatorial radius             |Ang|                   20
+req_major   Major equatorial radius             |Ang|                  400
+rpolar      Polar radius                        |Ang|                   10
+theta       In plane angle                      degree                  60
+phi         Out of plane angle                  degree                  60
+psi         Out of plane angle                  degree                  60
+=========== =================================== ============ =============
+
+The returned value is scaled to units of |cm^-1| |sr^-1|, absolute scale.
+
+
+All three axes are of different lengths with $R_a \leq R_b \leq R_c$
+**Users should maintain this inequality for all calculations**.
+
+.. math::
+
+    P(q) = \text{scale} V \left< F^2(q) \right> + \text{background}
+
+where the volume $V = 4/3 \pi R_a R_b R_c$, and the averaging
+$\left<\ldots\right>$ is applied over all orientations for 1D.
+
+.. figure:: img/triaxial_ellipsoid_geometry.jpg
+
+    Ellipsoid schematic.
+
+**Definition**
+
+The form factor calculated is
+
+.. math::
+
+    P(q) = \frac{\text{scale}}{V}\int_0^1\int_0^1
+        \Phi^2(qR_a^2\cos^2( \pi x/2) + qR_b^2\sin^2(\pi y/2)(1-y^2) + R_c^2y^2)
+        dx dy
+
+where
+
+.. math::
+
+    \Phi(u) = 3 u^{-3} (\sin u - u \cos u)
+
+To provide easy access to the orientation of the triaxial ellipsoid,
+we define the axis of the cylinder using the angles $\theta$, $\phi$
+and $\psi$. These angles are defined on
+:numref:`triaxial-ellipsoid-angles`.
+The angle $\psi$ is the rotational angle around its own $c$ axis
+against the $q$ plane. For example, $\psi = 0$ when the
+$a$ axis is parallel to the $x$ axis of the detector.
+
+.. _triaxial-ellipsoid-angles:
+
+.. figure:: img/triaxial_ellipsoid_angle_projection.jpg
+
+    The angles for oriented ellipsoid.
+
+The radius-of-gyration for this system is  $R_g^2 = (R_a R_b R_c)^2/5$.
+
+The contrast is defined as SLD(ellipsoid) - SLD(solvent).  In the
+parameters, $R_a$ is the minor equatorial radius, $R_b$ is the major
+equatorial radius, and $R_c$ is the polar radius of the ellipsoid.
+
+NB: The 2nd virial coefficient of the triaxial solid ellipsoid is
+calculated based on the polar radius $R_p = R_c$ and equatorial
+radius $R_e = \sqrt{R_a R_b}$, and used as the effective radius for
+$S(q)$ when $P(q) \cdot S(q)$ is applied.
+
+**Validation**
+
+Validation of our code was done by comparing the output of the
+1D calculation to the angular average of the output of 2D calculation
+over all possible angles.
+
+
+
+.. figure:: img/triaxial_ellipsoid_autogenfig.png
+
+    1D and 2D plots corresponding to the default parameters of the model.
+
+**References**
+
+L A Feigin and D I Svergun, *Structure Analysis by Small-Angle X-Ray
+and Neutron Scattering*, Plenum, New York, 1987.
+

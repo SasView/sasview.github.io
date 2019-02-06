@@ -1,0 +1,1261 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+  "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+    
+    <title>Writing a Plugin Model &mdash; SasView 4.2.0 documentation</title>
+    
+    <link rel="stylesheet" href="../../../../_static/classic.css" type="text/css" />
+    <link rel="stylesheet" href="../../../../_static/pygments.css" type="text/css" />
+    
+    <script type="text/javascript">
+      var DOCUMENTATION_OPTIONS = {
+        URL_ROOT:    '../../../../',
+        VERSION:     '4.2.0',
+        COLLAPSE_INDEX: false,
+        FILE_SUFFIX: '.html',
+        HAS_SOURCE:  true
+      };
+    </script>
+    <script type="text/javascript" src="../../../../_static/jquery.js"></script>
+    <script type="text/javascript" src="../../../../_static/underscore.js"></script>
+    <script type="text/javascript" src="../../../../_static/doctools.js"></script>
+    <script type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.1/MathJax.js?config=TeX-MML-AM_CHTML"></script>
+    <link rel="top" title="SasView 4.2.0 documentation" href="../../../../index.html" />
+    <link rel="up" title="Fitting Documentation" href="fitting.html" />
+    <link rel="next" title="GPU Setup" href="gpu_setup.html" />
+    <link rel="prev" title="Fitting SESANS Data" href="sesans/sesans_fitting.html" /> 
+  </head>
+  <body role="document">
+    <div class="related" role="navigation" aria-label="related navigation">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="../../../../genindex.html" title="General Index"
+             accesskey="I">index</a></li>
+        <li class="right" >
+          <a href="../../../../py-modindex.html" title="Python Module Index"
+             >modules</a> |</li>
+        <li class="right" >
+          <a href="gpu_setup.html" title="GPU Setup"
+             accesskey="N">next</a> |</li>
+        <li class="right" >
+          <a href="sesans/sesans_fitting.html" title="Fitting SESANS Data"
+             accesskey="P">previous</a> |</li>
+        <li class="nav-item nav-item-0"><a href="../../../../index.html">SasView 4.2.0 documentation</a> &raquo;</li>
+          <li class="nav-item nav-item-1"><a href="../../../user.html" >SasView User Documentation</a> &raquo;</li>
+          <li class="nav-item nav-item-2"><a href="../../../analysis.html" >Fitting &amp; Other Analyses</a> &raquo;</li>
+          <li class="nav-item nav-item-3"><a href="fitting.html" accesskey="U">Fitting Documentation</a> &raquo;</li> 
+      </ul>
+    </div>  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          <div class="body" role="main">
+            
+  <div class="section" id="writing-a-plugin-model">
+<span id="writing-a-plugin"></span><h1>Writing a Plugin Model</h1>
+<div class="section" id="overview">
+<h2>Overview</h2>
+<p>In addition to the models provided with the sasmodels package, you are free to
+create your own models.</p>
+<p>Models can be of three types:</p>
+<ul class="simple">
+<li>A pure python model : Example -
+<a class="reference external" href="https://github.com/SasView/sasmodels/blob/master/sasmodels/models/broad_peak.py">broadpeak.py</a></li>
+<li>A python model with embedded C : Example -
+<a class="reference external" href="https://github.com/SasView/sasmodels/blob/master/sasmodels/models/sphere.py">sphere.py</a></li>
+<li>A python wrapper with separate C code : Example -
+<a class="reference external" href="https://github.com/SasView/sasmodels/blob/master/sasmodels/models/cylinder.py">cylinder.py</a>,
+<a class="reference external" href="https://github.com/SasView/sasmodels/blob/master/sasmodels/models/cylinder.c">cylinder.c</a></li>
+</ul>
+<p>When using SasView, plugin models should be saved to the SasView
+<em>plugin_models</em> folder <em>C:\Users\{username}\.sasview\plugin_models</em>
+(on Windows) or <em>/Users/{username}/.sasview\plugin_models</em> (on Mac).
+The next time SasView is started it will compile the plugin and add
+it to the list of <em>Plugin Models</em> in a FitPage.  Scripts can load
+the models from anywhere.</p>
+<p>The built-in modules are available in the <em>models</em> subdirectory
+of the sasmodels package.  For SasView on Windows, these will
+be found in <em>C:\Program Files (x86)\SasView\sasmodels-data\models</em>.
+On Mac OSX, these will be within the application bundle as
+<em>/Applications/SasView 4.0.app/Contents/Resources/sasmodels-data/models</em>.</p>
+<p>Other models are available for download from the
+<a class="reference external" href="http://marketplace.sasview.org/">Model Marketplace</a>. You can contribute your
+own models to the Marketplace as well.</p>
+</div>
+<div class="section" id="create-new-model-files">
+<h2>Create New Model Files</h2>
+<p>Copy the appropriate files to your plugin models directory (we recommend
+using the examples above as templates) as mymodel.py (and mymodel.c, etc)
+as required, where &#8220;mymodel&#8221; is the name for the model you are creating.</p>
+<p><em>Please follow these naming rules:</em></p>
+<ul class="simple">
+<li>No capitalization and thus no CamelCase</li>
+<li>If necessary use underscore to separate words (i.e. barbell not BarBell or
+broad_peak not BroadPeak)</li>
+<li>Do not include &#8220;model&#8221; in the name (i.e. barbell not BarBellModel)</li>
+</ul>
+</div>
+<div class="section" id="edit-new-model-files">
+<h2>Edit New Model Files</h2>
+<div class="section" id="model-contents">
+<h3>Model Contents</h3>
+<p>The model interface definition is in the .py file.  This file contains:</p>
+<ul>
+<li><dl class="first docutils">
+<dt>a <strong>model name</strong>:</dt>
+<dd><ul class="first simple">
+<li>this is the <strong>name</strong> string in the <em>.py</em> file</li>
+<li>titles should be:</li>
+</ul>
+<blockquote class="last">
+<div><ul class="simple">
+<li>all in <em>lower</em> case</li>
+<li>without spaces (use underscores to separate words instead)</li>
+<li>without any capitalization or CamelCase</li>
+<li>without incorporating the word &#8220;model&#8221;</li>
+<li>examples: <em>barbell</em> <strong>not</strong> <em>BarBell</em>; <em>broad_peak</em> <strong>not</strong> <em>BroadPeak</em>;
+<em>barbell</em> <strong>not</strong> <em>BarBellModel</em></li>
+</ul>
+</div></blockquote>
+</dd>
+</dl>
+</li>
+<li><dl class="first docutils">
+<dt>a <strong>model title</strong>:</dt>
+<dd><ul class="first last simple">
+<li>this is the <strong>title</strong> string in the <em>.py</em> file</li>
+<li>this is a one or two line description of the model, which will appear
+at the start of the model documentation and as a tooltip in the SasView GUI</li>
+</ul>
+</dd>
+</dl>
+</li>
+<li><dl class="first docutils">
+<dt>a <strong>short description</strong>:</dt>
+<dd><ul class="first last simple">
+<li>this is the <strong>description</strong> string in the <em>.py</em> file</li>
+<li>this is a medium length description which appears when you click
+<em>Description</em> on the model FitPage</li>
+</ul>
+</dd>
+</dl>
+</li>
+<li><dl class="first docutils">
+<dt>a <strong>parameter table</strong>:</dt>
+<dd><ul class="first last simple">
+<li>this will be auto-generated from the <em>parameters</em> in the <em>.py</em> file</li>
+</ul>
+</dd>
+</dl>
+</li>
+<li><dl class="first docutils">
+<dt>a <strong>long description</strong>:</dt>
+<dd><ul class="first last simple">
+<li>this is ReStructuredText enclosed between the r&#8221;&#8220;&#8221; and &#8220;&#8221;&#8221; delimiters
+at the top of the <em>.py</em> file</li>
+<li>what you write here is abstracted into the SasView help documentation</li>
+<li>this is what other users will refer to when they want to know what
+your model does; so please be helpful!</li>
+</ul>
+</dd>
+</dl>
+</li>
+<li><dl class="first docutils">
+<dt>a <strong>definition</strong> of the model:</dt>
+<dd><ul class="first last simple">
+<li>as part of the <strong>long description</strong></li>
+</ul>
+</dd>
+</dl>
+</li>
+<li><dl class="first docutils">
+<dt>a <strong>formula</strong> defining the function the model calculates:</dt>
+<dd><ul class="first last simple">
+<li>as part of the <strong>long description</strong></li>
+</ul>
+</dd>
+</dl>
+</li>
+<li><dl class="first docutils">
+<dt>an <strong>explanation of the parameters</strong>:</dt>
+<dd><ul class="first last simple">
+<li>as part of the <strong>long description</strong></li>
+<li>explaining how the symbols in the formula map to the model parameters</li>
+</ul>
+</dd>
+</dl>
+</li>
+<li><dl class="first docutils">
+<dt>a <strong>plot</strong> of the function, with a <strong>figure caption</strong>:</dt>
+<dd><ul class="first last simple">
+<li>this is automatically generated from your default parameters</li>
+</ul>
+</dd>
+</dl>
+</li>
+<li><dl class="first docutils">
+<dt>at least one <strong>reference</strong>:</dt>
+<dd><ul class="first last simple">
+<li>as part of the <strong>long description</strong></li>
+<li>specifying where the reader can obtain more information about the model</li>
+</ul>
+</dd>
+</dl>
+</li>
+<li><dl class="first docutils">
+<dt>the <strong>name of the author</strong></dt>
+<dd><ul class="first last simple">
+<li>as part of the <strong>long description</strong></li>
+<li>the <em>.py</em> file should also contain a comment identifying <em>who</em>
+converted/created the model file</li>
+</ul>
+</dd>
+</dl>
+</li>
+</ul>
+<p>Models that do not conform to these requirements will <em>never</em> be incorporated
+into the built-in library.</p>
+</div>
+<div class="section" id="model-documentation">
+<h3>Model Documentation</h3>
+<p>The <em>.py</em> file starts with an r (for raw) and three sets of quotes
+to start the doc string and ends with a second set of three quotes.
+For example:</p>
+<div class="highlight-default"><div class="highlight"><pre><span></span><span class="sd">r&quot;&quot;&quot;</span>
+<span class="sd">Definition</span>
+<span class="sd">----------</span>
+
+<span class="sd">The 1D scattering intensity of the sphere is calculated in the following</span>
+<span class="sd">way (Guinier, 1955)</span>
+
+<span class="sd">.. math::</span>
+
+<span class="sd">    I(q) = \frac{\text{scale}}{V} \cdot \left[</span>
+<span class="sd">        3V(\Delta\rho) \cdot \frac{\sin(qr) - qr\cos(qr))}{(qr)^3}</span>
+<span class="sd">        \right]^2 + \text{background}</span>
+
+<span class="sd">where *scale* is a volume fraction, :math:`V` is the volume of the scatterer,</span>
+<span class="sd">:math:`r` is the radius of the sphere and *background* is the background level.</span>
+<span class="sd">*sld* and *sld_solvent* are the scattering length densities (SLDs) of the</span>
+<span class="sd">scatterer and the solvent respectively, whose difference is :math:`\Delta\rho`.</span>
+
+<span class="sd">You can included figures in your documentation, as in the following</span>
+<span class="sd">figure for the cylinder model.</span>
+
+<span class="sd">.. figure:: img/cylinder_angle_definition.jpg</span>
+
+<span class="sd">    Definition of the angles for oriented cylinders.</span>
+
+<span class="sd">References</span>
+<span class="sd">----------</span>
+
+<span class="sd">A Guinier, G Fournet, *Small-Angle Scattering of X-Rays*,</span>
+<span class="sd">John Wiley and Sons, New York, (1955)</span>
+<span class="sd">&quot;&quot;&quot;</span>
+</pre></div>
+</div>
+<p>This is where the FULL documentation for the model goes (to be picked up by
+the automatic documentation system).  Although it feels odd, you
+should start the documentation immediately with the <strong>definition</strong>&#8212;the model
+name, a brief description and the parameter table are automatically inserted
+above the definition, and the a plot of the model is automatically inserted
+before the <strong>reference</strong>.</p>
+<p>Figures can be included using the <em>figure</em> command, with the name
+of the <em>.png</em> file containing the figure and a caption to appear below the
+figure.  Figure numbers will be added automatically.</p>
+<p>See this <a class="reference external" href="http://matplotlib.org/sampledoc/cheatsheet.html">Sphinx cheat sheet</a>
+for a quick guide to the documentation layout commands, or the
+<a class="reference external" href="http://www.sphinx-doc.org/en/stable/">Sphinx Documentation</a> for
+complete details.</p>
+<p>The model should include a <strong>formula</strong> written using LaTeX markup.
+The example above uses the <em>math</em> command to make a displayed equation.  You
+can also use <em>$formula$</em> for an inline formula. This is handy for defining
+the relationship between the model parameters and formula variables, such
+as the phrase &#8220;$r$ is the radius&#8221; used above.  The live demo MathJax
+page <a class="reference external" href="http://www.mathjax.org/">http://www.mathjax.org/</a> is handy for checking that the equations
+will look like you intend.</p>
+<p>Math layout uses the <a class="reference external" href="http://www.ams.org/publications/authors/tex/amslatex">amsmath</a>
+package for aligning equations (see amsldoc.pdf on that page for complete
+documentation). You will automatically be in an aligned environment, with
+blank lines separating the lines of the equation.  Place an ampersand before
+the operator on which to align.  For example:</p>
+<div class="highlight-default"><div class="highlight"><pre><span></span><span class="o">..</span> <span class="n">math</span><span class="p">::</span>
+
+  <span class="n">x</span> <span class="o">+</span> <span class="n">y</span> <span class="o">&amp;=</span> <span class="mi">1</span> \\
+  <span class="n">y</span> <span class="o">&amp;=</span> <span class="n">x</span> <span class="o">-</span> <span class="mi">1</span>
+</pre></div>
+</div>
+<p>produces</p>
+<div class="math">
+\[\begin{split}x + y &amp;= 1 \\
+y &amp;= x - 1\end{split}\]</div>
+<p>If you need more control, use:</p>
+<div class="highlight-default"><div class="highlight"><pre><span></span><span class="o">..</span> <span class="n">math</span><span class="p">::</span>
+    <span class="p">:</span><span class="n">nowrap</span><span class="p">:</span>
+</pre></div>
+</div>
+</div>
+<div class="section" id="model-definition">
+<h3>Model Definition</h3>
+<p>Following the documentation string, there are a series of definitions:</p>
+<div class="highlight-default"><div class="highlight"><pre><span></span><span class="n">name</span> <span class="o">=</span> <span class="s2">&quot;sphere&quot;</span>  <span class="c1"># optional: defaults to the filename without .py</span>
+
+<span class="n">title</span> <span class="o">=</span> <span class="s2">&quot;Spheres with uniform scattering length density&quot;</span>
+
+<span class="n">description</span> <span class="o">=</span> <span class="s2">&quot;&quot;&quot;</span><span class="se">\</span>
+<span class="s2">P(q)=(scale/V)*[3V(sld-sld_solvent)*(sin(qr)-qr cos(qr))</span>
+<span class="s2">                /(qr)^3]^2 + background</span>
+<span class="s2">    r: radius of sphere</span>
+<span class="s2">    V: The volume of the scatter</span>
+<span class="s2">    sld: the SLD of the sphere</span>
+<span class="s2">    sld_solvent: the SLD of the solvent</span>
+<span class="s2">&quot;&quot;&quot;</span>
+
+<span class="n">category</span> <span class="o">=</span> <span class="s2">&quot;shape:sphere&quot;</span>
+
+<span class="n">single</span> <span class="o">=</span> <span class="kc">True</span>   <span class="c1"># optional: defaults to True</span>
+
+<span class="n">opencl</span> <span class="o">=</span> <span class="kc">False</span>  <span class="c1"># optional: defaults to False</span>
+
+<span class="n">structure_factor</span> <span class="o">=</span> <span class="kc">False</span>  <span class="c1"># optional: defaults to False</span>
+</pre></div>
+</div>
+<p><strong>name = &#8220;mymodel&#8221;</strong> defines the name of the model that is shown to the user.
+If it is not provided it will use the name of the model file. The name must
+be a valid variable name, starting with a letter and contains only letters,
+numbers or underscore.  Spaces, dashes, and other symbols are not permitted.</p>
+<p><strong>title = &#8220;short description&#8221;</strong> is short description of the model which
+is included after the model name in the automatically generated documentation.
+The title can also be used for a tooltip.</p>
+<p><strong>description = &#8220;&#8221;&#8220;doc string&#8221;&#8220;&#8221;</strong> is a longer description of the model. It
+shows up when you press the &#8220;Description&#8221; button of the SasView FitPage.
+It should give a brief description of the equation and the parameters
+without the need to read the entire model documentation. The triple quotes
+allow you to write the description over multiple lines. Keep the lines
+short since the GUI will wrap each one separately if they are too long.
+<strong>Make sure the parameter names in the description match the model definition!</strong></p>
+<p><strong>category = &#8220;shape:sphere&#8221;</strong> defines where the model will appear in the
+model documentation.  In this example, the model will appear alphabetically
+in the list of spheroid models in the <em>Shape</em> category.</p>
+<p><strong>single = True</strong> indicates that the model can be run using single
+precision floating point values.  Set it to False if the numerical
+calculation for the model is unstable, which is the case for about 20 of
+the built in models.  It is worthwhile modifying the calculation to support
+single precision, allowing models to run up to 10 times faster.  The
+section <a class="reference internal" href="#test-your-new-model">Test_Your_New_Model</a>  describes how to compare model values for
+single vs. double precision so you can decide if you need to set
+single to False.</p>
+<p><strong>opencl = False</strong> indicates that the model should not be run using OpenCL.
+This may be because the model definition includes code that cannot be
+compiled for the GPU (for example, goto statements).  It can also be used
+for large models which can&#8217;t run on most GPUs.  This flag has not been
+used on any of the built in models; models which were failing were
+streamlined so this flag was not necessary.</p>
+<p><strong>structure_factor = True</strong> indicates that the model can be used as a
+structure factor to account for interactions between particles.  See
+<a class="reference internal" href="#form-factors">Form_Factors</a> for more details.</p>
+</div>
+<div class="section" id="model-parameters">
+<h3>Model Parameters</h3>
+<p>Next comes the parameter table.  For example:</p>
+<div class="highlight-default"><div class="highlight"><pre><span></span><span class="c1"># pylint: disable=bad-whitespace, line-too-long</span>
+<span class="c1">#   [&quot;name&quot;,        &quot;units&quot;, default, [min, max], &quot;type&quot;,    &quot;description&quot;],</span>
+<span class="n">parameters</span> <span class="o">=</span> <span class="p">[</span>
+    <span class="p">[</span><span class="s2">&quot;sld&quot;</span><span class="p">,</span>         <span class="s2">&quot;1e-6/Ang^2&quot;</span><span class="p">,</span>  <span class="mi">1</span><span class="p">,</span> <span class="p">[</span><span class="o">-</span><span class="n">inf</span><span class="p">,</span> <span class="n">inf</span><span class="p">],</span> <span class="s2">&quot;sld&quot;</span><span class="p">,</span>    <span class="s2">&quot;Layer scattering length density&quot;</span><span class="p">],</span>
+    <span class="p">[</span><span class="s2">&quot;sld_solvent&quot;</span><span class="p">,</span> <span class="s2">&quot;1e-6/Ang^2&quot;</span><span class="p">,</span>  <span class="mi">6</span><span class="p">,</span> <span class="p">[</span><span class="o">-</span><span class="n">inf</span><span class="p">,</span> <span class="n">inf</span><span class="p">],</span> <span class="s2">&quot;sld&quot;</span><span class="p">,</span>    <span class="s2">&quot;Solvent scattering length density&quot;</span><span class="p">],</span>
+    <span class="p">[</span><span class="s2">&quot;radius&quot;</span><span class="p">,</span>      <span class="s2">&quot;Ang&quot;</span><span class="p">,</span>        <span class="mi">50</span><span class="p">,</span> <span class="p">[</span><span class="mi">0</span><span class="p">,</span> <span class="n">inf</span><span class="p">],</span>    <span class="s2">&quot;volume&quot;</span><span class="p">,</span> <span class="s2">&quot;Sphere radius&quot;</span><span class="p">],</span>
+<span class="p">]</span>
+<span class="c1"># pylint: enable=bad-whitespace, line-too-long</span>
+</pre></div>
+</div>
+<p><strong>parameters = [[&#8220;name&#8221;, &#8220;units&#8221;, default, [min,max], &#8220;type&#8221;, &#8220;tooltip&#8221;],...]</strong>
+defines the parameters that form the model.</p>
+<p><strong>Note: The order of the parameters in the definition will be the order of the
+parameters in the user interface and the order of the parameters in Iq(),
+Iqac(), Iqabc() and form_volume(). And</strong> <em>scale</em> <strong>and</strong> <em>background</em>
+<strong>parameters are implicit to all models, so they do not need to be included
+in the parameter table.</strong></p>
+<ul>
+<li><p class="first"><strong>&#8220;name&#8221;</strong> is the name of the parameter shown on the FitPage.</p>
+<ul>
+<li><p class="first">the name must be a valid variable name, starting with a letter and
+containing only letters, numbers and underscore.</p>
+</li>
+<li><p class="first">parameter names should follow the mathematical convention; e.g.,
+<em>radius_core</em> not <em>core_radius</em>, or <em>sld_solvent</em> not <em>solvent_sld</em>.</p>
+</li>
+<li><p class="first">model parameter names should be consistent between different models,
+so <em>sld_solvent</em>, for example, should have exactly the same name
+in every model.</p>
+</li>
+<li><p class="first">to see all the parameter names currently in use, type the following in the
+python shell/editor under the Tools menu:</p>
+<div class="highlight-default"><div class="highlight"><pre><span></span><span class="kn">import</span> <span class="nn">sasmodels.list_pars</span>
+<span class="n">sasmodels</span><span class="o">.</span><span class="n">list_pars</span><span class="o">.</span><span class="n">list_pars</span><span class="p">()</span>
+</pre></div>
+</div>
+<p><em>re-use</em> as many as possible!!!</p>
+</li>
+<li><p class="first">use &#8220;name[n]&#8221; for multiplicity parameters, where <em>n</em> is the name of
+the parameter defining the number of shells/layers/segments, etc.</p>
+</li>
+</ul>
+</li>
+<li><p class="first"><strong>&#8220;units&#8221;</strong> are displayed along with the parameter name</p>
+<ul>
+<li><p class="first">every parameter should have units; use &#8220;None&#8221; if there are no units.</p>
+</li>
+<li><p class="first"><strong>sld&#8217;s should be given in units of 1e-6/Ang^2, and not simply
+1/Ang^2 to be consistent with the builtin models.  Adjust your formulas
+appropriately.</strong></p>
+</li>
+<li><p class="first">fancy units markup is available for some units, including:</p>
+<div class="highlight-default"><div class="highlight"><pre><span></span><span class="n">Ang</span><span class="p">,</span> <span class="mi">1</span><span class="o">/</span><span class="n">Ang</span><span class="p">,</span> <span class="mi">1</span><span class="o">/</span><span class="n">Ang</span><span class="o">^</span><span class="mi">2</span><span class="p">,</span> <span class="mi">1</span><span class="n">e</span><span class="o">-</span><span class="mi">6</span><span class="o">/</span><span class="n">Ang</span><span class="o">^</span><span class="mi">2</span><span class="p">,</span> <span class="n">degrees</span><span class="p">,</span> <span class="mi">1</span><span class="o">/</span><span class="n">cm</span><span class="p">,</span> <span class="n">Ang</span><span class="o">/</span><span class="n">cm</span><span class="p">,</span> <span class="n">g</span><span class="o">/</span><span class="n">cm</span><span class="o">^</span><span class="mi">3</span><span class="p">,</span> <span class="n">mg</span><span class="o">/</span><span class="n">m</span><span class="o">^</span><span class="mi">2</span>
+</pre></div>
+</div>
+</li>
+<li><p class="first">the list of units is defined in the variable <em>RST_UNITS</em> within
+<a class="reference external" href="https://github.com/SasView/sasmodels/tree/master/sasmodels/generate.py">sasmodels/generate.py</a></p>
+<ul class="simple">
+<li>new units can be added using the macros defined in <em>doc/rst_prolog</em>
+in the sasmodels source.</li>
+<li>units should be properly formatted using sub-/super-scripts
+and using negative exponents instead of the / operator, though
+the unit name should use the / operator for consistency.</li>
+<li>please post a message to the SasView developers mailing list with your changes.</li>
+</ul>
+</li>
+</ul>
+</li>
+<li><p class="first"><strong>default</strong> is the initial value for the parameter.</p>
+<ul class="simple">
+<li><strong>the parameter default values are used to auto-generate a plot of
+the model function in the documentation.</strong></li>
+</ul>
+</li>
+<li><p class="first"><strong>[min, max]</strong> are the lower and upper limits on the parameter.</p>
+<ul class="simple">
+<li>lower and upper limits can be any number, or <em>-inf</em> or <em>inf</em>.</li>
+<li>the limits will show up as the default limits for the fit making it easy,
+for example, to force the radius to always be greater than zero.</li>
+<li>these are hard limits defining the valid range of parameter values;
+polydisperity distributions will be truncated at the limits.</li>
+</ul>
+</li>
+<li><p class="first"><strong>&#8220;type&#8221;</strong> can be one of: &#8220;&#8221;, &#8220;sld&#8221;, &#8220;volume&#8221;, or &#8220;orientation&#8221;.</p>
+<ul class="simple">
+<li>&#8220;sld&#8221; parameters can have magnetic moments when fitting magnetic models;
+depending on the spin polarization of the beam and the <span class="math">\(q\)</span> value being
+examined, the effective sld for that material will be used to compute the
+scattered intensity.</li>
+<li>&#8220;volume&#8221; parameters are passed to Iq(), Iqac(), Iqabc() and form_volume(),
+and have polydispersity loops generated automatically.</li>
+<li>&#8220;orientation&#8221; parameters are not passed, but instead are combined with
+orientation dispersity to translate <em>qx</em> and <em>qy</em> to <em>qa</em>, <em>qb</em> and <em>qc</em>.
+These parameters should appear at the end of the table with the specific
+names <em>theta</em>, <em>phi</em> and for asymmetric shapes <em>psi</em>, in that order.</li>
+</ul>
+</li>
+</ul>
+<p>Some models will have integer parameters, such as number of pearls in the
+pearl necklace model, or number of shells in the multi-layer vesicle model.
+The optimizers in BUMPS treat all parameters as floating point numbers which
+can take arbitrary values, even for integer parameters, so your model should
+round the incoming parameter value to the nearest integer inside your model
+you should round to the nearest integer.  In C code, you can do this using:</p>
+<div class="highlight-default"><div class="highlight"><pre><span></span><span class="n">static</span> <span class="n">double</span>
+<span class="n">Iq</span><span class="p">(</span><span class="n">double</span> <span class="n">q</span><span class="p">,</span> <span class="o">...</span><span class="p">,</span> <span class="n">double</span> <span class="n">fp_n</span><span class="p">,</span> <span class="o">...</span><span class="p">)</span>
+<span class="p">{</span>
+    <span class="nb">int</span> <span class="n">n</span> <span class="o">=</span> <span class="p">(</span><span class="nb">int</span><span class="p">)(</span><span class="n">fp_n</span> <span class="o">+</span> <span class="mf">0.5</span><span class="p">);</span>
+    <span class="o">...</span>
+<span class="p">}</span>
+</pre></div>
+</div>
+<p>in python:</p>
+<div class="highlight-default"><div class="highlight"><pre><span></span><span class="k">def</span> <span class="nf">Iq</span><span class="p">(</span><span class="n">q</span><span class="p">,</span> <span class="o">...</span><span class="p">,</span> <span class="n">n</span><span class="p">,</span> <span class="o">...</span><span class="p">):</span>
+    <span class="n">n</span> <span class="o">=</span> <span class="nb">int</span><span class="p">(</span><span class="n">n</span><span class="o">+</span><span class="mf">0.5</span><span class="p">)</span>
+    <span class="o">...</span>
+</pre></div>
+</div>
+<p>Derivative based optimizers such as Levenberg-Marquardt will not work
+for integer parameters since the partial derivative is always zero, but
+the remaining optimizers (DREAM, differential evolution, Nelder-Mead simplex)
+will still function.</p>
+</div>
+<div class="section" id="model-computation">
+<h3>Model Computation</h3>
+<p>Models can be defined as pure python models, or they can be a mixture of
+python and C models.  C models are run on the GPU if it is available,
+otherwise they are compiled and run on the CPU.</p>
+<p>Models are defined by the scattering kernel, which takes a set of parameter
+values defining the shape, orientation and material, and returns the
+expected scattering. Polydispersity and angular dispersion are defined
+by the computational infrastructure.  Any parameters defined as &#8220;volume&#8221;
+parameters are polydisperse, with polydispersity defined in proportion
+to their value.  &#8220;orientation&#8221; parameters use angular dispersion defined
+in degrees, and are not relative to the current angle.</p>
+<p>Based on a weighting function <span class="math">\(G(x)\)</span> and a number of points <span class="math">\(n\)</span>, the
+computed value is</p>
+<div class="math">
+\[\hat I(q)
+= \frac{\int G(x) I(q, x)\,dx}{\int G(x) V(x)\,dx}
+\approx \frac{\sum_{i=1}^n G(x_i) I(q,x_i)}{\sum_{i=1}^n G(x_i) V(x_i)}\]</div>
+<p>That is, the individual models do not need to include polydispersity
+calculations, but instead rely on numerical integration to compute the
+appropriately smeared pattern.</p>
+<p>Each .py file also contains a function:</p>
+<div class="highlight-default"><div class="highlight"><pre><span></span><span class="k">def</span> <span class="nf">random</span><span class="p">():</span>
+<span class="o">...</span>
+</pre></div>
+</div>
+<p>This function provides a model-specific random parameter set which shows model
+features in the USANS to SANS range.  For example, core-shell sphere sets the
+outer radius of the sphere logarithmically in <cite>[20, 20,000]</cite>, which sets the Q
+value for the transition from flat to falling.  It then uses a beta distribution
+to set the percentage of the shape which is shell, giving a preference for very
+thin or very thick shells (but never 0% or 100%).  Using <cite>-sets=10</cite> in sascomp
+should show a reasonable variety of curves over the default sascomp q range.
+The parameter set is returned as a dictionary of <cite>{parameter: value, ...}</cite>.
+Any model parameters not included in the dictionary will default according to
+the code in the <cite>_randomize_one()</cite> function from sasmodels/compare.py.</p>
+</div>
+<div class="section" id="python-models">
+<h3>Python Models</h3>
+<p>For pure python models, define the <em>Iq</em> function:</p>
+<div class="highlight-default"><div class="highlight"><pre><span></span><span class="kn">import</span> <span class="nn">numpy</span> <span class="k">as</span> <span class="nn">np</span>
+<span class="kn">from</span> <span class="nn">numpy</span> <span class="k">import</span> <span class="n">cos</span><span class="p">,</span> <span class="n">sin</span><span class="p">,</span> <span class="o">...</span>
+
+<span class="k">def</span> <span class="nf">Iq</span><span class="p">(</span><span class="n">q</span><span class="p">,</span> <span class="n">par1</span><span class="p">,</span> <span class="n">par2</span><span class="p">,</span> <span class="o">...</span><span class="p">):</span>
+    <span class="k">return</span> <span class="n">I</span><span class="p">(</span><span class="n">q</span><span class="p">,</span> <span class="n">par1</span><span class="p">,</span> <span class="n">par2</span><span class="p">,</span> <span class="o">...</span><span class="p">)</span>
+<span class="n">Iq</span><span class="o">.</span><span class="n">vectorized</span> <span class="o">=</span> <span class="kc">True</span>
+</pre></div>
+</div>
+<p>The parameters <em>par1, par2, ...</em> are the list of non-orientation parameters
+to the model in the order that they appear in the parameter table.
+<strong>Note that the auto-generated model file uses</strong> <em>x</em> <strong>rather than</strong> <em>q</em>.</p>
+<p>The <em>.py</em> file should import trigonometric and exponential functions from
+numpy rather than from math.  This lets us evaluate the model for the whole
+range of <span class="math">\(q\)</span> values at once rather than looping over each <span class="math">\(q\)</span> separately in
+python.  With <span class="math">\(q\)</span> as a vector, you cannot use if statements, but must instead
+do tricks like</p>
+<div class="highlight-default"><div class="highlight"><pre><span></span><span class="n">a</span> <span class="o">=</span> <span class="n">x</span><span class="o">*</span><span class="n">q</span><span class="o">*</span><span class="p">(</span><span class="n">q</span><span class="o">&gt;</span><span class="mi">0</span><span class="p">)</span> <span class="o">+</span> <span class="n">y</span><span class="o">*</span><span class="n">q</span><span class="o">*</span><span class="p">(</span><span class="n">q</span><span class="o">&lt;=</span><span class="mi">0</span><span class="p">)</span>
+</pre></div>
+</div>
+<p>or</p>
+<div class="highlight-default"><div class="highlight"><pre><span></span><span class="n">a</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">empty_like</span><span class="p">(</span><span class="n">q</span><span class="p">)</span>
+<span class="n">index</span> <span class="o">=</span> <span class="n">q</span><span class="o">&gt;</span><span class="mi">0</span>
+<span class="n">a</span><span class="p">[</span><span class="n">index</span><span class="p">]</span> <span class="o">=</span> <span class="n">x</span><span class="o">*</span><span class="n">q</span><span class="p">[</span><span class="n">index</span><span class="p">]</span>
+<span class="n">a</span><span class="p">[</span><span class="o">~</span><span class="n">index</span><span class="p">]</span> <span class="o">=</span> <span class="n">y</span><span class="o">*</span><span class="n">q</span><span class="p">[</span><span class="o">~</span><span class="n">index</span><span class="p">]</span>
+</pre></div>
+</div>
+<p>which sets <span class="math">\(a\)</span> to <span class="math">\(q \cdot x\)</span> if <span class="math">\(q\)</span> is positive or <span class="math">\(q \cdot y\)</span> if <span class="math">\(q\)</span>
+is zero or negative. If you have not converted your function to use <span class="math">\(q\)</span>
+vectors, you can set the following and it will only receive one <span class="math">\(q\)</span>
+value at a time:</p>
+<div class="highlight-default"><div class="highlight"><pre><span></span><span class="n">Iq</span><span class="o">.</span><span class="n">vectorized</span> <span class="o">=</span> <span class="kc">False</span>
+</pre></div>
+</div>
+<p>Return np.NaN if the parameters are not valid (e.g., cap_radius &lt; radius in
+barbell).  If I(q; pars) is NaN for any <span class="math">\(q\)</span>, then those parameters will be
+ignored, and not included in the calculation of the weighted polydispersity.</p>
+<p>Models should define <em>form_volume(par1, par2, ...)</em> where the parameter
+list includes the <em>volume</em> parameters in order.  This is used for a weighted
+volume normalization so that scattering is on an absolute scale.  If
+<em>form_volume</em> is not defined, then the default <em>form_volume = 1.0</em> will be
+used.</p>
+</div>
+<div class="section" id="embedded-c-models">
+<h3>Embedded C Models</h3>
+<p>Like pure python models, inline C models need to define an <em>Iq</em> function:</p>
+<div class="highlight-default"><div class="highlight"><pre><span></span><span class="n">Iq</span> <span class="o">=</span> <span class="s2">&quot;&quot;&quot;</span>
+<span class="s2">    return I(q, par1, par2, ...);</span>
+<span class="s2">&quot;&quot;&quot;</span>
+</pre></div>
+</div>
+<p>This expands into the equivalent C code:</p>
+<div class="highlight-default"><div class="highlight"><pre><span></span><span class="c1">#include &lt;math.h&gt;</span>
+<span class="n">double</span> <span class="n">Iq</span><span class="p">(</span><span class="n">double</span> <span class="n">q</span><span class="p">,</span> <span class="n">double</span> <span class="n">par1</span><span class="p">,</span> <span class="n">double</span> <span class="n">par2</span><span class="p">,</span> <span class="o">...</span><span class="p">);</span>
+<span class="n">double</span> <span class="n">Iq</span><span class="p">(</span><span class="n">double</span> <span class="n">q</span><span class="p">,</span> <span class="n">double</span> <span class="n">par1</span><span class="p">,</span> <span class="n">double</span> <span class="n">par2</span><span class="p">,</span> <span class="o">...</span><span class="p">)</span>
+<span class="p">{</span>
+    <span class="k">return</span> <span class="n">I</span><span class="p">(</span><span class="n">q</span><span class="p">,</span> <span class="n">par1</span><span class="p">,</span> <span class="n">par2</span><span class="p">,</span> <span class="o">...</span><span class="p">);</span>
+<span class="p">}</span>
+</pre></div>
+</div>
+<p><em>form_volume</em> defines the volume of the shape. As in python models, it
+includes only the volume parameters.</p>
+<p><strong>source=[&#8216;fn.c&#8217;, ...]</strong> includes the listed C source files in the
+program before <em>Iq</em> and <em>form_volume</em> are defined. This allows you to
+extend the library of C functions available to your model.</p>
+<p><em>c_code</em> includes arbitrary C code into your kernel, which can be
+handy for defining helper functions for <em>Iq</em> and <em>form_volume</em>. Note that
+you can put the full function definition for <em>Iq</em> and <em>form_volume</em>
+(include function declaration) into <em>c_code</em> as well, or put them into an
+external C file and add that file to the list of sources.</p>
+<p>Models are defined using double precision declarations for the
+parameters and return values.  When a model is run using single
+precision or long double precision, each variable is converted
+to the target type, depending on the precision requested.</p>
+<p><strong>Floating point constants must include the decimal point.</strong>  This allows us
+to convert values such as 1.0 (double precision) to 1.0f (single precision)
+so that expressions that use these values are not promoted to double precision
+expressions.  Some graphics card drivers are confused when functions
+that expect floating point values are passed integers, such as 4*atan(1); it
+is safest to not use integers in floating point expressions.  Even better,
+use the builtin constant M_PI rather than 4*atan(1); it is faster and smaller!</p>
+<p>The C model operates on a single <span class="math">\(q\)</span> value at a time.  The code will be
+run in parallel across different <span class="math">\(q\)</span> values, either on the graphics card
+or the processor.</p>
+<p>Rather than returning NAN from Iq, you must define the <em>INVALID(v)</em>.  The
+<em>v</em> parameter lets you access all the parameters in the model using
+<em>v.par1</em>, <em>v.par2</em>, etc. For example:</p>
+<div class="highlight-default"><div class="highlight"><pre><span></span><span class="c1">#define INVALID(v) (v.bell_radius &lt; v.radius)</span>
+</pre></div>
+</div>
+<p>The INVALID define can go into <em>Iq</em>, or <em>c_code</em>, or an external C file
+listed in <em>source</em>.</p>
+</div>
+<div class="section" id="oriented-shapes">
+<h3>Oriented Shapes</h3>
+<p>If the scattering is dependent on the orientation of the shape, then you
+will need to include <em>orientation</em> parameters <em>theta</em>, <em>phi</em> and <em>psi</em>
+at the end of the parameter table.  As described in the section
+<a class="reference internal" href="orientation/orientation.html#orientation"><span class="std std-ref">Oriented particles</span></a>, the individual <span class="math">\((q_x, q_y)\)</span> points on the detector will
+be rotated into <span class="math">\((q_a, q_b, q_c)\)</span> points relative to the sample in its
+canonical orientation with <span class="math">\(a\)</span>-<span class="math">\(b\)</span>-<span class="math">\(c\)</span> aligned with <span class="math">\(x\)</span>-<span class="math">\(y\)</span>-<span class="math">\(z\)</span> in the
+laboratory frame and beam travelling along <span class="math">\(-z\)</span>.</p>
+<p>The oriented C model is called using <em>Iqabc(qa, qb, qc, par1, par2, ...)</em> where
+<em>par1</em>, etc. are the parameters to the model.  If the shape is rotationally
+symmetric about <em>c</em> then <em>psi</em> is not needed, and the model is called
+as <em>Iqac(qab, qc, par1, par2, ...)</em>.  In either case, the orientation
+parameters are not included in the function call.</p>
+<p>For 1D oriented shapes, an integral over all angles is usually needed for
+the <em>Iq</em> function. Given symmetry and the substitution <span class="math">\(u = \cos(\alpha)\)</span>,
+<span class="math">\(du = -\sin(\alpha)\,d\alpha\)</span> this becomes</p>
+<div class="math">
+\[\begin{split}I(q) &amp;= \frac{1}{4\pi} \int_{-\pi/2}^{pi/2} \int_{-pi}^{pi}
+        F(q_a, q_b, q_c)^2 \sin(\alpha)\,d\beta\,d\alpha \\
+    &amp;= \frac{8}{4\pi} \int_{0}^{pi/2} \int_{0}^{\pi/2}
+        F^2 \sin(\alpha)\,d\beta\,d\alpha \\
+    &amp;= \frac{8}{4\pi} \int_1^0 \int_{0}^{\pi/2} - F^2 \,d\beta\,du \\
+    &amp;= \frac{8}{4\pi} \int_0^1 \int_{0}^{\pi/2} F^2 \,d\beta\,du\end{split}\]</div>
+<p>for</p>
+<div class="math">
+\[\begin{split}q_a &amp;= q \sin(\alpha)\sin(\beta) = q \sqrt{1-u^2} \sin(\beta) \\
+q_b &amp;= q \sin(\alpha)\cos(\beta) = q \sqrt{1-u^2} \cos(\beta) \\
+q_c &amp;= q \cos(\alpha) = q u\end{split}\]</div>
+<p>Using the <span class="math">\(z, w\)</span> values for Gauss-Legendre integration in &#8220;lib/gauss76.c&#8221;, the
+numerical integration is then:</p>
+<div class="highlight-default"><div class="highlight"><pre><span></span><span class="n">double</span> <span class="n">outer_sum</span> <span class="o">=</span> <span class="mf">0.0</span><span class="p">;</span>
+<span class="k">for</span> <span class="p">(</span><span class="nb">int</span> <span class="n">i</span> <span class="o">=</span> <span class="mi">0</span><span class="p">;</span> <span class="n">i</span> <span class="o">&lt;</span> <span class="n">GAUSS_N</span><span class="p">;</span> <span class="n">i</span><span class="o">++</span><span class="p">)</span> <span class="p">{</span>
+    <span class="n">const</span> <span class="n">double</span> <span class="n">cos_alpha</span> <span class="o">=</span> <span class="mf">0.5</span><span class="o">*</span><span class="n">GAUSS_Z</span><span class="p">[</span><span class="n">i</span><span class="p">]</span> <span class="o">+</span> <span class="mf">0.5</span><span class="p">;</span>
+    <span class="n">const</span> <span class="n">double</span> <span class="n">sin_alpha</span> <span class="o">=</span> <span class="n">sqrt</span><span class="p">(</span><span class="mf">1.0</span> <span class="o">-</span> <span class="n">cos_alpha</span><span class="o">*</span><span class="n">cos_alpha</span><span class="p">);</span>
+    <span class="n">const</span> <span class="n">double</span> <span class="n">qc</span> <span class="o">=</span> <span class="n">cos_alpha</span> <span class="o">*</span> <span class="n">q</span><span class="p">;</span>
+    <span class="n">double</span> <span class="n">inner_sum</span> <span class="o">=</span> <span class="mf">0.0</span><span class="p">;</span>
+    <span class="k">for</span> <span class="p">(</span><span class="nb">int</span> <span class="n">j</span> <span class="o">=</span> <span class="mi">0</span><span class="p">;</span> <span class="n">j</span> <span class="o">&lt;</span> <span class="n">GAUSS_N</span><span class="p">;</span> <span class="n">j</span><span class="o">++</span><span class="p">)</span> <span class="p">{</span>
+        <span class="n">const</span> <span class="n">double</span> <span class="n">beta</span> <span class="o">=</span> <span class="n">M_PI_4</span> <span class="o">*</span> <span class="n">GAUSS_Z</span><span class="p">[</span><span class="n">j</span><span class="p">]</span> <span class="o">+</span> <span class="n">M_PI_4</span><span class="p">;</span>
+        <span class="n">double</span> <span class="n">sin_beta</span><span class="p">,</span> <span class="n">cos_beta</span><span class="p">;</span>
+        <span class="n">SINCOS</span><span class="p">(</span><span class="n">beta</span><span class="p">,</span> <span class="n">sin_beta</span><span class="p">,</span> <span class="n">cos_beta</span><span class="p">);</span>
+        <span class="n">const</span> <span class="n">double</span> <span class="n">qa</span> <span class="o">=</span> <span class="n">sin_alpha</span> <span class="o">*</span> <span class="n">sin_beta</span> <span class="o">*</span> <span class="n">q</span><span class="p">;</span>
+        <span class="n">const</span> <span class="n">double</span> <span class="n">qb</span> <span class="o">=</span> <span class="n">sin_alpha</span> <span class="o">*</span> <span class="n">cos_beta</span> <span class="o">*</span> <span class="n">q</span><span class="p">;</span>
+        <span class="n">const</span> <span class="n">double</span> <span class="n">form</span> <span class="o">=</span> <span class="n">Fq</span><span class="p">(</span><span class="n">qa</span><span class="p">,</span> <span class="n">qb</span><span class="p">,</span> <span class="n">qc</span><span class="p">,</span> <span class="o">...</span><span class="p">);</span>
+        <span class="n">inner_sum</span> <span class="o">+=</span> <span class="n">GAUSS_W</span><span class="p">[</span><span class="n">j</span><span class="p">]</span> <span class="o">*</span> <span class="n">form</span> <span class="o">*</span> <span class="n">form</span><span class="p">;</span>
+    <span class="p">}</span>
+    <span class="n">outer_sum</span> <span class="o">+=</span> <span class="n">GAUSS_W</span><span class="p">[</span><span class="n">i</span><span class="p">]</span> <span class="o">*</span> <span class="n">inner_sum</span><span class="p">;</span>
+<span class="p">}</span>
+<span class="n">outer_sum</span> <span class="o">*=</span> <span class="mf">0.25</span><span class="p">;</span> <span class="o">//</span> <span class="o">=</span> <span class="mi">8</span><span class="o">/</span><span class="p">(</span><span class="mi">4</span> <span class="n">pi</span><span class="p">)</span> <span class="o">*</span> <span class="n">outer_sum</span> <span class="o">*</span> <span class="p">(</span><span class="n">pi</span><span class="o">/</span><span class="mi">2</span><span class="p">)</span> <span class="o">/</span> <span class="mi">4</span>
+</pre></div>
+</div>
+<p>The <em>z</em> values for the Gauss-Legendre integration extends from -1 to 1, so
+the double sum of <em>w[i]w[j]</em> explains the factor of 4.  Correcting for the
+average <em>dz[i]dz[j]</em> gives <span class="math">\((1-0) \cdot (\pi/2-0) = \pi/2\)</span>.  The <span class="math">\(8/(4 \pi)\)</span>
+factor comes from the integral over the quadrant.  With less symmetry (eg.,
+in the bcc and fcc paracrystal models), then an integral over the entire
+sphere may be necessary.</p>
+<p>For simpler models which are rotationally symmetric a single integral
+suffices:</p>
+<div class="math">
+\[\begin{split}I(q) &amp;= \frac{1}{\pi}\int_{-\pi/2}^{\pi/2}
+        F(q_{ab}, q_c)^2 \sin(\alpha)\,d\alpha/\pi \\
+    &amp;= \frac{2}{\pi} \int_0^1 F^2\,du\end{split}\]</div>
+<p>for</p>
+<div class="math">
+\[\begin{split}q_{ab} &amp;= q \sin(\alpha) = q \sqrt{1 - u^2} \\
+q_c &amp;= q \cos(\alpha) = q u\end{split}\]</div>
+<p>with integration loop:</p>
+<div class="highlight-default"><div class="highlight"><pre><span></span><span class="n">double</span> <span class="nb">sum</span> <span class="o">=</span> <span class="mf">0.0</span><span class="p">;</span>
+<span class="k">for</span> <span class="p">(</span><span class="nb">int</span> <span class="n">i</span> <span class="o">=</span> <span class="mi">0</span><span class="p">;</span> <span class="n">i</span> <span class="o">&lt;</span> <span class="n">GAUSS_N</span><span class="p">;</span> <span class="n">i</span><span class="o">++</span><span class="p">)</span> <span class="p">{</span>
+    <span class="n">const</span> <span class="n">double</span> <span class="n">cos_alpha</span> <span class="o">=</span> <span class="mf">0.5</span><span class="o">*</span><span class="n">GAUSS_Z</span><span class="p">[</span><span class="n">i</span><span class="p">]</span> <span class="o">+</span> <span class="mf">0.5</span><span class="p">;</span>
+    <span class="n">const</span> <span class="n">double</span> <span class="n">sin_alpha</span> <span class="o">=</span> <span class="n">sqrt</span><span class="p">(</span><span class="mf">1.0</span> <span class="o">-</span> <span class="n">cos_alpha</span><span class="o">*</span><span class="n">cos_alpha</span><span class="p">);</span>
+    <span class="n">const</span> <span class="n">double</span> <span class="n">qab</span> <span class="o">=</span> <span class="n">sin_alpha</span> <span class="o">*</span> <span class="n">q</span><span class="p">;</span>
+    <span class="n">const</span> <span class="n">double</span> <span class="n">qc</span> <span class="o">=</span> <span class="n">cos_alpha</span> <span class="o">*</span> <span class="n">q</span><span class="p">;</span>
+    <span class="n">const</span> <span class="n">double</span> <span class="n">form</span> <span class="o">=</span> <span class="n">Fq</span><span class="p">(</span><span class="n">qab</span><span class="p">,</span> <span class="n">qc</span><span class="p">,</span> <span class="o">...</span><span class="p">);</span>
+    <span class="nb">sum</span> <span class="o">+=</span> <span class="n">GAUSS_W</span><span class="p">[</span><span class="n">j</span><span class="p">]</span> <span class="o">*</span> <span class="n">form</span> <span class="o">*</span> <span class="n">form</span><span class="p">;</span>
+<span class="p">}</span>
+<span class="nb">sum</span> <span class="o">*=</span> <span class="mf">0.5</span><span class="p">;</span> <span class="o">//</span> <span class="o">=</span> <span class="mi">2</span><span class="o">/</span><span class="n">pi</span> <span class="o">*</span> <span class="nb">sum</span> <span class="o">*</span> <span class="p">(</span><span class="n">pi</span><span class="o">/</span><span class="mi">2</span><span class="p">)</span> <span class="o">/</span> <span class="mi">2</span>
+</pre></div>
+</div>
+</div>
+<div class="section" id="magnetism">
+<h3>Magnetism</h3>
+<p>Magnetism is supported automatically for all shapes by modifying the
+effective SLD of particle according to the Halpern-Johnson vector
+describing the interaction between neutron spin and magnetic field.  All
+parameters marked as type <em>sld</em> in the parameter table are treated as
+possibly magnetic particles with magnitude <em>M0</em> and direction
+<em>mtheta</em> and <em>mphi</em>.  Polarization parameters are also provided
+automatically for magnetic models to set the spin state of the measurement.</p>
+<p>For more complicated systems where magnetism is not uniform throughout
+the individual particles, you will need to write your own models.
+You should not mark the nuclear sld as type <em>sld</em>, but instead leave
+them unmarked and provide your own magnetism and polarization parameters.
+For 2D measurements you will need <span class="math">\((q_x, q_y)\)</span> values for the measurement
+to compute the proper magnetism and orientation, which you can implement
+using <em>Iqxy(qx, qy, par1, par2, ...)</em>.</p>
+</div>
+<div class="section" id="special-functions">
+<h3>Special Functions</h3>
+<p>The C code follows the C99 standard, with the usual math functions,
+as defined in
+<a class="reference external" href="https://www.khronos.org/registry/cl/sdk/1.1/docs/man/xhtml/mathFunctions.html">OpenCL</a>.
+This includes the following:</p>
+<blockquote>
+<div><dl class="docutils">
+<dt>M_PI, M_PI_2, M_PI_4, M_SQRT1_2, M_E:</dt>
+<dd><span class="math">\(\pi\)</span>, <span class="math">\(\pi/2\)</span>, <span class="math">\(\pi/4\)</span>, <span class="math">\(1/\sqrt{2}\)</span> and Euler&#8217;s constant <span class="math">\(e\)</span></dd>
+<dt>exp, log, pow(x,y), expm1, log1p, sqrt, cbrt:</dt>
+<dd>Power functions <span class="math">\(e^x\)</span>, <span class="math">\(\ln x\)</span>, <span class="math">\(x^y\)</span>, <span class="math">\(e^x - 1\)</span>, <span class="math">\(\ln 1 + x\)</span>,
+<span class="math">\(\sqrt{x}\)</span>, <span class="math">\(\sqrt[3]{x}\)</span>. The functions expm1(x) and log1p(x)
+are accurate across all <span class="math">\(x\)</span>, including <span class="math">\(x\)</span> very close to zero.</dd>
+<dt>sin, cos, tan, asin, acos, atan:</dt>
+<dd>Trigonometry functions and inverses, operating on radians.</dd>
+<dt>sinh, cosh, tanh, asinh, acosh, atanh:</dt>
+<dd>Hyperbolic trigonometry functions.</dd>
+<dt>atan2(y,x):</dt>
+<dd>Angle from the <span class="math">\(x\)</span>-axis to the point <span class="math">\((x,y)\)</span>, which is equal to
+<span class="math">\(\tan^{-1}(y/x)\)</span> corrected for quadrant.  That is, if <span class="math">\(x\)</span> and <span class="math">\(y\)</span> are
+both negative, then atan2(y,x) returns a value in quadrant III where
+atan(y/x) would return a value in quadrant I. Similarly for
+quadrants II and IV when <span class="math">\(x\)</span> and <span class="math">\(y\)</span> have opposite sign.</dd>
+<dt>fabs(x), fmin(x,y), fmax(x,y), trunc, rint:</dt>
+<dd>Floating point functions.  rint(x) returns the nearest integer.</dd>
+<dt>NAN:</dt>
+<dd>NaN, Not a Number, <span class="math">\(0/0\)</span>.  Use isnan(x) to test for NaN.  Note that
+you cannot use <code class="code docutils literal"><span class="pre">x</span> <span class="pre">==</span> <span class="pre">NAN</span></code> to test for NaN values since that
+will always return false.  NAN does not equal NAN!  The alternative,
+<code class="code docutils literal"><span class="pre">x</span> <span class="pre">!=</span> <span class="pre">x</span></code> may fail if the compiler optimizes the test away.</dd>
+<dt>INFINITY:</dt>
+<dd><span class="math">\(\infty, 1/0\)</span>.  Use isinf(x) to test for infinity, or isfinite(x)
+to test for finite and not NaN.</dd>
+<dt>erf, erfc, tgamma, lgamma:  <strong>do not use</strong></dt>
+<dd>Special functions that should be part of the standard, but are missing
+or inaccurate on some platforms. Use sas_erf, sas_erfc and sas_gamma
+instead (see below). Note: lgamma(x) has not yet been tested.</dd>
+</dl>
+</div></blockquote>
+<p>Some non-standard constants and functions are also provided:</p>
+<blockquote>
+<div><dl class="docutils">
+<dt>M_PI_180, M_4PI_3:</dt>
+<dd><span class="math">\(\frac{\pi}{180}\)</span>, <span class="math">\(\frac{4\pi}{3}\)</span></dd>
+<dt>SINCOS(x, s, c):</dt>
+<dd>Macro which sets s=sin(x) and c=cos(x). The variables <em>c</em> and <em>s</em>
+must be declared first.</dd>
+<dt>square(x):</dt>
+<dd><span class="math">\(x^2\)</span></dd>
+<dt>cube(x):</dt>
+<dd><span class="math">\(x^3\)</span></dd>
+<dt>sas_sinx_x(x):</dt>
+<dd><span class="math">\(\sin(x)/x\)</span>, with limit <span class="math">\(\sin(0)/0 = 1\)</span>.</dd>
+<dt>powr(x, y):</dt>
+<dd><span class="math">\(x^y\)</span> for <span class="math">\(x \ge 0\)</span>; this is faster than general <span class="math">\(x^y\)</span> on some GPUs.</dd>
+<dt>pown(x, n):</dt>
+<dd><span class="math">\(x^n\)</span> for <span class="math">\(n\)</span> integer; this is faster than general <span class="math">\(x^n\)</span> on some GPUs.</dd>
+<dt>FLOAT_SIZE:</dt>
+<dd><p class="first">The number of bytes in a floating point value.  Even though all
+variables are declared double, they may be converted to single
+precision float before running. If your algorithm depends on
+precision (which is not uncommon for numerical algorithms), use
+the following:</p>
+<div class="last highlight-default"><div class="highlight"><pre><span></span><span class="c1">#if FLOAT_SIZE&gt;4</span>
+<span class="o">...</span> <span class="n">code</span> <span class="k">for</span> <span class="n">double</span> <span class="n">precision</span> <span class="o">...</span>
+<span class="c1">#else</span>
+<span class="o">...</span> <span class="n">code</span> <span class="k">for</span> <span class="n">single</span> <span class="n">precision</span> <span class="o">...</span>
+<span class="c1">#endif</span>
+</pre></div>
+</div>
+</dd>
+<dt>SAS_DOUBLE:</dt>
+<dd>A replacement for <code class="code docutils literal"><span class="pre">double</span></code> so that the declared variable will
+stay double precision; this should generally not be used since some
+graphics cards do not support double precision.  There is no provision
+for forcing a constant to stay double precision.</dd>
+</dl>
+</div></blockquote>
+<p>The following special functions and scattering calculations are defined in
+<a class="reference external" href="https://github.com/SasView/sasmodels/tree/master/sasmodels/models/lib">sasmodels/models/lib</a>.
+These functions have been tuned to be fast and numerically stable down
+to <span class="math">\(q=0\)</span> even in single precision.  In some cases they work around bugs
+which appear on some platforms but not others, so use them where needed.
+Add the files listed in <code class="code docutils literal"><span class="pre">source</span> <span class="pre">=</span> <span class="pre">[&quot;lib/file.c&quot;,</span> <span class="pre">...]</span></code> to your <em>model.py</em>
+file in the order given, otherwise these functions will not be available.</p>
+<blockquote>
+<div><dl class="docutils">
+<dt>polevl(x, c, n):</dt>
+<dd><p class="first">Polynomial evaluation <span class="math">\(p(x) = \sum_{i=0}^n c_i x^i\)</span> using Horner&#8217;s
+method so it is faster and more accurate.</p>
+<p><span class="math">\(c = \{c_n, c_{n-1}, \ldots, c_0 \}\)</span> is the table of coefficients,
+sorted from highest to lowest.</p>
+<p class="last"><code class="code docutils literal"><span class="pre">source</span> <span class="pre">=</span> <span class="pre">[&quot;lib/polevl.c&quot;,</span> <span class="pre">...]</span></code> (<a class="reference external" href="https://github.com/SasView/sasmodels/tree/master/sasmodels/models/lib/polevl.c">link to code</a>)</p>
+</dd>
+<dt>p1evl(x, c, n):</dt>
+<dd><p class="first">Evaluation of normalized polynomial <span class="math">\(p(x) = x^n + \sum_{i=0}^{n-1} c_i x^i\)</span>
+using Horner&#8217;s method so it is faster and more accurate.</p>
+<p><span class="math">\(c = \{c_{n-1}, c_{n-2} \ldots, c_0 \}\)</span> is the table of coefficients,
+sorted from highest to lowest.</p>
+<p class="last"><code class="code docutils literal"><span class="pre">source</span> <span class="pre">=</span> <span class="pre">[&quot;lib/polevl.c&quot;,</span> <span class="pre">...]</span></code>
+(<a class="reference external" href="https://github.com/SasView/sasmodels/tree/master/sasmodels/models/lib/polevl.c">polevl.c</a>)</p>
+</dd>
+<dt>sas_gamma(x):</dt>
+<dd><p class="first">Gamma function sas_gamma<span class="math">\((x) = \Gamma(x)\)</span>.</p>
+<p>The standard math function, tgamma(x) is unstable for <span class="math">\(x &lt; 1\)</span>
+on some platforms.</p>
+<p class="last"><code class="code docutils literal"><span class="pre">source</span> <span class="pre">=</span> <span class="pre">[&quot;lib/sas_gamma.c&quot;,</span> <span class="pre">...]</span></code>
+(<a class="reference external" href="https://github.com/SasView/sasmodels/tree/master/sasmodels/models/lib/sas_gamma.c">sas_gamma.c</a>)</p>
+</dd>
+<dt>sas_erf(x), sas_erfc(x):</dt>
+<dd><p class="first">Error function
+sas_erf<span class="math">\((x) = \frac{2}{\sqrt\pi}\int_0^x e^{-t^2}\,dt\)</span>
+and complementary error function
+sas_erfc<span class="math">\((x) = \frac{2}{\sqrt\pi}\int_x^{\infty} e^{-t^2}\,dt\)</span>.</p>
+<p>The standard math functions erf(x) and erfc(x) are slower and broken
+on some platforms.</p>
+<p class="last"><code class="code docutils literal"><span class="pre">source</span> <span class="pre">=</span> <span class="pre">[&quot;lib/polevl.c&quot;,</span> <span class="pre">&quot;lib/sas_erf.c&quot;,</span> <span class="pre">...]</span></code>
+(<a class="reference external" href="https://github.com/SasView/sasmodels/tree/master/sasmodels/models/lib/sas_erf.c">sas_erf.c</a>)</p>
+</dd>
+<dt>sas_J0(x):</dt>
+<dd><p class="first">Bessel function of the first kind sas_J0<span class="math">\((x)=J_0(x)\)</span> where
+<span class="math">\(J_0(x) = \frac{1}{\pi}\int_0^\pi \cos(x\sin(\tau))\,d\tau\)</span>.</p>
+<p>The standard math function j0(x) is not available on all platforms.</p>
+<p class="last"><code class="code docutils literal"><span class="pre">source</span> <span class="pre">=</span> <span class="pre">[&quot;lib/polevl.c&quot;,</span> <span class="pre">&quot;lib/sas_J0.c&quot;,</span> <span class="pre">...]</span></code>
+(<a class="reference external" href="https://github.com/SasView/sasmodels/tree/master/sasmodels/models/lib/sas_J0.c">sas_J0.c</a>)</p>
+</dd>
+<dt>sas_J1(x):</dt>
+<dd><p class="first">Bessel function of the first kind  sas_J1<span class="math">\((x)=J_1(x)\)</span> where
+<span class="math">\(J_1(x) = \frac{1}{\pi}\int_0^\pi \cos(\tau - x\sin(\tau))\,d\tau\)</span>.</p>
+<p>The standard math function j1(x) is not available on all platforms.</p>
+<p class="last"><code class="code docutils literal"><span class="pre">source</span> <span class="pre">=</span> <span class="pre">[&quot;lib/polevl.c&quot;,</span> <span class="pre">&quot;lib/sas_J1.c&quot;,</span> <span class="pre">...]</span></code>
+(<a class="reference external" href="https://github.com/SasView/sasmodels/tree/master/sasmodels/models/lib/sas_J1.c">sas_J1.c</a>)</p>
+</dd>
+<dt>sas_JN(n, x):</dt>
+<dd><p class="first">Bessel function of the first kind and integer order <span class="math">\(n\)</span>,
+sas_JN<span class="math">\((n, x) =J_n(x)\)</span> where
+<span class="math">\(J_n(x) = \frac{1}{\pi}\int_0^\pi \cos(n\tau - x\sin(\tau))\,d\tau\)</span>.
+If <span class="math">\(n\)</span> = 0 or 1, it uses sas_J0(<span class="math">\(x\)</span>) or sas_J1(<span class="math">\(x\)</span>), respectively.</p>
+<p>The standard math function jn(n, x) is not available on all platforms.</p>
+<p class="last"><code class="code docutils literal"><span class="pre">source</span> <span class="pre">=</span> <span class="pre">[&quot;lib/polevl.c&quot;,</span> <span class="pre">&quot;lib/sas_J0.c&quot;,</span> <span class="pre">&quot;lib/sas_J1.c&quot;,</span> <span class="pre">&quot;lib/sas_JN.c&quot;,</span> <span class="pre">...]</span></code>
+(<a class="reference external" href="https://github.com/SasView/sasmodels/tree/master/sasmodels/models/lib/sas_JN.c">sas_JN.c</a>)</p>
+</dd>
+<dt>sas_Si(x):</dt>
+<dd><p class="first">Sine integral Si<span class="math">\((x) = \int_0^x \tfrac{\sin t}{t}\,dt\)</span>.</p>
+<p>This function uses Taylor series for small and large arguments:</p>
+<p>For large arguments,</p>
+<div class="math">
+\[\text{Si}(x) \sim \frac{\pi}{2}
+- \frac{\cos(x)}{x}\left(1 - \frac{2!}{x^2} + \frac{4!}{x^4} - \frac{6!}{x^6} \right)
+- \frac{\sin(x)}{x}\left(\frac{1}{x} - \frac{3!}{x^3} + \frac{5!}{x^5} - \frac{7!}{x^7}\right)\]</div>
+<p>For small arguments,</p>
+<div class="math">
+\[\text{Si}(x) \sim x
+- \frac{x^3}{3\times 3!} + \frac{x^5}{5 \times 5!} - \frac{x^7}{7 \times 7!}
++ \frac{x^9}{9\times 9!} - \frac{x^{11}}{11\times 11!}\]</div>
+<p class="last"><code class="code docutils literal"><span class="pre">source</span> <span class="pre">=</span> <span class="pre">[&quot;lib/Si.c&quot;,</span> <span class="pre">...]</span></code>
+(<a class="reference external" href="https://github.com/SasView/sasmodels/tree/master/sasmodels/models/lib/sas_Si.c">Si.c</a>)</p>
+</dd>
+<dt>sas_3j1x_x(x):</dt>
+<dd><p class="first">Spherical Bessel form
+sph_j1c<span class="math">\((x) = 3 j_1(x)/x = 3 (\sin(x) - x \cos(x))/x^3\)</span>,
+with a limiting value of 1 at <span class="math">\(x=0\)</span>, where <span class="math">\(j_1(x)\)</span> is the spherical
+Bessel function of the first kind and first order.</p>
+<p>This function uses a Taylor series for small <span class="math">\(x\)</span> for numerical accuracy.</p>
+<p class="last"><code class="code docutils literal"><span class="pre">source</span> <span class="pre">=</span> <span class="pre">[&quot;lib/sas_3j1x_x.c&quot;,</span> <span class="pre">...]</span></code>
+(<a class="reference external" href="https://github.com/SasView/sasmodels/tree/master/sasmodels/models/lib/sas_3j1x_x.c">sas_3j1x_x.c</a>)</p>
+</dd>
+<dt>sas_2J1x_x(x):</dt>
+<dd><p class="first">Bessel form sas_J1c<span class="math">\((x) = 2 J_1(x)/x\)</span>, with a limiting value
+of 1 at <span class="math">\(x=0\)</span>, where <span class="math">\(J_1(x)\)</span> is the Bessel function of first kind
+and first order.</p>
+<p class="last"><code class="code docutils literal"><span class="pre">source</span> <span class="pre">=</span> <span class="pre">[&quot;lib/polevl.c&quot;,</span> <span class="pre">&quot;lib/sas_J1.c&quot;,</span> <span class="pre">...]</span></code>
+(<a class="reference external" href="https://github.com/SasView/sasmodels/tree/master/sasmodels/models/lib/sas_J1.c">sas_J1.c</a>)</p>
+</dd>
+<dt>Gauss76Z[i], Gauss76Wt[i]:</dt>
+<dd><p class="first">Points <span class="math">\(z_i\)</span> and weights <span class="math">\(w_i\)</span> for 76-point Gaussian quadrature, respectively,
+computing <span class="math">\(\int_{-1}^1 f(z)\,dz \approx \sum_{i=1}^{76} w_i\,f(z_i)\)</span>.</p>
+<p>Similar arrays are available in <code class="code docutils literal"><span class="pre">gauss20.c</span></code> for 20-point
+quadrature and in <code class="code docutils literal"><span class="pre">gauss150.c</span></code> for 150-point quadrature.
+The macros <code class="code docutils literal"><span class="pre">GAUSS_N</span></code>, <code class="code docutils literal"><span class="pre">GAUSS_Z</span></code> and <code class="code docutils literal"><span class="pre">GAUSS_W</span></code> are
+defined so that you can change the order of the integration by
+selecting an different source without touching the C code.</p>
+<p class="last"><code class="code docutils literal"><span class="pre">source</span> <span class="pre">=</span> <span class="pre">[&quot;lib/gauss76.c&quot;,</span> <span class="pre">...]</span></code>
+(<a class="reference external" href="https://github.com/SasView/sasmodels/tree/master/sasmodels/models/lib/gauss76.c">gauss76.c</a>)</p>
+</dd>
+</dl>
+</div></blockquote>
+</div>
+<div class="section" id="problems-with-c-models">
+<h3>Problems with C models</h3>
+<p>The graphics processor (GPU) in your computer is a specialized computer tuned
+for certain kinds of problems.  This leads to strange restrictions that you
+need to be aware of.  Your code may work fine on some platforms or for some
+models, but then return bad values on other platforms.  Some examples of
+particular problems:</p>
+<blockquote>
+<div><p><strong>(1) Code is too complex, or uses too much memory.</strong> GPU devices only
+have a limited amount of memory available for each processor. If you run
+programs which take too much memory, then rather than running multiple
+values in parallel as it usually does, the GPU may only run a single
+version of the code at a time, making it slower than running on the CPU.
+It may fail to run on some platforms, or worse, cause the screen to go
+blank or the system to reboot.</p>
+<p><strong>(2) Code takes too long.</strong> Because GPU devices are used for the computer
+display, the OpenCL drivers are very careful about the amount of time they
+will allow any code to run. For example, on OS X, the model will stop
+running after 5 seconds regardless of whether the computation is complete.
+You may end up with only some of your 2D array defined, with the rest
+containing random data. Or it may cause the screen to go blank or the
+system to reboot.</p>
+<p><strong>(3) Memory is not aligned</strong>. The GPU hardware is specialized to operate
+on multiple values simultaneously. To keep the GPU simple the values in
+memory must be aligned with the different GPU compute engines. Not
+following these rules can lead to unexpected values being loaded into
+memory, and wrong answers computed. The conclusion from a very long and
+strange debugging session was that any arrays that you declare in your
+model should be a multiple of four. For example:</p>
+<div class="highlight-default"><div class="highlight"><pre><span></span><span class="n">double</span> <span class="n">Iq</span><span class="p">(</span><span class="n">q</span><span class="p">,</span> <span class="n">p1</span><span class="p">,</span> <span class="n">p2</span><span class="p">,</span> <span class="o">...</span><span class="p">)</span>
+<span class="p">{</span>
+    <span class="n">double</span> <span class="n">vector</span><span class="p">[</span><span class="mi">8</span><span class="p">];</span>  <span class="o">//</span> <span class="n">Only</span> <span class="n">going</span> <span class="n">to</span> <span class="n">use</span> <span class="n">seven</span> <span class="n">slots</span><span class="p">,</span> <span class="n">but</span> <span class="n">declare</span> <span class="mi">8</span>
+    <span class="o">...</span>
+<span class="p">}</span>
+</pre></div>
+</div>
+</div></blockquote>
+<p>The first step when your model is behaving strangely is to set
+<strong>single=False</strong>. This automatically restricts the model to only run on the
+CPU, or on high-end GPU cards. There can still be problems even on high-end
+cards, so you can force the model off the GPU by setting <strong>opencl=False</strong>.
+This runs the model as a normal C program without any GPU restrictions so
+you know that strange results are probably from your code rather than the
+environment. Once the code is debugged, you can compare your output to the
+output on the GPU.</p>
+<p>Although it can be difficult to get your model to work on the GPU, the reward
+can be a model that runs 1000x faster on a good card.  Even your laptop may
+show a 50x improvement or more over the equivalent pure python model.</p>
+</div>
+<div class="section" id="form-factors">
+<span id="id2"></span><h3>Form Factors</h3>
+<p>Away from the dilute limit you can estimate scattering including
+particle-particle interactions using <span class="math">\(I(q) = P(q)*S(q)\)</span> where <span class="math">\(P(q)\)</span>
+is the form factor and <span class="math">\(S(q)\)</span> is the structure factor.  The simplest
+structure factor is the <em>hardsphere</em> interaction, which
+uses the effective radius of the form factor as an input to the structure
+factor model.  The effective radius is the average radius of the
+form averaged over all the polydispersity values.</p>
+<div class="highlight-default"><div class="highlight"><pre><span></span><span class="k">def</span> <span class="nf">ER</span><span class="p">(</span><span class="n">radius</span><span class="p">,</span> <span class="n">thickness</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;Effective radius of a core-shell sphere.&quot;&quot;&quot;</span>
+    <span class="k">return</span> <span class="n">radius</span> <span class="o">+</span> <span class="n">thickness</span>
+</pre></div>
+</div>
+<p>Now consider the <em>core_shell_sphere</em>, which has a simple effective radius
+equal to the radius of the core plus the thickness of the shell, as
+shown above. Given polydispersity over <em>(r1, r2, ..., rm)</em> in radius and
+<em>(t1, t2, ..., tn)</em> in thickness, <em>ER</em> is called with a mesh
+grid covering all possible combinations of radius and thickness.
+That is, <em>radius</em> is <em>(r1, r2, ..., rm, r1, r2, ..., rm, ...)</em>
+and <em>thickness</em> is <em>(t1, t1, ... t1, t2, t2, ..., t2, ...)</em>.
+The <em>ER</em> function returns one effective radius for each combination.
+The effective radius calculator weights each of these according to
+the polydispersity distributions and calls the structure factor
+with the average <em>ER</em>.</p>
+<div class="highlight-default"><div class="highlight"><pre><span></span><span class="k">def</span> <span class="nf">VR</span><span class="p">(</span><span class="n">radius</span><span class="p">,</span> <span class="n">thickness</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;Sphere and shell volumes for a core-shell sphere.&quot;&quot;&quot;</span>
+    <span class="n">whole</span> <span class="o">=</span> <span class="mf">4.0</span><span class="o">/</span><span class="mf">3.0</span> <span class="o">*</span> <span class="n">pi</span> <span class="o">*</span> <span class="p">(</span><span class="n">radius</span> <span class="o">+</span> <span class="n">thickness</span><span class="p">)</span><span class="o">**</span><span class="mi">3</span>
+    <span class="n">core</span> <span class="o">=</span> <span class="mf">4.0</span><span class="o">/</span><span class="mf">3.0</span> <span class="o">*</span> <span class="n">pi</span> <span class="o">*</span> <span class="n">radius</span><span class="o">**</span><span class="mi">3</span>
+    <span class="k">return</span> <span class="n">whole</span><span class="p">,</span> <span class="n">whole</span> <span class="o">-</span> <span class="n">core</span>
+</pre></div>
+</div>
+<p>Core-shell type models have an additional volume ratio which scales
+the structure factor.  The <em>VR</em> function returns the volume of
+the whole sphere and the volume of the shell. Like <em>ER</em>, there is
+one return value for each point in the mesh grid.</p>
+<p><em>NOTE: we may be removing or modifying this feature soon. As of the
+time of writing, core-shell sphere returns (1., 1.) for VR, giving a volume
+ratio of 1.0.</em></p>
+</div>
+<div class="section" id="unit-tests">
+<h3>Unit Tests</h3>
+<p>THESE ARE VERY IMPORTANT. Include at least one test for each model and
+PLEASE make sure that the answer value is correct (i.e. not a random number).</p>
+<div class="highlight-default"><div class="highlight"><pre><span></span><span class="n">tests</span> <span class="o">=</span> <span class="p">[</span>
+    <span class="p">[{},</span> <span class="mf">0.2</span><span class="p">,</span> <span class="mf">0.726362</span><span class="p">],</span>
+    <span class="p">[{</span><span class="s2">&quot;scale&quot;</span><span class="p">:</span> <span class="mf">1.</span><span class="p">,</span> <span class="s2">&quot;background&quot;</span><span class="p">:</span> <span class="mf">0.</span><span class="p">,</span> <span class="s2">&quot;sld&quot;</span><span class="p">:</span> <span class="mf">6.</span><span class="p">,</span> <span class="s2">&quot;sld_solvent&quot;</span><span class="p">:</span> <span class="mf">1.</span><span class="p">,</span>
+      <span class="s2">&quot;radius&quot;</span><span class="p">:</span> <span class="mf">120.</span><span class="p">,</span> <span class="s2">&quot;radius_pd&quot;</span><span class="p">:</span> <span class="mf">0.2</span><span class="p">,</span> <span class="s2">&quot;radius_pd_n&quot;</span><span class="p">:</span><span class="mi">45</span><span class="p">},</span>
+     <span class="mf">0.2</span><span class="p">,</span> <span class="mf">0.228843</span><span class="p">],</span>
+    <span class="p">[{</span><span class="s2">&quot;radius&quot;</span><span class="p">:</span> <span class="mf">120.</span><span class="p">,</span> <span class="s2">&quot;radius_pd&quot;</span><span class="p">:</span> <span class="mf">0.2</span><span class="p">,</span> <span class="s2">&quot;radius_pd_n&quot;</span><span class="p">:</span><span class="mi">45</span><span class="p">},</span> <span class="s2">&quot;ER&quot;</span><span class="p">,</span> <span class="mf">120.</span><span class="p">],</span>
+    <span class="p">[{</span><span class="s2">&quot;radius&quot;</span><span class="p">:</span> <span class="mf">120.</span><span class="p">,</span> <span class="s2">&quot;radius_pd&quot;</span><span class="p">:</span> <span class="mf">0.2</span><span class="p">,</span> <span class="s2">&quot;radius_pd_n&quot;</span><span class="p">:</span><span class="mi">45</span><span class="p">},</span> <span class="s2">&quot;VR&quot;</span><span class="p">,</span> <span class="mf">1.</span><span class="p">],</span>
+<span class="p">]</span>
+</pre></div>
+</div>
+<p><strong>tests=[[{parameters}, q, result], ...]</strong> is a list of lists.
+Each list is one test and contains, in order:</p>
+<ul class="simple">
+<li>a dictionary of parameter values. This can be <em>{}</em> using the default
+parameters, or filled with some parameters that will be different from the
+default, such as <em>{&#8220;radius&#8221;:10.0, &#8220;sld&#8221;:4}</em>. Unlisted parameters will
+be given the default values.</li>
+<li>the input <span class="math">\(q\)</span> value or tuple of <span class="math">\((q_x, q_y)\)</span> values.</li>
+<li>the output <span class="math">\(I(q)\)</span> or <span class="math">\(I(q_x,q_y)\)</span> expected of the model for the parameters
+and input value given.</li>
+<li>input and output values can themselves be lists if you have several
+<span class="math">\(q\)</span> values to test for the same model parameters.</li>
+<li>for testing <em>ER</em> and <em>VR</em>, give the inputs as &#8220;ER&#8221; and &#8220;VR&#8221; respectively;
+the output for <em>VR</em> should be the sphere/shell ratio, not the individual
+sphere and shell values.</li>
+</ul>
+</div>
+</div>
+<div class="section" id="test-your-new-model">
+<span id="id3"></span><h2>Test Your New Model</h2>
+<div class="section" id="minimal-testing">
+<h3>Minimal Testing</h3>
+<p>From SasView either open the Python shell (<em>Tools</em> &gt; <em>Python Shell/Editor</em>)
+or the plugin editor (<em>Fitting</em> &gt; <em>Plugin Model Operations</em> &gt; <em>Advanced
+Plugin Editor</em>), load your model, and then select <em>Run &gt; Check Model</em> from
+the menu bar. An <em>Info</em> box will appear with the results of the compilation
+and a check that the model runs.</p>
+<p>If you are not using sasmodels from SasView, skip this step.</p>
+</div>
+<div class="section" id="recommended-testing">
+<h3>Recommended Testing</h3>
+<p>If the model compiles and runs, you can next run the unit tests that
+you have added using the <strong>test =</strong> values.</p>
+<p>From SasView, switch to the <em>Shell</em> tab and type the following:</p>
+<div class="highlight-default"><div class="highlight"><pre><span></span><span class="kn">from</span> <span class="nn">sasmodels.model_test</span> <span class="k">import</span> <span class="n">run_one</span>
+<span class="n">run_one</span><span class="p">(</span><span class="s2">&quot;~/.sasview/plugin_models/model.py&quot;</span><span class="p">)</span>
+</pre></div>
+</div>
+<p>This should print:</p>
+<div class="highlight-default"><div class="highlight"><pre><span></span><span class="n">test_model_python</span> <span class="p">(</span><span class="n">sasmodels</span><span class="o">.</span><span class="n">model_test</span><span class="o">.</span><span class="n">ModelTestCase</span><span class="p">)</span> <span class="o">...</span> <span class="n">ok</span>
+</pre></div>
+</div>
+<p>To check whether single precision is good enough, type the following:</p>
+<div class="highlight-default"><div class="highlight"><pre><span></span><span class="kn">from</span> <span class="nn">sasmodels.compare</span> <span class="k">import</span> <span class="n">main</span> <span class="k">as</span> <span class="n">compare</span>
+<span class="n">compare</span><span class="p">(</span><span class="s2">&quot;~/.sasview/plugin_models/model.py&quot;</span><span class="p">)</span>
+</pre></div>
+</div>
+<p>This will pop up a plot showing the difference between single precision
+and double precision on a range of <span class="math">\(q\)</span> values.</p>
+<div class="highlight-default"><div class="highlight"><pre><span></span><span class="n">demo</span> <span class="o">=</span> <span class="nb">dict</span><span class="p">(</span><span class="n">scale</span><span class="o">=</span><span class="mi">1</span><span class="p">,</span> <span class="n">background</span><span class="o">=</span><span class="mi">0</span><span class="p">,</span>
+            <span class="n">sld</span><span class="o">=</span><span class="mi">6</span><span class="p">,</span> <span class="n">sld_solvent</span><span class="o">=</span><span class="mi">1</span><span class="p">,</span>
+            <span class="n">radius</span><span class="o">=</span><span class="mi">120</span><span class="p">,</span>
+            <span class="n">radius_pd</span><span class="o">=.</span><span class="mi">2</span><span class="p">,</span> <span class="n">radius_pd_n</span><span class="o">=</span><span class="mi">45</span><span class="p">)</span>
+</pre></div>
+</div>
+<p><strong>demo={&#8216;par&#8217;: value, ...}</strong> in the model file sets the default values for
+the comparison. You can include polydispersity parameters such as
+<em>radius_pd=0.2, radius_pd_n=45</em> which would otherwise be zero.</p>
+<p>These commands can also be run directly in the python interpreter:</p>
+<blockquote>
+<div>$ python -m sasmodels.model_test -v ~/.sasview/plugin_models/model.py
+$ python -m sasmodels.compare ~/.sasview/plugin_models/model.py</div></blockquote>
+<p>The options to compare are quite extensive; type the following for help:</p>
+<div class="highlight-default"><div class="highlight"><pre><span></span><span class="n">compare</span><span class="p">()</span>
+</pre></div>
+</div>
+<p>Options will need to be passed as separate strings.
+For example to run your model with a random set of parameters:</p>
+<div class="highlight-default"><div class="highlight"><pre><span></span><span class="n">compare</span><span class="p">(</span><span class="s2">&quot;-random&quot;</span><span class="p">,</span> <span class="s2">&quot;-pars&quot;</span><span class="p">,</span> <span class="s2">&quot;~/.sasview/plugin_models/model.py&quot;</span><span class="p">)</span>
+</pre></div>
+</div>
+<p>For the random models,</p>
+<ul class="simple">
+<li><em>sld</em> will be in the range (-0.5,10.5),</li>
+<li>angles (<em>theta, phi, psi</em>) will be in the range (-180,180),</li>
+<li>angular dispersion will be in the range (0,45),</li>
+<li>polydispersity will be in the range (0,1)</li>
+<li>other values will be in the range (0, 2<em>v</em>), where <em>v</em> is the value
+of the parameter in demo.</li>
+</ul>
+<p>Dispersion parameters <em>n</em>, <em>sigma</em> and <em>type</em> will be unchanged from
+demo so that run times are more predictable (polydispersity calculated
+across multiple parameters can be very slow).</p>
+<p>If your model has 2D orientation calculation, then you should also
+test with:</p>
+<div class="highlight-default"><div class="highlight"><pre><span></span><span class="n">compare</span><span class="p">(</span><span class="s2">&quot;-2d&quot;</span><span class="p">,</span> <span class="s2">&quot;~/.sasview/plugin_models/model.py&quot;</span><span class="p">)</span>
+</pre></div>
+</div>
+</div>
+</div>
+<div class="section" id="check-the-docs">
+<h2>Check The Docs</h2>
+<p>You can get a rough idea of how the documentation will look using the
+following:</p>
+<div class="highlight-default"><div class="highlight"><pre><span></span><span class="n">compare</span><span class="p">(</span><span class="s2">&quot;-help&quot;</span><span class="p">,</span> <span class="s2">&quot;~/.sasview/plugin_models/model.py&quot;</span><span class="p">)</span>
+</pre></div>
+</div>
+<p>This does not use the same styling as the rest of the docs, but it will
+allow you to check that your ReStructuredText and LaTeX formatting.
+Here are some tools to help with the inevitable syntax errors:</p>
+<ul class="simple">
+<li><a class="reference external" href="http://matplotlib.org/sampledoc/cheatsheet.html">Sphinx cheat sheet</a></li>
+<li><a class="reference external" href="http://www.sphinx-doc.org/en/stable/">Sphinx Documentation</a></li>
+<li><a class="reference external" href="http://www.mathjax.org/">MathJax</a></li>
+<li><a class="reference external" href="http://www.ams.org/publications/authors/tex/amslatex">amsmath</a></li>
+</ul>
+<p>There is also a neat online WYSIWYG ReStructuredText editor at
+<a class="reference external" href="http://rst.ninjs.org">http://rst.ninjs.org</a>.</p>
+</div>
+<div class="section" id="clean-lint-developer-version-only">
+<h2>Clean Lint - (Developer Version Only)</h2>
+<p><strong>NB: For now we are not providing pylint with the installer version
+of SasView; so unless you have a SasView build environment available,
+you can ignore this section!</strong></p>
+<p>Run the lint check with:</p>
+<div class="highlight-default"><div class="highlight"><pre><span></span><span class="n">python</span> <span class="o">-</span><span class="n">m</span> <span class="n">pylint</span> <span class="o">--</span><span class="n">rcfile</span><span class="o">=</span><span class="n">extra</span><span class="o">/</span><span class="n">pylint</span><span class="o">.</span><span class="n">rc</span> <span class="o">~/.</span><span class="n">sasview</span><span class="o">/</span><span class="n">plugin_models</span><span class="o">/</span><span class="n">model</span><span class="o">.</span><span class="n">py</span>
+</pre></div>
+</div>
+<p>We are not aiming for zero lint just yet, only keeping it to a minimum.
+For now, don&#8217;t worry too much about <em>invalid-name</em>. If you really want a
+variable name <em>Rg</em> for example because <span class="math">\(R_g\)</span> is the right name for the model
+parameter then ignore the lint errors.  Also, ignore <em>missing-docstring</em>
+for standard model functions <em>Iq</em>, <em>Iqac</em>, etc.</p>
+<p>We will have delinting sessions at the SasView Code Camps, where we can
+decide on standards for model files, parameter names, etc.</p>
+<p>For now, you can tell pylint to ignore things.  For example, to align your
+parameters in blocks:</p>
+<div class="highlight-default"><div class="highlight"><pre><span></span><span class="c1"># pylint: disable=bad-whitespace,line-too-long</span>
+<span class="c1">#   [&quot;name&quot;,                  &quot;units&quot;, default, [lower, upper], &quot;type&quot;, &quot;description&quot;],</span>
+<span class="n">parameters</span> <span class="o">=</span> <span class="p">[</span>
+    <span class="p">[</span><span class="s2">&quot;contrast_factor&quot;</span><span class="p">,</span>       <span class="s2">&quot;barns&quot;</span><span class="p">,</span>    <span class="mf">10.0</span><span class="p">,</span>  <span class="p">[</span><span class="o">-</span><span class="n">inf</span><span class="p">,</span> <span class="n">inf</span><span class="p">],</span> <span class="s2">&quot;&quot;</span><span class="p">,</span> <span class="s2">&quot;Contrast factor of the polymer&quot;</span><span class="p">],</span>
+    <span class="p">[</span><span class="s2">&quot;bjerrum_length&quot;</span><span class="p">,</span>        <span class="s2">&quot;Ang&quot;</span><span class="p">,</span>       <span class="mf">7.1</span><span class="p">,</span>  <span class="p">[</span><span class="mi">0</span><span class="p">,</span> <span class="n">inf</span><span class="p">],</span>    <span class="s2">&quot;&quot;</span><span class="p">,</span> <span class="s2">&quot;Bjerrum length&quot;</span><span class="p">],</span>
+    <span class="p">[</span><span class="s2">&quot;virial_param&quot;</span><span class="p">,</span>          <span class="s2">&quot;1/Ang^2&quot;</span><span class="p">,</span>  <span class="mf">12.0</span><span class="p">,</span>  <span class="p">[</span><span class="o">-</span><span class="n">inf</span><span class="p">,</span> <span class="n">inf</span><span class="p">],</span> <span class="s2">&quot;&quot;</span><span class="p">,</span> <span class="s2">&quot;Virial parameter&quot;</span><span class="p">],</span>
+    <span class="p">[</span><span class="s2">&quot;monomer_length&quot;</span><span class="p">,</span>        <span class="s2">&quot;Ang&quot;</span><span class="p">,</span>      <span class="mf">10.0</span><span class="p">,</span>  <span class="p">[</span><span class="mi">0</span><span class="p">,</span> <span class="n">inf</span><span class="p">],</span>    <span class="s2">&quot;&quot;</span><span class="p">,</span> <span class="s2">&quot;Monomer length&quot;</span><span class="p">],</span>
+    <span class="p">[</span><span class="s2">&quot;salt_concentration&quot;</span><span class="p">,</span>    <span class="s2">&quot;mol/L&quot;</span><span class="p">,</span>     <span class="mf">0.0</span><span class="p">,</span>  <span class="p">[</span><span class="o">-</span><span class="n">inf</span><span class="p">,</span> <span class="n">inf</span><span class="p">],</span> <span class="s2">&quot;&quot;</span><span class="p">,</span> <span class="s2">&quot;Concentration of monovalent salt&quot;</span><span class="p">],</span>
+    <span class="p">[</span><span class="s2">&quot;ionization_degree&quot;</span><span class="p">,</span>     <span class="s2">&quot;&quot;</span><span class="p">,</span>          <span class="mf">0.05</span><span class="p">,</span> <span class="p">[</span><span class="mi">0</span><span class="p">,</span> <span class="n">inf</span><span class="p">],</span>    <span class="s2">&quot;&quot;</span><span class="p">,</span> <span class="s2">&quot;Degree of ionization&quot;</span><span class="p">],</span>
+    <span class="p">[</span><span class="s2">&quot;polymer_concentration&quot;</span><span class="p">,</span> <span class="s2">&quot;mol/L&quot;</span><span class="p">,</span>     <span class="mf">0.7</span><span class="p">,</span>  <span class="p">[</span><span class="mi">0</span><span class="p">,</span> <span class="n">inf</span><span class="p">],</span>    <span class="s2">&quot;&quot;</span><span class="p">,</span> <span class="s2">&quot;Polymer molar concentration&quot;</span><span class="p">],</span>
+    <span class="p">]</span>
+<span class="c1"># pylint: enable=bad-whitespace,line-too-long</span>
+</pre></div>
+</div>
+<p>Don&#8217;t put in too many pylint statements, though, since they make the code ugly.</p>
+</div>
+<div class="section" id="share-your-model">
+<h2>Share Your Model!</h2>
+<p>Once compare and the unit test(s) pass properly and everything is done,
+consider adding your model to the
+<a class="reference external" href="http://marketplace.sasview.org/">Model Marketplace</a> so that others may use it!</p>
+<p><em>Document History</em></p>
+<div class="line-block">
+<div class="line">2016-10-25 Steve King</div>
+<div class="line">2017-05-07 Paul Kienzle - Moved from sasview to sasmodels docs</div>
+</div>
+</div>
+</div>
+
+
+          </div>
+        </div>
+      </div>
+      <div class="sphinxsidebar" role="navigation" aria-label="main navigation">
+        <div class="sphinxsidebarwrapper">
+  <h3><a href="../../../../index.html">Table Of Contents</a></h3>
+  <ul>
+<li><a class="reference internal" href="#">Writing a Plugin Model</a><ul>
+<li><a class="reference internal" href="#overview">Overview</a></li>
+<li><a class="reference internal" href="#create-new-model-files">Create New Model Files</a></li>
+<li><a class="reference internal" href="#edit-new-model-files">Edit New Model Files</a><ul>
+<li><a class="reference internal" href="#model-contents">Model Contents</a></li>
+<li><a class="reference internal" href="#model-documentation">Model Documentation</a></li>
+<li><a class="reference internal" href="#model-definition">Model Definition</a></li>
+<li><a class="reference internal" href="#model-parameters">Model Parameters</a></li>
+<li><a class="reference internal" href="#model-computation">Model Computation</a></li>
+<li><a class="reference internal" href="#python-models">Python Models</a></li>
+<li><a class="reference internal" href="#embedded-c-models">Embedded C Models</a></li>
+<li><a class="reference internal" href="#oriented-shapes">Oriented Shapes</a></li>
+<li><a class="reference internal" href="#magnetism">Magnetism</a></li>
+<li><a class="reference internal" href="#special-functions">Special Functions</a></li>
+<li><a class="reference internal" href="#problems-with-c-models">Problems with C models</a></li>
+<li><a class="reference internal" href="#form-factors">Form Factors</a></li>
+<li><a class="reference internal" href="#unit-tests">Unit Tests</a></li>
+</ul>
+</li>
+<li><a class="reference internal" href="#test-your-new-model">Test Your New Model</a><ul>
+<li><a class="reference internal" href="#minimal-testing">Minimal Testing</a></li>
+<li><a class="reference internal" href="#recommended-testing">Recommended Testing</a></li>
+</ul>
+</li>
+<li><a class="reference internal" href="#check-the-docs">Check The Docs</a></li>
+<li><a class="reference internal" href="#clean-lint-developer-version-only">Clean Lint - (Developer Version Only)</a></li>
+<li><a class="reference internal" href="#share-your-model">Share Your Model!</a></li>
+</ul>
+</li>
+</ul>
+
+  <h4>Previous topic</h4>
+  <p class="topless"><a href="sesans/sesans_fitting.html"
+                        title="previous chapter">Fitting SESANS Data</a></p>
+  <h4>Next topic</h4>
+  <p class="topless"><a href="gpu_setup.html"
+                        title="next chapter">GPU Setup</a></p>
+  <div role="note" aria-label="source link">
+    <h3>This Page</h3>
+    <ul class="this-page-menu">
+      <li><a href="../../../../_sources/user/sasgui/perspectives/fitting/plugin.txt"
+            rel="nofollow">Show Source</a></li>
+    </ul>
+   </div>
+<div id="searchbox" style="display: none" role="search">
+  <h3>Quick search</h3>
+    <form class="search" action="../../../../search.html" method="get">
+      <input type="text" name="q" />
+      <input type="submit" value="Go" />
+      <input type="hidden" name="check_keywords" value="yes" />
+      <input type="hidden" name="area" value="default" />
+    </form>
+</div>
+<script type="text/javascript">$('#searchbox').show(0);</script>
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="related" role="navigation" aria-label="related navigation">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="../../../../genindex.html" title="General Index"
+             >index</a></li>
+        <li class="right" >
+          <a href="../../../../py-modindex.html" title="Python Module Index"
+             >modules</a> |</li>
+        <li class="right" >
+          <a href="gpu_setup.html" title="GPU Setup"
+             >next</a> |</li>
+        <li class="right" >
+          <a href="sesans/sesans_fitting.html" title="Fitting SESANS Data"
+             >previous</a> |</li>
+        <li class="nav-item nav-item-0"><a href="../../../../index.html">SasView 4.2.0 documentation</a> &raquo;</li>
+          <li class="nav-item nav-item-1"><a href="../../../user.html" >SasView User Documentation</a> &raquo;</li>
+          <li class="nav-item nav-item-2"><a href="../../../analysis.html" >Fitting &amp; Other Analyses</a> &raquo;</li>
+          <li class="nav-item nav-item-3"><a href="fitting.html" >Fitting Documentation</a> &raquo;</li> 
+      </ul>
+    </div>
+    <div class="footer" role="contentinfo">
+        &copy; Copyright 2018, The SasView Project.
+      Created using <a href="http://sphinx-doc.org/">Sphinx</a> 1.4.1.
+    </div>
+  </body>
+</html>

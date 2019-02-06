@@ -1,0 +1,186 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+  "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+    
+    <title>GPU Computations &mdash; SasView 4.1.2 documentation</title>
+    
+    <link rel="stylesheet" href="../_static/classic.css" type="text/css" />
+    <link rel="stylesheet" href="../_static/pygments.css" type="text/css" />
+    
+    <script type="text/javascript">
+      var DOCUMENTATION_OPTIONS = {
+        URL_ROOT:    '../',
+        VERSION:     '4.1.2',
+        COLLAPSE_INDEX: false,
+        FILE_SUFFIX: '.html',
+        HAS_SOURCE:  true
+      };
+    </script>
+    <script type="text/javascript" src="../_static/jquery.js"></script>
+    <script type="text/javascript" src="../_static/underscore.js"></script>
+    <script type="text/javascript" src="../_static/doctools.js"></script>
+    <script type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.1/MathJax.js?config=TeX-MML-AM_CHTML"></script>
+    <link rel="top" title="SasView 4.1.2 documentation" href="../index.html" />
+    <link rel="up" title="Fitting Documentation" href="sasgui/perspectives/fitting/fitting.html" />
+    <link rel="next" title="P(r) Calculation" href="sasgui/perspectives/pr/pr_help.html" />
+    <link rel="prev" title="Writing a Plugin Model" href="sasgui/perspectives/fitting/plugin.html" /> 
+  </head>
+  <body role="document">
+    <div class="related" role="navigation" aria-label="related navigation">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="../genindex.html" title="General Index"
+             accesskey="I">index</a></li>
+        <li class="right" >
+          <a href="../py-modindex.html" title="Python Module Index"
+             >modules</a> |</li>
+        <li class="right" >
+          <a href="sasgui/perspectives/pr/pr_help.html" title="P(r) Calculation"
+             accesskey="N">next</a> |</li>
+        <li class="right" >
+          <a href="sasgui/perspectives/fitting/plugin.html" title="Writing a Plugin Model"
+             accesskey="P">previous</a> |</li>
+        <li class="nav-item nav-item-0"><a href="../index.html">SasView 4.1.2 documentation</a> &raquo;</li>
+          <li class="nav-item nav-item-1"><a href="user.html" >SasView User Documentation</a> &raquo;</li>
+          <li class="nav-item nav-item-2"><a href="analysis.html" >Fitting &amp; Other Analyses</a> &raquo;</li>
+          <li class="nav-item nav-item-3"><a href="sasgui/perspectives/fitting/fitting.html" accesskey="U">Fitting Documentation</a> &raquo;</li> 
+      </ul>
+    </div>  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          <div class="body" role="main">
+            
+  <div class="section" id="gpu-computations">
+<span id="models-computation"></span><h1>GPU Computations</h1>
+<p>SasView model evaluations can run on your graphics card (GPU) or they can run
+on the processor (CPU). In general, calculations performed on the GPU will run faster.</p>
+<p>To run on the GPU, your computer must have OpenCL drivers installed.
+For information about OpenCL installation see this
+<a class="reference internal" href="opencl_installation.html#opencl-installation"><span class="std std-ref">OpenCL Installation</span></a> guidance.</p>
+<p>Where the model is evaluated is a little bit complicated.
+If the model has the line <em>single=False</em> then it requires double precision.
+If the GPU is single precision only, then it will try running via OpenCL
+on the CPU.  If the OpenCL driver is not available for the CPU then
+it will run as a normal program on the CPU.</p>
+<p>For models with a large number of parameters or with a lot of code,
+the GPU may be too small to run the program effectively.
+In this case, you should try simplifying the model, maybe breaking it
+into several different modules so that you don&#8217;t need <em>IF</em> statements in your code.
+If it is still too big, you can set <em>opencl=False</em> in the model file and
+the model will only run as a normal program on the CPU.
+This will not usually be necessary.</p>
+<div class="section" id="device-selection">
+<h2>Device Selection</h2>
+<p>If you have multiple GPU devices you can tell SasView which device to use.
+By default, SasView looks for one GPU and one CPU device
+from available OpenCL platforms.</p>
+<p>SasView prefers AMD or NVIDIA drivers for GPU, and prefers Intel or
+Apple drivers for CPU. Both GPU and CPU are included on the assumption that CPU
+is always available and supports double precision.</p>
+<p>The device order is important: GPU is checked before CPU on the assumption that
+it will be faster. By examining ~/sasview.log you can see which device SasView
+chose to run the model.</p>
+<p><strong>If you don&#8217;t want to use OpenCL, you can set</strong> <em>SAS_OPENCL=None</em>
+<strong>in your environment settings, and it will only use normal programs.</strong></p>
+<p>If you want to use one of the other devices, you can run the following
+from the python console in SasView:</p>
+<div class="highlight-default"><div class="highlight"><pre><span></span><span class="kn">import</span> <span class="nn">pyopencl</span> <span class="k">as</span> <span class="nn">cl</span>
+<span class="n">cl</span><span class="o">.</span><span class="n">create_some_context</span><span class="p">()</span>
+</pre></div>
+</div>
+<p>This will provide a menu of different OpenCL drivers available.
+When one is selected, it will say &#8220;set PYOPENCL_CTX=...&#8221;
+Use that value as the value of <em>SAS_OPENCL</em>.</p>
+</div>
+<div class="section" id="compiler-selection">
+<h2>Compiler Selection</h2>
+<p>For models run as normal programs, you may need to specify a compiler.
+This is done using the SAS_COMPILER environment variable.
+Set it to <em>tinycc</em> for the tinycc compiler, <em>msvc</em> for the
+Microsoft Visual C compiler, or <em>mingw</em> for the MinGW compiler.
+TinyCC is provided with SasView so that is the default.
+If you want one of the other compilers, be sure to have it available
+in your <em>PATH</em> so SasView can find it!</p>
+<div class="admonition note">
+<p class="first admonition-title">Note</p>
+<p class="last">This help document was last changed by Steve King, 08Oct2016</p>
+</div>
+</div>
+</div>
+
+
+          </div>
+        </div>
+      </div>
+      <div class="sphinxsidebar" role="navigation" aria-label="main navigation">
+        <div class="sphinxsidebarwrapper">
+  <h3><a href="../index.html">Table Of Contents</a></h3>
+  <ul>
+<li><a class="reference internal" href="#">GPU Computations</a><ul>
+<li><a class="reference internal" href="#device-selection">Device Selection</a></li>
+<li><a class="reference internal" href="#compiler-selection">Compiler Selection</a></li>
+</ul>
+</li>
+</ul>
+
+  <h4>Previous topic</h4>
+  <p class="topless"><a href="sasgui/perspectives/fitting/plugin.html"
+                        title="previous chapter">Writing a Plugin Model</a></p>
+  <h4>Next topic</h4>
+  <p class="topless"><a href="sasgui/perspectives/pr/pr_help.html"
+                        title="next chapter">P(r) Calculation</a></p>
+  <div role="note" aria-label="source link">
+    <h3>This Page</h3>
+    <ul class="this-page-menu">
+      <li><a href="../_sources/user/gpu_computations.txt"
+            rel="nofollow">Show Source</a></li>
+    </ul>
+   </div>
+<div id="searchbox" style="display: none" role="search">
+  <h3>Quick search</h3>
+    <form class="search" action="../search.html" method="get">
+      <input type="text" name="q" />
+      <input type="submit" value="Go" />
+      <input type="hidden" name="check_keywords" value="yes" />
+      <input type="hidden" name="area" value="default" />
+    </form>
+</div>
+<script type="text/javascript">$('#searchbox').show(0);</script>
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="related" role="navigation" aria-label="related navigation">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="../genindex.html" title="General Index"
+             >index</a></li>
+        <li class="right" >
+          <a href="../py-modindex.html" title="Python Module Index"
+             >modules</a> |</li>
+        <li class="right" >
+          <a href="sasgui/perspectives/pr/pr_help.html" title="P(r) Calculation"
+             >next</a> |</li>
+        <li class="right" >
+          <a href="sasgui/perspectives/fitting/plugin.html" title="Writing a Plugin Model"
+             >previous</a> |</li>
+        <li class="nav-item nav-item-0"><a href="../index.html">SasView 4.1.2 documentation</a> &raquo;</li>
+          <li class="nav-item nav-item-1"><a href="user.html" >SasView User Documentation</a> &raquo;</li>
+          <li class="nav-item nav-item-2"><a href="analysis.html" >Fitting &amp; Other Analyses</a> &raquo;</li>
+          <li class="nav-item nav-item-3"><a href="sasgui/perspectives/fitting/fitting.html" >Fitting Documentation</a> &raquo;</li> 
+      </ul>
+    </div>
+    <div class="footer" role="contentinfo">
+        &copy; Copyright 2017, The SasView Project.
+      Created using <a href="http://sphinx-doc.org/">Sphinx</a> 1.4.1.
+    </div>
+  </body>
+</html>

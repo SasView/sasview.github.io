@@ -1,0 +1,409 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+  "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+    
+    <title>sas.sascalc.data_util.uncertainty &mdash; SasView 4.2.0 documentation</title>
+    
+    <link rel="stylesheet" href="../../../../_static/classic.css" type="text/css" />
+    <link rel="stylesheet" href="../../../../_static/pygments.css" type="text/css" />
+    
+    <script type="text/javascript">
+      var DOCUMENTATION_OPTIONS = {
+        URL_ROOT:    '../../../../',
+        VERSION:     '4.2.0',
+        COLLAPSE_INDEX: false,
+        FILE_SUFFIX: '.html',
+        HAS_SOURCE:  true
+      };
+    </script>
+    <script type="text/javascript" src="../../../../_static/jquery.js"></script>
+    <script type="text/javascript" src="../../../../_static/underscore.js"></script>
+    <script type="text/javascript" src="../../../../_static/doctools.js"></script>
+    <script type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.1/MathJax.js?config=TeX-MML-AM_CHTML"></script>
+    <link rel="top" title="SasView 4.2.0 documentation" href="../../../../index.html" />
+    <link rel="up" title="sas" href="../../../sas.html" /> 
+  </head>
+  <body role="document">
+    <div class="related" role="navigation" aria-label="related navigation">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="../../../../genindex.html" title="General Index"
+             accesskey="I">index</a></li>
+        <li class="right" >
+          <a href="../../../../py-modindex.html" title="Python Module Index"
+             >modules</a> |</li>
+        <li class="nav-item nav-item-0"><a href="../../../../index.html">SasView 4.2.0 documentation</a> &raquo;</li>
+          <li class="nav-item nav-item-1"><a href="../../../index.html" >Module code</a> &raquo;</li>
+          <li class="nav-item nav-item-2"><a href="../../../sas.html" accesskey="U">sas</a> &raquo;</li> 
+      </ul>
+    </div>  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          <div class="body" role="main">
+            
+  <h1>Source code for sas.sascalc.data_util.uncertainty</h1><div class="highlight"><pre>
+<span></span><span class="sd">r&quot;&quot;&quot;</span>
+<span class="sd">Uncertainty propagation class for arithmetic, log and exp.</span>
+
+<span class="sd">Based on scalars or numpy vectors, this class allows you to store and</span>
+<span class="sd">manipulate values+uncertainties, with propagation of gaussian error for</span>
+<span class="sd">addition, subtraction, multiplication, division, power, exp and log.</span>
+
+<span class="sd">Storage properties are determined by the numbers used to set the value</span>
+<span class="sd">and uncertainty.  Be sure to use floating point uncertainty vectors</span>
+<span class="sd">for inplace operations since numpy does not do automatic type conversion.</span>
+<span class="sd">Normal operations can use mixed integer and floating point.  In place</span>
+<span class="sd">operations such as *a \*= b* create at most one extra copy for each operation.</span>
+<span class="sd">By contrast, *c = a\*b* uses four intermediate vectors, so shouldn&#39;t be used</span>
+<span class="sd">for huge arrays.</span>
+<span class="sd">&quot;&quot;&quot;</span>
+
+<span class="kn">from</span> <span class="nn">__future__</span> <span class="kn">import</span> <span class="n">division</span>
+
+<span class="kn">import</span> <span class="nn">numpy</span> <span class="kn">as</span> <span class="nn">np</span>
+
+<span class="kn">from</span> <span class="nn">.import</span> <span class="nn">err1d</span>
+<span class="kn">from</span> <span class="nn">.formatnum</span> <span class="kn">import</span> <span class="n">format_uncertainty</span>
+
+<span class="n">__all__</span> <span class="o">=</span> <span class="p">[</span><span class="s1">&#39;Uncertainty&#39;</span><span class="p">]</span>
+
+<span class="c1"># TODO: rename to Measurement and add support for units?</span>
+<span class="c1"># TODO: C implementation of *,/,**?</span>
+<div class="viewcode-block" id="Uncertainty"><a class="viewcode-back" href="../../../../dev/sasview-api/sas.sascalc.data_util.html#sas.sascalc.data_util.uncertainty.Uncertainty">[docs]</a><span class="k">class</span> <span class="nc">Uncertainty</span><span class="p">(</span><span class="nb">object</span><span class="p">):</span>
+    <span class="c1"># Make standard deviation available</span>
+    <span class="k">def</span> <span class="nf">_getdx</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span> <span class="k">return</span> <span class="n">np</span><span class="o">.</span><span class="n">sqrt</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">variance</span><span class="p">)</span>
+    <span class="k">def</span> <span class="nf">_setdx</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span><span class="n">dx</span><span class="p">):</span>
+        <span class="c1"># Direct operation</span>
+        <span class="c1">#    variance = dx**2</span>
+        <span class="c1"># Indirect operation to avoid temporaries</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">variance</span><span class="p">[:]</span> <span class="o">=</span> <span class="n">dx</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">variance</span> <span class="o">**=</span> <span class="mi">2</span>
+    <span class="n">dx</span> <span class="o">=</span> <span class="nb">property</span><span class="p">(</span><span class="n">_getdx</span><span class="p">,</span><span class="n">_setdx</span><span class="p">,</span><span class="n">doc</span><span class="o">=</span><span class="s2">&quot;standard deviation&quot;</span><span class="p">)</span>
+
+    <span class="c1"># Constructor</span>
+    <span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">x</span><span class="p">,</span> <span class="n">variance</span><span class="o">=</span><span class="bp">None</span><span class="p">):</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">x</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">variance</span> <span class="o">=</span> <span class="n">x</span><span class="p">,</span> <span class="n">variance</span>
+
+    <span class="c1"># Numpy array slicing operations</span>
+    <span class="k">def</span> <span class="nf">__len__</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="k">return</span> <span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">x</span><span class="p">)</span>
+    <span class="k">def</span> <span class="nf">__getitem__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span><span class="n">key</span><span class="p">):</span>
+        <span class="k">return</span> <span class="n">Uncertainty</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">x</span><span class="p">[</span><span class="n">key</span><span class="p">],</span><span class="bp">self</span><span class="o">.</span><span class="n">variance</span><span class="p">[</span><span class="n">key</span><span class="p">])</span>
+    <span class="k">def</span> <span class="nf">__setitem__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span><span class="n">key</span><span class="p">,</span><span class="n">value</span><span class="p">):</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">x</span><span class="p">[</span><span class="n">key</span><span class="p">]</span> <span class="o">=</span> <span class="n">value</span><span class="o">.</span><span class="n">x</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">variance</span><span class="p">[</span><span class="n">key</span><span class="p">]</span> <span class="o">=</span> <span class="n">value</span><span class="o">.</span><span class="n">variance</span>
+    <span class="k">def</span> <span class="nf">__delitem__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">key</span><span class="p">):</span>
+        <span class="k">del</span> <span class="bp">self</span><span class="o">.</span><span class="n">x</span><span class="p">[</span><span class="n">key</span><span class="p">]</span>
+        <span class="k">del</span> <span class="bp">self</span><span class="o">.</span><span class="n">variance</span><span class="p">[</span><span class="n">key</span><span class="p">]</span>
+    <span class="c1">#def __iter__(self): pass # Not sure we need iter</span>
+
+    <span class="c1"># Normal operations: may be of mixed type</span>
+    <span class="k">def</span> <span class="nf">__add__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">other</span><span class="p">):</span>
+        <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">other</span><span class="p">,</span><span class="n">Uncertainty</span><span class="p">):</span>
+            <span class="k">return</span> <span class="n">Uncertainty</span><span class="p">(</span><span class="o">*</span><span class="n">err1d</span><span class="o">.</span><span class="n">add</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">x</span><span class="p">,</span><span class="bp">self</span><span class="o">.</span><span class="n">variance</span><span class="p">,</span><span class="n">other</span><span class="o">.</span><span class="n">x</span><span class="p">,</span><span class="n">other</span><span class="o">.</span><span class="n">variance</span><span class="p">))</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="k">return</span> <span class="n">Uncertainty</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">x</span><span class="o">+</span><span class="n">other</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">variance</span><span class="o">+</span><span class="mi">0</span><span class="p">)</span> <span class="c1"># Force copy</span>
+    <span class="k">def</span> <span class="nf">__sub__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">other</span><span class="p">):</span>
+        <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">other</span><span class="p">,</span><span class="n">Uncertainty</span><span class="p">):</span>
+            <span class="k">return</span> <span class="n">Uncertainty</span><span class="p">(</span><span class="o">*</span><span class="n">err1d</span><span class="o">.</span><span class="n">sub</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">x</span><span class="p">,</span><span class="bp">self</span><span class="o">.</span><span class="n">variance</span><span class="p">,</span><span class="n">other</span><span class="o">.</span><span class="n">x</span><span class="p">,</span><span class="n">other</span><span class="o">.</span><span class="n">variance</span><span class="p">))</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="k">return</span> <span class="n">Uncertainty</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">x</span><span class="o">-</span><span class="n">other</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">variance</span><span class="o">+</span><span class="mi">0</span><span class="p">)</span> <span class="c1"># Force copy</span>
+    <span class="k">def</span> <span class="nf">__mul__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">other</span><span class="p">):</span>
+        <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">other</span><span class="p">,</span><span class="n">Uncertainty</span><span class="p">):</span>
+            <span class="k">return</span> <span class="n">Uncertainty</span><span class="p">(</span><span class="o">*</span><span class="n">err1d</span><span class="o">.</span><span class="n">mul</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">x</span><span class="p">,</span><span class="bp">self</span><span class="o">.</span><span class="n">variance</span><span class="p">,</span><span class="n">other</span><span class="o">.</span><span class="n">x</span><span class="p">,</span><span class="n">other</span><span class="o">.</span><span class="n">variance</span><span class="p">))</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="k">return</span> <span class="n">Uncertainty</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">x</span><span class="o">*</span><span class="n">other</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">variance</span><span class="o">*</span><span class="n">other</span><span class="o">**</span><span class="mi">2</span><span class="p">)</span>
+    <span class="k">def</span> <span class="nf">__truediv__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">other</span><span class="p">):</span>
+        <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">other</span><span class="p">,</span><span class="n">Uncertainty</span><span class="p">):</span>
+            <span class="k">return</span> <span class="n">Uncertainty</span><span class="p">(</span><span class="o">*</span><span class="n">err1d</span><span class="o">.</span><span class="n">div</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">x</span><span class="p">,</span><span class="bp">self</span><span class="o">.</span><span class="n">variance</span><span class="p">,</span><span class="n">other</span><span class="o">.</span><span class="n">x</span><span class="p">,</span><span class="n">other</span><span class="o">.</span><span class="n">variance</span><span class="p">))</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="k">return</span> <span class="n">Uncertainty</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">x</span><span class="o">/</span><span class="n">other</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">variance</span><span class="o">/</span><span class="n">other</span><span class="o">**</span><span class="mi">2</span><span class="p">)</span>
+    <span class="k">def</span> <span class="nf">__pow__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">other</span><span class="p">):</span>
+        <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">other</span><span class="p">,</span><span class="n">Uncertainty</span><span class="p">):</span>
+            <span class="c1"># Haven&#39;t calcuated variance in (a+/-da) ** (b+/-db)</span>
+            <span class="k">return</span> <span class="bp">NotImplemented</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="k">return</span> <span class="n">Uncertainty</span><span class="p">(</span><span class="o">*</span><span class="n">err1d</span><span class="o">.</span><span class="n">pow</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">x</span><span class="p">,</span><span class="bp">self</span><span class="o">.</span><span class="n">variance</span><span class="p">,</span><span class="n">other</span><span class="p">))</span>
+
+    <span class="c1"># Reverse operations</span>
+    <span class="k">def</span> <span class="nf">__radd__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">other</span><span class="p">):</span>
+        <span class="k">return</span> <span class="n">Uncertainty</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">x</span><span class="o">+</span><span class="n">other</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">variance</span><span class="o">+</span><span class="mi">0</span><span class="p">)</span> <span class="c1"># Force copy</span>
+    <span class="k">def</span> <span class="nf">__rsub__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">other</span><span class="p">):</span>
+        <span class="k">return</span> <span class="n">Uncertainty</span><span class="p">(</span><span class="n">other</span><span class="o">-</span><span class="bp">self</span><span class="o">.</span><span class="n">x</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">variance</span><span class="o">+</span><span class="mi">0</span><span class="p">)</span>
+    <span class="k">def</span> <span class="nf">__rmul__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">other</span><span class="p">):</span>
+        <span class="k">return</span> <span class="n">Uncertainty</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">x</span><span class="o">*</span><span class="n">other</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">variance</span><span class="o">*</span><span class="n">other</span><span class="o">**</span><span class="mi">2</span><span class="p">)</span>
+    <span class="k">def</span> <span class="nf">__rtruediv__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">other</span><span class="p">):</span>
+        <span class="n">x</span><span class="p">,</span><span class="n">variance</span> <span class="o">=</span> <span class="n">err1d</span><span class="o">.</span><span class="n">pow</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">x</span><span class="p">,</span><span class="bp">self</span><span class="o">.</span><span class="n">variance</span><span class="p">,</span><span class="o">-</span><span class="mi">1</span><span class="p">)</span>
+        <span class="k">return</span> <span class="n">Uncertainty</span><span class="p">(</span><span class="n">x</span><span class="o">*</span><span class="n">other</span><span class="p">,</span><span class="n">variance</span><span class="o">*</span><span class="n">other</span><span class="o">**</span><span class="mi">2</span><span class="p">)</span>
+    <span class="k">def</span> <span class="nf">__rpow__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">other</span><span class="p">):</span> <span class="k">return</span> <span class="bp">NotImplemented</span>
+
+    <span class="c1"># In-place operations: may be of mixed type</span>
+    <span class="k">def</span> <span class="nf">__iadd__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">other</span><span class="p">):</span>
+        <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">other</span><span class="p">,</span><span class="n">Uncertainty</span><span class="p">):</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">x</span><span class="p">,</span><span class="bp">self</span><span class="o">.</span><span class="n">variance</span> \
+                <span class="o">=</span> <span class="n">err1d</span><span class="o">.</span><span class="n">add_inplace</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">x</span><span class="p">,</span><span class="bp">self</span><span class="o">.</span><span class="n">variance</span><span class="p">,</span><span class="n">other</span><span class="o">.</span><span class="n">x</span><span class="p">,</span><span class="n">other</span><span class="o">.</span><span class="n">variance</span><span class="p">)</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">x</span><span class="o">+=</span><span class="n">other</span>
+        <span class="k">return</span> <span class="bp">self</span>
+    <span class="k">def</span> <span class="nf">__isub__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">other</span><span class="p">):</span>
+        <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">other</span><span class="p">,</span><span class="n">Uncertainty</span><span class="p">):</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">x</span><span class="p">,</span><span class="bp">self</span><span class="o">.</span><span class="n">variance</span> \
+                <span class="o">=</span> <span class="n">err1d</span><span class="o">.</span><span class="n">sub_inplace</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">x</span><span class="p">,</span><span class="bp">self</span><span class="o">.</span><span class="n">variance</span><span class="p">,</span><span class="n">other</span><span class="o">.</span><span class="n">x</span><span class="p">,</span><span class="n">other</span><span class="o">.</span><span class="n">variance</span><span class="p">)</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">x</span><span class="o">-=</span><span class="n">other</span>
+        <span class="k">return</span> <span class="bp">self</span>
+    <span class="k">def</span> <span class="nf">__imul__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">other</span><span class="p">):</span>
+        <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">other</span><span class="p">,</span><span class="n">Uncertainty</span><span class="p">):</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">x</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">variance</span> \
+                <span class="o">=</span> <span class="n">err1d</span><span class="o">.</span><span class="n">mul_inplace</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">x</span><span class="p">,</span><span class="bp">self</span><span class="o">.</span><span class="n">variance</span><span class="p">,</span><span class="n">other</span><span class="o">.</span><span class="n">x</span><span class="p">,</span><span class="n">other</span><span class="o">.</span><span class="n">variance</span><span class="p">)</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">x</span> <span class="o">*=</span> <span class="n">other</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">variance</span> <span class="o">*=</span> <span class="n">other</span><span class="o">**</span><span class="mi">2</span>
+        <span class="k">return</span> <span class="bp">self</span>
+    <span class="k">def</span> <span class="nf">__itruediv__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">other</span><span class="p">):</span>
+        <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">other</span><span class="p">,</span><span class="n">Uncertainty</span><span class="p">):</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">x</span><span class="p">,</span><span class="bp">self</span><span class="o">.</span><span class="n">variance</span> \
+                <span class="o">=</span> <span class="n">err1d</span><span class="o">.</span><span class="n">div_inplace</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">x</span><span class="p">,</span><span class="bp">self</span><span class="o">.</span><span class="n">variance</span><span class="p">,</span><span class="n">other</span><span class="o">.</span><span class="n">x</span><span class="p">,</span><span class="n">other</span><span class="o">.</span><span class="n">variance</span><span class="p">)</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">x</span> <span class="o">/=</span> <span class="n">other</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">variance</span> <span class="o">/=</span> <span class="n">other</span><span class="o">**</span><span class="mi">2</span>
+        <span class="k">return</span> <span class="bp">self</span>
+    <span class="k">def</span> <span class="nf">__ipow__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">other</span><span class="p">):</span>
+        <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">other</span><span class="p">,</span><span class="n">Uncertainty</span><span class="p">):</span>
+            <span class="c1"># Haven&#39;t calcuated variance in (a+/-da) ** (b+/-db)</span>
+            <span class="k">return</span> <span class="bp">NotImplemented</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">x</span><span class="p">,</span><span class="bp">self</span><span class="o">.</span><span class="n">variance</span> <span class="o">=</span> <span class="n">err1d</span><span class="o">.</span><span class="n">pow_inplace</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">x</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">variance</span><span class="p">,</span> <span class="n">other</span><span class="p">)</span>
+        <span class="k">return</span> <span class="bp">self</span>
+
+    <span class="c1"># Use true division instead of integer division</span>
+    <span class="k">def</span> <span class="nf">__div__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">other</span><span class="p">):</span> <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">__truediv__</span><span class="p">(</span><span class="n">other</span><span class="p">)</span>
+    <span class="k">def</span> <span class="nf">__rdiv__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">other</span><span class="p">):</span> <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">__rtruediv__</span><span class="p">(</span><span class="n">other</span><span class="p">)</span>
+    <span class="k">def</span> <span class="nf">__idiv__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">other</span><span class="p">):</span> <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">__itruediv__</span><span class="p">(</span><span class="n">other</span><span class="p">)</span>
+
+
+    <span class="c1"># Unary ops</span>
+    <span class="k">def</span> <span class="nf">__neg__</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="k">return</span> <span class="n">Uncertainty</span><span class="p">(</span><span class="o">-</span><span class="bp">self</span><span class="o">.</span><span class="n">x</span><span class="p">,</span><span class="bp">self</span><span class="o">.</span><span class="n">variance</span><span class="p">)</span>
+    <span class="k">def</span> <span class="nf">__pos__</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="k">return</span> <span class="bp">self</span>
+    <span class="k">def</span> <span class="nf">__abs__</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="k">return</span> <span class="n">Uncertainty</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">abs</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">x</span><span class="p">),</span><span class="bp">self</span><span class="o">.</span><span class="n">variance</span><span class="p">)</span>
+
+    <span class="k">def</span> <span class="nf">__str__</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="c1">#return str(self.x)+&quot; +/- &quot;+str(np.sqrt(self.variance))</span>
+        <span class="k">if</span> <span class="n">np</span><span class="o">.</span><span class="n">isscalar</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">x</span><span class="p">):</span>
+            <span class="k">return</span> <span class="n">format_uncertainty</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">x</span><span class="p">,</span><span class="n">np</span><span class="o">.</span><span class="n">sqrt</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">variance</span><span class="p">))</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="k">return</span> <span class="p">[</span><span class="n">format_uncertainty</span><span class="p">(</span><span class="n">v</span><span class="p">,</span><span class="n">dv</span><span class="p">)</span>
+                    <span class="k">for</span> <span class="n">v</span><span class="p">,</span><span class="n">dv</span> <span class="ow">in</span> <span class="nb">zip</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">x</span><span class="p">,</span><span class="n">np</span><span class="o">.</span><span class="n">sqrt</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">variance</span><span class="p">))]</span>
+    <span class="k">def</span> <span class="nf">__repr__</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="k">return</span> <span class="s2">&quot;Uncertainty(</span><span class="si">%s</span><span class="s2">,</span><span class="si">%s</span><span class="s2">)&quot;</span><span class="o">%</span><span class="p">(</span><span class="nb">str</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">x</span><span class="p">),</span><span class="nb">str</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">variance</span><span class="p">))</span>
+
+    <span class="c1"># Not implemented</span>
+    <span class="k">def</span> <span class="nf">__floordiv__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">other</span><span class="p">):</span> <span class="k">return</span> <span class="bp">NotImplemented</span>
+    <span class="k">def</span> <span class="nf">__mod__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">other</span><span class="p">):</span> <span class="k">return</span> <span class="bp">NotImplemented</span>
+    <span class="k">def</span> <span class="nf">__divmod__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">other</span><span class="p">):</span> <span class="k">return</span> <span class="bp">NotImplemented</span>
+    <span class="k">def</span> <span class="nf">__mod__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">other</span><span class="p">):</span> <span class="k">return</span> <span class="bp">NotImplemented</span>
+    <span class="k">def</span> <span class="nf">__lshift__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">other</span><span class="p">):</span> <span class="k">return</span> <span class="bp">NotImplemented</span>
+    <span class="k">def</span> <span class="nf">__rshift__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">other</span><span class="p">):</span> <span class="k">return</span> <span class="bp">NotImplemented</span>
+    <span class="k">def</span> <span class="nf">__and__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">other</span><span class="p">):</span> <span class="k">return</span> <span class="bp">NotImplemented</span>
+    <span class="k">def</span> <span class="nf">__xor__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">other</span><span class="p">):</span> <span class="k">return</span> <span class="bp">NotImplemented</span>
+    <span class="k">def</span> <span class="nf">__or__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">other</span><span class="p">):</span> <span class="k">return</span> <span class="bp">NotImplemented</span>
+
+    <span class="k">def</span> <span class="nf">__rfloordiv__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">other</span><span class="p">):</span> <span class="k">return</span> <span class="bp">NotImplemented</span>
+    <span class="k">def</span> <span class="nf">__rmod__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">other</span><span class="p">):</span> <span class="k">return</span> <span class="bp">NotImplemented</span>
+    <span class="k">def</span> <span class="nf">__rdivmod__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">other</span><span class="p">):</span> <span class="k">return</span> <span class="bp">NotImplemented</span>
+    <span class="k">def</span> <span class="nf">__rmod__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">other</span><span class="p">):</span> <span class="k">return</span> <span class="bp">NotImplemented</span>
+    <span class="k">def</span> <span class="nf">__rlshift__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">other</span><span class="p">):</span> <span class="k">return</span> <span class="bp">NotImplemented</span>
+    <span class="k">def</span> <span class="nf">__rrshift__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">other</span><span class="p">):</span> <span class="k">return</span> <span class="bp">NotImplemented</span>
+    <span class="k">def</span> <span class="nf">__rand__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">other</span><span class="p">):</span> <span class="k">return</span> <span class="bp">NotImplemented</span>
+    <span class="k">def</span> <span class="nf">__rxor__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">other</span><span class="p">):</span> <span class="k">return</span> <span class="bp">NotImplemented</span>
+    <span class="k">def</span> <span class="nf">__ror__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">other</span><span class="p">):</span> <span class="k">return</span> <span class="bp">NotImplemented</span>
+
+    <span class="k">def</span> <span class="nf">__ifloordiv__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">other</span><span class="p">):</span> <span class="k">return</span> <span class="bp">NotImplemented</span>
+    <span class="k">def</span> <span class="nf">__imod__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">other</span><span class="p">):</span> <span class="k">return</span> <span class="bp">NotImplemented</span>
+    <span class="k">def</span> <span class="nf">__idivmod__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">other</span><span class="p">):</span> <span class="k">return</span> <span class="bp">NotImplemented</span>
+    <span class="k">def</span> <span class="nf">__imod__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">other</span><span class="p">):</span> <span class="k">return</span> <span class="bp">NotImplemented</span>
+    <span class="k">def</span> <span class="nf">__ilshift__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">other</span><span class="p">):</span> <span class="k">return</span> <span class="bp">NotImplemented</span>
+    <span class="k">def</span> <span class="nf">__irshift__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">other</span><span class="p">):</span> <span class="k">return</span> <span class="bp">NotImplemented</span>
+    <span class="k">def</span> <span class="nf">__iand__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">other</span><span class="p">):</span> <span class="k">return</span> <span class="bp">NotImplemented</span>
+    <span class="k">def</span> <span class="nf">__ixor__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">other</span><span class="p">):</span> <span class="k">return</span> <span class="bp">NotImplemented</span>
+    <span class="k">def</span> <span class="nf">__ior__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">other</span><span class="p">):</span> <span class="k">return</span> <span class="bp">NotImplemented</span>
+
+    <span class="k">def</span> <span class="nf">__invert__</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span> <span class="k">return</span> <span class="n">NotImplmented</span>  <span class="c1"># For ~x</span>
+    <span class="k">def</span> <span class="nf">__complex__</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span> <span class="k">return</span> <span class="n">NotImplmented</span>
+    <span class="k">def</span> <span class="nf">__int__</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span> <span class="k">return</span> <span class="n">NotImplmented</span>
+    <span class="k">def</span> <span class="nf">__long__</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span> <span class="k">return</span> <span class="n">NotImplmented</span>
+    <span class="k">def</span> <span class="nf">__float__</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span> <span class="k">return</span> <span class="n">NotImplmented</span>
+    <span class="k">def</span> <span class="nf">__oct__</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span> <span class="k">return</span> <span class="n">NotImplmented</span>
+    <span class="k">def</span> <span class="nf">__hex__</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span> <span class="k">return</span> <span class="n">NotImplmented</span>
+    <span class="k">def</span> <span class="nf">__index__</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span> <span class="k">return</span> <span class="n">NotImplmented</span>
+    <span class="k">def</span> <span class="nf">__coerce__</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span> <span class="k">return</span> <span class="n">NotImplmented</span>
+
+<div class="viewcode-block" id="Uncertainty.log"><a class="viewcode-back" href="../../../../dev/sasview-api/sas.sascalc.data_util.html#sas.sascalc.data_util.uncertainty.Uncertainty.log">[docs]</a>    <span class="k">def</span> <span class="nf">log</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="k">return</span> <span class="n">Uncertainty</span><span class="p">(</span><span class="o">*</span><span class="n">err1d</span><span class="o">.</span><span class="n">log</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">x</span><span class="p">,</span><span class="bp">self</span><span class="o">.</span><span class="n">variance</span><span class="p">))</span></div>
+
+<div class="viewcode-block" id="Uncertainty.exp"><a class="viewcode-back" href="../../../../dev/sasview-api/sas.sascalc.data_util.html#sas.sascalc.data_util.uncertainty.Uncertainty.exp">[docs]</a>    <span class="k">def</span> <span class="nf">exp</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="k">return</span> <span class="n">Uncertainty</span><span class="p">(</span><span class="o">*</span><span class="n">err1d</span><span class="o">.</span><span class="n">exp</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">x</span><span class="p">,</span><span class="bp">self</span><span class="o">.</span><span class="n">variance</span><span class="p">))</span></div></div>
+
+<span class="k">def</span> <span class="nf">log</span><span class="p">(</span><span class="n">val</span><span class="p">):</span> <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">log</span><span class="p">()</span>
+<span class="k">def</span> <span class="nf">exp</span><span class="p">(</span><span class="n">val</span><span class="p">):</span> <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">exp</span><span class="p">()</span>
+
+<span class="k">def</span> <span class="nf">test</span><span class="p">():</span>
+    <span class="n">a</span> <span class="o">=</span> <span class="n">Uncertainty</span><span class="p">(</span><span class="mi">5</span><span class="p">,</span><span class="mi">3</span><span class="p">)</span>
+    <span class="n">b</span> <span class="o">=</span> <span class="n">Uncertainty</span><span class="p">(</span><span class="mi">4</span><span class="p">,</span><span class="mi">2</span><span class="p">)</span>
+
+    <span class="c1"># Scalar operations</span>
+    <span class="n">z</span> <span class="o">=</span> <span class="n">a</span><span class="o">+</span><span class="mi">4</span>
+    <span class="k">assert</span> <span class="n">z</span><span class="o">.</span><span class="n">x</span> <span class="o">==</span> <span class="mi">5</span><span class="o">+</span><span class="mi">4</span> <span class="ow">and</span> <span class="n">z</span><span class="o">.</span><span class="n">variance</span> <span class="o">==</span> <span class="mi">3</span>
+    <span class="n">z</span> <span class="o">=</span> <span class="n">a</span><span class="o">-</span><span class="mi">4</span>
+    <span class="k">assert</span> <span class="n">z</span><span class="o">.</span><span class="n">x</span> <span class="o">==</span> <span class="mi">5</span><span class="o">-</span><span class="mi">4</span> <span class="ow">and</span> <span class="n">z</span><span class="o">.</span><span class="n">variance</span> <span class="o">==</span> <span class="mi">3</span>
+    <span class="n">z</span> <span class="o">=</span> <span class="n">a</span><span class="o">*</span><span class="mi">4</span>
+    <span class="k">assert</span> <span class="n">z</span><span class="o">.</span><span class="n">x</span> <span class="o">==</span> <span class="mi">5</span><span class="o">*</span><span class="mi">4</span> <span class="ow">and</span> <span class="n">z</span><span class="o">.</span><span class="n">variance</span> <span class="o">==</span> <span class="mi">3</span><span class="o">*</span><span class="mi">4</span><span class="o">**</span><span class="mi">2</span>
+    <span class="n">z</span> <span class="o">=</span> <span class="n">a</span><span class="o">/</span><span class="mi">4</span>
+    <span class="k">assert</span> <span class="n">z</span><span class="o">.</span><span class="n">x</span> <span class="o">==</span> <span class="mf">5.</span><span class="o">/</span><span class="mi">4</span> <span class="ow">and</span> <span class="n">z</span><span class="o">.</span><span class="n">variance</span> <span class="o">==</span> <span class="mf">3.</span><span class="o">/</span><span class="mi">4</span><span class="o">**</span><span class="mi">2</span>
+
+    <span class="c1"># Reverse scalar operations</span>
+    <span class="n">z</span> <span class="o">=</span> <span class="mi">4</span><span class="o">+</span><span class="n">a</span>
+    <span class="k">assert</span> <span class="n">z</span><span class="o">.</span><span class="n">x</span> <span class="o">==</span> <span class="mi">4</span><span class="o">+</span><span class="mi">5</span> <span class="ow">and</span> <span class="n">z</span><span class="o">.</span><span class="n">variance</span> <span class="o">==</span> <span class="mi">3</span>
+    <span class="n">z</span> <span class="o">=</span> <span class="mi">4</span><span class="o">-</span><span class="n">a</span>
+    <span class="k">assert</span> <span class="n">z</span><span class="o">.</span><span class="n">x</span> <span class="o">==</span> <span class="mi">4</span><span class="o">-</span><span class="mi">5</span> <span class="ow">and</span> <span class="n">z</span><span class="o">.</span><span class="n">variance</span> <span class="o">==</span> <span class="mi">3</span>
+    <span class="n">z</span> <span class="o">=</span> <span class="mi">4</span><span class="o">*</span><span class="n">a</span>
+    <span class="k">assert</span> <span class="n">z</span><span class="o">.</span><span class="n">x</span> <span class="o">==</span> <span class="mi">4</span><span class="o">*</span><span class="mi">5</span> <span class="ow">and</span> <span class="n">z</span><span class="o">.</span><span class="n">variance</span> <span class="o">==</span> <span class="mi">3</span><span class="o">*</span><span class="mi">4</span><span class="o">**</span><span class="mi">2</span>
+    <span class="n">z</span> <span class="o">=</span> <span class="mi">4</span><span class="o">/</span><span class="n">a</span>
+    <span class="k">assert</span> <span class="n">z</span><span class="o">.</span><span class="n">x</span> <span class="o">==</span> <span class="mf">4.</span><span class="o">/</span><span class="mi">5</span> <span class="ow">and</span> <span class="nb">abs</span><span class="p">(</span><span class="n">z</span><span class="o">.</span><span class="n">variance</span> <span class="o">-</span> <span class="mf">3.</span><span class="o">/</span><span class="mi">5</span><span class="o">**</span><span class="mi">4</span> <span class="o">*</span> <span class="mi">4</span><span class="o">**</span><span class="mi">2</span><span class="p">)</span> <span class="o">&lt;</span> <span class="mf">1e-15</span>
+
+    <span class="c1"># Power operations</span>
+    <span class="n">z</span> <span class="o">=</span> <span class="n">a</span><span class="o">**</span><span class="mi">2</span>
+    <span class="k">assert</span> <span class="n">z</span><span class="o">.</span><span class="n">x</span> <span class="o">==</span> <span class="mi">5</span><span class="o">**</span><span class="mi">2</span> <span class="ow">and</span> <span class="n">z</span><span class="o">.</span><span class="n">variance</span> <span class="o">==</span> <span class="mi">4</span><span class="o">*</span><span class="mi">3</span><span class="o">*</span><span class="mi">5</span><span class="o">**</span><span class="mi">2</span>
+    <span class="n">z</span> <span class="o">=</span> <span class="n">a</span><span class="o">**</span><span class="mi">1</span>
+    <span class="k">assert</span> <span class="n">z</span><span class="o">.</span><span class="n">x</span> <span class="o">==</span> <span class="mi">5</span><span class="o">**</span><span class="mi">1</span> <span class="ow">and</span> <span class="n">z</span><span class="o">.</span><span class="n">variance</span> <span class="o">==</span> <span class="mi">3</span>
+    <span class="n">z</span> <span class="o">=</span> <span class="n">a</span><span class="o">**</span><span class="mi">0</span>
+    <span class="k">assert</span> <span class="n">z</span><span class="o">.</span><span class="n">x</span> <span class="o">==</span> <span class="mi">5</span><span class="o">**</span><span class="mi">0</span> <span class="ow">and</span> <span class="n">z</span><span class="o">.</span><span class="n">variance</span> <span class="o">==</span> <span class="mi">0</span>
+    <span class="n">z</span> <span class="o">=</span> <span class="n">a</span><span class="o">**-</span><span class="mi">1</span>
+    <span class="k">assert</span> <span class="n">z</span><span class="o">.</span><span class="n">x</span> <span class="o">==</span> <span class="mi">5</span><span class="o">**-</span><span class="mi">1</span> <span class="ow">and</span> <span class="nb">abs</span><span class="p">(</span><span class="n">z</span><span class="o">.</span><span class="n">variance</span> <span class="o">-</span> <span class="mf">3.</span><span class="o">/</span><span class="mi">5</span><span class="o">**</span><span class="mi">4</span><span class="p">)</span> <span class="o">&lt;</span> <span class="mf">1e-15</span>
+
+    <span class="c1"># Binary operations</span>
+    <span class="n">z</span> <span class="o">=</span> <span class="n">a</span><span class="o">+</span><span class="n">b</span>
+    <span class="k">assert</span> <span class="n">z</span><span class="o">.</span><span class="n">x</span> <span class="o">==</span> <span class="mi">5</span><span class="o">+</span><span class="mi">4</span> <span class="ow">and</span> <span class="n">z</span><span class="o">.</span><span class="n">variance</span> <span class="o">==</span> <span class="mi">3</span><span class="o">+</span><span class="mi">2</span>
+    <span class="n">z</span> <span class="o">=</span> <span class="n">a</span><span class="o">-</span><span class="n">b</span>
+    <span class="k">assert</span> <span class="n">z</span><span class="o">.</span><span class="n">x</span> <span class="o">==</span> <span class="mi">5</span><span class="o">-</span><span class="mi">4</span> <span class="ow">and</span> <span class="n">z</span><span class="o">.</span><span class="n">variance</span> <span class="o">==</span> <span class="mi">3</span><span class="o">+</span><span class="mi">2</span>
+    <span class="n">z</span> <span class="o">=</span> <span class="n">a</span><span class="o">*</span><span class="n">b</span>
+    <span class="k">assert</span> <span class="n">z</span><span class="o">.</span><span class="n">x</span> <span class="o">==</span> <span class="mi">5</span><span class="o">*</span><span class="mi">4</span> <span class="ow">and</span> <span class="n">z</span><span class="o">.</span><span class="n">variance</span> <span class="o">==</span> <span class="p">(</span><span class="mi">5</span><span class="o">**</span><span class="mi">2</span><span class="o">*</span><span class="mi">2</span> <span class="o">+</span> <span class="mi">4</span><span class="o">**</span><span class="mi">2</span><span class="o">*</span><span class="mi">3</span><span class="p">)</span>
+    <span class="n">z</span> <span class="o">=</span> <span class="n">a</span><span class="o">/</span><span class="n">b</span>
+    <span class="k">assert</span> <span class="n">z</span><span class="o">.</span><span class="n">x</span> <span class="o">==</span> <span class="mf">5.</span><span class="o">/</span><span class="mi">4</span> <span class="ow">and</span> <span class="nb">abs</span><span class="p">(</span><span class="n">z</span><span class="o">.</span><span class="n">variance</span> <span class="o">-</span> <span class="p">(</span><span class="mf">3.</span><span class="o">/</span><span class="mi">5</span><span class="o">**</span><span class="mi">2</span> <span class="o">+</span> <span class="mf">2.</span><span class="o">/</span><span class="mi">4</span><span class="o">**</span><span class="mi">2</span><span class="p">)</span><span class="o">*</span><span class="p">(</span><span class="mf">5.</span><span class="o">/</span><span class="mi">4</span><span class="p">)</span><span class="o">**</span><span class="mi">2</span><span class="p">)</span> <span class="o">&lt;</span> <span class="mf">1e-15</span>
+
+    <span class="c1"># ===== Inplace operations =====</span>
+    <span class="c1"># Scalar operations</span>
+    <span class="n">y</span> <span class="o">=</span> <span class="n">a</span><span class="o">+</span><span class="mi">0</span><span class="p">;</span> <span class="n">y</span> <span class="o">+=</span> <span class="mi">4</span>
+    <span class="n">z</span> <span class="o">=</span> <span class="n">a</span><span class="o">+</span><span class="mi">4</span>
+    <span class="k">assert</span> <span class="n">y</span><span class="o">.</span><span class="n">x</span> <span class="o">==</span> <span class="n">z</span><span class="o">.</span><span class="n">x</span> <span class="ow">and</span> <span class="nb">abs</span><span class="p">(</span><span class="n">y</span><span class="o">.</span><span class="n">variance</span><span class="o">-</span><span class="n">z</span><span class="o">.</span><span class="n">variance</span><span class="p">)</span> <span class="o">&lt;</span> <span class="mf">1e-15</span>
+    <span class="n">y</span> <span class="o">=</span> <span class="n">a</span><span class="o">+</span><span class="mi">0</span><span class="p">;</span> <span class="n">y</span> <span class="o">-=</span> <span class="mi">4</span>
+    <span class="n">z</span> <span class="o">=</span> <span class="n">a</span><span class="o">-</span><span class="mi">4</span>
+    <span class="k">assert</span> <span class="n">y</span><span class="o">.</span><span class="n">x</span> <span class="o">==</span> <span class="n">z</span><span class="o">.</span><span class="n">x</span> <span class="ow">and</span> <span class="nb">abs</span><span class="p">(</span><span class="n">y</span><span class="o">.</span><span class="n">variance</span><span class="o">-</span><span class="n">z</span><span class="o">.</span><span class="n">variance</span><span class="p">)</span> <span class="o">&lt;</span> <span class="mf">1e-15</span>
+    <span class="n">y</span> <span class="o">=</span> <span class="n">a</span><span class="o">+</span><span class="mi">0</span><span class="p">;</span> <span class="n">y</span> <span class="o">*=</span> <span class="mi">4</span>
+    <span class="n">z</span> <span class="o">=</span> <span class="n">a</span><span class="o">*</span><span class="mi">4</span>
+    <span class="k">assert</span> <span class="n">y</span><span class="o">.</span><span class="n">x</span> <span class="o">==</span> <span class="n">z</span><span class="o">.</span><span class="n">x</span> <span class="ow">and</span> <span class="nb">abs</span><span class="p">(</span><span class="n">y</span><span class="o">.</span><span class="n">variance</span><span class="o">-</span><span class="n">z</span><span class="o">.</span><span class="n">variance</span><span class="p">)</span> <span class="o">&lt;</span> <span class="mf">1e-15</span>
+    <span class="n">y</span> <span class="o">=</span> <span class="n">a</span><span class="o">+</span><span class="mi">0</span><span class="p">;</span> <span class="n">y</span> <span class="o">/=</span> <span class="mi">4</span>
+    <span class="n">z</span> <span class="o">=</span> <span class="n">a</span><span class="o">/</span><span class="mi">4</span>
+    <span class="k">assert</span> <span class="n">y</span><span class="o">.</span><span class="n">x</span> <span class="o">==</span> <span class="n">z</span><span class="o">.</span><span class="n">x</span> <span class="ow">and</span> <span class="nb">abs</span><span class="p">(</span><span class="n">y</span><span class="o">.</span><span class="n">variance</span><span class="o">-</span><span class="n">z</span><span class="o">.</span><span class="n">variance</span><span class="p">)</span> <span class="o">&lt;</span> <span class="mf">1e-15</span>
+
+    <span class="c1"># Power operations</span>
+    <span class="n">y</span> <span class="o">=</span> <span class="n">a</span><span class="o">+</span><span class="mi">0</span><span class="p">;</span> <span class="n">y</span> <span class="o">**=</span> <span class="mi">4</span>
+    <span class="n">z</span> <span class="o">=</span> <span class="n">a</span><span class="o">**</span><span class="mi">4</span>
+    <span class="k">assert</span> <span class="n">y</span><span class="o">.</span><span class="n">x</span> <span class="o">==</span> <span class="n">z</span><span class="o">.</span><span class="n">x</span> <span class="ow">and</span> <span class="nb">abs</span><span class="p">(</span><span class="n">y</span><span class="o">.</span><span class="n">variance</span><span class="o">-</span><span class="n">z</span><span class="o">.</span><span class="n">variance</span><span class="p">)</span> <span class="o">&lt;</span> <span class="mf">1e-15</span>
+
+    <span class="c1"># Binary operations</span>
+    <span class="n">y</span> <span class="o">=</span> <span class="n">a</span><span class="o">+</span><span class="mi">0</span><span class="p">;</span> <span class="n">y</span> <span class="o">+=</span> <span class="n">b</span>
+    <span class="n">z</span> <span class="o">=</span> <span class="n">a</span><span class="o">+</span><span class="n">b</span>
+    <span class="k">assert</span> <span class="n">y</span><span class="o">.</span><span class="n">x</span> <span class="o">==</span> <span class="n">z</span><span class="o">.</span><span class="n">x</span> <span class="ow">and</span> <span class="nb">abs</span><span class="p">(</span><span class="n">y</span><span class="o">.</span><span class="n">variance</span><span class="o">-</span><span class="n">z</span><span class="o">.</span><span class="n">variance</span><span class="p">)</span> <span class="o">&lt;</span> <span class="mf">1e-15</span>
+    <span class="n">y</span> <span class="o">=</span> <span class="n">a</span><span class="o">+</span><span class="mi">0</span><span class="p">;</span> <span class="n">y</span> <span class="o">-=</span> <span class="n">b</span>
+    <span class="n">z</span> <span class="o">=</span> <span class="n">a</span><span class="o">-</span><span class="n">b</span>
+    <span class="k">assert</span> <span class="n">y</span><span class="o">.</span><span class="n">x</span> <span class="o">==</span> <span class="n">z</span><span class="o">.</span><span class="n">x</span> <span class="ow">and</span> <span class="nb">abs</span><span class="p">(</span><span class="n">y</span><span class="o">.</span><span class="n">variance</span><span class="o">-</span><span class="n">z</span><span class="o">.</span><span class="n">variance</span><span class="p">)</span> <span class="o">&lt;</span> <span class="mf">1e-15</span>
+    <span class="n">y</span> <span class="o">=</span> <span class="n">a</span><span class="o">+</span><span class="mi">0</span><span class="p">;</span> <span class="n">y</span> <span class="o">*=</span> <span class="n">b</span>
+    <span class="n">z</span> <span class="o">=</span> <span class="n">a</span><span class="o">*</span><span class="n">b</span>
+    <span class="k">assert</span> <span class="n">y</span><span class="o">.</span><span class="n">x</span> <span class="o">==</span> <span class="n">z</span><span class="o">.</span><span class="n">x</span> <span class="ow">and</span> <span class="nb">abs</span><span class="p">(</span><span class="n">y</span><span class="o">.</span><span class="n">variance</span><span class="o">-</span><span class="n">z</span><span class="o">.</span><span class="n">variance</span><span class="p">)</span> <span class="o">&lt;</span> <span class="mf">1e-15</span>
+    <span class="n">y</span> <span class="o">=</span> <span class="n">a</span><span class="o">+</span><span class="mi">0</span><span class="p">;</span> <span class="n">y</span> <span class="o">/=</span> <span class="n">b</span>
+    <span class="n">z</span> <span class="o">=</span> <span class="n">a</span><span class="o">/</span><span class="n">b</span>
+    <span class="k">assert</span> <span class="n">y</span><span class="o">.</span><span class="n">x</span> <span class="o">==</span> <span class="n">z</span><span class="o">.</span><span class="n">x</span> <span class="ow">and</span> <span class="nb">abs</span><span class="p">(</span><span class="n">y</span><span class="o">.</span><span class="n">variance</span><span class="o">-</span><span class="n">z</span><span class="o">.</span><span class="n">variance</span><span class="p">)</span> <span class="o">&lt;</span> <span class="mf">1e-15</span>
+
+
+    <span class="c1"># =============== vector operations ================</span>
+    <span class="c1"># Slicing</span>
+    <span class="n">z</span> <span class="o">=</span> <span class="n">Uncertainty</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">([</span><span class="mi">1</span><span class="p">,</span><span class="mi">2</span><span class="p">,</span><span class="mi">3</span><span class="p">,</span><span class="mi">4</span><span class="p">,</span><span class="mi">5</span><span class="p">]),</span><span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">([</span><span class="mi">2</span><span class="p">,</span><span class="mi">1</span><span class="p">,</span><span class="mi">2</span><span class="p">,</span><span class="mi">3</span><span class="p">,</span><span class="mi">2</span><span class="p">]))</span>
+    <span class="k">assert</span> <span class="n">z</span><span class="p">[</span><span class="mi">2</span><span class="p">]</span><span class="o">.</span><span class="n">x</span> <span class="o">==</span> <span class="mi">3</span> <span class="ow">and</span> <span class="n">z</span><span class="p">[</span><span class="mi">2</span><span class="p">]</span><span class="o">.</span><span class="n">variance</span> <span class="o">==</span> <span class="mi">2</span>
+    <span class="k">assert</span> <span class="p">(</span><span class="n">z</span><span class="p">[</span><span class="mi">2</span><span class="p">:</span><span class="mi">4</span><span class="p">]</span><span class="o">.</span><span class="n">x</span> <span class="o">==</span> <span class="p">[</span><span class="mi">3</span><span class="p">,</span><span class="mi">4</span><span class="p">])</span><span class="o">.</span><span class="n">all</span><span class="p">()</span>
+    <span class="k">assert</span> <span class="p">(</span><span class="n">z</span><span class="p">[</span><span class="mi">2</span><span class="p">:</span><span class="mi">4</span><span class="p">]</span><span class="o">.</span><span class="n">variance</span> <span class="o">==</span> <span class="p">[</span><span class="mi">2</span><span class="p">,</span><span class="mi">3</span><span class="p">])</span><span class="o">.</span><span class="n">all</span><span class="p">()</span>
+    <span class="n">z</span><span class="p">[</span><span class="mi">2</span><span class="p">:</span><span class="mi">4</span><span class="p">]</span> <span class="o">=</span> <span class="n">Uncertainty</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">([</span><span class="mi">8</span><span class="p">,</span><span class="mi">7</span><span class="p">]),</span><span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">([</span><span class="mi">4</span><span class="p">,</span><span class="mi">5</span><span class="p">]))</span>
+    <span class="k">assert</span> <span class="n">z</span><span class="p">[</span><span class="mi">2</span><span class="p">]</span><span class="o">.</span><span class="n">x</span> <span class="o">==</span> <span class="mi">8</span> <span class="ow">and</span> <span class="n">z</span><span class="p">[</span><span class="mi">2</span><span class="p">]</span><span class="o">.</span><span class="n">variance</span> <span class="o">==</span> <span class="mi">4</span>
+    <span class="n">A</span> <span class="o">=</span> <span class="n">Uncertainty</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">([</span><span class="n">a</span><span class="o">.</span><span class="n">x</span><span class="p">]</span><span class="o">*</span><span class="mi">2</span><span class="p">),</span><span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">([</span><span class="n">a</span><span class="o">.</span><span class="n">variance</span><span class="p">]</span><span class="o">*</span><span class="mi">2</span><span class="p">))</span>
+    <span class="n">B</span> <span class="o">=</span> <span class="n">Uncertainty</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">([</span><span class="n">b</span><span class="o">.</span><span class="n">x</span><span class="p">]</span><span class="o">*</span><span class="mi">2</span><span class="p">),</span><span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">([</span><span class="n">b</span><span class="o">.</span><span class="n">variance</span><span class="p">]</span><span class="o">*</span><span class="mi">2</span><span class="p">))</span>
+
+    <span class="c1"># TODO complete tests of copy and inplace operations for vectors and slices.</span>
+
+    <span class="c1"># Binary operations</span>
+    <span class="n">z</span> <span class="o">=</span> <span class="n">A</span><span class="o">+</span><span class="n">B</span>
+    <span class="k">assert</span> <span class="p">(</span><span class="n">z</span><span class="o">.</span><span class="n">x</span> <span class="o">==</span> <span class="mi">5</span><span class="o">+</span><span class="mi">4</span><span class="p">)</span><span class="o">.</span><span class="n">all</span><span class="p">()</span> <span class="ow">and</span> <span class="p">(</span><span class="n">z</span><span class="o">.</span><span class="n">variance</span> <span class="o">==</span> <span class="mi">3</span><span class="o">+</span><span class="mi">2</span><span class="p">)</span><span class="o">.</span><span class="n">all</span><span class="p">()</span>
+    <span class="n">z</span> <span class="o">=</span> <span class="n">A</span><span class="o">-</span><span class="n">B</span>
+    <span class="k">assert</span> <span class="p">(</span><span class="n">z</span><span class="o">.</span><span class="n">x</span> <span class="o">==</span> <span class="mi">5</span><span class="o">-</span><span class="mi">4</span><span class="p">)</span><span class="o">.</span><span class="n">all</span><span class="p">()</span> <span class="ow">and</span> <span class="p">(</span><span class="n">z</span><span class="o">.</span><span class="n">variance</span> <span class="o">==</span> <span class="mi">3</span><span class="o">+</span><span class="mi">2</span><span class="p">)</span><span class="o">.</span><span class="n">all</span><span class="p">()</span>
+    <span class="n">z</span> <span class="o">=</span> <span class="n">A</span><span class="o">*</span><span class="n">B</span>
+    <span class="k">assert</span> <span class="p">(</span><span class="n">z</span><span class="o">.</span><span class="n">x</span> <span class="o">==</span> <span class="mi">5</span><span class="o">*</span><span class="mi">4</span><span class="p">)</span><span class="o">.</span><span class="n">all</span><span class="p">()</span> <span class="ow">and</span> <span class="p">(</span><span class="n">z</span><span class="o">.</span><span class="n">variance</span> <span class="o">==</span> <span class="p">(</span><span class="mi">5</span><span class="o">**</span><span class="mi">2</span><span class="o">*</span><span class="mi">2</span> <span class="o">+</span> <span class="mi">4</span><span class="o">**</span><span class="mi">2</span><span class="o">*</span><span class="mi">3</span><span class="p">))</span><span class="o">.</span><span class="n">all</span><span class="p">()</span>
+    <span class="n">z</span> <span class="o">=</span> <span class="n">A</span><span class="o">/</span><span class="n">B</span>
+    <span class="k">assert</span> <span class="p">(</span><span class="n">z</span><span class="o">.</span><span class="n">x</span> <span class="o">==</span> <span class="mf">5.</span><span class="o">/</span><span class="mi">4</span><span class="p">)</span><span class="o">.</span><span class="n">all</span><span class="p">()</span>
+    <span class="k">assert</span> <span class="p">(</span><span class="nb">abs</span><span class="p">(</span><span class="n">z</span><span class="o">.</span><span class="n">variance</span> <span class="o">-</span> <span class="p">(</span><span class="mf">3.</span><span class="o">/</span><span class="mi">5</span><span class="o">**</span><span class="mi">2</span> <span class="o">+</span> <span class="mf">2.</span><span class="o">/</span><span class="mi">4</span><span class="o">**</span><span class="mi">2</span><span class="p">)</span><span class="o">*</span><span class="p">(</span><span class="mf">5.</span><span class="o">/</span><span class="mi">4</span><span class="p">)</span><span class="o">**</span><span class="mi">2</span><span class="p">)</span> <span class="o">&lt;</span> <span class="mf">1e-15</span><span class="p">)</span><span class="o">.</span><span class="n">all</span><span class="p">()</span>
+
+    <span class="c1"># printing; note that sqrt(3) ~ 1.7</span>
+    <span class="k">assert</span> <span class="nb">str</span><span class="p">(</span><span class="n">Uncertainty</span><span class="p">(</span><span class="mi">5</span><span class="p">,</span><span class="mi">3</span><span class="p">))</span> <span class="o">==</span> <span class="s2">&quot;5.0(17)&quot;</span>
+    <span class="k">assert</span> <span class="nb">str</span><span class="p">(</span><span class="n">Uncertainty</span><span class="p">(</span><span class="mi">15</span><span class="p">,</span><span class="mi">3</span><span class="p">))</span> <span class="o">==</span> <span class="s2">&quot;15.0(17)&quot;</span>
+    <span class="k">assert</span> <span class="nb">str</span><span class="p">(</span><span class="n">Uncertainty</span><span class="p">(</span><span class="mf">151.23356</span><span class="p">,</span><span class="mf">0.324185</span><span class="o">**</span><span class="mi">2</span><span class="p">))</span> <span class="o">==</span> <span class="s2">&quot;151.23(32)&quot;</span>
+
+<span class="k">if</span> <span class="n">__name__</span> <span class="o">==</span> <span class="s2">&quot;__main__&quot;</span><span class="p">:</span> <span class="n">test</span><span class="p">()</span>
+</pre></div>
+
+          </div>
+        </div>
+      </div>
+      <div class="sphinxsidebar" role="navigation" aria-label="main navigation">
+        <div class="sphinxsidebarwrapper">
+<div id="searchbox" style="display: none" role="search">
+  <h3>Quick search</h3>
+    <form class="search" action="../../../../search.html" method="get">
+      <input type="text" name="q" />
+      <input type="submit" value="Go" />
+      <input type="hidden" name="check_keywords" value="yes" />
+      <input type="hidden" name="area" value="default" />
+    </form>
+</div>
+<script type="text/javascript">$('#searchbox').show(0);</script>
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="related" role="navigation" aria-label="related navigation">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="../../../../genindex.html" title="General Index"
+             >index</a></li>
+        <li class="right" >
+          <a href="../../../../py-modindex.html" title="Python Module Index"
+             >modules</a> |</li>
+        <li class="nav-item nav-item-0"><a href="../../../../index.html">SasView 4.2.0 documentation</a> &raquo;</li>
+          <li class="nav-item nav-item-1"><a href="../../../index.html" >Module code</a> &raquo;</li>
+          <li class="nav-item nav-item-2"><a href="../../../sas.html" >sas</a> &raquo;</li> 
+      </ul>
+    </div>
+    <div class="footer" role="contentinfo">
+        &copy; Copyright 2018, The SasView Project.
+      Created using <a href="http://sphinx-doc.org/">Sphinx</a> 1.4.1.
+    </div>
+  </body>
+</html>

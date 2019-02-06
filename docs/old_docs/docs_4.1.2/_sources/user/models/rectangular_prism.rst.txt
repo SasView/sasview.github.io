@@ -1,0 +1,102 @@
+.. _rectangular-prism:
+
+rectangular_prism
+=======================================================
+
+Rectangular parallelepiped with uniform scattering length density.
+
+=========== ======================================== ============ =============
+Parameter   Description                              Units        Default value
+=========== ======================================== ============ =============
+scale       Source intensity                         None                     1
+background  Source background                        |cm^-1|              0.001
+sld         Parallelepiped scattering length density |1e-6Ang^-2|           6.3
+sld_solvent Solvent scattering length density        |1e-6Ang^-2|             1
+a_side      Shorter side of the parallelepiped       |Ang|                   35
+b2a_ratio   Ratio sides b/a                          |Ang|                    1
+c2a_ratio   Ratio sides c/a                          |Ang|                    1
+=========== ======================================== ============ =============
+
+The returned value is scaled to units of |cm^-1| |sr^-1|, absolute scale.
+
+
+
+This model provides the form factor, *P(q)*, for a rectangular prism.
+
+Note that this model is almost totally equivalent to the existing
+:ref:`parallelepiped` model.
+The only difference is that the way the relevant
+parameters are defined here (*a*, *b/a*, *c/a* instead of *a*, *b*, *c*)
+which allows use of polydispersity with this model while keeping the shape of
+the prism (e.g. setting *b/a* = 1 and *c/a* = 1 and applying polydispersity
+to *a* will generate a distribution of cubes of different sizes).
+Note also that, contrary to :ref:`parallelepiped`, it does not compute
+the 2D scattering.
+
+
+**Definition**
+
+The 1D scattering intensity for this model was calculated by Mittelbach and
+Porod (Mittelbach, 1961), but the implementation here is closer to the
+equations given by Nayuk and Huber (Nayuk, 2012).
+Note also that the angle definitions used in the code and the present
+documentation correspond to those used in (Nayuk, 2012) (see Fig. 1 of
+that reference), with |theta| corresponding to |alpha| in that paper,
+and not to the usual convention used for example in the
+:ref:`parallelepiped` model. As the present model does not compute
+the 2D scattering, this has no further consequences.
+
+In this model the scattering from a massive parallelepiped with an
+orientation with respect to the scattering vector given by |theta|
+and |phi|
+
+.. math::
+  A_P\,(q) =  \frac{\sin \bigl( q \frac{C}{2} \cos\theta \bigr)}{\left( q \frac{C}{2}
+  \cos\theta \right)} \, \times \, \frac{\sin \bigl( q \frac{A}{2} \sin\theta \sin\phi
+  \bigr)}{\left( q \frac{A}{2} \sin\theta \sin\phi \right)} \, \times \, \frac{\sin \bigl(
+  q \frac{B}{2} \sin\theta \cos\phi \bigr)}{\left( q \frac{B}{2} \sin\theta \cos\phi \right)}
+
+where *A*, *B* and *C* are the sides of the parallelepiped and must fulfill
+:math:`A \le B \le C`, |theta| is the angle between the *z* axis and the
+longest axis of the parallelepiped *C*, and |phi| is the angle between the
+scattering vector (lying in the *xy* plane) and the *y* axis.
+
+The normalized form factor in 1D is obtained averaging over all possible
+orientations
+
+.. math::
+  P(q) =  \frac{2}{\pi} \times \, \int_0^{\frac{\pi}{2}} \,
+  \int_0^{\frac{\pi}{2}} A_P^2(q) \, \sin\theta \, d\theta \, d\phi
+
+And the 1D scattering intensity is calculated as
+
+.. math::
+  I(q) = \mbox{scale} \times V \times (\rho_{\mbox{p}} -
+  \rho_{\mbox{solvent}})^2 \times P(q)
+
+where *V* is the volume of the rectangular prism, :math:`\rho_{\mbox{p}}`
+is the scattering length of the parallelepiped, :math:`\rho_{\mbox{solvent}}`
+is the scattering length of the solvent, and (if the data are in absolute
+units) *scale* represents the volume fraction (which is unitless).
+
+**The 2D scattering intensity is not computed by this model.**
+
+
+**Validation**
+
+Validation of the code was conducted by comparing the output of the 1D model
+to the output of the existing :ref:`parallelepiped` model.
+
+
+
+.. figure:: img/rectangular_prism_autogenfig.png
+
+    1D plot corresponding to the default parameters of the model.
+
+**References**
+
+P Mittelbach and G Porod, *Acta Physica Austriaca*, 14 (1961) 185-211
+
+R Nayuk and K Huber, *Z. Phys. Chem.*, 226 (2012) 837-854
+
+

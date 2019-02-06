@@ -1,0 +1,482 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+  "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+    
+    <title>sasmodels.guyou &mdash; SasView 4.2.0 documentation</title>
+    
+    <link rel="stylesheet" href="../../_static/classic.css" type="text/css" />
+    <link rel="stylesheet" href="../../_static/pygments.css" type="text/css" />
+    
+    <script type="text/javascript">
+      var DOCUMENTATION_OPTIONS = {
+        URL_ROOT:    '../../',
+        VERSION:     '4.2.0',
+        COLLAPSE_INDEX: false,
+        FILE_SUFFIX: '.html',
+        HAS_SOURCE:  true
+      };
+    </script>
+    <script type="text/javascript" src="../../_static/jquery.js"></script>
+    <script type="text/javascript" src="../../_static/underscore.js"></script>
+    <script type="text/javascript" src="../../_static/doctools.js"></script>
+    <script type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.1/MathJax.js?config=TeX-MML-AM_CHTML"></script>
+    <link rel="top" title="SasView 4.2.0 documentation" href="../../index.html" />
+    <link rel="up" title="sasmodels" href="../sasmodels.html" /> 
+  </head>
+  <body role="document">
+    <div class="related" role="navigation" aria-label="related navigation">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="../../genindex.html" title="General Index"
+             accesskey="I">index</a></li>
+        <li class="right" >
+          <a href="../../py-modindex.html" title="Python Module Index"
+             >modules</a> |</li>
+        <li class="nav-item nav-item-0"><a href="../../index.html">SasView 4.2.0 documentation</a> &raquo;</li>
+          <li class="nav-item nav-item-1"><a href="../index.html" >Module code</a> &raquo;</li>
+          <li class="nav-item nav-item-2"><a href="../sasmodels.html" accesskey="U">sasmodels</a> &raquo;</li> 
+      </ul>
+    </div>  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          <div class="body" role="main">
+            
+  <h1>Source code for sasmodels.guyou</h1><div class="highlight"><pre>
+<span></span><span class="c1"># Copyright 2013-2016 Mike Bostock</span>
+<span class="c1"># All rights reserved.</span>
+<span class="c1">#</span>
+<span class="c1"># Redistribution and use in source and binary forms, with or without modification,</span>
+<span class="c1"># are permitted provided that the following conditions are met:</span>
+<span class="c1">#</span>
+<span class="c1"># * Redistributions of source code must retain the above copyright notice, this</span>
+<span class="c1">#   list of conditions and the following disclaimer.</span>
+<span class="c1">#</span>
+<span class="c1"># * Redistributions in binary form must reproduce the above copyright notice,</span>
+<span class="c1">#   this list of conditions and the following disclaimer in the documentation</span>
+<span class="c1">#   and/or other materials provided with the distribution.</span>
+<span class="c1">#</span>
+<span class="c1"># * Neither the name of the author nor the names of contributors may be used to</span>
+<span class="c1">#   endorse or promote products derived from this software without specific prior</span>
+<span class="c1">#   written permission.</span>
+<span class="c1">#</span>
+<span class="c1"># THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS &quot;AS IS&quot; AND</span>
+<span class="c1"># ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED</span>
+<span class="c1"># WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE</span>
+<span class="c1"># DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT OWNER OR CONTRIBUTORS BE LIABLE FOR</span>
+<span class="c1"># ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES</span>
+<span class="c1"># (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES;</span>
+<span class="c1"># LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON</span>
+<span class="c1"># ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT</span>
+<span class="c1"># (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS</span>
+<span class="c1"># SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.</span>
+<span class="c1">#</span>
+<span class="c1"># https://github.com/d3/d3-geo-projection</span>
+<span class="c1"># commit fd2886555e46b35163c7b898d43c7d1bcebbba7c 2016-07-02</span>
+<span class="c1">#</span>
+<span class="c1"># 2017-11-01 Paul Kienzle</span>
+<span class="c1"># * converted to python, with degrees rather than radians</span>
+<span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">Convert between latitude-longitude and Guyou map coordinates.</span>
+<span class="sd">&quot;&quot;&quot;</span>
+
+<span class="kn">from</span> <span class="nn">__future__</span> <span class="kn">import</span> <span class="n">division</span><span class="p">,</span> <span class="n">print_function</span>
+
+<span class="kn">import</span> <span class="nn">numpy</span> <span class="kn">as</span> <span class="nn">np</span>
+<span class="kn">from</span> <span class="nn">numpy</span> <span class="kn">import</span> <span class="n">sqrt</span><span class="p">,</span> <span class="n">pi</span><span class="p">,</span> <span class="n">tan</span><span class="p">,</span> <span class="n">cos</span><span class="p">,</span> <span class="n">sin</span><span class="p">,</span> <span class="n">sign</span><span class="p">,</span> <span class="n">radians</span><span class="p">,</span> <span class="n">degrees</span>
+<span class="kn">from</span> <span class="nn">numpy</span> <span class="kn">import</span> <span class="n">sinh</span><span class="p">,</span> <span class="n">arctan</span> <span class="k">as</span> <span class="n">atan</span>
+
+<span class="c1"># scipy version of special functions</span>
+<span class="kn">from</span> <span class="nn">scipy.special</span> <span class="kn">import</span> <span class="n">ellipj</span> <span class="k">as</span> <span class="n">ellipticJ</span><span class="p">,</span> <span class="n">ellipkinc</span> <span class="k">as</span> <span class="n">ellipticF</span>
+
+<span class="n">_</span> <span class="o">=</span> <span class="s2">&quot;&quot;&quot;</span>
+<span class="s2"># mpmath version of special functions</span>
+<span class="s2">import mpmath as mp</span>
+<span class="s2">sn, cn, dn = [mp.ellipfun(v) for v in &#39;sn&#39;, &#39;cn&#39;, &#39;dn&#39;]</span>
+
+<span class="s2">def ellipticJi(u, v, m):</span>
+<span class="s2">    z = u+v*1j</span>
+<span class="s2">    return sn(z, m), cn(z, m), dn(z, m)</span>
+
+<span class="s2">def ellipticJ(u, m):</span>
+<span class="s2">    s, c, d = sn(u, m), cn(u, m), dn(u, m)</span>
+<span class="s2">    phi = mp.asin(s)</span>
+<span class="s2">    return s, c, d, phi</span>
+
+<span class="s2">def ellipticFi(phi, psi, m):</span>
+<span class="s2">    z = phi + psi*1j</span>
+<span class="s2">    return mp.ellipf(z, m)</span>
+
+<span class="s2">def ellipticF(phi, m):</span>
+<span class="s2">    return mp.ellipf(phi, m)</span>
+<span class="s2">&quot;&quot;&quot;</span>
+
+<div class="viewcode-block" id="ellipticJi"><a class="viewcode-back" href="../../dev/sasmodels-api/sasmodels.html#sasmodels.guyou.ellipticJi">[docs]</a><span class="k">def</span> <span class="nf">ellipticJi</span><span class="p">(</span><span class="n">u</span><span class="p">,</span> <span class="n">v</span><span class="p">,</span> <span class="n">m</span><span class="p">):</span>
+    <span class="n">scalar</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">isscalar</span><span class="p">(</span><span class="n">u</span><span class="p">)</span> <span class="ow">and</span> <span class="n">np</span><span class="o">.</span><span class="n">isscalar</span><span class="p">(</span><span class="n">v</span><span class="p">)</span> <span class="ow">and</span> <span class="n">np</span><span class="o">.</span><span class="n">isscalar</span><span class="p">(</span><span class="n">m</span><span class="p">)</span>
+    <span class="n">u</span><span class="p">,</span> <span class="n">v</span><span class="p">,</span> <span class="n">m</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">broadcast_arrays</span><span class="p">(</span><span class="n">u</span><span class="p">,</span> <span class="n">v</span><span class="p">,</span> <span class="n">m</span><span class="p">)</span>
+    <span class="n">result</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">empty_like</span><span class="p">([</span><span class="n">u</span><span class="p">,</span> <span class="n">u</span><span class="p">,</span> <span class="n">u</span><span class="p">],</span> <span class="s1">&#39;D&#39;</span><span class="p">)</span>
+    <span class="n">real</span> <span class="o">=</span> <span class="p">(</span><span class="n">v</span> <span class="o">==</span> <span class="mi">0</span><span class="p">)</span>
+    <span class="n">imag</span> <span class="o">=</span> <span class="p">(</span><span class="n">u</span> <span class="o">==</span> <span class="mi">0</span><span class="p">)</span>
+    <span class="n">mixed</span> <span class="o">=</span> <span class="o">~</span><span class="p">(</span><span class="n">real</span><span class="o">|</span><span class="n">imag</span><span class="p">)</span>
+    <span class="n">result</span><span class="p">[:,</span> <span class="n">real</span><span class="p">]</span> <span class="o">=</span> <span class="n">_ellipticJi_real</span><span class="p">(</span><span class="n">u</span><span class="p">[</span><span class="n">real</span><span class="p">],</span> <span class="n">m</span><span class="p">[</span><span class="n">real</span><span class="p">])</span>
+    <span class="n">result</span><span class="p">[:,</span> <span class="n">imag</span><span class="p">]</span> <span class="o">=</span> <span class="n">_ellipticJi_imag</span><span class="p">(</span><span class="n">v</span><span class="p">[</span><span class="n">imag</span><span class="p">],</span> <span class="n">m</span><span class="p">[</span><span class="n">imag</span><span class="p">])</span>
+    <span class="n">result</span><span class="p">[:,</span> <span class="n">mixed</span><span class="p">]</span> <span class="o">=</span> <span class="n">_ellipticJi</span><span class="p">(</span><span class="n">u</span><span class="p">[</span><span class="n">mixed</span><span class="p">],</span> <span class="n">v</span><span class="p">[</span><span class="n">mixed</span><span class="p">],</span> <span class="n">m</span><span class="p">[</span><span class="n">mixed</span><span class="p">])</span>
+    <span class="k">return</span> <span class="n">result</span><span class="p">[</span><span class="mi">0</span><span class="p">,</span> <span class="p">:]</span> <span class="k">if</span> <span class="n">scalar</span> <span class="k">else</span> <span class="n">result</span></div>
+
+<span class="k">def</span> <span class="nf">_ellipticJi_real</span><span class="p">(</span><span class="n">u</span><span class="p">,</span> <span class="n">m</span><span class="p">):</span>
+    <span class="n">sn</span><span class="p">,</span> <span class="n">cn</span><span class="p">,</span> <span class="n">dn</span><span class="p">,</span> <span class="n">phi</span> <span class="o">=</span> <span class="n">ellipticJ</span><span class="p">(</span><span class="n">u</span><span class="p">,</span> <span class="n">m</span><span class="p">)</span>
+    <span class="k">return</span> <span class="n">sn</span><span class="p">,</span> <span class="n">cn</span><span class="p">,</span> <span class="n">dn</span>
+
+<span class="k">def</span> <span class="nf">_ellipticJi_imag</span><span class="p">(</span><span class="n">v</span><span class="p">,</span> <span class="n">m</span><span class="p">):</span>
+    <span class="n">sn</span><span class="p">,</span> <span class="n">cn</span><span class="p">,</span> <span class="n">dn</span><span class="p">,</span> <span class="n">phi</span> <span class="o">=</span> <span class="n">ellipticJ</span><span class="p">(</span><span class="n">v</span><span class="p">,</span> <span class="mi">1</span><span class="o">-</span><span class="n">m</span><span class="p">)</span>
+    <span class="k">return</span> <span class="mi">1j</span><span class="o">*</span><span class="n">sn</span><span class="o">/</span><span class="n">cn</span><span class="p">,</span> <span class="mi">1</span><span class="o">/</span><span class="n">cn</span><span class="p">,</span> <span class="n">dn</span><span class="o">/</span><span class="n">cn</span>
+
+<span class="k">def</span> <span class="nf">_ellipticJi</span><span class="p">(</span><span class="n">u</span><span class="p">,</span> <span class="n">v</span><span class="p">,</span> <span class="n">m</span><span class="p">):</span>
+    <span class="c1"># Ignoring special cases for now.</span>
+    <span class="c1">#   u=0: (1j*b[0]/b[1], 1/b[1], b[2]/b[1])</span>
+    <span class="c1">#   v=0: (a[0], a[1], a[2])</span>
+    <span class="n">a</span> <span class="o">=</span> <span class="n">ellipticJ</span><span class="p">(</span><span class="n">u</span><span class="p">,</span> <span class="n">m</span><span class="p">)</span>
+    <span class="n">b</span> <span class="o">=</span> <span class="n">ellipticJ</span><span class="p">(</span><span class="n">v</span><span class="p">,</span> <span class="mi">1</span> <span class="o">-</span> <span class="n">m</span><span class="p">)</span>
+    <span class="n">c</span> <span class="o">=</span> <span class="n">b</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span><span class="o">**</span><span class="mi">2</span> <span class="o">+</span> <span class="n">m</span> <span class="o">*</span> <span class="p">(</span><span class="n">a</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="o">*</span> <span class="n">b</span><span class="p">[</span><span class="mi">0</span><span class="p">])</span><span class="o">**</span><span class="mi">2</span>
+    <span class="k">return</span> <span class="p">[</span>
+        <span class="p">(</span><span class="n">a</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="o">*</span> <span class="n">b</span><span class="p">[</span><span class="mi">2</span><span class="p">]</span> <span class="o">/</span> <span class="n">c</span><span class="p">)</span> <span class="o">+</span> <span class="mi">1j</span><span class="o">*</span><span class="p">(</span><span class="n">a</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span> <span class="o">*</span> <span class="n">a</span><span class="p">[</span><span class="mi">2</span><span class="p">]</span> <span class="o">*</span> <span class="n">b</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="o">*</span> <span class="n">b</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span> <span class="o">/</span> <span class="n">c</span><span class="p">),</span>
+        <span class="p">(</span><span class="n">a</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span> <span class="o">*</span> <span class="n">b</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span> <span class="o">/</span> <span class="n">c</span><span class="p">)</span> <span class="o">+</span> <span class="mi">1j</span><span class="o">*</span><span class="p">(</span><span class="o">-</span><span class="n">a</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="o">*</span> <span class="n">a</span><span class="p">[</span><span class="mi">2</span><span class="p">]</span> <span class="o">*</span> <span class="n">b</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="o">*</span> <span class="n">b</span><span class="p">[</span><span class="mi">2</span><span class="p">]</span> <span class="o">/</span> <span class="n">c</span><span class="p">),</span>
+        <span class="p">(</span><span class="n">a</span><span class="p">[</span><span class="mi">2</span><span class="p">]</span> <span class="o">*</span> <span class="n">b</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span> <span class="o">*</span> <span class="n">b</span><span class="p">[</span><span class="mi">2</span><span class="p">]</span> <span class="o">/</span> <span class="n">c</span><span class="p">)</span> <span class="o">+</span> <span class="mi">1j</span><span class="o">*</span><span class="p">(</span><span class="o">-</span><span class="n">m</span> <span class="o">*</span> <span class="n">a</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="o">*</span> <span class="n">a</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span> <span class="o">*</span> <span class="n">b</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="o">/</span> <span class="n">c</span><span class="p">),</span>
+    <span class="p">]</span>
+
+<span class="c1"># calculate F(phi+ipsi|m).</span>
+<span class="c1"># see Abramowitz and Stegun, 17.4.11.</span>
+<div class="viewcode-block" id="ellipticFi"><a class="viewcode-back" href="../../dev/sasmodels-api/sasmodels.html#sasmodels.guyou.ellipticFi">[docs]</a><span class="k">def</span> <span class="nf">ellipticFi</span><span class="p">(</span><span class="n">phi</span><span class="p">,</span> <span class="n">psi</span><span class="p">,</span> <span class="n">m</span><span class="p">):</span>
+    <span class="k">if</span> <span class="n">np</span><span class="o">.</span><span class="n">any</span><span class="p">(</span><span class="n">phi</span> <span class="o">==</span> <span class="mi">0</span><span class="p">):</span>
+        <span class="n">scalar</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">isscalar</span><span class="p">(</span><span class="n">phi</span><span class="p">)</span> <span class="ow">and</span> <span class="n">np</span><span class="o">.</span><span class="n">isscalar</span><span class="p">(</span><span class="n">psi</span><span class="p">)</span> <span class="ow">and</span> <span class="n">np</span><span class="o">.</span><span class="n">isscalar</span><span class="p">(</span><span class="n">m</span><span class="p">)</span>
+        <span class="n">phi</span><span class="p">,</span> <span class="n">psi</span><span class="p">,</span> <span class="n">m</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">broadcast_arrays</span><span class="p">(</span><span class="n">phi</span><span class="p">,</span> <span class="n">psi</span><span class="p">,</span> <span class="n">m</span><span class="p">)</span>
+        <span class="n">result</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">empty_like</span><span class="p">(</span><span class="n">phi</span><span class="p">,</span> <span class="s1">&#39;D&#39;</span><span class="p">)</span>
+        <span class="n">index</span> <span class="o">=</span> <span class="p">(</span><span class="n">phi</span> <span class="o">==</span> <span class="mi">0</span><span class="p">)</span>
+        <span class="n">result</span><span class="p">[</span><span class="n">index</span><span class="p">]</span> <span class="o">=</span> <span class="n">ellipticF</span><span class="p">(</span><span class="n">atan</span><span class="p">(</span><span class="n">sinh</span><span class="p">(</span><span class="nb">abs</span><span class="p">(</span><span class="n">phi</span><span class="p">[</span><span class="n">index</span><span class="p">]))),</span>
+                                  <span class="mi">1</span><span class="o">-</span><span class="n">m</span><span class="p">[</span><span class="n">index</span><span class="p">])</span> <span class="o">*</span> <span class="n">sign</span><span class="p">(</span><span class="n">psi</span><span class="p">[</span><span class="n">index</span><span class="p">])</span>
+        <span class="n">result</span><span class="p">[</span><span class="o">~</span><span class="n">index</span><span class="p">]</span> <span class="o">=</span> <span class="n">ellipticFi</span><span class="p">(</span><span class="n">phi</span><span class="p">[</span><span class="o">~</span><span class="n">index</span><span class="p">],</span> <span class="n">psi</span><span class="p">[</span><span class="o">~</span><span class="n">index</span><span class="p">],</span> <span class="n">m</span><span class="p">[</span><span class="o">~</span><span class="n">index</span><span class="p">])</span>
+        <span class="k">return</span> <span class="n">result</span><span class="o">.</span><span class="n">reshape</span><span class="p">(</span><span class="mi">1</span><span class="p">)[</span><span class="mi">0</span><span class="p">]</span> <span class="k">if</span> <span class="n">scalar</span> <span class="k">else</span> <span class="n">result</span>
+
+    <span class="n">r</span> <span class="o">=</span> <span class="nb">abs</span><span class="p">(</span><span class="n">phi</span><span class="p">)</span>
+    <span class="n">i</span> <span class="o">=</span> <span class="nb">abs</span><span class="p">(</span><span class="n">psi</span><span class="p">)</span>
+    <span class="n">sinhpsi2</span> <span class="o">=</span> <span class="n">sinh</span><span class="p">(</span><span class="n">i</span><span class="p">)</span><span class="o">**</span><span class="mi">2</span>
+    <span class="n">cscphi2</span> <span class="o">=</span> <span class="mi">1</span> <span class="o">/</span> <span class="n">sin</span><span class="p">(</span><span class="n">r</span><span class="p">)</span><span class="o">**</span><span class="mi">2</span>
+    <span class="n">cotphi2</span> <span class="o">=</span> <span class="mi">1</span> <span class="o">/</span> <span class="n">tan</span><span class="p">(</span><span class="n">r</span><span class="p">)</span><span class="o">**</span><span class="mi">2</span>
+    <span class="n">b</span> <span class="o">=</span> <span class="o">-</span><span class="p">(</span><span class="n">cotphi2</span> <span class="o">+</span> <span class="n">m</span> <span class="o">*</span> <span class="p">(</span><span class="n">sinhpsi2</span> <span class="o">*</span> <span class="n">cscphi2</span><span class="p">)</span> <span class="o">-</span> <span class="mi">1</span> <span class="o">+</span> <span class="n">m</span><span class="p">)</span>
+    <span class="n">c</span> <span class="o">=</span> <span class="p">(</span><span class="n">m</span> <span class="o">-</span> <span class="mi">1</span><span class="p">)</span> <span class="o">*</span> <span class="n">cotphi2</span>
+    <span class="n">cotlambda2</span> <span class="o">=</span> <span class="p">(</span><span class="o">-</span><span class="n">b</span> <span class="o">+</span> <span class="n">sqrt</span><span class="p">(</span><span class="n">b</span> <span class="o">*</span> <span class="n">b</span> <span class="o">-</span> <span class="mi">4</span> <span class="o">*</span> <span class="n">c</span><span class="p">))</span> <span class="o">/</span> <span class="mi">2</span>
+    <span class="n">re</span> <span class="o">=</span> <span class="n">ellipticF</span><span class="p">(</span><span class="n">atan</span><span class="p">(</span><span class="mi">1</span> <span class="o">/</span> <span class="n">sqrt</span><span class="p">(</span><span class="n">cotlambda2</span><span class="p">)),</span> <span class="n">m</span><span class="p">)</span> <span class="o">*</span> <span class="n">sign</span><span class="p">(</span><span class="n">phi</span><span class="p">)</span>
+    <span class="n">im</span> <span class="o">=</span> <span class="n">ellipticF</span><span class="p">(</span><span class="n">atan</span><span class="p">(</span><span class="n">sqrt</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">maximum</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="p">(</span><span class="n">cotlambda2</span> <span class="o">/</span> <span class="n">cotphi2</span> <span class="o">-</span> <span class="mi">1</span><span class="p">)</span> <span class="o">/</span> <span class="n">m</span><span class="p">))),</span>
+                   <span class="mi">1</span> <span class="o">-</span> <span class="n">m</span><span class="p">)</span> <span class="o">*</span> <span class="n">sign</span><span class="p">(</span><span class="n">psi</span><span class="p">)</span>
+    <span class="k">return</span> <span class="n">re</span> <span class="o">+</span> <span class="mi">1j</span><span class="o">*</span><span class="n">im</span></div>
+
+<span class="n">SQRT2</span> <span class="o">=</span> <span class="n">sqrt</span><span class="p">(</span><span class="mi">2</span><span class="p">)</span>
+
+<span class="c1"># [PAK] renamed k_ =&gt; cos_u, k =&gt; sin_u, k*k =&gt; sinsq_u to avoid k,K confusion</span>
+<span class="c1"># cos_u = 0.171572875253809902396622551580603842860656249246103853646...</span>
+<span class="c1"># sinsq_u = 0.970562748477140585620264690516376942836062504523376878120...</span>
+<span class="c1"># K = 3.165103454447431823666270142140819753058976299237578486994...</span>
+<div class="viewcode-block" id="guyou"><a class="viewcode-back" href="../../dev/sasmodels-api/sasmodels.html#sasmodels.guyou.guyou">[docs]</a><span class="k">def</span> <span class="nf">guyou</span><span class="p">(</span><span class="n">lam</span><span class="p">,</span> <span class="n">phi</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;Transform from (latitude, longitude) to point (x, y)&quot;&quot;&quot;</span>
+    <span class="c1"># [PAK] wrap into [-pi/2, pi/2] radians</span>
+    <span class="n">x</span><span class="p">,</span> <span class="n">y</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">asarray</span><span class="p">(</span><span class="n">lam</span><span class="p">),</span> <span class="n">np</span><span class="o">.</span><span class="n">asarray</span><span class="p">(</span><span class="n">phi</span><span class="p">)</span>
+    <span class="n">xn</span><span class="p">,</span> <span class="n">x</span> <span class="o">=</span> <span class="nb">divmod</span><span class="p">(</span><span class="n">x</span><span class="o">+</span><span class="mi">90</span><span class="p">,</span> <span class="mi">180</span><span class="p">)</span>
+    <span class="n">yn</span><span class="p">,</span> <span class="n">y</span> <span class="o">=</span> <span class="nb">divmod</span><span class="p">(</span><span class="n">y</span><span class="o">+</span><span class="mi">90</span><span class="p">,</span> <span class="mi">180</span><span class="p">)</span>
+    <span class="n">xn</span><span class="p">,</span> <span class="n">lam</span> <span class="o">=</span> <span class="n">xn</span><span class="o">*</span><span class="mi">180</span><span class="p">,</span> <span class="n">radians</span><span class="p">(</span><span class="n">x</span><span class="o">-</span><span class="mi">90</span><span class="p">)</span>
+    <span class="n">yn</span><span class="p">,</span> <span class="n">phi</span> <span class="o">=</span> <span class="n">yn</span><span class="o">*</span><span class="mi">180</span><span class="p">,</span> <span class="n">radians</span><span class="p">(</span><span class="n">y</span><span class="o">-</span><span class="mi">90</span><span class="p">)</span>
+
+    <span class="c1"># Compute constant K</span>
+    <span class="n">cos_u</span> <span class="o">=</span> <span class="p">(</span><span class="n">SQRT2</span> <span class="o">-</span> <span class="mi">1</span><span class="p">)</span> <span class="o">/</span> <span class="p">(</span><span class="n">SQRT2</span> <span class="o">+</span> <span class="mi">1</span><span class="p">)</span>
+    <span class="n">sinsq_u</span> <span class="o">=</span> <span class="mi">1</span> <span class="o">-</span> <span class="n">cos_u</span><span class="o">**</span><span class="mi">2</span>
+    <span class="n">K</span> <span class="o">=</span> <span class="n">ellipticF</span><span class="p">(</span><span class="n">pi</span><span class="o">/</span><span class="mi">2</span><span class="p">,</span> <span class="n">sinsq_u</span><span class="p">)</span>
+
+    <span class="c1"># [PAK] simplify expressions, using the fact that f = -1</span>
+    <span class="c1"># Note: exp(f log(x)) =&gt; 1/x,  cos(f x) =&gt; cos(x), sin(f x) =&gt; -sin(x)</span>
+    <span class="n">r</span> <span class="o">=</span> <span class="mi">1</span><span class="o">/</span><span class="p">(</span><span class="n">tan</span><span class="p">(</span><span class="n">pi</span><span class="o">/</span><span class="mi">4</span> <span class="o">+</span> <span class="nb">abs</span><span class="p">(</span><span class="n">phi</span><span class="p">)</span><span class="o">/</span><span class="mi">2</span><span class="p">)</span> <span class="o">*</span> <span class="n">sqrt</span><span class="p">(</span><span class="n">cos_u</span><span class="p">))</span>
+    <span class="n">at</span> <span class="o">=</span> <span class="n">atan</span><span class="p">(</span><span class="n">r</span> <span class="o">*</span> <span class="p">(</span><span class="n">cos</span><span class="p">(</span><span class="n">lam</span><span class="p">)</span> <span class="o">-</span> <span class="mi">1j</span><span class="o">*</span><span class="n">sin</span><span class="p">(</span><span class="n">lam</span><span class="p">)))</span>
+    <span class="n">t</span> <span class="o">=</span> <span class="n">ellipticFi</span><span class="p">(</span><span class="n">at</span><span class="o">.</span><span class="n">real</span><span class="p">,</span> <span class="n">at</span><span class="o">.</span><span class="n">imag</span><span class="p">,</span> <span class="n">sinsq_u</span><span class="p">)</span>
+    <span class="n">x</span><span class="p">,</span> <span class="n">y</span> <span class="o">=</span> <span class="p">(</span><span class="o">-</span><span class="n">t</span><span class="o">.</span><span class="n">imag</span><span class="p">,</span> <span class="n">sign</span><span class="p">(</span><span class="n">phi</span> <span class="o">+</span> <span class="p">(</span><span class="n">phi</span> <span class="o">==</span> <span class="mi">0</span><span class="p">))</span><span class="o">*</span><span class="p">(</span><span class="mf">0.5</span> <span class="o">*</span> <span class="n">K</span> <span class="o">-</span> <span class="n">t</span><span class="o">.</span><span class="n">real</span><span class="p">))</span>
+
+    <span class="c1"># [PAK] convert to degrees, and return to original tile</span>
+    <span class="k">return</span> <span class="n">degrees</span><span class="p">(</span><span class="n">x</span><span class="p">)</span><span class="o">+</span><span class="n">xn</span><span class="p">,</span> <span class="n">degrees</span><span class="p">(</span><span class="n">y</span><span class="p">)</span><span class="o">+</span><span class="n">yn</span></div>
+
+<div class="viewcode-block" id="guyou_invert"><a class="viewcode-back" href="../../dev/sasmodels-api/sasmodels.html#sasmodels.guyou.guyou_invert">[docs]</a><span class="k">def</span> <span class="nf">guyou_invert</span><span class="p">(</span><span class="n">x</span><span class="p">,</span> <span class="n">y</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;Transform from point (x, y) on plot to (latitude, longitude)&quot;&quot;&quot;</span>
+    <span class="c1"># [PAK] wrap into [-pi/2, pi/2] radians</span>
+    <span class="n">x</span><span class="p">,</span> <span class="n">y</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">asarray</span><span class="p">(</span><span class="n">x</span><span class="p">),</span> <span class="n">np</span><span class="o">.</span><span class="n">asarray</span><span class="p">(</span><span class="n">y</span><span class="p">)</span>
+    <span class="n">xn</span><span class="p">,</span> <span class="n">x</span> <span class="o">=</span> <span class="nb">divmod</span><span class="p">(</span><span class="n">x</span><span class="o">+</span><span class="mi">90</span><span class="p">,</span> <span class="mi">180</span><span class="p">)</span>
+    <span class="n">yn</span><span class="p">,</span> <span class="n">y</span> <span class="o">=</span> <span class="nb">divmod</span><span class="p">(</span><span class="n">y</span><span class="o">+</span><span class="mi">90</span><span class="p">,</span> <span class="mi">180</span><span class="p">)</span>
+    <span class="n">xn</span><span class="p">,</span> <span class="n">x</span> <span class="o">=</span> <span class="n">xn</span><span class="o">*</span><span class="mi">180</span><span class="p">,</span> <span class="n">radians</span><span class="p">(</span><span class="n">x</span><span class="o">-</span><span class="mi">90</span><span class="p">)</span>
+    <span class="n">yn</span><span class="p">,</span> <span class="n">y</span> <span class="o">=</span> <span class="n">yn</span><span class="o">*</span><span class="mi">180</span><span class="p">,</span> <span class="n">radians</span><span class="p">(</span><span class="n">y</span><span class="o">-</span><span class="mi">90</span><span class="p">)</span>
+
+    <span class="c1"># compute constant K</span>
+    <span class="n">cos_u</span> <span class="o">=</span> <span class="p">(</span><span class="n">SQRT2</span> <span class="o">-</span> <span class="mi">1</span><span class="p">)</span> <span class="o">/</span> <span class="p">(</span><span class="n">SQRT2</span> <span class="o">+</span> <span class="mi">1</span><span class="p">)</span>
+    <span class="n">sinsq_u</span> <span class="o">=</span> <span class="mi">1</span> <span class="o">-</span> <span class="n">cos_u</span><span class="o">**</span><span class="mi">2</span>
+    <span class="n">K</span> <span class="o">=</span> <span class="n">ellipticF</span><span class="p">(</span><span class="n">pi</span><span class="o">/</span><span class="mi">2</span><span class="p">,</span> <span class="n">sinsq_u</span><span class="p">)</span>
+
+    <span class="c1"># [PAK] simplify expressions, using the fact that f = -1</span>
+    <span class="n">j</span> <span class="o">=</span> <span class="n">ellipticJi</span><span class="p">(</span><span class="n">K</span><span class="o">/</span><span class="mi">2</span> <span class="o">-</span> <span class="n">y</span><span class="p">,</span> <span class="o">-</span><span class="n">x</span><span class="p">,</span> <span class="n">sinsq_u</span><span class="p">)</span>
+    <span class="n">tn</span> <span class="o">=</span> <span class="n">j</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="o">/</span><span class="n">j</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span>  <span class="c1"># j[0], j[1] are complex</span>
+    <span class="c1"># Note: -atan2(im(x)/re(x)) =&gt; angle(x)</span>
+    <span class="n">lam</span> <span class="o">=</span> <span class="o">-</span><span class="n">np</span><span class="o">.</span><span class="n">angle</span><span class="p">(</span><span class="n">tn</span><span class="p">)</span>
+    <span class="c1"># Note: exp(0.5/f log(a re(x)^2 + a im(x)^2)) =&gt; 1/(sqrt(a) |x|)</span>
+    <span class="n">phi</span> <span class="o">=</span> <span class="mi">2</span><span class="o">*</span><span class="n">atan</span><span class="p">(</span><span class="mi">1</span><span class="o">/</span><span class="n">sqrt</span><span class="p">(</span><span class="n">cos_u</span><span class="p">)</span><span class="o">/</span><span class="nb">abs</span><span class="p">(</span><span class="n">tn</span><span class="p">))</span> <span class="o">-</span> <span class="n">pi</span><span class="o">/</span><span class="mi">2</span>
+
+    <span class="c1"># [PAK] convert to degrees, and return to original tile</span>
+    <span class="k">return</span> <span class="n">degrees</span><span class="p">(</span><span class="n">lam</span><span class="p">)</span><span class="o">+</span><span class="n">xn</span><span class="p">,</span> <span class="n">degrees</span><span class="p">(</span><span class="n">phi</span><span class="p">)</span><span class="o">+</span><span class="n">yn</span></div>
+
+<div class="viewcode-block" id="plot_grid"><a class="viewcode-back" href="../../dev/sasmodels-api/sasmodels.html#sasmodels.guyou.plot_grid">[docs]</a><span class="k">def</span> <span class="nf">plot_grid</span><span class="p">():</span>
+    <span class="sd">&quot;&quot;&quot;Plot the latitude-longitude grid for Guyou transform&quot;&quot;&quot;</span>
+    <span class="kn">import</span> <span class="nn">matplotlib.pyplot</span> <span class="kn">as</span> <span class="nn">plt</span>
+    <span class="kn">from</span> <span class="nn">numpy</span> <span class="kn">import</span> <span class="n">linspace</span>
+    <span class="n">lat_line</span> <span class="o">=</span> <span class="n">linspace</span><span class="p">(</span><span class="o">-</span><span class="mi">90</span><span class="p">,</span> <span class="mi">90</span><span class="p">,</span> <span class="mi">400</span><span class="p">)</span>
+    <span class="n">long_line</span> <span class="o">=</span> <span class="n">linspace</span><span class="p">(</span><span class="o">-</span><span class="mi">90</span><span class="p">,</span> <span class="mi">90</span><span class="p">,</span> <span class="mi">400</span><span class="p">)</span>
+
+    <span class="c1">#scale = 1</span>
+    <span class="n">limit</span><span class="p">,</span> <span class="n">step</span><span class="p">,</span> <span class="n">scale</span> <span class="o">=</span> <span class="mi">90</span><span class="p">,</span> <span class="mi">10</span><span class="p">,</span> <span class="mi">2</span>
+    <span class="n">plt</span><span class="o">.</span><span class="n">subplot</span><span class="p">(</span><span class="mi">211</span><span class="p">)</span>
+    <span class="k">for</span> <span class="n">lat</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="o">-</span><span class="n">limit</span><span class="p">,</span> <span class="n">limit</span><span class="o">+</span><span class="mi">1</span><span class="p">,</span> <span class="n">step</span><span class="p">):</span>
+        <span class="n">x</span><span class="p">,</span> <span class="n">y</span> <span class="o">=</span> <span class="n">guyou</span><span class="p">(</span><span class="n">scale</span><span class="o">*</span><span class="n">lat_line</span><span class="p">,</span> <span class="n">scale</span><span class="o">*</span><span class="n">lat</span><span class="p">)</span>
+        <span class="n">plt</span><span class="o">.</span><span class="n">plot</span><span class="p">(</span><span class="n">x</span><span class="p">,</span> <span class="n">y</span><span class="p">,</span> <span class="s1">&#39;g&#39;</span><span class="p">)</span>
+
+    <span class="k">for</span> <span class="n">longitude</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="o">-</span><span class="n">limit</span><span class="p">,</span> <span class="n">limit</span><span class="o">+</span><span class="mi">1</span><span class="p">,</span> <span class="n">step</span><span class="p">):</span>
+        <span class="n">x</span><span class="p">,</span> <span class="n">y</span> <span class="o">=</span> <span class="n">guyou</span><span class="p">(</span><span class="n">scale</span><span class="o">*</span><span class="n">longitude</span><span class="p">,</span> <span class="n">scale</span><span class="o">*</span><span class="n">long_line</span><span class="p">)</span>
+        <span class="n">plt</span><span class="o">.</span><span class="n">plot</span><span class="p">(</span><span class="n">x</span><span class="p">,</span> <span class="n">y</span><span class="p">,</span> <span class="s1">&#39;b&#39;</span><span class="p">)</span>
+    <span class="c1">#plt.xlabel(&#39;longitude&#39;)</span>
+    <span class="n">plt</span><span class="o">.</span><span class="n">ylabel</span><span class="p">(</span><span class="s1">&#39;latitude&#39;</span><span class="p">)</span>
+    <span class="n">plt</span><span class="o">.</span><span class="n">title</span><span class="p">(</span><span class="s1">&#39;forward transform&#39;</span><span class="p">)</span>
+
+    <span class="n">plt</span><span class="o">.</span><span class="n">subplot</span><span class="p">(</span><span class="mi">212</span><span class="p">)</span>
+    <span class="k">for</span> <span class="n">lat</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="o">-</span><span class="n">limit</span><span class="p">,</span> <span class="n">limit</span><span class="o">+</span><span class="mi">1</span><span class="p">,</span> <span class="n">step</span><span class="p">):</span>
+        <span class="n">x</span><span class="p">,</span> <span class="n">y</span> <span class="o">=</span> <span class="n">guyou_invert</span><span class="p">(</span><span class="n">scale</span><span class="o">*</span><span class="n">lat_line</span><span class="p">,</span> <span class="n">scale</span><span class="o">*</span><span class="n">lat</span><span class="p">)</span>
+        <span class="n">plt</span><span class="o">.</span><span class="n">plot</span><span class="p">(</span><span class="n">x</span><span class="p">,</span> <span class="n">y</span><span class="p">,</span> <span class="s1">&#39;g&#39;</span><span class="p">)</span>
+
+    <span class="k">for</span> <span class="nb">long</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="o">-</span><span class="n">limit</span><span class="p">,</span> <span class="n">limit</span><span class="o">+</span><span class="mi">1</span><span class="p">,</span> <span class="n">step</span><span class="p">):</span>
+        <span class="n">x</span><span class="p">,</span> <span class="n">y</span> <span class="o">=</span> <span class="n">guyou_invert</span><span class="p">(</span><span class="n">scale</span><span class="o">*</span><span class="nb">long</span><span class="p">,</span> <span class="n">scale</span><span class="o">*</span><span class="n">long_line</span><span class="p">)</span>
+        <span class="n">plt</span><span class="o">.</span><span class="n">plot</span><span class="p">(</span><span class="n">x</span><span class="p">,</span> <span class="n">y</span><span class="p">,</span> <span class="s1">&#39;b&#39;</span><span class="p">)</span>
+    <span class="n">plt</span><span class="o">.</span><span class="n">xlabel</span><span class="p">(</span><span class="s1">&#39;longitude&#39;</span><span class="p">)</span>
+    <span class="n">plt</span><span class="o">.</span><span class="n">ylabel</span><span class="p">(</span><span class="s1">&#39;latitude&#39;</span><span class="p">)</span>
+    <span class="n">plt</span><span class="o">.</span><span class="n">title</span><span class="p">(</span><span class="s1">&#39;inverse transform&#39;</span><span class="p">)</span></div>
+
+<div class="viewcode-block" id="main"><a class="viewcode-back" href="../../dev/sasmodels-api/sasmodels.html#sasmodels.guyou.main">[docs]</a><span class="k">def</span> <span class="nf">main</span><span class="p">():</span>
+    <span class="sd">&quot;&quot;&quot;Show the Guyou transformation&quot;&quot;&quot;</span>
+    <span class="n">plot_grid</span><span class="p">()</span>
+    <span class="kn">import</span> <span class="nn">matplotlib.pyplot</span> <span class="kn">as</span> <span class="nn">plt</span>
+    <span class="n">plt</span><span class="o">.</span><span class="n">show</span><span class="p">()</span></div>
+
+<span class="k">if</span> <span class="n">__name__</span> <span class="o">==</span> <span class="s2">&quot;__main__&quot;</span><span class="p">:</span>
+    <span class="n">main</span><span class="p">()</span>
+
+<span class="n">_</span> <span class="o">=</span> <span class="s2">&quot;&quot;&quot;</span>
+<span class="s2">// Javascript source for elliptic functions</span>
+<span class="s2">//</span>
+<span class="s2">// Returns [sn, cn, dn](u + iv|m).</span>
+<span class="s2">export function ellipticJi(u, v, m) {</span>
+<span class="s2">  var a, b, c;</span>
+<span class="s2">  if (!u) {</span>
+<span class="s2">    b = ellipticJ(v, 1 - m);</span>
+<span class="s2">    return [</span>
+<span class="s2">      [0, b[0] / b[1]],</span>
+<span class="s2">      [1 / b[1], 0],</span>
+<span class="s2">      [b[2] / b[1], 0]</span>
+<span class="s2">    ];</span>
+<span class="s2">  }</span>
+<span class="s2">  a = ellipticJ(u, m);</span>
+<span class="s2">  if (!v) return [[a[0], 0], [a[1], 0], [a[2], 0]];</span>
+<span class="s2">  b = ellipticJ(v, 1 - m);</span>
+<span class="s2">  c = b[1] * b[1] + m * a[0] * a[0] * b[0] * b[0];</span>
+<span class="s2">  return [</span>
+<span class="s2">    [a[0] * b[2] / c, a[1] * a[2] * b[0] * b[1] / c],</span>
+<span class="s2">    [a[1] * b[1] / c, -a[0] * a[2] * b[0] * b[2] / c],</span>
+<span class="s2">    [a[2] * b[1] * b[2] / c, -m * a[0] * a[1] * b[0] / c]</span>
+<span class="s2">  ];</span>
+<span class="s2">}</span>
+
+<span class="s2">// Returns [sn, cn, dn, ph](u|m).</span>
+<span class="s2">export function ellipticJ(u, m) {</span>
+<span class="s2">  var ai, b, phi, t, twon;</span>
+<span class="s2">  if (m &lt; epsilon) {</span>
+<span class="s2">    t = sin(u);</span>
+<span class="s2">    b = cos(u);</span>
+<span class="s2">    ai = m * (u - t * b) / 4;</span>
+<span class="s2">    return [</span>
+<span class="s2">      t - ai * b,</span>
+<span class="s2">      b + ai * t,</span>
+<span class="s2">      1 - m * t * t / 2,</span>
+<span class="s2">      u - ai</span>
+<span class="s2">    ];</span>
+<span class="s2">  }</span>
+<span class="s2">  if (m &gt;= 1 - epsilon) {</span>
+<span class="s2">    ai = (1 - m) / 4;</span>
+<span class="s2">    b = cosh(u);</span>
+<span class="s2">    t = tanh(u);</span>
+<span class="s2">    phi = 1 / b;</span>
+<span class="s2">    twon = b * sinh(u);</span>
+<span class="s2">    return [</span>
+<span class="s2">      t + ai * (twon - u) / (b * b),</span>
+<span class="s2">      phi - ai * t * phi * (twon - u),</span>
+<span class="s2">      phi + ai * t * phi * (twon + u),</span>
+<span class="s2">      2 * atan(exp(u)) - halfPi + ai * (twon - u) / b</span>
+<span class="s2">    ];</span>
+<span class="s2">  }</span>
+
+<span class="s2">  var a = [1, 0, 0, 0, 0, 0, 0, 0, 0],</span>
+<span class="s2">      c = [sqrt(m), 0, 0, 0, 0, 0, 0, 0, 0],</span>
+<span class="s2">      i = 0;</span>
+<span class="s2">  b = sqrt(1 - m);</span>
+<span class="s2">  twon = 1;</span>
+
+<span class="s2">  while (abs(c[i] / a[i]) &gt; epsilon &amp;&amp; i &lt; 8) {</span>
+<span class="s2">    ai = a[i++];</span>
+<span class="s2">    c[i] = (ai - b) / 2;</span>
+<span class="s2">    a[i] = (ai + b) / 2;</span>
+<span class="s2">    b = sqrt(ai * b);</span>
+<span class="s2">    twon *= 2;</span>
+<span class="s2">  }</span>
+
+<span class="s2">  phi = twon * a[i] * u;</span>
+<span class="s2">  do {</span>
+<span class="s2">    t = c[i] * sin(b = phi) / a[i];</span>
+<span class="s2">    phi = (asin(t) + phi) / 2;</span>
+<span class="s2">  } while (--i);</span>
+
+<span class="s2">  // [PAK] Cephes uses dn = sqrt(1 - m*sin^2 phi) rather than cos(phi)/cos(phi-b)</span>
+<span class="s2">  // DLMF says the second version is unstable near x = K.</span>
+<span class="s2">  return [sin(phi), t = cos(phi), t / cos(phi - b), phi];</span>
+<span class="s2">}</span>
+
+<span class="s2">// calculate F(phi+ipsi|m).</span>
+<span class="s2">// see Abramowitz and Stegun, 17.4.11.</span>
+<span class="s2">export function ellipticFi(phi, psi, m) {</span>
+<span class="s2">  var r = abs(phi),</span>
+<span class="s2">      i = abs(psi),</span>
+<span class="s2">      sinhpsi = sinh(i);</span>
+<span class="s2">  if (r) {</span>
+<span class="s2">    var cscphi = 1 / sin(r),</span>
+<span class="s2">        cotphi2 = 1 / (tan(r) * tan(r)),</span>
+<span class="s2">        b = -(cotphi2 + m * (sinhpsi * sinhpsi * cscphi * cscphi) - 1 + m),</span>
+<span class="s2">        c = (m - 1) * cotphi2,</span>
+<span class="s2">        cotlambda2 = (-b + sqrt(b * b - 4 * c)) / 2;</span>
+<span class="s2">    return [</span>
+<span class="s2">      ellipticF(atan(1 / sqrt(cotlambda2)), m) * sign(phi),</span>
+<span class="s2">      ellipticF(atan(sqrt((cotlambda2 / cotphi2 - 1) / m)), 1 - m) * sign(psi)</span>
+<span class="s2">    ];</span>
+<span class="s2">  }</span>
+<span class="s2">  return [</span>
+<span class="s2">    0,</span>
+<span class="s2">    ellipticF(atan(sinhpsi), 1 - m) * sign(psi)</span>
+<span class="s2">  ];</span>
+<span class="s2">}</span>
+
+<span class="s2">// Calculate F(phi|m) where m = k^2 = sin(alpha)^2.</span>
+<span class="s2">// See Abramowitz and Stegun, 17.6.7.</span>
+<span class="s2">export function ellipticF(phi, m) {</span>
+<span class="s2">  if (!m) return phi;</span>
+<span class="s2">  if (m === 1) return log(tan(phi / 2 + quarterPi));</span>
+<span class="s2">  var a = 1,</span>
+<span class="s2">      b = sqrt(1 - m),</span>
+<span class="s2">      c = sqrt(m);</span>
+<span class="s2">  for (var i = 0; abs(c) &gt; epsilon; i++) {</span>
+<span class="s2">    if (phi % pi) {</span>
+<span class="s2">      var dPhi = atan(b * tan(phi) / a);</span>
+<span class="s2">      if (dPhi &lt; 0) dPhi += pi;</span>
+<span class="s2">      phi += dPhi + ~~(phi / pi) * pi;</span>
+<span class="s2">    } else phi += phi;</span>
+<span class="s2">    c = (a + b) / 2;</span>
+<span class="s2">    b = sqrt(a * b);</span>
+<span class="s2">    c = ((a = c) - b) / 2;</span>
+<span class="s2">  }</span>
+<span class="s2">  return phi / (pow(2, i) * a);</span>
+
+
+<span class="s2">export function guyouRaw(lambda, phi) {</span>
+<span class="s2">  var k_ = (sqrt2 - 1) / (sqrt2 + 1),</span>
+<span class="s2">      k = sqrt(1 - k_ * k_),</span>
+<span class="s2">      K = ellipticF(halfPi, k * k),</span>
+<span class="s2">      f = -1,</span>
+<span class="s2">      psi = log(tan(pi / 4 + abs(phi) / 2)),</span>
+<span class="s2">      r = exp(f * psi) / sqrt(k_),</span>
+<span class="s2">      at = guyouComplexAtan(r * cos(f * lambda), r * sin(f * lambda)),</span>
+<span class="s2">      t = ellipticFi(at[0], at[1], k * k);</span>
+<span class="s2">  return [-t[1], (phi &gt;= 0 ? 1 : -1) * (0.5 * K - t[0])];</span>
+<span class="s2">}</span>
+
+<span class="s2">function guyouComplexAtan(x, y) {</span>
+<span class="s2">  var x2 = x * x,</span>
+<span class="s2">      y_1 = y + 1,</span>
+<span class="s2">      t = 1 - x2 - y * y;</span>
+<span class="s2">  return [</span>
+<span class="s2">   0.5 * ((x &gt;= 0 ? halfPi : -halfPi) - atan2(t, 2 * x)),</span>
+<span class="s2">    -0.25 * log(t * t + 4 * x2) +0.5 * log(y_1 * y_1 + x2)</span>
+<span class="s2">  ];</span>
+<span class="s2">}</span>
+
+<span class="s2">function guyouComplexDivide(a, b) {</span>
+<span class="s2">  var denominator = b[0] * b[0] + b[1] * b[1];</span>
+<span class="s2">  return [</span>
+<span class="s2">    (a[0] * b[0] + a[1] * b[1]) / denominator,</span>
+<span class="s2">    (a[1] * b[0] - a[0] * b[1]) / denominator</span>
+<span class="s2">  ];</span>
+<span class="s2">}</span>
+
+<span class="s2">guyouRaw.invert = function(x, y) {</span>
+<span class="s2">  var k_ = (sqrt2 - 1) / (sqrt2 + 1),</span>
+<span class="s2">      k = sqrt(1 - k_ * k_),</span>
+<span class="s2">      K = ellipticF(halfPi, k * k),</span>
+<span class="s2">      f = -1,</span>
+<span class="s2">      j = ellipticJi(0.5 * K - y, -x, k * k),</span>
+<span class="s2">      tn = guyouComplexDivide(j[0], j[1]),</span>
+<span class="s2">      lambda = atan2(tn[1], tn[0]) / f;</span>
+<span class="s2">  return [</span>
+<span class="s2">    lambda,</span>
+<span class="s2">    2 * atan(exp(0.5 / f * log(k_ * tn[0] * tn[0] + k_ * tn[1] * tn[1]))) - halfPi</span>
+<span class="s2">  ];</span>
+<span class="s2">};</span>
+<span class="s2">&quot;&quot;&quot;</span>
+</pre></div>
+
+          </div>
+        </div>
+      </div>
+      <div class="sphinxsidebar" role="navigation" aria-label="main navigation">
+        <div class="sphinxsidebarwrapper">
+<div id="searchbox" style="display: none" role="search">
+  <h3>Quick search</h3>
+    <form class="search" action="../../search.html" method="get">
+      <input type="text" name="q" />
+      <input type="submit" value="Go" />
+      <input type="hidden" name="check_keywords" value="yes" />
+      <input type="hidden" name="area" value="default" />
+    </form>
+</div>
+<script type="text/javascript">$('#searchbox').show(0);</script>
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="related" role="navigation" aria-label="related navigation">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="../../genindex.html" title="General Index"
+             >index</a></li>
+        <li class="right" >
+          <a href="../../py-modindex.html" title="Python Module Index"
+             >modules</a> |</li>
+        <li class="nav-item nav-item-0"><a href="../../index.html">SasView 4.2.0 documentation</a> &raquo;</li>
+          <li class="nav-item nav-item-1"><a href="../index.html" >Module code</a> &raquo;</li>
+          <li class="nav-item nav-item-2"><a href="../sasmodels.html" >sasmodels</a> &raquo;</li> 
+      </ul>
+    </div>
+    <div class="footer" role="contentinfo">
+        &copy; Copyright 2018, The SasView Project.
+      Created using <a href="http://sphinx-doc.org/">Sphinx</a> 1.4.1.
+    </div>
+  </body>
+</html>
