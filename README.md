@@ -26,7 +26,9 @@ For example the post `tags: [codecamp, highlight 2019-03-25]` will disappear on 
 
 ### Create a new release post
 
-New releases of SASView should be tagged as `release`. E.g.: `tags: [release, download]`. The *Home* page will detect a newer post tagged as `release` and will update the *Home* page. The date in the post filename should be the release date.
+New releases of SASView should be tagged as `release`. E.g.: `tags: [release, download]`. The *Home* page will detect a newer post tagged as `release` and will update the *Download* box. The date in the post filename should be the release date.
+
+I would suggest to follow the same post header format (E.g. `title` and `tags`) as in the previous release posts.
 
 ## Documentation
 
