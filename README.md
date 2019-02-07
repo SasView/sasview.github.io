@@ -1,4 +1,43 @@
-# Beautiful Jekyll
+SASView WebPage
+===============
+
+## Instructions
+
+The new page works with **posts**. Any changes to the HTML should not be needed.
+
+## Posts
+
+Posts must be written in *markdown*. You can also mix some `html`. Use a previewer to make sure your markdown is well formatted.
+
+E.g. [jbt.github.io/markdown-editor/](http://jbt.github.io/markdown-editor/)
+
+### Create a new post
+
+In the folder `_posts` there are examples of posts.
+The filenames start always with a date: the date the post will be visible in the website, followed by whatever you want. If the post category already exists, try to follow the same nomenclature...
+
+Try to use the same format and `tags` as the posts previously created.
+
+### Create a highlighted post
+
+If you want to highlight yout post (e.g. the code camps) use has tag `highlight` followed by a date in the format `YYYY-mm-dd`. The date is the date your post will disappear from the *Home* page pinned posts box.
+
+For example the post `tags: [codecamp, highlight 2019-03-25]` will disappear on the 2019-03-25.
+
+### Create a new release post
+
+New releases of SASView should be tagged as `release`. E.g.: `tags: [release, download]`. The *Home* page will detect a newer post tagged as `release` and will update the *Home* page. The date in the post filename should be the release date.
+
+## Documentation
+
+Copy all the **Sphinx** generated files to the repository `docs`. Leave the `.nojekyll` in place!
+From now on, the documentation must be in separate repository and not in `sasview.github.io`.
+
+The uploaded documentation is visible in [www.sasview.org/docs/](http://www.sasview.org/docs/).
+
+
+Beautiful Jekyll
+================
 
 [![Donate](https://img.shields.io/badge/Donate-PayPal-green.svg)](https://www.paypal.me/daattali/20)
 [![Gem Version](https://badge.fury.io/rb/beautiful-jekyll-theme.svg)](https://badge.fury.io/rb/beautiful-jekyll-theme)
