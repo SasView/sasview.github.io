@@ -1,3 +1,9 @@
+---
+layout: page
+title: FAQ
+subtitle: Here are the answers to some common questions about SasView
+---
+
 [What is SasView?](#what-is-sasview)
 
 [What platforms does SasView run on?](#what-platforms-does-sasview-run-on)
