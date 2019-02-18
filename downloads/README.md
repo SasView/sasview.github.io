@@ -8,5 +8,5 @@ recently files were updated relative to a SasView release.
 You can add/replace files in this folder to make them immediately available 
 via the website, rather than having to wait for the new release cycle.
 
-But on't forget to edit download.md in the folder above if you add a file!
+But don't forget to edit download.md in the folder above if you add a file!
   
