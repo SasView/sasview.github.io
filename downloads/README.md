@@ -1,4 +1,4 @@
-# tutorials
+# downloads
 This folder is where files directly downloadable from the website live!
 
 Files in here may, or may not, be the same as those in 
