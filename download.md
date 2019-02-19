@@ -4,7 +4,7 @@ title: Links & Downloads
 ---
 
 ### For Users
-*   [Supported platforms](/faq)
+*   [Supported platforms](/faq/#what-platforms-does-sasview-run-on)
 
 **Releases:**
 

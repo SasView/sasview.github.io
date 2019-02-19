@@ -9,7 +9,7 @@ Much is documented in the help documentation. In particular, descriptions of eac
 
 *   [Links to our tutorials](/download/#tutorials) (in PDF format)
 *   [The full user documentation](/docs/user/user.html) including model documentation. Also available as a [PDF download](/downloads/SasViewDocumentation.pdf)
-*   Visit the [users forum Archives](http://sourceforge.net/mailarchive/forum.php?forum_name=sasview-users) here
+*   Sorry the users forum Archives are not currently available
 *   You may contact us at: [help@sasview.org](mailto:help@sasview.org) to report bugs (in which case please also attach a SasView log file, see below) or for help using the software
 *   Or try the users forum at: [users@sasview.org](mailto:users@sasview.org)
 *   Visit our [tickets list](http://trac.sasview.org/report/3/) To view reported bugs, things being worked on or possible future ehancements
