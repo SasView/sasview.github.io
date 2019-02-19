@@ -11,7 +11,7 @@ title: Links & Downloads
 _(Mac Users: please ensure you have the [Xcode](https://en.wikipedia.org/wiki/Xcode) command line tools installed before installing SasView; get it from the App Store)_
 
 - [Current release version of SasView 4](https://github.com/SasView/sasview/releases/latest "SasView download")
-- [Preview of SasView 5](https://github.com/SasView/sasview/releases/tag/v5.0-beta.1 "SasView download")
+- [Preview of SasView 5](https://github.com/SasView/sasview/releases/tag/v5.0-beta.2 "SasView download")
 - [All versions from 3.0](https://github.com/SasView/sasview/tags "SasView download") (click on the version number for more information)
 
 **Documentation:**
