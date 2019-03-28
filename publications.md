@@ -1,9 +1,8 @@
-
 ---
 layout: page
-title: SASVIEW
+title: Publications
 ---
-### Acknowledgements / Contacts
+## Acknowledgements and Contacts
 
 If you found this software useful to your work please don't forget to acknowledge its use in your publications as suggested below and reference this website: _http://www.sasview.org/_. Please also consider letting us know by sending us the reference to your work. This will help us to ensure the long term support and development of the software.
 
@@ -14,8 +13,16 @@ If you found this software useful to your work please don't forget to acknowledg
 information is incorrect or out of date, please inform <a href="mailto:jkrzywon@nist.gov">Jeff Krzywon</a> and/or <a href="mailto:andrew.jackson@esss.se@nist.gov">Andrew Jackson</a>.</p>
 
 
-<div class="year-heading" id="year 2019"><h4>2019</h4><a href="#year_navigation">top</a></div>
-<hr>
+---
+
+[2019](#2019), [2018](#2018), [2017](#2017), [2016](#2016), [2015](#2015), [2014](#2014), [2013](#2013), [2012](#2012), [2011](#2011), [2009](#2009), [0](#0)
+
+---
+
+### 2019 [top](#year_navigation)
+
+---
+
 <ol class="publications">
 <li><span class="title"><a href="https://doi.org/10.1016/j.jcis.2019.01.056">What happens when pesticides are solubilized in nonionic surfactant micelles</a><br/></span> <span class="author">Hu, X., Gong, H., Li, Z., Ruane, S., Liu, H., Pambou, E., Bawn, C., King, S., Ma, K., Li, P., Padia, F., Bell, G., and Lu, J.R.</span>,  <span class="journal">Journal of Colloid and Interface Science</span> <span class="volume"><strong><b>541</b></strong></span>, 175–182 (2019)</li>
 <li><span class="title"><a href="https://doi.org/10.1016/j.jcis.2019.01.075">A fluorescence study of the loading and time stability of doxorubicin in sodium cholate/PEO-PPO-PEO triblock copolymer mixed micelles</a><br/></span> <span class="author">Tasca, E., Del Giudice, A., Galantini, L., Schillen, K., Giuliani, A.M., and Giustini, M.</span>,  <span class="journal">Journal of Colloid and Interface Science</span> <span class="volume"><strong><b>540</b></strong></span>, 593–601 (2019)</li>
@@ -44,8 +51,10 @@ information is incorrect or out of date, please inform <a href="mailto:jkrzywon@
 <li><span class="title">“A nonionic polyethylene oxide (PEO) surfactant model: experimental and molecular dynamics studies of Kolliphor EL”</span> <span class="author">Suys, E.J., Warren, D.B., Pham, A.C., Nowell, C.J., Clulow, A.J., Benameur, H., Porter, C.J., Pouton, C.W., and Chalmers, D.K.</span>,  <span class="journal">Journal of Pharmaceutical Sciences</span> <span class="volume"><strong><b>108</b></strong></span>, 193–204 (2019)</li>
 <li><span class="title">“Assemblies of lauryl maltose neopentyl glycol (LMNG) and LMNG-solubilized membrane proteins”</span> <span class="author">Breyton, C., Javed, W., Vermot, A., Arnaud, C.-A., Hajjar, C., Dupuy, J., Petit-Hartlein, I., Le Roy, A., Martel, A., and Thépaut, M.</span>,  <span class="journal">Biochimica Et Biophysica Acta (bba)-biomembranes</span> <span class="volume"><strong><b>1861</b></strong></span>, 939–957 (2019)</li>
 </ol>
-<div class="year-heading" id="year 2018"><h4>2018</h4><a href="#year_navigation">top</a></div>
-<hr>
+### 2018 [top](#year_navigation)
+
+---
+
 <ol class="publications">
 <li><span class="title"><a href="https://doi.org/10.1021/acsami.8b15589">Sulfonated Thiophene Derivative Stabilized Aqueous Poly(3-hexylthiophene):Phenyl-C-61-butyric Acid Methyl Ester Nanoparticle Dispersion for Organic Solar Cell Applications</a><br/></span> <span class="author">Subianto, S., Balu, R., de Campo, L., Sokolova, A., Dutta, N.K., and Choudhury, N.R.</span>,  <span class="journal">ACS Appl. Mater. Interfaces</span> <span class="volume"><strong><b>10</b></strong></span>, 44116–44125 (2018)</li>
 <li><span class="title"><a href="https://doi.org/10.1039/c8sm01916a">Investigating the effect of supramolecular gel phase crystallization on gel nucleation</a><br/></span> <span class="author">Dawn, A., Mirzamani, M., Jones, C.D., Yufit, D.S., Qian, S., Steed, J.W., and Kumari, H.</span>,  <span class="journal">Soft Matter</span> <span class="volume"><strong><b>14</b></strong></span>, 9489–9497 (2018)</li>
@@ -133,8 +142,10 @@ information is incorrect or out of date, please inform <a href="mailto:jkrzywon@
 <li><span class="title">“Droplet microfluidic SANS”</span> <span class="author">Adamo, M., Poulos, A.S., Lopez, C.G., Martel, A., Porcar, L., and Cabral, J.T.</span>,  <span class="journal">Soft Matter</span> <span class="volume"><strong><b>14</b></strong></span>, 1759–1770 (2018)</li>
 <li><span class="title">“Design and performance of the variable-wavelength Bonse–Hart ultra-small-angle neutron scattering diffractometer KOOKABURRA at ANSTO”</span> <span class="author">Rehm, C., Campo, L. de ., Brûlé, A., Darmann, F., Bartsch, F., and Berry, A.</span>,  <span class="journal">Journal of Applied Crystallography</span> <span class="volume"><strong><b>51</b></strong></span>, 1–8 (2018)</li>
 </ol>
-<div class="year-heading" id="year 2017"><h4>2017</h4><a href="#year_navigation">top</a></div>
-<hr>
+### 2017 [top](#year_navigation)
+
+---
+
 <ol class="publications">
 <li><span class="title"><a href="https://doi.org/10.1039/c7nj02558k">Synthesis process, size and composition effects of spherical Fe3O4 and FeO@Fe3O4 core/shell nanoparticles</a><br/></span> <span class="author">Tancredi, P., Rivas Rojas, P.C., Moscoso-Londono, O., Wolff, U., Neu, V., Damm, C., Rellinghaus, B., Knobel, M., and Socolovsky, L.M.</span>,  <span class="journal">New J. Chem.</span> <span class="volume"><strong><b>41</b></strong></span>, 15033–15041 (2017)</li>
 <li><span class="title"><a href="https://doi.org/10.1039/c7nr04251e">Integration of molecular machines into supramolecular materials: actuation between equilibrium polymers and crystal-like gels</a><br/></span> <span class="author">Mariani, G., Goujon, A., Moulin, E., Rawiso, M., Giuseppone, N., and Buhler, E.</span>,  <span class="journal">Nanoscale</span> <span class="volume"><strong><b>9</b></strong></span>, 18456–18466 (2017)</li>
@@ -197,8 +208,10 @@ information is incorrect or out of date, please inform <a href="mailto:jkrzywon@
 <li><span class="title">“Characterization of Solubilizing Nanoaggregates Present in Different Versions of Simulated Intestinal Fluid”</span> <span class="author">Clulow, A.J., Parrow, A., Hawley, A., Khan, J., Pham, A.C., Larsson, P., Bergström, C.A., and Boyd, B.J.</span>,  <span class="journal">The Journal of Physical Chemistry B</span> <span class="volume"><strong><b>121</b></strong></span>, 10869–10881 (2017)</li>
 <li><span class="title">“Acid-induced assembly of a reconstituted silk protein system”</span> <span class="author">Tabatabai, A.P., Weigandt, K.M., and Blair, D.L.</span>,  <span class="journal">Physical Review E</span> <span class="volume"><strong><b>96</b></strong></span>, 22405 (2017)</li>
 </ol>
-<div class="year-heading" id="year 2016"><h4>2016</h4><a href="#year_navigation">top</a></div>
-<hr>
+### 2016 [top](#year_navigation)
+
+---
+
 <ol class="publications">
 <li><span class="title"><a href="https://doi.org/10.1021/acs.langmuir.6b03367">Competitive and Synergistic Interactions between Polymer Micelles, Drugs, and Cyclodextrins: The Importance of Drug Solubilization Locus</a><br/></span> <span class="author">Valero, M., Castiglione, F., Mele, A., da Silva, M.A., Grillo, I., Gonzalez-Gaitano, G., and Dreiss, C.A.</span>,  <span class="journal">Langmuir</span> <span class="volume"><strong><b>32</b></strong></span>, 13174–13186 (2016)</li>
 <li><span class="title"><a href="https://doi.org/10.1016/j.cemconres.2016.09.009">Impact of aluminum on the structure of geopolymers from the early stages to consolidated material</a><br/></span> <span class="author">Benavent, V., Steins, P., Sobrados, I., Sanz, J., Lambertin, D., Frizon, F., Rossignol, S., and Poulesquen, A.</span>,  <span class="journal">Cement and Concrete Research</span> <span class="volume"><strong><b>90</b></strong></span>, 27–35 (2016)</li>
@@ -243,8 +256,10 @@ information is incorrect or out of date, please inform <a href="mailto:jkrzywon@
 <li><span class="title"><a href="https://doi.org/10.1039/C5SM02145F">Modulation of partition and localization of perfume molecules in sodium dodecyl sulfate micelles</a><br/></span> <span class="author">Fan, Y., Tang, H., Strand, R., and Wang, Y.</span>,  <span class="journal">Soft Matter</span> <span class="volume"><strong><b>12</b></strong></span>, 219–227 (2016)</li>
 <li><span class="title"><a href="https://doi.org/10.1039/C5SM02502H">Interaction of partially denatured insulin with a DSPC floating lipid bilayer</a><br/></span> <span class="author">Dennison, A.J.C., Jones, R.A.L., Staniforth, R.A., and Parnell, A.J.</span>,  <span class="journal">Soft Matter</span> <span class="volume"><strong><b>12</b></strong></span>, 824–829 (2016)</li>
 </ol>
-<div class="year-heading" id="year 2015"><h4>2015</h4><a href="#year_navigation">top</a></div>
-<hr>
+### 2015 [top](#year_navigation)
+
+---
+
 <ol class="publications">
 <li><span class="title"><a href="https://doi.org/10.1021/acs.langmuir.5b03876">Sulfosuccinate and Sulfocarballylate Surfactants As Charge Control Additives in Nonpolar Solvents</a><br/></span> <span class="author">Smith, G.N., Kemp, R., Pegg, J.C., Rogers, S.E., and Eastoe, J.</span>,  <span class="journal">Langmuir</span> <span class="volume"><strong><b>31</b></strong></span>, 13690–13699 (2015)</li>
 <li><span class="title"><a href="https://doi.org/10.1021/jacs.5b08894">Mechanical Properties of Nanoscopic Lipid Domains</a><br/></span> <span class="author">Nickels, J.D., Cheng, X., Mostofian, B., Stanley, C., Lindner, B., Heberle, F.A., Perticaroli, S., Feygenson, M., Egami, T., Standaert, R.F., Smith, J.C., Myles, D.A.A., Ohl, M., and Katsaras, J.</span>,  <span class="journal">J. Am. Chem. Soc.</span> <span class="volume"><strong><b>137</b></strong></span>, 15772–15780 (2015)</li>
@@ -304,8 +319,10 @@ information is incorrect or out of date, please inform <a href="mailto:jkrzywon@
 <li><span class="title"><a href="https://doi.org/10.1039/C4EE03147D">Theory, practice and prospects of X-ray and neutron scattering for lignocellulosic biomass characterization: towards understanding biomass pretreatment</a><br/></span> <span class="author">Cheng, G., Zhang, X., Simmons, B., and Singh, S.</span>,  <span class="journal">Energy Environ. Sci.</span> <span class="volume"><strong><b>8</b></strong></span>, 436–455 (2015)</li>
 <li><span class="title"><a href="https://doi.org/10.1039/C5SC01202C">The origin of surfactant amphiphilicity and self-assembly in protic ionic liquids</a><br/></span> <span class="author">Dolan, A., Atkin, R., and Warr, G.G.</span>,  <span class="journal">Chem. Sci.</span> <span class="volume"><strong><b>6</b></strong></span>, 6189–6198 (2015)</li>
 </ol>
-<div class="year-heading" id="year 2014"><h4>2014</h4><a href="#year_navigation">top</a></div>
-<hr>
+### 2014 [top](#year_navigation)
+
+---
+
 <ol class="publications">
 <li><span class="title"><a href="https://doi.org/10.1021/nn505860a">Engineering Nanostructures by Binding Single Molecules to Single-Walled Carbon Nanotubes</a><br/></span> <span class="author">Sharkey, J.J., Stranks, S.D., Huang, J., Alexander-Webber, J.A., and Nicholas, R.J.</span>,  <span class="journal">ACS Nano</span> <span class="volume"><strong><b>8</b></strong></span>, 12748–12754 (2014)</li>
 <li><span class="title"><a href="https://doi.org/10.1021/jz5021795">Enhanced Hole Extraction in Perovskite Solar Cells Through Carbon Nanotubes</a><br/></span> <span class="author">Habisreutinger, S.N., Leijtens, T., Eperon, G.E., Stranks, S.D., Nicholas, R.J., and Snaith, H.J.</span>,  <span class="journal">J. Phys. Chem. Lett.</span> <span class="volume"><strong><b>5</b></strong></span>, 4207–4212 (2014)</li>
@@ -349,8 +366,10 @@ information is incorrect or out of date, please inform <a href="mailto:jkrzywon@
 <li><span class="title"><a href="https://doi.org/10.1021/la500331u">Interaction between Surfactants and Colloidal Latexes in Nonpolar Solvents Studied Using Contrast-Variation Small-Angle Neutron Scattering</a><br/></span> <span class="author">Smith, G.N., Alexander, S., Brown, P., Gillespie, D.A.J., Grillo, I., Heenan, R.K., James, C., Kemp, R., Rogers, S.E., and Eastoe, J.</span>,  <span class="journal">Langmuir</span> <span class="volume"><strong><b>30</b></strong></span>, 3422–3431 (2014)</li>
 <li><span class="title"><a href="https://doi.org/10.1039/c3tb21585g">Design of a fluorinated magneto-responsive material with tuneable ultrasound scattering properties</a><br/></span> <span class="author">Zimny, K., Mascaro, B., Brunet, T., Poncelet, O., Aristégui, C., Leng, J., Sandre, O., and Mondain-Monval, O.</span>,  <span class="journal">J. Mater. Chem. B</span> <span class="volume"><strong><b>2</b></strong></span>, 1285 (2014)</li>
 </ol>
-<div class="year-heading" id="year 2013"><h4>2013</h4><a href="#year_navigation">top</a></div>
-<hr>
+### 2013 [top](#year_navigation)
+
+---
+
 <ol class="publications">
 <li><span class="title"><a href="https://doi.org/10.1021/la402364p">Flow-Induced Structured Phase in Nonionic Micellar Solutions</a><br/></span> <span class="author">Cardiel, J.J., Tonggu, L., de la Iglesia, P., Zhao, Y., Pozzo, D.C., Wang, L., and Shen, A.Q.</span>,  <span class="journal">Langmuir</span> <span class="volume"><strong><b>29</b></strong></span>, 15485–15495 (2013)</li>
 <li><span class="title"><a href="https://doi.org/10.1021/cs400684x">Strategies for Stabilization of Enzymes in Organic Solvents</a><br/></span> <span class="author">Stepankova, V., Bidmanova, S., Koudelakova, T., Prokop, Z., Chaloupkova, R., and Damborsky, J.</span>,  <span class="journal">ACS Catal.</span> <span class="volume"><strong><b>3</b></strong></span>, 2823–2836 (2013)</li>
@@ -377,8 +396,10 @@ information is incorrect or out of date, please inform <a href="mailto:jkrzywon@
 <li><span class="title"><a href="https://doi.org/10.1021/es403377p">The Stability of Silver Nanoparticles in a Model of Pulmonary Surfactant</a><br/></span> <span class="author">Leo, B.F., Chen, S., Kyo, Y., Herpoldt, K.-L., Terrill, N.J., Dunlop, I.E., McPhail, D.S., Shaffer, M.S., Schwander, S., Gow, A., Zhang, J., Chung, K.F., Tetley, T.D., Porter, A.E., and Ryan, M.P.</span>,  <span class="journal">Environ. Sci. Technol.</span> <span class="volume"><strong><b>47</b></strong></span>, 11232–11240 (2013)</li>
 <li><span class="title"><a href="https://doi.org/10.1021/cs3003963">One-Pot Synthesis of Supported, Nanocrystalline Nickel Manganese Oxide for Dry Reforming of Methane</a><br/></span> <span class="author">Xie, X., Otremba, T., Littlewood, P., Schomäcker, R., and Thomas, A.</span>,  <span class="journal">ACS Catal.</span> <span class="volume"><strong><b>3</b></strong></span>, 224–229 (2013)</li>
 </ol>
-<div class="year-heading" id="year 2012"><h4>2012</h4><a href="#year_navigation">top</a></div>
-<hr>
+### 2012 [top](#year_navigation)
+
+---
+
 <ol class="publications">
 <li><span class="title"><a href="https://doi.org/10.1021/jf303513m">Role of Non-prolamin Proteins and Low Molecular Weight Redox Agents in Protein Folding and Polymerization in Wheat Grains and Influence on Baking Quality Parameters</a><br/></span> <span class="author">Osipova, S.V., Permyakova, M.D., and Permyakov, A.V.</span>,  <span class="journal">J. Agric. Food Chem.</span> <span class="volume"><strong><b>60</b></strong></span>, 12065–12073 (2012)</li>
 <li><span class="title"><a href="https://doi.org/10.1021/cm301610w">Electroluminescence in Ion-Gel Gated Conjugated Polymer Field-Effect Transistors</a><br/></span> <span class="author">Bhat, S.N., Pietro, R.D., and Sirringhaus, H.</span>,  <span class="journal">Chem. Mater.</span> <span class="volume"><strong><b>24</b></strong></span>, 4060–4067 (2012)</li>
@@ -393,8 +414,10 @@ information is incorrect or out of date, please inform <a href="mailto:jkrzywon@
 <li><span class="title"><a href="https://doi.org/10.1021/jp209699g">Conversion of Alcoholic Concentration Variations into Mechanical Force via Core–Shell Capsules</a><br/></span> <span class="author">Liu, L., Song, X.-L., Ju, X.-J., Xie, R., Liu, Z., and Chu, L.-Y.</span>,  <span class="journal">J. Phys. Chem. B</span> <span class="volume"><strong><b>116</b></strong></span>, 974–979 (2012)</li>
 <li><span class="title"><a href="https://doi.org/10.1039/c2sm26114f">Structure and property development of poly(3-hexylthiophene) organogels probed with combined rheology, conductivity and small angle neutron scattering</a><br/></span> <span class="author">Newbloom, G.M., Weigandt, K.M., and Pozzo, D.C.</span>,  <span class="journal">Soft Matter</span> <span class="volume"><strong><b>8</b></strong></span>, 8854 (2012)</li>
 </ol>
-<div class="year-heading" id="year 2011"><h4>2011</h4><a href="#year_navigation">top</a></div>
-<hr>
+### 2011 [top](#year_navigation)
+
+---
+
 <ol class="publications">
 <li><span class="title"><a href="https://doi.org/10.1021/bc2003583">The Conformation of the Poly(ethylene glycol) Chain in Mono-PEGylated Lysozyme and Mono-PEGylated Human Growth Hormone</a><br/></span> <span class="author">Pai, S.S., Hammouda, B., Hong, K., Pozzo, D.C., Przybycien, T.M., and Tilton, R.D.</span>,  <span class="journal">Bioconjugate Chem.</span> <span class="volume"><strong><b>22</b></strong></span>, 2317–2323 (2011)</li>
 <li><span class="title"><a href="https://doi.org/10.1021/ar200036k">Polymeric Vesicles: From Drug Carriers to Nanoreactors and Artificial Organelles</a><br/></span> <span class="author">Tanner, P., Baumann, P., Enea, R., Onaca, O., Palivan, C., and Meier, W.</span>,  <span class="journal">Acc. Chem. Res.</span> <span class="volume"><strong><b>44</b></strong></span>, 1039–1049 (2011)</li>
@@ -408,19 +431,21 @@ information is incorrect or out of date, please inform <a href="mailto:jkrzywon@
 <li><span class="title"><a href="https://doi.org/10.1021/jp201156r">Dehaloperoxidase-Hemoglobin from <i>Amphitrite ornata</i> Is Primarily a Monomer in Solution</a><br/></span> <span class="author">Thompson, M.K., Franzen, S., Davis, M.F., Oliver, R.C., and Krueger, J.K.</span>,  <span class="journal">J. Phys. Chem. B</span> <span class="volume"><strong><b>115</b></strong></span>, 4266–4272 (2011)</li>
 <li><span class="title"><a href="https://doi.org/10.1039/c1sm06176c">In situ neutron scattering study of structural transitions in fibrin networks under shear deformation</a><br/></span> <span class="author">Weigandt, K.M., Porcar, L., and Pozzo, D.C.</span>,  <span class="journal">Soft Matter</span> <span class="volume"><strong><b>7</b></strong></span>, 9992 (2011)</li>
 </ol>
-<div class="year-heading" id="year 2009"><h4>2009</h4><a href="#year_navigation">top</a></div>
-<hr>
+### 2009 [top](#year_navigation)
+
+---
+
 <ol class="publications">
 <li><span class="title"><a href="https://doi.org/10.1021/la8039994">Neutron-Scattering Probe of Complexes of Sodium Dodecyl Sulfate and Serum Albumin during Polyacrylamide Gel Electrophoresis</a><br/></span> <span class="author">Pozzo, D.C.</span>,  <span class="journal">Langmuir</span> <span class="volume"><strong><b>25</b></strong></span>, 1558–1565 (2009)</li>
 </ol>
-<div class="year-heading" id="year 0"><h4>0</h4><a href="#year_navigation">top</a></div>
-<hr>
+### 0 [top](#year_navigation)
+
+---
+
 <ol class="publications">
 <li><span class="title">“Electronic supporting information for”</span> <span class="author">Sanchez-Fernandez, A., Edler, K.J., Arnold, T., Venero, D.A., and Jacksonb, A.J.</span>, (n.d.)</li>
 <li><span class="title">“CHARACTERIZATION OF PRECIPITATION IN 2000 SERIES ALUMINIUM ALLOYS USING NEUTRON DIFFRACTION, SANS AND SEM METHODS”</span> <span class="author">BOKUCHAVA, G., GORSHKOVA, Y., FERNÁNDEZ, R., GONZÁLEZ-DONCEL, G., and BRUNO, G.</span>, (n.d.)</li>
 </ol>
-
-<a href="#year_2019">2019</a>, <a href="#year_2018">2018</a>, <a href="#year_2017">2017</a>, <a href="#year_2016">2016</a>, <a href="#year_2015">2015</a>, <a href="#year_2014">2014</a>, <a href="#year_2013">2013</a>, <a href="#year_2012">2012</a>, <a href="#year_2011">2011</a>, <a href="#year_2009">2009</a>, <a href="#year_0">0</a>
 
 
 
