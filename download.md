@@ -12,8 +12,8 @@ _(Mac Users: please ensure you have the [Xcode](https://en.wikipedia.org/wiki/Xc
 
  We recommend that you avoid using installation folder paths which contain spaces, non-Latin characters or characters not available on a standard keyboard.
 
-- [Current release version of SasView 4](https://github.com/SasView/sasview/releases/latest "SasView download")
-- [Current release version of SasView 5](https://github.com/SasView/sasview/releases/tag/v5.0.0 "SasView download")
+- [Current release version of SasView 4.x](https://github.com/SasView/sasview/releases/latest "SasView download")
+- [Current release version of SasView 5.x](https://github.com/SasView/sasview/releases/tag/v5.0.0 "SasView download")
 - [All versions from 3.0](https://github.com/SasView/sasview/tags "SasView download") (click on the version number for more information)
 
 **Documentation:**
