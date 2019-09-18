@@ -24,8 +24,7 @@ P. Juhas, M. Knudsen, A. Markvardsen
 L. Porcar, L. Pozzo, and A. Rennie
 
 ### External grants
-B. Fultz (DANSE)
-T. H. Rod (SINE2020 project)
+B. Fultz (DANSE), T. H. Rod (SINE2020 project)
 
 ### Special thanks
 Special thanks also to Mike McKerns for numerous critical discussions and advice during the DANSE years.
