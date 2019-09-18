@@ -23,7 +23,8 @@ P. Juhas, M. Knudsen, A. Markvardsen
 ### Community contributors
 L. Porcar, L. Pozzo, and A. Rennie
 
-### Funding and resources
+### External grants
+B. Fultz (DANSE)
 T. H. Rod (SINE2020 project)
 
 ### Special thanks
