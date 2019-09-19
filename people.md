@@ -15,7 +15,7 @@ Many people have contributed to this SAS analysis software over the years, and w
 
 #### Developers:
 
-G. Alina, Z. Atalla, J. Bakker, W. Bouwman, I. Breßler, P. Butler, K. Campbell, J-H. Cho, T. Cooper-Bennun, R. Cortes Hernandez, M. Doucet, C. Durniak, L. Forster, M. Gonzalez, R. Heenan, A. Jackson, G. Jensen, P. Kienzle, S. King, S. Kline, J. Krzywon, D. Mannicke,  A. Nelson, T. Nielsen, L. O'Driscoll, H. Park, P. Parker, W. Potrzebowski,  P. Rozyczko, T. Snow, A. Washington, R. Whitley, and J. Zhou.
+G. Alina, Z. Attala, J. Bakker, W. Bouwman, I. Breßler, P. Butler, K. Campbell, J-H. Cho, T. Cooper-Bennun, R. Cortes Hernandez, M. Doucet, C. Durniak, L. Forster, M. Gonzalez, R. Heenan, A. Jackson, G. Jensen, P. Kienzle, S. King, S. Kline, J. Krzywon, D. Mannicke,  A. Nelson, T. Nielsen, L. O'Driscoll, H. Park, P. Parker, W. Potrzebowski,  P. Rozyczko, T. Snow, A. Washington, R. Whitley, and J. Zhou.
 
 ### Community contributors and external collaborators
 P. Juhas, M. Knudsen, A. Markvardsen  M. McKerns, D. Parsons, L. Porcar, L. Pozzo, S. Prescott, M. Rakitin, and A. Rennie
