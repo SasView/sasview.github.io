@@ -17,18 +17,12 @@ Many people have contributed to this SAS analysis software over the years, and w
 
 G. Alina, Z. Atalla, J. Bakker, W. Bouwman, I. Breßler, P. Butler, K. Campbell, J-H. Cho, T. Cooper-Bennun, R. Cortes Hernandez, M. Doucet, C. Durniak, L. Forster, M. Gonzalez, R. Heenan, A. Jackson, G. Jensen, P. Kienzle, S. King, S. Kline, J. Krzywon, D. Mannicke,  A. Nelson, T. Nielsen, L. O'Driscoll, H. Park, P. Parker, W. Potrzebowski,  P. Rozyczko, T. Snow, A. Washington, R. Whitley, and J. Zhou.
 
-### Previous developers 
-P. Juhas, M. Knudsen, A. Markvardsen 
-
-### Community contributors
-L. Porcar, L. Pozzo, and A. Rennie
+### Community contributors and external collaborators
+P. Juhas, M. Knudsen, A. Markvardsen  M. McKerns, D. Parsons, L. Porcar, L. Pozzo, S. Prescott, M. Rakitin, and A. Rennie
 
 ### External grants
-B. Fultz (DANSE), T. H. Rod (SINE2020 project)
+B. Fultz (DANSE), T. H. Rod (SINE2020)
 
-### Special thanks
-Special thanks also to Mike McKerns for numerous critical discussions and advice during the DANSE years.
-The Debian SasView development is the work of S. Prescott and D. Parsons.
 
 ### Acknowledgements / Contacts
 
