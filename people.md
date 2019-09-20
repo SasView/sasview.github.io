@@ -13,18 +13,18 @@ Steve King - [stephen.king@stfc.ac.uk](mailto:stephen.king@stfc.ac.uk)
 
 Many people have contributed to this SAS analysis software over the years, and we hope many more will do so in the years to come. 
 
-#### Developers:
+### Developers:
 
 G. Alina, Z. Attala, J. Bakker, W. Bouwman, I. Breßler, P. Butler, K. Campbell, J-H. Cho, T. Cooper-Bennun, R. Cortes Hernandez, M. Doucet, C. Durniak, L. Forster, M. Gonzalez, R. Heenan, A. Jackson, G. Jensen, P. Kienzle, S. King, S. Kline, J. Krzywon, D. Mannicke,  A. Nelson, T. Nielsen, L. O'Driscoll, H. Park, P. Parker, W. Potrzebowski,  P. Rozyczko, T. Snow, A. Washington, R. Whitley, and J. Zhou.
 
-#### Community contributors and external collaborators
+### Community contributors and external collaborators
 A. Anuchitanukul, P. Juhas, M. Knudsen, A. Markvardsen  M. McKerns, M. Oakley, D. Parsons, L. Porcar, L. Pozzo, S. Prescott, M. Rakitin, A. Rennie, L. Udby
 
-#### External grants
+### External grants
 B. Fultz (DANSE), T. H. Rod (SINE2020)
 
 
-#### Acknowledgements / Contacts
+### Acknowledgements / Contacts
 
 If you found this sofware useful to your work please dont forget to acknowledge its use in your publications as suggested below and reference this website: _http://www.sasview.org/_. Please also consider letting us know by sending us the reference to your work. This will help us to ensure the long term support and development of the software.
 
