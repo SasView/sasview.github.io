@@ -18,7 +18,7 @@ Many people have contributed to this SAS analysis software over the years, and w
 G. Alina, Z. Attala, J. Bakker, W. Bouwman, I. Breßler, P. Butler, K. Campbell, J-H. Cho, T. Cooper-Bennun, R. Cortes Hernandez, M. Doucet, C. Durniak, L. Forster, M. Gonzalez, R. Heenan, A. Jackson, G. Jensen, P. Kienzle, S. King, S. Kline, J. Krzywon, D. Mannicke,  A. Nelson, T. Nielsen, L. O'Driscoll, H. Park, P. Parker, W. Potrzebowski,  P. Rozyczko, T. Snow, A. Washington, R. Whitley, and J. Zhou.
 
 ### Community contributors and external collaborators
-P. Juhas, M. Knudsen, A. Markvardsen  M. McKerns, D. Parsons, L. Porcar, L. Pozzo, S. Prescott, M. Rakitin, and A. Rennie
+A. Anuchitanukul, P. Juhas, M. Knudsen, A. Markvardsen  M. McKerns, M. Oakley, D. Parsons, L. Porcar, L. Pozzo, S. Prescott, M. Rakitin, A. Rennie, L. Udby
 
 ### External grants
 B. Fultz (DANSE), T. H. Rod (SINE2020)
