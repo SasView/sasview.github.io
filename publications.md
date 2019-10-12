@@ -10,7 +10,7 @@ If you found this software useful to your work please don't forget to acknowledg
 
 
 <p>If you have written a paper that reports measurements using SasView and you do not see it in the list below, or if the paper is listed but the 
-information is incorrect or out of date, please inform <a href="mailto:jkrzywon@nist.gov">Jeff Krzywon</a> and or <a href=mailto:help@sasview.org">help</a>.</p>
+information is incorrect or out of date, please inform <a href="mailto:jkrzywon@nist.gov">Jeff Krzywon</a> and/or <a href="mailto:andrew.jackson@esss.se@nist.gov">Andrew Jackson</a>.</p>
 
 
 ---
