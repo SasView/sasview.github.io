@@ -17,8 +17,8 @@ _(Mac Users: please ensure you have the [Xcode](https://en.wikipedia.org/wiki/Xc
 - [All versions from 3.0](https://github.com/SasView/sasview/tags "SasView download") (click on the version number for more information)
 
 **Documentation:**
--   [Current user documentation for SasView 4.x (webpages)](/docs/user/user.html) - includes full model documentation 
--   [Current user documentation for SasView 4.x (PDF)](/downloads/SasViewDocumentation_4.2.2.pdf) - includes full model documentation  
+-   [Current documentation for SasView 4.x (web)](/docs/user/user.html) - includes full model descriptions 
+-   [Current documentation for SasView 4.x (PDF)](/downloads/SasViewDocumentation_4.2.2.pdf) - includes full model descriptions  
     
 <a name="tutorials"></a>
 
