@@ -19,7 +19,7 @@ _(Mac Users: please ensure you have the [Xcode](https://en.wikipedia.org/wiki/Xc
 **Documentation:**
 <!--- -   [Current documentation for SasView 5.x (web)](/docs/user/user.html) - with model descriptions --->
 -   [Current documentation for SasView 4.x (web)](/docs/old_docs/docs_4.2.2/user/user.html) - with model descriptions & updates
--   [Current documentation for SasView 4.x (PDF)](/downloads/SasViewDocumentation_4.2.2.pdf) - with model descriptions (release) 
+-   [Current documentation for SasView 4.x (PDF)](/downloads/SasViewDocumentation_4.2.2.pdf) - with model descriptions (at release) 
     
 <a name="tutorials"></a>
 
