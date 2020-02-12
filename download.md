@@ -24,11 +24,11 @@ _(Mac Users: please ensure you have the [Xcode](https://en.wikipedia.org/wiki/Xc
 <a name="tutorials"></a>
 
 **Tutorials:**
-*   [Old SasView tutorial (PDF)](/downloads/OldTutorial.pdf) - still useful
-*   Getting started with SasView [versions 3.x/4.x (PDF)](/downloads/getting_started_with_sasview_v3x_v4x.pdf) [versions 5.x (PDF)](/downloads/getting_started_with_sasview_v5.pdf)
-*   Basic 1D Fitting in SasView [versions 3.x/4.x (PDF)](/downloads/basic_1d_fitting_in_sasview_v3x_4x.pdf)  [versions 5.x (PDF)](/downloads/basic_1d_fitting_in_sasview_v5.pdf)
-*   Simultaneous 1D Fitting in SasView [versions 3.x/4.x (PDF)](/downloads/simultaneous_1d_fitting_in_sasview_v3x_4x.pdf)  [versions 5.x (PDF)](/downloads/simultaneous_1d_fitting_in_sasview_v5.pdf)
-*   Correlation Function Analysis in SasView [version 4.x (PDF)](/downloads/correlation_function_analysis_in_sasview_v4x.pdf) [version 4.x (PDF)](/downloads/correlation_function_analysis_in_sasview_v4.pdf)
+*   [Old SasView tutorial](/downloads/OldTutorial.pdf) (PDF) - still useful
+*   "Getting started with SasView" (PDF) for [versions 3.x/4.x](/downloads/getting_started_with_sasview_v3x_v4x.pdf) & [versions 5.x](/downloads/getting_started_with_sasview_v5.pdf)
+*   "Basic 1D Fitting in SasView" (PDF) for [versions 3.x/4.x](/downloads/basic_1d_fitting_in_sasview_v3x_4x.pdf) & [versions 5.x](/downloads/basic_1d_fitting_in_sasview_v5.pdf)
+*   "Simultaneous 1D Fitting in SasView" (PDF) for [versions 3.x/4.x](/downloads/simultaneous_1d_fitting_in_sasview_v3x_4x.pdf) & [versions 5.x](/downloads/simultaneous_1d_fitting_in_sasview_v5.pdf)
+*   "Correlation Function Analysis in SasView" (PDF) for [version 4.x](/downloads/correlation_function_analysis_in_sasview_v4x.pdf) & [versions 5.x](/downloads/correlation_function_analysis_in_sasview_v5.pdf)
 
   
 **Previous versions:**
