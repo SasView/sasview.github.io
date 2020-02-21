@@ -28,6 +28,7 @@ _(Mac Users: please ensure you have the [Xcode](https://en.wikipedia.org/wiki/Xc
 *   "Getting started with SasView" (PDF) for [versions 3.x/4.x](/downloads/getting_started_with_sasview_v3x_4x.pdf) & [versions 5.x](/downloads/getting_started_with_sasview_v5.pdf)
 *   "Basic 1D Fitting in SasView" (PDF) for [versions 3.x/4.x](/downloads/basic_1d_fitting_in_sasview_v3x_4x.pdf) & [versions 5.x](/downloads/basic_1d_fitting_in_sasview_v5.pdf)
 *   "Simultaneous 1D Fitting in SasView" (PDF) for [versions 3.x/4.x](/downloads/simultaneous_1d_fitting_in_sasview_v3x_4x.pdf) & [versions 5.x](/downloads/simultaneous_1d_fitting_in_sasview_v5.pdf)
+*   "P(r) Inversion Analysis in SasView" (PDF) for [versions 4.x](/downloads/pr_inversion_analysis_in_sasview_v4x.pdf)
 *   "Correlation Function Analysis in SasView" (PDF) for [versions 4.x](/downloads/correlation_function_analysis_in_sasview_v4x.pdf) & [versions 5.x](/downloads/correlation_function_analysis_in_sasview_v5.pdf)
 
   
