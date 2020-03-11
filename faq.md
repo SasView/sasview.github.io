@@ -276,7 +276,7 @@ subtitle: Here are the answers to some common questions about SasView
 
 *   Custom (or plugin) models should be placed in the SasView plugin folder:
 
-    *   C:\Users\\<username>\\.sasview\plugin_models (Windows)
+    *   C:\Users\\username\\.sasview\plugin_models (Windows)
     *   ~.sasview\plugin_models (Mac)
     
 *   The next time SasView is started all model files in this folder will be compiled. Alternatively, on-the-fly compilation is possible by selecting:
