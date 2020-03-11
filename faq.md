@@ -62,6 +62,8 @@ subtitle: Here are the answers to some common questions about SasView
 
 [What is the Model Marketplace?](#what-is-the-model-marketplace)
 
+[Where does SasView expect to find custom models?](#where-does-sasview-expect-to-find-custom-models)
+
 
 ### What is SasView?
 
@@ -270,3 +272,16 @@ subtitle: Here are the answers to some common questions about SasView
 *   The [Model Marketplace](http://marketplace.sasview.org) is an open repository of SasView fitting models we have set up to allow the SAS Community to contribute and share models.
 *   Despite its name, it is free to use!
 
+### Where does SasView expect to find custom models?
+
+*   Custom (or plugin) models should be placed in the SasView plugin folder:
+
+    *   C:\Users\<username>\.sasview\plugin_models (Windows)
+    *   ~.sasview\plugin_models (Mac)
+    
+*   The next time SasView is started all model files in this folder will be compiled. Alternatively, on-the-fly compilation is possible by selecting:
+
+    * Fitting > Plugin Model Operations > Load Plugin Models (in SasView 3.x/4.x)
+    * Fitting > Manage Custom Models > Add  file... (In SasView 5.x)
+
+*   If the required custom model does not appear in the drop-down list of Plugin Models in the FitPage then compilation is likely to have failed. Check the Console (in SasView 3.x/4.x) or Log Explorer (in SasView 5.x) or sasview.log file (all versions) for clues to the reason why.
