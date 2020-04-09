@@ -186,7 +186,7 @@ information is incorrect or out of date, please inform <a href="mailto:jkrzywon@
 
 ---
 
-0. [3D DNA Origami Crystals](https://doi.org/10.1002/adma.201800273) Zhang, T., Hartl, C., Frank, K., Heuer-Jungemann, A., Fischer, S., Nickels, P.C., Nickel, B., and Liedl, T., ADVANCED MATERIALS 30, 1800273 (2018)
+0. [3D DNA Origami Crystals](https://doi.org/10.1002/adma.201800273) Zhang, T., Hartl, C., Frank, K., Amelie Heuer-Jungemann, ., Fischer, S., Nickels, P.C., Nickel, B., and Liedl, T., ADVANCED MATERIALS 30, 1800273 (2018)
 1. [A Stereochemically Driven Supramolecular Polymerisation](https://doi.org/10.1002/chem.201800644) Tasca, E., D'Abramo, M., Galantini, L., Giuliani, A.M., Pavel, N.V., Palazzo, G., and Giustini, M., CHEMISTRY-A EUROPEAN JOURNAL 24, 8195–8204 (2018)
 2. [A numerical method for deriving shape functions of nanoparticles for pair distribution function refinements](https://doi.org/10.1107/S2053273318004977) Usher, T.-M., Olds, D., Liu, J., and Page, K., ACTA CRYSTALLOGRAPHICA A-FOUNDATION AND ADVANCES 74, 322–331 (2018)
 3. [An addressable packing parameter approach for reversibly tuning the assembly of oligo(aniline)-based supra-amphiphiles](https://doi.org/10.1039/c8sc00068a) Lyu, W., Alotaibi, M., Bell, O.A., Watanabe, K., Harniman, R., Mills, B.M., Seddon, A.M., Rogers, S.E., King, S.M., Yan, W., and Faul, C.F.J., CHEMICAL SCIENCE 9, 4392–4401 (2018)
