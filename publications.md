@@ -570,7 +570,7 @@ information is incorrect or out of date, please inform <a href="mailto:jkrzywon@
 
 ---
 
-0. [Gradient crystallinity and its influence on the poly(vinylidene fluoride)/poly(methyl methacrylate) membrane‐derived by immersion precipitation method](https://doi.org/10.1002/app.48677) Remanan, S., Ghosh, S., Das, T.K., Sharma, M., Bose, M., Bose, S., Das, A.K., and Das, N.C., J. appl. polym. sci. 48677 (n.d.)
+0. [Gradient crystallinity and its influence on the poly(vinylidene fluoride)/poly(methyl methacrylate) membrane‐derived by immersion precipitation method](https://doi.org/10.1002/app.48677) Remanan, S., Ghosh, S., Das, T.K., Sharma, M., Bose, M., Bose, S., Das, A.K., and Das, N.C., J. appl. polym. sci. 137, 48677 (n.d.)
 1. [In Situ Dimensional Characterization of Magnetic Nanoparticle Clusters during Induction Heating](https://doi.org/10.1002/ppsc.201900358) Carlton, H., Krycka, K., Bleuel, M., and Huitink, D., Part. part. syst. charact. 37, 1900358 (n.d.)
 2. [The role of disaccharides for protein–protein interactions – a SANS study](https://doi.org/10.1080/00268976.2019.1640400) Olsson, C. and Swenson, J., Mol. phys. 117, 3408–3416 (n.d.)
 
