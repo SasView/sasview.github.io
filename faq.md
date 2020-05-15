@@ -64,6 +64,8 @@ subtitle: Here are the answers to some common questions about SasView
 
 [Where does SasView expect to find custom models?](#where-does-sasview-expect-to-find-custom-models)
 
+[I installed SasView 5.x alongside SasView 4.x and now one or other will not start](#why-will-sasview-no-longer-start)
+
 
 ### What is SasView?
 
@@ -285,3 +287,17 @@ subtitle: Here are the answers to some common questions about SasView
     * Fitting > Manage Custom Models > Add  file... (In SasView 5.x)
 
 *   If the required custom model does not appear in the drop-down list of Plugin Models in the FitPage then compilation is likely to have failed. Check the Console (in SasView 3.x/4.x) or Log Explorer (in SasView 5.x) or sasview.log file (all versions) for clues to the reason why.
+
+### Why will SasView no longer start?
+
+*   This may be because you have installed a version of SasView 5.x but still have a version of SasView 4.x installed.
+*   It is perfectly fine to install multiple versions of SasView as long as you put them separate folders. So during the installation procedure you must specify a new installation folder name.
+*   However, they will all use a common shared folder in your profile:
+
+    *   C:\Users\\username\\.sasview (Windows)
+    *   ~.sasview\ (Mac)
+
+*   We believe there may be instances where the new installation corrupts the contents of this folder. In such instances, deleting this folder, so that SasView can re-create it when it is next run, may solve the problem.
+
+*   Warning! the .sasview folder contains a sub-folder with your plugin models. If you wish to preserve those plugin models, you should make temporary copies of them before deleting .sasview.
+
