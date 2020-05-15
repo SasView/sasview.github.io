@@ -291,7 +291,7 @@ subtitle: Here are the answers to some common questions about SasView
 ### Why will SasView no longer start?
 
 *   This may be because you have installed a version of SasView 5.x but still have a version of SasView 4.x installed.
-*   It is perfectly fine to install multiple versions of SasView as long as you put them separate folders. So during the installation procedure you must specify a new installation folder name.
+*   It is perfectly fine to install multiple versions of SasView as long as you put them in separate folders. So during the installation procedure you must specify a new installation folder name.
 *   However, they will all use a common shared folder in your profile:
 
     *   C:\Users\\username\\.sasview (Windows)
