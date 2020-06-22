@@ -41,6 +41,7 @@ Whenever you run SasView it silently creates/appends debugging information to a 
 *   _'Ooooh NICE PROGRAME!! Hours of fun!'_ - Stuart
 *   _'I love such amazing software so much. It help our researches a lot.'_ - Po-Wei
 *   _'Thanks for a great piece of software!'_ - Birte
+*   _'I want to thank you for your amazing software - I could not manage my PhD without it'_ - Martina
 
 ### Other Resources
 
