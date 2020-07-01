@@ -12,7 +12,7 @@ Much is documented in the help documentation. In particular, descriptions of eac
 *   Sorry the users forum Archives are not currently available
 *   You may contact us at: [help@sasview.org](mailto:help@sasview.org) to report bugs (in which case please also attach a SasView log file, see below) or for help using the software
 *   Or try the users forum at: [users@sasview.org](mailto:users@sasview.org)
-*   Check our [release notes](http://www.sasview.org/docs/user/RELEASE.html)
+*   Check our [release notes](http://www.sasview.org/docs/user/RELEASE.html) for Known Issues
 *   Visit our [tickets list](http://trac.sasview.org/report/3/) To view reported bugs, things being worked on or possible future ehancements
 *   For the adventurous, many new features and bug fixes are available in the [latest builds](https://jenkins.esss.dk/sasview/) & may have what you are looking for
 
