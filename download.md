@@ -32,6 +32,8 @@ _(Mac Users: Please ensure you have the [Xcode](https://en.wikipedia.org/wiki/Xc
 *   "Correlation Function Analysis in SasView" (PDF) for [versions 4.x](/downloads/correlation_function_analysis_in_sasview_v4x.pdf) & [versions 5.x](/downloads/correlation_function_analysis_in_sasview_v5.pdf)
 *   "Subtracting a Model Calculation from Data in SasView" (PDF) for [versions 4.x](/downloads/subtracting_a_model_calculation_from_real_data_v4x.pdf)
 
+**Videos:**
+*   Some short videos on using SasView are available on the [SasView YouTube Channel](https://www.youtube.com/channel/UCxvD3ysXJ05l6MgY7YKjEFQ)
   
 **Previous versions:**
 *   To download versions of SasView before v2.2 please go to the old [SansView](http://danse.chem.utk.edu/sansview.html#downloads) website
