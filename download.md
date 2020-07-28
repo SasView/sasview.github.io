@@ -8,7 +8,7 @@ title: Links & Downloads
 
 **Releases:**
 
-_(Mac Users: Please ensure you have the [Xcode](https://en.wikipedia.org/wiki/Xcode) command line tools installed before installing SasView; get it from the App Store. If you also get an error message that Apple cannot check the .dmg file for malicious software, right-click on the .dmg to override)_
+_(Mac Users: Please ensure you have the [Xcode](https://en.wikipedia.org/wiki/Xcode) command line tools installed before installing SasView; get it from the App Store. If you also get an error message that Apple cannot check the .dmg file for malicious software, Control-click on the .dmg to override)_
 
  We recommend that you avoid using installation folder paths which contain spaces, non-Latin characters or characters not available on a standard keyboard.
 
