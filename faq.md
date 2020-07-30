@@ -82,6 +82,7 @@ subtitle: Here are the answers to some common questions about SasView
 *   Mac OS
     *   SasView 3.x and earlier: 32-bit OSX (10.6, Snowleopard).
     *   SasView 4.x and later: 64-bit OSX (10.9, Mavericks or later).
+    *   SasView 5.0.3 and later: 64-bit OSX (10.13, High Sierra or later).
 *   Linux
     *   We do not currently support a Linux distribution.
     *   SasView is being built under Ubuntu on the development servers but is mostly aspirational at present due to limited developer resources. In fact the eggs produced do not currently appear to be usable. We hope to eventually be able to distribute on Linux and welcome anyone interested in helping with that project to join us.
