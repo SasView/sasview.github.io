@@ -314,12 +314,12 @@ subtitle: Here are the answers to some common questions about SasView
         Then try running SasView again. If it starts it will re-create the folders.
         
     2.  Locate the the SasView log file sasview.log (on Windows this will be in C:\Users\\username\\). Open it in a text editor and search for recent occurrences of the string 'Could not copy'. Any matches will look something like this (an actual example reported to the Development Team):
-    ```
+        ```
         2020-08-29 10:57:05,906 : ERROR : sas._config (_config.py:94) :: Could not copy default custom config.
-    ```
+        ```
     
-       In this example the error indicated that the installation process had been unable to copy the file custom_config.py into the folder C:\Users\\username\\.sasview\\config\\ for some reason. Manually copying the file from the SasView installation folder to C:\Users\\username\\.sasview\\config\\ then allowed SasView to start.
+        In this example the error indicated that the installation process had been unable to copy the file custom_config.py into the folder C:\Users\\username\\.sasview\\config\\ for some reason. Manually copying the file from the SasView installation folder to C:\Users\\username\\.sasview\\config\\ then allowed SasView to start.
        
-       **Note: if it is unclear what file is missing, where it can be found, or where it should be copied too, please contact the Development Team at help@sasview.org, attaching a copy of your sasview.log file.**
+        **Note: if it is unclear what file is missing, where it can be found, or where it should be copied too, please contact the Development Team at [help@sasview.org](mailto:help@sasview.org), attaching a copy of your sasview.log file.**
        
        
