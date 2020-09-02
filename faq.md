@@ -64,7 +64,7 @@ subtitle: Here are the answers to some common questions about SasView
 
 [Where does SasView expect to find custom models?](#where-does-sasview-expect-to-find-custom-models)
 
-[I installed SasView 5.x alongside SasView 4.x and now one or other will not start](#why-will-sasview-no-longer-start)
+[I installed SasView 5.x alongside SasView 4.x and now one or the other will not start](#why-will-sasview-no-longer-start)
 
 
 ### What is SasView?
@@ -291,14 +291,35 @@ subtitle: Here are the answers to some common questions about SasView
 
 ### Why will SasView no longer start?
 
-*   This may be because you have installed a version of SasView 5.x but still have a version of SasView 4.x installed.
-*   It is perfectly fine to install multiple versions of SasView as long as you put them in separate folders. So during the installation procedure you must specify a new installation folder name.
-*   However, they will all use a common shared folder in your profile:
+*   There appear to be some situations where SasView fails to start with the message 'cannot execute script sasview'. One or more of the following conditions is usually present:
+     *   A fresh install of SasView has been performed (most likely SasView 5.x) 
+     *   Installation was on a Windows 10 machine
+     *   The machine already had an existing installation of an earlier version of SasView (typically SasView 4.x)
+     
+*   It is perfectly fine to install multiple versions of SasView as long as they are installed to separate folders. From SasView 5.0.3 this happens automatically, but earlier versions may need a new installation folder name to be specified.
 
-    *   C:\Users\\username\\.sasview (Windows)
-    *   ~.sasview\ (Mac)
+*   All versions of SasView, however, use two common shared folders in the users profile:
+    *   C:\Users\\username\\.sasview and C:\Users\\username\\.sasmodels (Windows)
+    *   ~.sasview\ and ~.sasmodels\ (Mac)
 
-*   We believe there may be instances where the new installation corrupts the contents of this folder. In such instances, deleting this folder, so that SasView can re-create it when it is next run, may solve the problem.
+*   The failure to start SasView appears to have one of two causes:
+    *   The new installation corrupts the contents of the shared folders
+    *   The installation process is unable to copy all of the required files to the shared folders
 
-*   Warning! the .sasview folder contains a sub-folder with your plugin models. If you wish to preserve those plugin models, you should make temporary copies of them before deleting .sasview.
+*   Determining which of these circumstances is the cause is not entirely straightforward but the following procedure *should* cover both eventualities:
+    1.  Delete the folders .sasview and .sasmodels.
+    
+        **Warning! the .sasview folder may contain a sub-folder with existing plugin models. To preserve those plugin models, make temporary copies of them before deleting .sasview!**
 
+        Then try running SasView again. If it starts it will re-create the folders.
+        
+    2.  Locate the the SasView log file sasview.log (on Windows this will be in C:\Users\\username\\). Open it in a text editor and search for recent occurrences of the string 'Could not copy'. Any matches will look something like this (an actual example reported to the Development Team):
+    ```
+        2020-08-29 10:57:05,906 : ERROR : sas._config (_config.py:94) :: Could not copy default custom config.
+    ```
+    
+       In this example the error indicated that the installation process had been unable to copy the file custom_config.py into the folder C:\Users\\username\\.sasview\\config\\ for some reason. Manually copying the file from the SasView installation folder to C:\Users\\username\\.sasview\\config\\ then allowed SasView to start.
+       
+       **Note: if it is unclear what file is missing, where it can be found, or where it should be copied too, please contact the Development Team at help@sasview.org, attaching a copy of your sasview.log file.**
+       
+       
