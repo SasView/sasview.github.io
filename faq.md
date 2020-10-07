@@ -64,7 +64,7 @@ subtitle: Here are the answers to some common questions about SasView
 
 [Where does SasView expect to find custom models?](#where-does-sasview-expect-to-find-custom-models)
 
-[Can I use complex numbers in my models?](#can-I-use-complex-numbers-in-my-models)
+[Can I use complex numbers in my models?](#can-i-use-complex-numbers-in-my-models)
 
 [I installed SasView 5.x alongside SasView 4.x and now one or the other will not start](#why-will-sasview-no-longer-start)
 
