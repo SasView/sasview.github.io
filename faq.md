@@ -64,8 +64,9 @@ subtitle: Here are the answers to some common questions about SasView
 
 [Where does SasView expect to find custom models?](#where-does-sasview-expect-to-find-custom-models)
 
-[I installed SasView 5.x alongside SasView 4.x and now one or the other will not start](#why-will-sasview-no-longer-start)
+[Can I use complex numbers in my models?](can-I-use-complex-numbers-in-my-models)
 
+[I installed SasView 5.x alongside SasView 4.x and now one or the other will not start](#why-will-sasview-no-longer-start)
 
 ### What is SasView?
 
@@ -288,6 +289,11 @@ subtitle: Here are the answers to some common questions about SasView
     * Fitting > Manage Custom Models > Add  file... (In SasView 5.x)
 
 *   If the required custom model does not appear in the drop-down list of Plugin Models in the FitPage then compilation is likely to have failed. Check the Console (in SasView 3.x/4.x) or Log Explorer (in SasView 5.x) or sasview.log file (all versions) for clues to the reason why.
+
+### Can I use complex numbers in my models?
+
+*   Yes, you can. Please download and unzip this [C++ header file](https://github.com/SasView/sasview.github.io/blob/master/downloads/cl_complex.zip) to your plugin model folder and add it to your source list before your .c file.
+*   OpenCL 3.0 will allow the direct use of complex numbers, but it is not yet widely supported by GPU devices.
 
 ### Why will SasView no longer start?
 
