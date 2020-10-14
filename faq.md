@@ -66,7 +66,7 @@ subtitle: Here are the answers to some common questions about SasView
 
 [Can I use complex numbers in my models?](#can-i-use-complex-numbers-in-my-models)
 
-[I installed SasView 5.x alongside SasView 4.x and now one or the other will not start](#why-will-sasview-no-longer-start)
+[Why will SasView no longer start? ('cannot execute script sasview')](#why-will-sasview-no-longer-start)
 
 ### What is SasView?
 
@@ -302,7 +302,7 @@ subtitle: Here are the answers to some common questions about SasView
      *   Installation was on a Windows 10 machine
      *   The machine already had an existing installation of an earlier version of SasView (typically SasView 4.x)
      
-*   It is perfectly fine to install multiple versions of SasView as long as they are installed to separate folders. From SasView 5.0.3 this happens automatically, but earlier versions may need a new installation folder name to be specified.
+*   It is perfectly fine to install multiple versions of SasView as long as they are installed to separate folders. From SasView 5.0.3 this happens automatically during installation, but earlier versions may need a new installation folder name to be specified.
 
 *   All versions of SasView, however, use two common shared folders in the users profile:
     *   C:\Users\\username\\.sasview and C:\Users\\username\\.sasmodels (Windows)
@@ -313,13 +313,15 @@ subtitle: Here are the answers to some common questions about SasView
     *   The installation process is unable to copy all of the required files to the shared folders
 
 *   Determining which of these circumstances is the cause is not entirely straightforward but the following procedure *should* cover both eventualities:
-    1.  Delete the folders .sasview and .sasmodels.
+    1.  If you installed SasView 'For All Users (recommended)', uninstall it, then try re-installing it as 'Just for Me'.
+    
+    2.  If Step 1 does not resolve the problem, delete the folders .sasview and .sasmodels.
     
         **Warning! the .sasview folder may contain a sub-folder with existing plugin models. To preserve those plugin models, make temporary copies of them before deleting .sasview!**
 
         Then try running SasView again. If it starts it will re-create the folders.
         
-    2.  Locate the the SasView log file sasview.log (on Windows this will be in C:\Users\\username\\). Open it in a text editor and search for recent occurrences of the string 'Could not copy'. Any matches will look something like this (an actual example reported to the Development Team):
+    3.  Locate the the SasView log file sasview.log (on Windows this will be in C:\Users\\username\\). Open it in a text editor and search for recent occurrences of the string 'Could not copy'. Any matches will look something like this (an actual example reported to the Development Team):
         ```
         2020-08-29 10:57:05,906 : ERROR : sas._config (_config.py:94) :: Could not copy default custom config.
         ```
