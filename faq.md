@@ -349,6 +349,11 @@ whilst discussions take place under the auspices of CanSAS on extensions to the 
 *  Yes, you can. Start SasView and navigate to Tools > Python Shell/Editor. Then enter (note the use of \\\ in the path to the script):
 ```
  exec(open('C:\\Temp\\scriptname.py').read())
+ 
+ or, better (as it will close the file after reading it):
+ 
+ from pathlib import Path
+ exec(Path('C:\\Temp\\scriptname.py').read_text())
 ```
 *  Scripts executed like this will have access to all SasView libraries.
 
