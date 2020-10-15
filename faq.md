@@ -140,6 +140,40 @@ subtitle: Here are the answers to some common questions about SasView
     *   For a description of the NIST 2D format click [here](http://danse.chem.utk.edu/trac/wiki/NCNROutput1D_2DQxQy).
 *   Files in the [NXcanSAS format](http://download.nexusformat.org/doc/html/classes/contributed_definitions/NXcanSAS.html) with the extension .h5
 
+#### SESANS data (P(z) vs z)
+
+*   SasView currently recognises the data format used on the LARMOR instrument at the ISIS Pulsed Neutron & Muon Source and the SESANS at the RID, Technical University Delft
+whilst discussions take place under the auspices of CanSAS on extensions to the NXcanSAS format (see 2D data above).
+*   The file format is:
+
+```
+  FileFormatVersion       1.0
+  DataFileTitle           <text string>
+  Sample                  <text string>
+  Settings                <text string>
+  Operator                <text string>
+  Date                    <text string>
+  ScanType                <text string>
+  Thickness               x.xxE-xx
+  Thickness_unit          <mm/cm/etc>
+  Theta_zmax              <decimal number>
+  Theta_zmax_unit         <radians/degrees>
+  Theta_ymax              <decimal number>
+  Theta_ymax_unit         <radians/degrees>
+  Orientation             <Z/Y/X>
+  SpinEchoLength_unit     <A/nm/um/etc>
+  Depolarisation_unit     <A-2 cm-1/nm-2 cm-1/etc>
+  Wavelength_unit         <A/nm>
+
+  BEGIN_DATA
+  SpinEchoLength Depolarisation Depolarisation_error SpinEchoLength_error Wavelength Wavelength_error Polarisation  Polarisation_error
+  391.56 0.0041929 0.0036894 19.578 2.11 0.1055 1.0037 0.0032974
+  etc
+```
+
+*   SasView expects the following file extension for SESANS data:
+    *   .SES
+
 ### What units should my data be in?
 
 #### Q data
