@@ -68,6 +68,8 @@ subtitle: Here are the answers to some common questions about SasView
 
 [Can I use complex numbers in my models?](#can-i-use-complex-numbers-in-my-models)
 
+[Can I run Python scripts inside SasView?](#can-i-run-python-scripts-inside-sasview)
+
 [Why will SasView no longer start? ('cannot execute script sasview')](#why-will-sasview-no-longer-start)
 
 ### What is SasView?
@@ -341,6 +343,14 @@ whilst discussions take place under the auspices of CanSAS on extensions to the 
 
 *   Yes, you can. Please download and unzip this [C++ header file](https://github.com/SasView/sasview.github.io/blob/master/downloads/cl_complex.zip) to your plugin model folder and add it to your source list before your .c file.
 *   OpenCL 3.0 will allow the direct use of complex numbers, but it is not yet widely supported by GPU devices.
+
+### Can I run Python scripts inside SasView?
+
+*  Yes, you can. Start SasView and navigate to Tools > Python Shell/Editor. Then enter (note the use of \\\ in the path to the script):
+```
+ exec(open('C:\\Temp\\scriptname.py').read())
+```
+*  Scripts executed like this will have access to all SasView libraries.
 
 ### Why will SasView no longer start?
 
