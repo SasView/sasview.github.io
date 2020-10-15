@@ -24,6 +24,8 @@ subtitle: Here are the answers to some common questions about SasView
 
 [What units should my data be in?](#what-units-should-my-data-be-in)
 
+[Why is SasView no longer loading my data?](#why-is-sasview-no-longer-loading-my-data)
+
 [Does SasView fit data in its I vs Q representation, or as Log I vs Log Q?](#does-sasview-fit-data-in-its-i-vs-q-representation-or-as-log-i-vs-log-q)
 
 [Many models have a _scale_ parameter; what is this?](#what-is-the-scale-parameter-in-models)
@@ -183,6 +185,17 @@ whilst discussions take place under the auspices of CanSAS on extensions to the 
 #### I(Q) data
 
 *   SasView makes no assumptions about the units of I(Q) data, _but_ your model fits will only return meaningful scale parameters (ie, volume fractions) if the I(Q) data is in absolute units (/cm) and on an absolute scale (ie, the I(Q) values have been calibrated against a standard).
+
+### Why is SasView no longer loading my data?
+
+*   Any data files that used to load in SasView 4.x should load in SasView 5.x, but there are a small number of exceptions:
+
+    *  The NeXus data loader was removed in version 5.0 as it was superseded by the integration of a loader for [NXcanSAS format](http://download.nexusformat.org/doc/html/classes/contributed_definitions/NXcanSAS.html) files with the extension .h5.
+    *  SasView 4.x was built with Python 2, but SasView 5.x is built with Python 3. The [Python Software Foundation](https://www.python.org/psf-landing/) decided to fundemantally change the way that character strings are represented internally in Python 3 and, thereby, the assumptions that Python 3 makes about the encoding (the byte-level representation) of characters. If the character encoding of your data file does not match those assumptions it is possible that SasView will throw an error. Depending on the version of SasView you are running you may see an error such as the following in the Message Log, Console or Log File:
+    ```
+      14:26:27 - ERROR: 'utf-8' codec can't decode byte 0xc5 in position 2: invalid continuation byte
+    ```
+    *  We are attempting to trap and process such cases, but this is not straightforward. In such instances, try changing/fixing the encoding of your file to UTF-8. A simple way to do this (for Windows users) is to install [Notepad++](https://notepad-plus-plus.org/). Open your data file in it, then navigate to Encoding > Convert to UTF-8, and save the file. Then try loading the file in SasView.
 
 ### Does SasView fit data in its I vs Q representation, or as Log I vs Log Q?
 
