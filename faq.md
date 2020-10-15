@@ -26,7 +26,7 @@ subtitle: Here are the answers to some common questions about SasView
 
 [Does SasView fit data in its I vs Q representation, or as Log I vs Log Q?](#does-sasview-fit-data-in-its-i-vs-q-representation-or-as-log-i-vs-log-q)
 
-[Many models have a _scale_ parameter; what is this?](#many-models-have-a-_scale_-parameter-what-is-this)
+[Many models have a _scale_ parameter; what is this?](#what-is-the-scale-parameter-in-models)
 
 [How can I put my data on an absolute intensity scale?](#how-can-i-put-my-data-on-an-absolute-intensity-scale)
 
@@ -191,7 +191,7 @@ whilst discussions take place under the auspices of CanSAS on extensions to the 
     *   _NB: when using log representation, SasView applies `Log10` and not `Loge`._
 *   However, SasView has no way of knowing if the data it has loaded is actually I vs Q. It will happily load and fit, for example, Reflectivity vs Q, but simply label the Y-axis as Intensity.
 
-### Many models have a _scale_ parameter; what is this?
+### What is the scale parameter in models?
 
 *   If your I(Q) data is in absolute units (/cm) and on an absolute scale (ie, the I(Q) values have been calibrated against a standard) the scale parameter will be equal to the volume fraction. In all other instances the scale factor will be a number proportional to the volume fraction. Some models have both volume fraction and scale parameters. In these models the scale is just a multiplying factor (equal to 1 if the data is in absolute units on an absolute scale).
   
