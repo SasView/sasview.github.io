@@ -140,7 +140,7 @@ subtitle: Here are the answers to some common questions about SasView
 *   Files in the NIST 2D format with the extension .ASC or .DAT
     *   Most of the header lines can be removed except the last line, and only the first three columns (Qx, Qy, and I(Qx,Qy)) are actually required.
     *   For a description of the NIST 2D format click [here](http://danse.chem.utk.edu/trac/wiki/NCNROutput1D_2DQxQy).
-*   Files in the [NXcanSAS format](http://download.nexusformat.org/doc/html/classes/contributed_definitions/NXcanSAS.html) with the extension .h5
+*   Files in the [NXcanSAS format](https://manual.nexusformat.org/classes/applications/NXcanSAS.html?highlight=nxcansas) with the extension .h5
 
 #### SESANS data (P(z) vs z)
 
@@ -190,7 +190,7 @@ whilst discussions take place under the auspices of CanSAS on extensions to the 
 
 *   Any data files that used to load in SasView 4.x should load in SasView 5.x, but there are a small number of exceptions:
 
-    *  The NeXus data loader was removed in version 5.0 as it was superseded by the integration of a loader for [NXcanSAS format](http://download.nexusformat.org/doc/html/classes/contributed_definitions/NXcanSAS.html) files with the extension .h5.
+    *  The NeXus data loader was removed in version 5.0 as it was superseded by the integration of a loader for [NXcanSAS format](https://manual.nexusformat.org/classes/applications/NXcanSAS.html?highlight=nxcansas) files with the extension .h5.
     *  SasView 4.x was built with Python 2, but SasView 5.x is built with Python 3. The [Python Software Foundation](https://www.python.org/psf-landing/) decided to fundemantally change the way that character strings are represented internally in Python 3 and, thereby, the assumptions that Python 3 makes about the encoding (the byte-level representation) of characters. If the character encoding of your data file does not match those assumptions it is possible that SasView will throw an error. Depending on the version of SasView you are running you may see an error such as the following in the Message Log, Console or Log File:
     ```
       14:26:27 - ERROR: 'utf-8' codec can't decode byte 0xc5 in position 2: invalid continuation byte
