@@ -10,6 +10,8 @@ subtitle: Here are the answers to some common questions about SasView
 
 [Do I need to install Python/C++ or any compilers before I install SasView?](#do-i-need-to-install-pythonc-or-any-compilers-before-i-install-sasview)
 
+[What do xcrun errors mean?](#what-do-xcrun-errors-mean)
+
 [Can SasView make use of my GPU(s)?](#can-sasview-make-use-of-my-gpus)
 
 [Can I stop SasView trying to use my GPU(s)?](#can-i-stop-sasview-trying-to-use-my-gpus)
@@ -97,7 +99,12 @@ subtitle: Here are the answers to some common questions about SasView
 ### Do I need to install Python/C++ or any compilers before I install SasView?
 
 *   If you intend to use SasView on a Windows computer, then No: Our packaged installer ships with everything you need to run SasView.
-*   If you intend to use SasView on a Mac OS computer, you do not need to install Python/C++ but you _do_ need to pre-install the Xcode command line tools as SasView makes use of the C compiler.
+*   If you intend to use SasView on a Mac OS computer, you do not need to install Python but you _do_ need to pre-install the Xcode command line tools as SasView makes use of the C compiler in them. If Xcode is not installed the SasView console or log file may contain messages about 'xcrun: error' or 'missing xcrun at:'.
+    *  _You should not need to install the full Xcode package_, just a subset of it; try the command: __xcode-select -install__.
+    *  If this command does not subsequently allow you to use SasView, or, if you require the full Xcode package for other purposes, you can get Xcode from the Apple AppStore. However, be aware that attempting to install the latest version of Xcode may require you to upgrade your version of MacOS. If you do not want to do that you will need to install a version of Xcode that is compatible with your current version of MacOS. [This site](https://xcodereleases.com/) may be useful in this respect.
+
+### What do xcrun errors mean?
+*   You will get these errors if you are trying to use SasView on a Mac and do not have the Xcode command line tools installed. See the preceding answer.
 
 ### Can SasView make use of my GPU(s)?
 
