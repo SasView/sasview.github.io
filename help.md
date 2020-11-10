@@ -8,7 +8,7 @@ title: Help
 Much is documented in the help documentation. In particular, descriptions of each model, the equations used and appropriate references. This should always be the first place to go with questions. Also note that the bottom information bar on SasView often has useful information. Other available sources are
 
 *   [Links to our tutorials](/download/#tutorials) (in PDF format)
-*   [The full user documentation](/docs/user/user.html) including model documentation. Also available as a [PDF download](/downloads/SasViewDocumentation.pdf)
+*   [The full user documentation](/docs/user/user.html) including model documentation. Also available as a [PDF download](/downloads/SasViewDocumentation_4.2.2.pdf)
 *   Sorry the users forum Archives are not currently available
 *   You may contact us at: [help@sasview.org](mailto:help@sasview.org) to report bugs (in which case please also attach a SasView log file, see below) or for help using the software
 *   Or try the users forum at: [users@sasview.org](mailto:users@sasview.org)
