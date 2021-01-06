@@ -367,36 +367,34 @@ whilst discussions take place under the auspices of CanSAS on extensions to the 
 ### Why will SasView no longer start?
 
 *   There appear to be some situations where SasView fails to start with the message 'cannot execute script sasview'. One or more of the following conditions is usually present:
-     *   A fresh install of SasView has been performed (most likely SasView 5.x) 
-     *   Installation was on a Windows 10 machine
+     *   SasView was installed on a Windows 10 machine
+     *   A new or fresh install of SasView 5.x has been performed
      *   The machine already had an existing installation of an earlier version of SasView (typically SasView 4.x)
-     
-*   It is perfectly fine to install multiple versions of SasView as long as they are installed to separate folders. From SasView 5.0.3 this happens automatically during installation, but earlier versions may need a new installation folder name to be specified.
+
+*   It is perfectly fine to install multiple versions of SasView on the same machine as long as they are installed to separate folders. From SasView 5.0.3 this happens automatically during installation, but earlier versions of SasView will need a unique installation folder name to be specified (eg, C:\SasView-v422).
 
 *   All versions of SasView, however, use two common shared folders in the users profile:
-    *   C:\Users\\username\\.sasview and C:\Users\\username\\.sasmodels (Windows)
-    *   ~.sasview\ and ~.sasmodels\ (Mac)
+    *   (On Windows):  C:\Users\\username\\.sasview and C:\Users\\username\\.sasmodels
+    *   (on MacOS)  :  ~.sasview\ and ~.sasmodels\
 
-*   The failure to start SasView appears to have one of two causes:
-    *   The new installation corrupts the contents of the shared folders
+*   The failure to start SasView appears to have one of three causes:
+    *   (Windows 10 and later) During the Windows setup process the default save location for the users files (ie, anything normally expected to go into C:\Users\\username\\ and any sub-folders thereof) was redirected to the users OneDrive. See https://support.microsoft.com/en-us/office/files-save-to-onedrive-by-default-in-windows-10-33da0077-770c-4bda-b61e-8c8e8ca70ac7 In essence, this means that Windows changes the locations of the SasView shared folders FROM C:\Users\\username\\.sasview and C:\Users\\username\\.sasmodels TO C:\Users\\username\\OneDrive\\.sasview and C:\Users\\username\\OneDrive\\.sasmodels!
     *   The installation process is unable to copy all of the required files to the shared folders
+    *   The new installation corrupts the contents of the shared folders
 
-*   Determining which of these circumstances is the cause is not entirely straightforward but the following procedure *should* cover both eventualities:
-    1.  If you installed SasView 'For All Users (recommended)', uninstall it, then try re-installing it as 'Just for Me'.
+*   Determining which of these circumstances is the cause may not be entirely straightforward but the following procedure *should* cover all eventualities:
+    1.  (Windows 10 and later) Check to see if the SasView shared folders have been created in your local OneDrive folder (C:\Users\\username\\OneDrive\\). If they *have*, copy them **up** one level and delete them from the OneDrive folder. Now try running SasView.
     
-    2.  If Step 1 does not resolve the problem, delete the folders .sasview and .sasmodels.
-    
-        **Warning! the .sasview folder may contain a sub-folder with existing plugin models. To preserve those plugin models, make temporary copies of them before deleting .sasview!**
-
-        Then try running SasView again. If it starts it will re-create the folders.
-        
-    3.  Locate the the SasView log file sasview.log (on Windows this will be in C:\Users\\username\\). Open it in a text editor and search for recent occurrences of the string 'Could not copy'. Any matches will look something like this (an actual example reported to the Development Team):
+    2.  If Step 1 does not apply/work, locate the the SasView log file **sasview.log** (on Windows this should be in C:\Users\\username\\). Open it in a text editor and search for recent occurrences of the string 'Could not copy'. Any matches will look something like this (an actual example reported to the Development Team):
         ```
         2020-08-29 10:57:05,906 : ERROR : sas._config (_config.py:94) :: Could not copy default custom config.
         ```
-    
-        In this example the error indicated that the installation process had been unable to copy the file custom_config.py into the folder C:\Users\\username\\.sasview\\config\\ for some reason. Manually copying the file from the SasView installation folder to C:\Users\\username\\.sasview\\config\\ then allowed SasView to start.
+        In this example the error indicates that the installation process had been unable to copy the file **custom_config.py** into the folder C:\Users\\username\\.sasview\\config\\ for some reason. Manually copying the missing file from the SasView installation folder to C:\Users\\username\\.sasview\\config\\ then allowed SasView to start.
        
         **Note: if it is unclear what file is missing, where it can be found, or where it should be copied too, please contact the Development Team at [help@sasview.org](mailto:help@sasview.org), attaching a copy of your sasview.log file.**
-       
-       
+    
+    3.  If you installed SasView 'For All Users (recommended)', uninstall it, delete *all* folders that were created, then try re-installing SasView as 'Just for Me'.
+    
+    4.  If Step 3 does not work/apply, delete the shared folders .sasview and .sasmodels and then try running SasView again. If it starts it will re-create the folders.
+    
+        **Warning! the .sasview folder may contain a sub-folder with existing plugin models. To preserve those plugin models, make temporary copies of them before deleting the .sasview folder!**
