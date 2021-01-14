@@ -3,7 +3,8 @@ layout: page
 title: Documentation
 ---
 
-**Help documentation**
+**Help documentation:**
+
 Our help documentation has evolved considerably over the years and includes
 
 *   USER DOCUMENTATION - information on how to use SasView, descriptions of each model, the equations behind them and appropriate references
@@ -22,10 +23,10 @@ Below are links to this documentation arranged by SasView version:
 *   [3.1.2](/docs/old_docs/3.1.2/index.html)
 *   [3.0.0](/docs/old_docs/3.0.0/index.html)
 
-<!-- <a name="tutorials"></a> -->
+<a name="tutorials"></a>
 
 **Tutorials:**
-*    [Old SasView tutorial](/downloads/OldTutorial.pdf) (PDF) - still useful
+*   [Old SasView tutorial](/downloads/OldTutorial.pdf) (PDF) - dated but still useful
 *   "Getting started with SasView" (PDF) for [versions 3.x/4.x](/downloads/getting_started_with_sasview_v3x_4x.pdf) & [versions 5.x](/downloads/getting_started_with_sasview_v5.pdf)
 *   "Basic 1D Fitting in SasView" (PDF) for [versions 3.x/4.x](/downloads/basic_1d_fitting_in_sasview_v3x_4x.pdf) & [versions 5.x](/downloads/basic_1d_fitting_in_sasview_v5.pdf)
 *   "Simultaneous 1D Fitting in SasView" (PDF) for [versions 3.x/4.x](/downloads/simultaneous_1d_fitting_in_sasview_v3x_4x.pdf) & [versions 5.x](/downloads/simultaneous_1d_fitting_in_sasview_v5.pdf)
