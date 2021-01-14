@@ -3,20 +3,19 @@ layout: page
 title: Documentation
 ---
 
-### Our help documentation
-
-Our help documentation has evolved considerably over the years and may include
+**Help documentation**
+Our help documentation has evolved considerably over the years and includes
 
 *   USER DOCUMENTATION - information on how to use SasView, descriptions of each model, the equations behind them and appropriate references
 *   DEVELOPER DOCUMENTATION - information primarily aimed at software developers that want to interact with the SasView and Sasmodels APIs
-*   Release Notes - what is new in a given version of SasView, bugs that have been fixed, and any known issues discovered during testing
+*   RELEASE NOTES - what is new in a given version of SasView, bugs that have been fixed, and any known issues discovered during testing
 
 Below are links to this documentation arranged by SasView version:
 
 *   [current](/docs/index.html)
 *   [5.0.2](/docs/old_docs/5.0.2/index.html)
 *   [5.0.1](/docs/old_docs/5.0.1/index.html)
-*   [4.2.2](/docs/old_docs/4.2.2/index.html) [(PDF)](/downloads/SasViewDocumentation_4.2.2.pdf)
+*   [4.2.2](/docs/old_docs/4.2.2/index.html) & [(PDF)](/downloads/SasViewDocumentation_4.2.2.pdf)
 *   [4.2.1](/docs/old_docs/4.2.1/index.html)
 *   [4.2.0](/docs/old_docs/4.2.0/index.html)
 *   [4.1.2](/docs/old_docs/4.1.2/index.html)
@@ -26,7 +25,7 @@ Below are links to this documentation arranged by SasView version:
 <!-- <a name="tutorials"></a> -->
 
 **Tutorials:**
-*   [Old SasView tutorial](/downloads/OldTutorial.pdf) (PDF) - still useful
+*    [Old SasView tutorial](/downloads/OldTutorial.pdf) (PDF) - still useful
 *   "Getting started with SasView" (PDF) for [versions 3.x/4.x](/downloads/getting_started_with_sasview_v3x_4x.pdf) & [versions 5.x](/downloads/getting_started_with_sasview_v5.pdf)
 *   "Basic 1D Fitting in SasView" (PDF) for [versions 3.x/4.x](/downloads/basic_1d_fitting_in_sasview_v3x_4x.pdf) & [versions 5.x](/downloads/basic_1d_fitting_in_sasview_v5.pdf)
 *   "Simultaneous 1D Fitting in SasView" (PDF) for [versions 3.x/4.x](/downloads/simultaneous_1d_fitting_in_sasview_v3x_4x.pdf) & [versions 5.x](/downloads/simultaneous_1d_fitting_in_sasview_v5.pdf)
