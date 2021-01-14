@@ -24,7 +24,7 @@ _(Mac Users: Please ensure you have the [Xcode](https://en.wikipedia.org/wiki/Xc
 
 **Documentation:**
 -   [Current  documentation for SasView 5.x   (web)](/docs/user/user.html) - with model descriptions & updates
--   [Documentation](documentation)
+-   [New Documentation Page](../documentation)
   
 To report bugs or for help using the software please contact us at: [help@sasview.org](mailto:help@sasview.org)
 
