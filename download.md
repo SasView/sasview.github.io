@@ -21,16 +21,16 @@ _(Mac Users: Please ensure you have the [Xcode](https://en.wikipedia.org/wiki/Xc
   
 **Plug-in Model Marketplace:**
 
-Looking for old or new models, or wish to contribute a model? Visit the Marketplace. It's free!
-
+Looking for new models, or wish to contribute a model? Visit the Marketplace. It's free!
 *   [http://marketplace.sasview.org/](http://marketplace.sasview.org/)
 
 **Getting Help:**
+
 If you are having problems, first check our [Frequently Asked Questions](/faq)
 
-Otherwise to report bugs, or for help using the SasView, please contact us at: [help@sasview.org](mailto:help@sasview.org)
+Otherwise to report bugs, or for help using SasView, please contact us at: [help@sasview.org](mailto:help@sasview.org)
 
-Or you can also try asking other SasView Users! Email [users@sasview.org](mailto:users@sasview.org) or visit [Users Forum Archives](http://sourceforge.net/mailarchive/forum.php?forum_name=sasview-users)
+Or you can also try asking other SasView Users! Email [users@sasview.org](mailto:users@sasview.org) or visit the [Users Forum Archives](http://sourceforge.net/mailarchive/forum.php?forum_name=sasview-users)
 
   
 
@@ -43,12 +43,12 @@ Or you can also try asking other SasView Users! Email [users@sasview.org](mailto
 *   [Full SasView Sphinx Documentation](/docs) for the latest build
 *   [Class Documentation Index](/docs/dev/dev.html) for the latest build
 
-**Old/historical Repositories:**
+**Old/historical repositories:**
 *   [Old Sourceforge repository](http://sourceforge.net/p/sasview/code/) - Closed to commits February 2015
     *   [Old SansView source code repository](http://sansviewproject.svn.sourceforge.net/viewvc/sansviewproject/)
-    *   [Old DANSE repositories](http://danse.us/admin/repolist).
+    *   [Old DANSE repositories](http://danse.us/admin/repolist)
 
-*   For developer questions please contact the developers at: [developers@sasview.org](mailto:developers@sasview.org) or visit the [archives](https://sourceforge.net/p/sasview/mailman/sasview-users/) (note: a developer login is required to access archives)
+For developer questions please contact the developers at: [developers@sasview.org](mailto:developers@sasview.org) or visit the [archives](https://sourceforge.net/p/sasview/mailman/sasview-users/) (note: a developer login is required to access archives)
 
   
 
