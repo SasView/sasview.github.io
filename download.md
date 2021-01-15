@@ -21,9 +21,6 @@ _(Mac Users: Please ensure you have the [Xcode](https://en.wikipedia.org/wiki/Xc
   
 **Plug-in Model Marketplace:**
 *   [http://marketplace.sasview.org/](http://marketplace.sasview.org/)
-
-**Documentation:**
--   Visit our new [Documentation Page](../documentation)
   
 To report bugs or for help using the software please contact us at: [help@sasview.org](mailto:help@sasview.org)
 
