@@ -16,6 +16,9 @@ _(Mac Users: Please ensure you have the [Xcode](https://en.wikipedia.org/wiki/Xc
 - [Current release version of SasView 4.x](https://github.com/SasView/sasview/releases/tag/v4.2.2 "SasView download")
 
 **Previous versions:**
+
+_(Note: Version 4.2.0 was the last version to be built for 32-bit operating systems)_
+
 - [All versions from v3.0](https://github.com/SasView/sasview/tags "SasView download") (click on the version number for more information)
 - To download versions of SasView before v2.2 please go to the old [SansView](http://danse.chem.utk.edu/sansview.html#downloads) website
   
@@ -37,12 +40,11 @@ If you are having problems,
 **Current information:**
 - [Source code repository](https://github.com/SasView/sasview) on Github
 - [Official SasView builds](https://jenkins.esss.dk/sasview/view/Master-Builds) from our Jenkins Server
-- Project Wiki](http://trac.sasview.org/wiki/) - a source for project information, Trac tickets, and HowTo documents
-- [Tickets by Milestone](http://trac.sasview.org/report/3/)
+- [Project Wiki](http://trac.sasview.org/wiki/) - a source for project information and HowTo documents
 - [Full SasView Sphinx Documentation](/docs) for the latest build
 - [Class Documentation Index](/docs/dev/dev.html) for the latest build
 
-**Old/historical repositories:**
+**Old/historical information:**
 - [Old Sourceforge repository](http://sourceforge.net/p/sasview/code/) - Closed to commits February 2015
     *   [Old SansView source code repository](http://sansviewproject.svn.sourceforge.net/viewvc/sansviewproject/)
     *   [Old DANSE repositories](http://danse.us/admin/repolist)
@@ -55,12 +57,12 @@ For developer questions please contact the developers at: [developers@sasview.or
 - The new [SAS Portal](http://www.smallangle.org) aims to be an access point for all information related to SAS and should be a great resource for any SAS question.
 - Some of the same great Team developing SasView are also engaged in a new project called [CCP-SAS](http://www.ccpsas.org) for atomistic structure determination from solution small-angle scattering. Check it out!
 - The [canSAS group](http://www.cansas.org) develops standards and data formats for SAS.
-- The [Scattering-Central](https://github.com/scattering-central) repository of legacy SAS software
+- The [Scattering-Central](https://github.com/scattering-central) repository of (mostly) legacy SAS software
 
   
   
-### Acknowledgements
+### Acknowledging SasView
 
-If you found this sofware useful to your work please dont forget to acknowledge its use in your publications as suggested below and reference this website: [www.sasview.org](http://www.sasview.org). Please also consider letting us know by sending us the reference to your work. This will help us to ensure the long term support and development of the software.
+If you found this sofware useful to your work please dont forget to acknowledge its use in your publications as suggested below and reference this website: [www.sasview.org](http://www.sasview.org). Please also consider letting us know by sending us the reference to your work. We will add it to our list of [publications](/publications). This will help us to ensure the long term support and development of the software.
 
 > _This work benefited from the use of the SasView application, originally developed under NSF award DMR-0520547. SasView also contains code developed with funding from the European Union's Horizon 2020 research and innovation programme under the SINE2020 project, grant agreement No 654000._
