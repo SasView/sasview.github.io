@@ -4,7 +4,7 @@ title: Links & Downloads
 ---
 
 ### For Users
-*   [Supported platforms](/faq/#what-platforms-does-sasview-run-on)
+- [Supported platforms](/faq/#what-platforms-does-sasview-run-on)
 
 **Release versions:**
 
@@ -22,29 +22,28 @@ _(Mac Users: Please ensure you have the [Xcode](https://en.wikipedia.org/wiki/Xc
 **Plug-in Model Marketplace:**
 
 Looking for new models, or wish to contribute a model? Visit the Marketplace. It's free!
-*   [http://marketplace.sasview.org/](http://marketplace.sasview.org/)
+- [http://marketplace.sasview.org/](http://marketplace.sasview.org/)
 
 **Getting Help:**
 
-If you are having problems, first check our [Frequently Asked Questions](/faq)
-
-Otherwise to report bugs, or for help using SasView, please contact us at: [help@sasview.org](mailto:help@sasview.org)
-
-Or you can also try asking other SasView Users! Email [users@sasview.org](mailto:users@sasview.org) or visit the [Users Forum Archives](http://sourceforge.net/mailarchive/forum.php?forum_name=sasview-users)
+If you are having problems,
+- First check our [Frequently Asked Questions](/faq)
+- Otherwise to report bugs, or for help using SasView, please contact us at: [help@sasview.org](mailto:help@sasview.org)
+- Or you can also try asking other SasView Users! Email [users@sasview.org](mailto:users@sasview.org) or visit the [Users Forum Archives](http://sourceforge.net/mailarchive/forum.php?forum_name=sasview-users)
 
   
 
 ### For Developers
 **Current information:**
-*   [Source code repository](https://github.com/SasView/sasview) on Github
-*   [Official SasView builds](https://jenkins.esss.dk/sasview/view/Master-Builds) from our Jenkins Server
-*   [Project Wiki](http://trac.sasview.org/wiki/) - a source for project information, Trac tickets, and HowTo documents
-*   [Tickets by Milestone](http://trac.sasview.org/report/3/)
-*   [Full SasView Sphinx Documentation](/docs) for the latest build
-*   [Class Documentation Index](/docs/dev/dev.html) for the latest build
+- [Source code repository](https://github.com/SasView/sasview) on Github
+- [Official SasView builds](https://jenkins.esss.dk/sasview/view/Master-Builds) from our Jenkins Server
+- Project Wiki](http://trac.sasview.org/wiki/) - a source for project information, Trac tickets, and HowTo documents
+- [Tickets by Milestone](http://trac.sasview.org/report/3/)
+- [Full SasView Sphinx Documentation](/docs) for the latest build
+- [Class Documentation Index](/docs/dev/dev.html) for the latest build
 
 **Old/historical repositories:**
-*   [Old Sourceforge repository](http://sourceforge.net/p/sasview/code/) - Closed to commits February 2015
+- [Old Sourceforge repository](http://sourceforge.net/p/sasview/code/) - Closed to commits February 2015
     *   [Old SansView source code repository](http://sansviewproject.svn.sourceforge.net/viewvc/sansviewproject/)
     *   [Old DANSE repositories](http://danse.us/admin/repolist)
 
@@ -53,10 +52,10 @@ For developer questions please contact the developers at: [developers@sasview.or
   
 
 ### Other Resources
-*   The new [SAS Portal](http://www.smallangle.org) aims to be an access point for all information related to SAS and should be a great resource for any SAS question.
-*   Some of the same great Team developing SasView are also engaged in a new project called [CCP-SAS](http://www.ccpsas.org) for atomistic structure determination from solution small-angle scattering. Check it out!
-*   The [canSAS group](http://www.cansas.org) develops standards and data formats for SAS.
-*   The [Scattering-Central](https://github.com/scattering-central) repository of legacy SAS software
+- The new [SAS Portal](http://www.smallangle.org) aims to be an access point for all information related to SAS and should be a great resource for any SAS question.
+- Some of the same great Team developing SasView are also engaged in a new project called [CCP-SAS](http://www.ccpsas.org) for atomistic structure determination from solution small-angle scattering. Check it out!
+- The [canSAS group](http://www.cansas.org) develops standards and data formats for SAS.
+- The [Scattering-Central](https://github.com/scattering-central) repository of legacy SAS software
 
   
   
