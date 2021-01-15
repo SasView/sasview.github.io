@@ -5,15 +5,14 @@ title: Help
 
 ### How to get help
 
-Much is documented in the help documentation. In particular, descriptions of each model, the equations used and appropriate references. This should always be the first place to go with questions. Also note that the bottom information bar on SasView often has useful information. Other available sources are
+Much is documented in the help documentation. In particular, descriptions of each model, the equations used and appropriate references. This should always be the first place to go with questions. Also note that the bottom information bar on SasView often has useful information. Other places to look are:
 
-*   [Links to our tutorials](/download/#tutorials) (in PDF format)
-*   [The full user documentation](/docs/user/user.html) including model documentation. Also available as a [PDF download](/downloads/SasViewDocumentation_4.2.2.pdf)
-*   Sorry the users forum Archives are not currently available
+*   [Links to our tutorials](/documentation/#tutorials) (in PDF format)
+*   [The full user documentation](/docs/user/user.html) including model documentation. Also available as a [PDF download](/downloads/SasViewDocumentation_4.2.2.pdf) for version 4.2.2
 *   You may contact us at: [help@sasview.org](mailto:help@sasview.org) to report bugs (in which case please also attach a SasView log file, see below) or for help using the software
 *   Or try the users forum at: [users@sasview.org](mailto:users@sasview.org)
 *   Check our [release notes](http://www.sasview.org/docs/user/RELEASE.html) for Known Issues
-*   Visit our [tickets list](http://trac.sasview.org/report/3/) To view reported bugs, things being worked on or possible future ehancements
+*   Visit our [issues list](https://github.com/SasView/sasview/issues?q=is%3Aissue) to view reported bugs, things being worked on or possible future ehancements
 *   For the adventurous, many new features and bug fixes are available in the [latest builds](https://jenkins.esss.dk/sasview/) & may have what you are looking for
 
 ### Where to find the SasView log file
@@ -46,8 +45,7 @@ Whenever you run SasView it silently creates/appends debugging information to a 
 
 ### Other Resources
 
-*   The new [SAS Portal](http://www.smallangle.org) aims to be an access point for all information related to SAS and should be a great resource for any SAS question.
-*   The [canSAS group](http://www.cansas.org)
+Check out some of the links on our [Links & Downloads](/download/) page
 
 ### Licence
 
@@ -57,6 +55,8 @@ You may use and redistribute SasView for free, including for proprietary purpose
 
 ### Acknowledgements
 
-If you found this sofware useful to your work please dont forget to acknowledge its use in your publications as suggested below and reference this website: [www.sasview.org](http://www.sasview.org). Please also consider letting us know by sending us the reference to your work. This will help us to ensure the long term support and development of the software.
+If you found this sofware useful to your work please dont forget to acknowledge its use in your publications as suggested below and reference this 
+website: [www.sasview.org](http://www.sasview.org). Please also consider letting us know by sending us the reference to your work. We will add it 
+to our list of [publications](/publications). This will help us to ensure the long term support and development of the software.
 
-> _This work benefited from the use of the SasView application, originally developed under NSF award DMR-0520547. SasView contains code developed with funding from the European Union's Horizon 2020 research and innovation programme under the SINE2020 project, grant agreement No 654000._
+> _This work benefited from the use of the SasView application, originally developed under NSF award DMR-0520547. SasView also contains code developed with funding from the European Union's Horizon 2020 research and innovation programme under the SINE2020 project, grant agreement No 654000._
