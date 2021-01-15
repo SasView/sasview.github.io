@@ -8,6 +8,8 @@ subtitle: Here are the answers to some common questions about SasView
 
 [What platforms does SasView run on?](#what-platforms-does-sasview-run-on)
 
+[Is there a SasView Manual?](#is-there-a-sasview-manual)
+
 [Do I need to install Python/C++ or any compilers before I install SasView?](#do-i-need-to-install-pythonc-or-any-compilers-before-i-install-sasview)
 
 [What do xcrun errors mean?](#what-do-xcrun-errors-mean)
@@ -95,6 +97,11 @@ subtitle: Here are the answers to some common questions about SasView
     *   SasView is being built under Ubuntu on the development servers but is mostly aspirational at present due to limited developer resources. In fact the eggs produced do not currently appear to be usable. We hope to eventually be able to distribute on Linux and welcome anyone interested in helping with that project to join us.
     *   In the meantime you are welcome to try building SasView from source available on the release pages: [https://github.com/SasView/sasview/releases](https://github.com/SasView/sasview/releases) and executing 'python run.py'. Please note, you will also need to download our 'sasmodels' repository from [https://github.com/SasView/sasmodels](https://github.com/SasView/sasmodels) before you try this. Some people have reported success with this approach.
     *   There is a third-party project developing SasView on [Debian](http://trac.sasview.org/wiki/DevNotes/Projects/Debian)
+
+### Is there a SasView Manual?
+
+*   If you really want to chop down a tree then you can print a [PDF download](/downloads/SasViewDocumentation_4.2.2.pdf) of the full documentation package for version 4.2.2.
+*   Otherwise we would suggest you just visit our [online documentation](/documentation)!
 
 ### Do I need to install Python/C++ or any compilers before I install SasView?
 
