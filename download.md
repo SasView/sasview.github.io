@@ -40,7 +40,7 @@ If you are having problems,
 **Current information:**
 - [Source code repository](https://github.com/SasView/sasview) on Github
 - [Official SasView builds](https://jenkins.esss.dk/sasview/view/Master-Builds) from our Jenkins Server
-- [Project Wiki](http://trac.sasview.org/wiki/) - a source for project information and HowTo documents
+- [Project Wiki](http://wiki.sasview.org/) - a source for project information and HowTo documents
 - [Full SasView Sphinx Documentation](/docs) for the latest build
 - [Class Documentation Index](/docs/dev/dev.html) for the latest build
 
@@ -48,6 +48,7 @@ If you are having problems,
 - [Old Sourceforge repository](http://sourceforge.net/p/sasview/code/) - Closed to commits February 2015
     *   [Old SansView source code repository](http://sansviewproject.svn.sourceforge.net/viewvc/sansviewproject/)
     *   [Old DANSE repositories](http://danse.us/admin/repolist)
+- [Old Project Wiki](http://trac.sasview.org/wiki/)
 
 For developer questions please contact the developers at: [developers@sasview.org](mailto:developers@sasview.org) or visit the [archives](https://sourceforge.net/p/sasview/mailman/sasview-users/) (note: a developer login is required to access archives)
 
