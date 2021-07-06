@@ -39,7 +39,7 @@ If you are having problems,
 ### For Developers
 **Current information:**
 - [Source code repository](https://github.com/SasView/sasview) on Github
-- [Official SasView builds](https://jenkins.esss.dk/sasview/view/Master-Builds) from our Jenkins Server
+- [Official SasView builds](https://jenkins.esss.dk/sasview-beta) from our Jenkins Server
 - [Project Wiki](http://wiki.sasview.org/) - a source for project information and HowTo documents
 - [Full SasView Sphinx Documentation](/docs) for the latest build
 - [Class Documentation Index](/docs/dev/dev.html) for the latest build
