@@ -10,7 +10,7 @@ position will be part of a new Research Software Engineering Team based at
 ISIS.
 
 Full details can be found at:
-https://www.careersportal.co.uk/UKRI-careers/jobs/research-software-engineer-scientist-1158 
+[https://www.careersportal.co.uk/UKRI-careers/jobs/research-software-engineer-scientist-1158](https://www.careersportal.co.uk/UKRI-careers/jobs/research-software-engineer-scientist-1158)
 
 Interviews are being held on a rolling basis up to the closing date of 
 October 31, 2021.
