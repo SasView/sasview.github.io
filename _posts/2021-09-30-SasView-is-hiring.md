@@ -1,3 +1,4 @@
+layout: post
 title: SasView is hiring!
 tags: [vacancy]
 ---
