@@ -136,33 +136,46 @@ subtitle: Here are the answers to some common questions about SasView
 
 ### What format should my data be in?
 
+*   SasView recognizes 1D SAS data either arranged in separated columns in ASCII ('text') files, or 1D/2D SAS data in binary arrays in HDF5 files, if the files have the following extensions (which are not case-sensitive):
+    *  .ABS
+    *  .ASC
+    *  .COR (in CanSAS XML v1.0 and v1.1 formats)
+    *  .CSV
+    *  .DAT
+    *  .PDH (the Anton Paar SAXSess format)
+    *  .TXT
+    *  .XML (in CanSAS format v1.0 and 1.1)
+    *  .H5, .NXS, .HDF, or .HDF5 (in NXcanSAS format)
+	
+*   SasView also recognizes 1D SESANS data arranged in separated columns in ASCII files with the following extensions (which are not case-sensitive):
+    *  .SES (in ISIS/RID format)
+	*  .SESANS (in ISIS/RID format)
+	
+*   And the Generic Scattering Calculator tool in SasView recognises ASCII coordinate data files with the following extensions (which are not case-sensitive):
+    *  .PDB (Protein Data Bank format)
+    *  .OMF (OOMMF micromagnetic simulation format)
+    *  .SLD (Spin-Lattice Dynamics simulation format)
+	
+*   Since SasView 4.1, the File Converter tool in SasView will convert data in the following legacy formats to the CanSAS .XML (for 1D data) or NXcanSAS .H5 (for 2D data) formats:
+    *  BSL/OTOKO
+    *  FIT2D and some other 'by analogy' SAXS-oriented software
+	*  COLETTE (or 'RKH') 2D
+	*  The first two of these are notable for containing the Q and I(Q) data in separate files.
+	
 #### 1D data (I(Q) vs Q)
 
-*   Files with 2 to 4 _columns_ of numbers in the following order: Q, I(Q), (dI(Q), dQ(Q)), where dQ(Q) is the instrumental resolution in Q and assumed to have originated from pinhole geometry. Numbers can be separated by spaces or commas.
-*   SasView recognises the following file extensions:
-    *   .TXT
-    *   .ASC
-    *   .DAT
-    *   .XML (in [canSAS format v1.0 and 1.1)](http://www.cansas.org/formats/canSAS1d/1.1/doc/) Also available as a [PDF document](http://www.cansas.org/trac/export/265/1dwg/tags/v1.0/doc/cansas-1d-1_0-manual.pdf
-        )
-    *   .h5 (in [NXcanSAS format](http://download.nexusformat.org/doc/html/classes/contributed_definitions/NXcanSAS.html))
-*   If using CSV output from, for example, a spreadsheet, ensure that it is not using commas as delimiters for thousands.
-*   For a description of the NIST 1D format click [here](http://danse.chem.utk.edu/trac/wiki/NCNROutput1D_IQ).
-*   For a description of the ISIS 1D format click [here](http://www.isis.stfc.ac.uk/instruments/loq/software/colette-ascii-file-format-descriptions9808.pdf).
-*   _NB: SasView does not at present load data where the Q and I(Q) data are in separate files. But this is coming in version 4.1!_
+*   The ASCII ('text') files are expected to have 2, 3, or 4 columns of values, separated by spaces or commas, in the order Q, I(Q), ( dI(Q), dQ(Q) ), where dI(Q) is the uncertainty on the intensity value, and dQ(Q) is the instrumental resolution in Q, assumed to have arisen from pinhole geometry. Slit-smeared data can also be handled but is more involved. See the [Data Formats](https://www.sasview.org/docs/user/qtgui/MainWindow/data_formats_help.html) help for more information.
 
 #### 2D data (I(Qx,Qy) vs Qx & Qy)
     
-*   Files in the NIST 2D format with the extension .ASC or .DAT
-    *   Most of the header lines can be removed except the last line, and only the first three columns (Qx, Qy, and I(Qx,Qy)) are actually required.
-    *   For a description of the NIST 2D format click [here](http://danse.chem.utk.edu/trac/wiki/NCNROutput1D_2DQxQy).
-*   Files in the [NXcanSAS format](https://manual.nexusformat.org/classes/applications/NXcanSAS.html?highlight=nxcansas) with the extension .h5
+*   SasView will read ASCII ('text') files in the NIST 2D format (with the extensions .ASC or .DAT) or the NXcanSAS format.
+*   Most of the header lines in the NIST 2D format can be removed _except the last line_, and only the first three columns (i.e. Qx, Qy, and I(Qx,Qy)) are actually required.
 
 #### SESANS data (P(z) vs z)
 
-*   SasView currently recognises the data format used on the LARMOR instrument at the ISIS Pulsed Neutron & Muon Source and the SESANS at the RID, Technical University Delft
-whilst discussions take place under the auspices of CanSAS on extensions to the NXcanSAS format (see 2D data above).
-*   The file format is:
+*   SasView currently recognises the data format used on the LARMOR instrument at the ISIS Pulsed Neutron & Muon Source and the SESANS at the RID, Technical University Delft whilst discussions take place under the auspices of CanSAS on extensions to the NXcanSAS format (see 2D data above).
+*   The file format starts with a list of name-value pairs which detail the general experimental parameters necessary for fitting and analyzing the data. This list should contain all the information necessary for the file to be 'portable' between users.
+*   Following the header are up to 8 space-delimited columns of experimental variables of which the first 4 columns are required. For example:
 
 ```
   FileFormatVersion       1.0
@@ -189,8 +202,27 @@ whilst discussions take place under the auspices of CanSAS on extensions to the 
   etc
 ```
 
-*   SasView expects the following file extension for SESANS data:
-    *   .SES
+#### Further Information
+
+[ASCII](https://en.wikipedia.org/wiki/ASCII)
+
+[HDF](https://en.wikipedia.org/wiki/Hierarchical_Data_Format)
+
+[NeXuS](https://en.wikipedia.org/wiki/Nexus_(data_format))
+
+[NeXus format](https://www.nexusformat.org/)
+
+[CanSAS SASXML format](http://www.cansas.org/formats/canSAS1d/1.1/doc/) Also available as a [PDF document](http://www.cansas.org/trac/export/265/1dwg/tags/v1.0/doc/cansas-1d-1_0-manual.pdf)
+
+[NXcanSAS format](https://manual.nexusformat.org/classes/applications/NXcanSAS.html)
+
+[COLETTE (or 'RKH') 1D/2D formats](https://www.isis.stfc.ac.uk/Pages/colette-ascii-file-format-descriptions.pdf)
+
+[NIST 1D format](http://danse.chem.utk.edu/trac/wiki/NCNROutput1D_IQ)
+
+[NIST 2D format](http://danse.chem.utk.edu/trac/wiki/NCNROutput1D_2DQxQy)
+
+[BSL/OTOKO format](http://www.diamond.ac.uk/Beamlines/Soft-Condensed-Matter/small-angle/SAXS-Software/CCP13/BSL.html)
 
 ### What units should my data be in?
 
