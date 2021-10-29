@@ -96,7 +96,7 @@ subtitle: Here are the answers to some common questions about SasView
     *   We do not currently support a Linux distribution.
     *   SasView is being built under Ubuntu on the development servers but is mostly aspirational at present due to limited developer resources. In fact the eggs produced do not currently appear to be usable. We hope to eventually be able to distribute on Linux and welcome anyone interested in helping with that project to join us.
     *   In the meantime you are welcome to try building SasView from source available on the release pages: [https://github.com/SasView/sasview/releases](https://github.com/SasView/sasview/releases) and executing 'python run.py'. Please note, you will also need to download our 'sasmodels' repository from [https://github.com/SasView/sasmodels](https://github.com/SasView/sasmodels) before you try this. Some people have reported success with this approach.
-    *   There is a third-party project developing SasView on [Debian](http://trac.sasview.org/wiki/DevNotes/Projects/Debian)
+    *   There is a third-party project developing SasView on [Debian](https://github.com/SasView/sasview/wiki/DevNotes_Projects_Debian)
 
 ### Is there a SasView Manual?
 
