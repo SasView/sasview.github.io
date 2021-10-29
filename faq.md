@@ -216,11 +216,9 @@ subtitle: Here are the answers to some common questions about SasView
 
 [NXcanSAS format](https://manual.nexusformat.org/classes/applications/NXcanSAS.html)
 
+[NIST 1D/2D formats](https://github.com/sansigormacros/ncnrsansigormacros/wiki)
+
 [COLETTE (or 'RKH') 1D/2D formats](https://www.isis.stfc.ac.uk/Pages/colette-ascii-file-format-descriptions.pdf)
-
-[NIST 1D format](http://danse.chem.utk.edu/trac/wiki/NCNROutput1D_IQ)
-
-[NIST 2D format](http://danse.chem.utk.edu/trac/wiki/NCNROutput1D_2DQxQy)
 
 [BSL/OTOKO format](http://www.diamond.ac.uk/Beamlines/Soft-Condensed-Matter/small-angle/SAXS-Software/CCP13/BSL.html)
 
