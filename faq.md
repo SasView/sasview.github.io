@@ -78,9 +78,9 @@ subtitle: Here are the answers to some common questions about SasView
 
 ### What is SasView?
 
-*   SasView is software for the analysis of Small-Angle Scattering (SAS) data.
+*   SasView is software for the analysis of Small-Angle Scattering (SAS) data, including Spin-Echo SANS (SESANS) data.
 *   It fits analytic functions describing different types of material microstructure to experimental data in order to determine the shape, size and degree of ordering.
-*   SasView also includes tools for calculating scattering length densities, slit sizes, resolution, fringe thicknesses/d-spacings, the (Porod) invariant ('total scattering'), and distance distribution functions.
+*   SasView also includes tools for calculating scattering length densities, slit sizes, resolution, fringe thicknesses/d-spacings, the (Porod) invariant ('total scattering'), distance distribution functions, and correlation functions.
 
 ### What platforms does SasView run on?
 
@@ -91,7 +91,8 @@ subtitle: Here are the answers to some common questions about SasView
 *   Mac OS
     *   SasView 3.x and earlier: 32-bit OSX (10.6, Snowleopard).
     *   SasView 4.x and later: 64-bit OSX (10.9, Mavericks or later).
-    *   SasView 5.0.3 and later: 64-bit OSX (10.13, High Sierra or later).
+    *   SasView 5.0.3: 64-bit OSX (10.13, High Sierra or later).
+	*   SasView 5.0.4 and later: 64-bit OSX (10.15, Catalina or later; but will install on 10.13 by clearing the extended attributes on the package: xattr -cr /Applications/SasView5.app)
 *   Linux
     *   We do not currently support a Linux distribution.
     *   SasView is being built under Ubuntu on the development servers but is mostly aspirational at present due to limited developer resources. In fact the eggs produced do not currently appear to be usable. We hope to eventually be able to distribute on Linux and welcome anyone interested in helping with that project to join us.
@@ -101,7 +102,7 @@ subtitle: Here are the answers to some common questions about SasView
 ### Is there a SasView Manual?
 
 *   If you really want to chop down a tree then you can print a [PDF download](/downloads/SasViewDocumentation_4.2.2.pdf) of the full documentation package for version 4.2.2.
-*   Otherwise we would suggest you just visit our [online documentation](/documentation)!
+*   Otherwise we would recommend that you just visit our extensive [online documentation](/documentation)! This is the same documentation shipped with each release of SasView.
 
 ### Do I need to install Python/C++ or any compilers before I install SasView?
 
@@ -116,7 +117,7 @@ subtitle: Here are the answers to some common questions about SasView
 ### Can SasView make use of my GPU(s)?
 
 *   GPU support is only available in SasView 4.x and later.
-*   If a GPU is available then SasView will attempt to use it _by default_ if a suitable driver is also installed. See the SasView Help documentation for further information.
+*   Click on Fitting > GPU Options. If a potential GPU is present it will be displayed. Click on the Test button to have SasView check the suitability of the device and its drivers. For more information, see the [SasView Help documentation](https://www.sasview.org/docs/user/qtgui/Perspectives/Fitting/gpu_setup.html).
 
 ### Can I stop SasView trying to use my GPU(s)?
 
@@ -132,29 +133,35 @@ subtitle: Here are the answers to some common questions about SasView
 
 ### Can SasView be used in a commercial environment?
 
-*   Yes, provided you accept the terms of our [licence](https://github.com/SasView/sasview/blob/master/LICENSE.TXT). There is no licence fee.
+*   Yes, provided you accept the terms of our [license](https://github.com/SasView/sasview/blob/master/LICENSE.TXT). There is no license fee.
 
 ### What format should my data be in?
 
-*   SasView recognizes 1D SAS data either arranged in separated columns in ASCII ('text') files, or 1D/2D SAS data in binary arrays in HDF5 files, if the files have the following extensions (which are not case-sensitive):
-    *  .ABS
-    *  .ASC
-    *  .COR (in CanSAS XML v1.0 and v1.1 formats)
-    *  .CSV
-    *  .DAT
-    *  .PDH (the Anton Paar SAXSess format)
-    *  .TXT
-    *  .XML (in CanSAS format v1.0 and 1.1)
-    *  .H5, .NXS, .HDF, or .HDF5 (in NXcanSAS format)
-	
+*   SasView recognizes 1D data supplied in a number of specific formats, as identified by the file extensions below (which are not case-sensitive). It also incorporates a 'generic loader' which is called if all else fails. The generic loader will attempt to read data files of any extension provided the file is in ASCII ('text') format (i.e. not binary). So this includes, for example, comma-separated variable (CSV) files from a spreadsheet.
+    *  .ABS (NIST format)
+    *  .ASC (NIST format)
+    *  .COR (CanSAS XML v1.0 and v1.1 formats only)
+    *  .DAT (NIST format)
+    *  .H5, .NXS, .HDF, or .HDF5 (in NXcanSAS v1.0 and v1.1 formats only)
+    *  .PDH (Anton Paar SAXSess format)
+    *  .XML (CanSAS XML v1.0 and 1.1 formats only)
+
+*   SasView recognizes 2D data only when supplied in ASCII ('text') files or HDF5 files in the NeXus NXcanSAS format with the extensions below (which are not case-sensitive):
+    *  .ASC (NIST format)
+    *  .DAT (NIST format)
+    *  .H5, .NXS, .HDF, or .HDF5 (in NXcanSAS v1.0 and v1.1 formats only)
+
+*   2D image data can be translated into 2D 'pseudo-data' using the [Image Viewer Tool](https://www.sasview.org/docs/user/qtgui/Calculators/image_viewer_help.html).
+
 *   SasView also recognizes 1D SESANS data arranged in separated columns in ASCII files with the following extensions (which are not case-sensitive):
     *  .SES (in ISIS/RID format)
 	*  .SESANS (in ISIS/RID format)
 	
-*   And the Generic Scattering Calculator tool in SasView recognises ASCII coordinate data files with the following extensions (which are not case-sensitive):
+*   And the Generic Scattering Calculator tool in SasView recognises coordinate in ASCII data files with the following extensions (which are not case-sensitive):
     *  .PDB (Protein Data Bank format)
     *  .OMF (OOMMF micromagnetic simulation format)
     *  .SLD (Spin-Lattice Dynamics simulation format)
+	*  .VTK (Visualisation ToolKit format - from SasView v5.0.5)
 	
 *   Since SasView 4.1, the File Converter tool in SasView will convert data in the following legacy formats to the CanSAS .XML (for 1D data) or NXcanSAS .H5 (for 2D data) formats:
     *  BSL/OTOKO
@@ -164,11 +171,10 @@ subtitle: Here are the answers to some common questions about SasView
 	
 #### 1D data (I(Q) vs Q)
 
-*   The ASCII ('text') files are expected to have 2, 3, or 4 columns of values, separated by spaces or commas, in the order Q, I(Q), ( dI(Q), dQ(Q) ), where dI(Q) is the uncertainty on the intensity value, and dQ(Q) is the instrumental resolution in Q, assumed to have arisen from pinhole geometry. Slit-smeared data can also be handled but is more involved. See the [Data Formats](https://www.sasview.org/docs/user/qtgui/MainWindow/data_formats_help.html) help for more information.
+*   The ASCII ('text') files are expected to have 2, 3, or 4 columns of values, separated by whitespaces or commas or semicolons, in the order Q, I(Q), ( dI(Q), dQ(Q) ), where dI(Q) is the uncertainty on the intensity value, and dQ(Q) is the instrumental resolution in Q, assumed to have arisen from pinhole geometry. Slit-smeared data can also be handled but is more involved. See the [Data Formats](https://www.sasview.org/docs/user/qtgui/MainWindow/data_formats_help.html) help for more information.
 
 #### 2D data (I(Qx,Qy) vs Qx & Qy)
     
-*   SasView will read ASCII ('text') files in the NIST 2D format (with the extensions .ASC or .DAT) or the NXcanSAS format.
 *   Most of the header lines in the NIST 2D format can be removed _except the last line_, and only the first three columns (i.e. Qx, Qy, and I(Qx,Qy)) are actually required.
 
 #### SESANS data (P(z) vs z)
@@ -237,7 +243,7 @@ subtitle: Here are the answers to some common questions about SasView
 *   Any data files that used to load in SasView 4.x should load in SasView 5.x, but there are a small number of exceptions:
 
     *  The NeXus data loader was removed in version 5.0 as it was superseded by the integration of a loader for [NXcanSAS format](https://manual.nexusformat.org/classes/applications/NXcanSAS.html?highlight=nxcansas) files with the extension .h5.
-    *  SasView 4.x was built with Python 2, but SasView 5.x is built with Python 3. The [Python Software Foundation](https://www.python.org/psf-landing/) decided to fundemantally change the way that character strings are represented internally in Python 3 and, thereby, the assumptions that Python 3 makes about the encoding (the byte-level representation) of characters. If the character encoding of your data file does not match those assumptions it is possible that SasView will throw an error. Depending on the version of SasView you are running you may see an error such as the following in the Message Log, Console or Log File:
+    *  SasView 4.x was built with Python 2, but SasView 5.x is built with Python 3. The [Python Software Foundation](https://www.python.org/psf-landing/) decided to fundamentally change the way that character strings are represented internally in Python 3 and, thereby, the assumptions that Python 3 makes about the encoding (the byte-level representation) of characters. If the character encoding of your data file does not match those assumptions it is possible that SasView will throw an error. Depending on the version of SasView you are running you may see an error such as the following in the Message Log, Console or Log File:
     ```
       14:26:27 - ERROR: 'utf-8' codec can't decode byte 0xc5 in position 2: invalid continuation byte
     ```
@@ -254,7 +260,7 @@ subtitle: Here are the answers to some common questions about SasView
 
 *   If your I(Q) data is in absolute units (/cm) and on an absolute scale (ie, the I(Q) values have been calibrated against a standard) the scale parameter will be equal to the volume fraction. In all other instances the scale factor will be a number proportional to the volume fraction. Some models have both volume fraction and scale parameters. In these models the scale is just a multiplying factor (equal to 1 if the data is in absolute units on an absolute scale).
   
-*   We are aware that some of the model descriptions in the 'help file' are unclear about the meaning of _scale_ and are working to improve the documentation.
+*   We are aware that some of the model descriptions in the Help documentation are unclear about the meaning of _scale_ and are working to improve the documentation.
 
 ### How can I put my data on an absolute intensity scale?
 
@@ -281,7 +287,7 @@ subtitle: Here are the answers to some common questions about SasView
 ### How do I load an image file as data?
 
 *   Use 'Tool' > 'Image Viewer' and **not** 'File' > 'Load Data File(s)' or the 'Load Data' button on the Data Explorer.
-*   SasView will load .BMP, .GIF, .JPG, .PNG and .TIF formats.
+*   SasView will load images in .BMP, .GIF, .JPG, .PNG and .TIF formats. The file extension is not case-sensitive.
 
 ### Where do the model parameter uncertainties come from?
 
@@ -289,9 +295,9 @@ subtitle: Here are the answers to some common questions about SasView
 
 ### Why do I get different parameter uncertainties using the Simple and Complex fitting engines?
 
-*   _This applies to SasView 3.0.0 and earlier._
+*   _This only applies to SasView 3.0.0 and earlier._
 *   To a first approximation, the two fitting engines should return similar, but not identical, parameter uncertainties. The Simple engine uses the Python SciPy library which computes the Jacobian using the _forward difference formula_ and evaluates the covariance matrix by QR decomposition. The Complex engine computes the Jacobian using the _centre point formula_ and evaluates the covariance matrix by singular value decomposition (SV). Both methods will also be affected by the accuracy of the numerical differentiation procedures and the precision of the floating point computations.
-*   (July 2014) We have discovered an inconsistency in the way that the Simple and Complex fitting engines define the reduced chi-square in SasView 3.0.0 and earlier. The consequence of this is that the Complex engine is not performing as many iterations as it should and is thus returning parameter uncertainties that are perhaps a factor 5 to 10 larger than expected. A solution is under consideration.
+*   (July 2014) We have discovered an inconsistency in the way that the Simple and Complex fitting engines define the reduced chi-square in SasView 3.0.0 and earlier. The consequence of this is that the Complex engine is not performing as many iterations as it should and is thus returning parameter uncertainties that are perhaps a factor 5 to 10 larger than expected.
 
 ### Why do I sometimes get different 'goodness-of-fit' values when pressing Enter or Compute compared to pressing Fit?
 
@@ -300,7 +306,7 @@ subtitle: Here are the answers to some common questions about SasView
 ### Why have I got several instances of the same model category (eg, 'Shape Independent' and 'Shape-Independent')?
 
 *   This is most likely because you have previously installed earlier versions of SasView and the category file needs rebuilding.
-    *   If open, close SasView. Then go to your profile folder (eg, on Windows: `C:\Users\user_name`) and open the `.sasview` folder. Delete the file `categories.json`. Run SasView again.
+    *   If open, close SasView. Then go to your profile folder (eg, on Windows: `C:\Users\user_name`) and open the `.sasview` folder. Delete the file `categories.json`. Then run SasView again.
 
 ### Why is SasView not loading the model parameters from some of my existing .fitv (Save Fit) files?
 
@@ -310,6 +316,7 @@ subtitle: Here are the answers to some common questions about SasView
 
 ### Why is Save Analysis (File menu) greyed out after I fit a model?
 
+*   _This only applies to SasView 4.2.2 and earlier._
 *   At present Save Analysis gets greyed out if you click on a graph window after fitting a model. We agree this is not very sensible behaviour and will rectify it in a future bug release. In the meantime, use the 'Save' icon in the graphical toolbar to generate .fitv files.
 
 ### Why doesn't Check for Updates work?
@@ -363,6 +370,9 @@ subtitle: Here are the answers to some common questions about SasView
 *   When you make a Custom/Plugin model, the full set of parameters for calculating S(Q) are made available and you need to have an idea of what the effective radius and effective volume fraction for your chosen particles should be.
 *   All S(Q) functions available in SasView were derived for spherical particles.
 *   Also be aware that if you create a Custom/Plugin model from two other Custom/Plugin models with S(Q) included, for example, something like P1(Q)S1(Q) + P2(Q)S2(Q), SasView will only take account of the 'self' interactions. If you _also_ need to properly account for the 'cross' interactions you will need to program a Custom/Plugin model from first principles.
+*   From release 5.0.3, when a S(Q) function is selected the FitPage allows you to select a _radius_effctive_mode_ and/or a _structure_factor_mode_.
+    *   _radius_effective_mode_ determines whether the interaction radius value in the S(Q) should be the same as the radius in the P(Q) or not.
+	*   _structure_factor_mode_ determines whether the calculation should use the 'beta approximation' for non-sphericity or not.
 
 ### What is the Model Marketplace?
 
