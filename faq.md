@@ -10,17 +10,17 @@ subtitle: Here are the answers to some common questions about SasView
 
 [Is there a SasView Manual?](#is-there-a-sasview-manual)
 
-[Do I need to install Python/C++ or any compilers before I install SasView?](#do-i-need-to-install-pythonc-or-any-compilers-before-i-install-sasview)
+[Do I need to install Python or C or any compilers before I install SasView?](#do-i-need-to-install-python-or-c-or-any-compilers-before-i-install-sasview)
 
 [What do xcrun errors mean?](#what-do-xcrun-errors-mean)
 
-[Can SasView make use of my GPU(s)?](#can-sasview-make-use-of-my-gpus)
+[Can SasView make use of my GPUs?](#can-sasview-make-use-of-my-gpus)
 
-[Can I stop SasView trying to use my GPU(s)?](#can-i-stop-sasview-trying-to-use-my-gpus)
+[Can I stop SasView trying to use my GPUs?](#can-i-stop-sasview-trying-to-use-my-gpus)
 
-[Can I use SasView to analyse SANS/USANS data?](#can-i-use-sasview-to-analyse-sansusans-data)
+[Can I use SasView to analyse SANS or USANS data?](#can-i-use-sasview-to-analyse-sans-or-usans-data)
 
-[Can I use SasView to analyse SAXS/USAXS data?](#can-i-use-sasview-to-analyse-saxsusaxs-data)
+[Can I use SasView to analyse SAXS or USAXS data?](#can-i-use-sasview-to-analyse-saxs-or-usaxs-data)
 
 [Can SasView be used in a commercial environment?](#can-sasview-be-used-in-a-commercial-environment)
 
@@ -58,7 +58,7 @@ subtitle: Here are the answers to some common questions about SasView
 
 [Why is Save Analysis (File menu) greyed out after I fit a model?](#why-is-save-analysis-file-menu-greyed-out-after-i-fit-a-model)
 
-[Why doesn't Check for Updates work?](#why-doesnt-check-for-updates-work)
+[Why does Check for Updates not work?](#why-does-check-for-updates-not-work)
 
 [Why is SasView no longer able to run my existing custom models?](#why-is-sasview-no-longer-able-to-run-my-existing-custom-models)
 
@@ -104,7 +104,7 @@ subtitle: Here are the answers to some common questions about SasView
 *   If you really want to chop down a tree then you can print a [PDF download](/downloads/SasViewDocumentation_4.2.2.pdf) of the full documentation package for version 4.2.2.
 *   Otherwise we would recommend that you just visit our extensive [online documentation](/documentation)! This is the same documentation shipped with each release of SasView.
 
-### Do I need to install Python/C++ or any compilers before I install SasView?
+### Do I need to install Python or C or any compilers before I install SasView?
 
 *   If you intend to use SasView on a Windows computer, then No: Our packaged installer ships with everything you need to run SasView.
 *   If you intend to use SasView on a Mac OS computer, you do not need to install Python but you _do_ need to pre-install the Xcode command line tools as SasView makes use of the C compiler in them. If Xcode is not installed the SasView console or log file may contain messages about 'xcrun: error' or 'missing xcrun at:'.
@@ -114,20 +114,20 @@ subtitle: Here are the answers to some common questions about SasView
 ### What do xcrun errors mean?
 *   You will get these errors if you are trying to use SasView on a Mac and do not have the Xcode command line tools installed. See the preceding answer.
 
-### Can SasView make use of my GPU(s)?
+### Can SasView make use of my GPUs?
 
 *   GPU support is only available in SasView 4.x and later.
 *   Click on Fitting > GPU Options. If a potential GPU is present it will be displayed. Click on the Test button to have SasView check the suitability of the device and its drivers. For more information, see the [SasView Help documentation](https://www.sasview.org/docs/user/qtgui/Perspectives/Fitting/gpu_setup.html).
 
-### Can I stop SasView trying to use my GPU(s)?
+### Can I stop SasView trying to use my GPUs?
 
 *   Yes. Create a system environment variable called SAS\_OPENCL and give it the value 'None'.
 
-### Can I use SasView to analyse SANS/USANS data?
+### Can I use SasView to analyse SANS or USANS data?
 
 *   Yes.
 
-### Can I use SasView to analyse SAXS/USAXS data?
+### Can I use SasView to analyse SAXS or USAXS data?
 
 *   Yes, especially if your intensity data is in absolute units (/cm).
 
@@ -319,7 +319,7 @@ subtitle: Here are the answers to some common questions about SasView
 *   _This only applies to SasView 4.2.2 and earlier._
 *   At present Save Analysis gets greyed out if you click on a graph window after fitting a model. We agree this is not very sensible behaviour and will rectify it in a future bug release. In the meantime, use the 'Save' icon in the graphical toolbar to generate .fitv files.
 
-### Why doesn't Check for Updates work?
+### Why does Check for Updates not work?
 
 *   Check for Updates compares the version (not build) number of your copy of SasView with that in the code repository. If SasView cannot access the remote server the message _'Cannot connect to the application server'_ is displayed in the status bar.
 *   Prior to version 3.1.1., the most common reason for Check for Updates failing was that your internet connection used a proxy server and your operating system had not been fully configured to use that proxy server. It is entirely possible to be able to use a web browser to surf the internet but find that SasView cannot read the current version number from the code repository! We believe this is fixed in 3.1.1. How you remedy this if you have a lower version (and don't want to update) depends on your operating system:
