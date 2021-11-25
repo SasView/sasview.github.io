@@ -181,6 +181,11 @@ subtitle: Here are the answers to some common questions about SasView
 
 *   SasView currently recognises the data format used on the LARMOR instrument at the ISIS Pulsed Neutron & Muon Source and the SESANS at the RID, Technical University Delft whilst discussions take place under the auspices of CanSAS on extensions to the NXcanSAS format (see 2D data above).
 *   The file format starts with a list of name-value pairs which detail the general experimental parameters necessary for fitting and analyzing the data. This list should contain all the information necessary for the file to be 'portable' between users.
+*   Note that the SESANS reader in SasView checks for, and requires, a subset of the name-value pairs. Specifically:
+    * "FileFormatVersion" - The version of the SESANS data format used. The current version is 1.0.
+    * SpinEchoLength_unit - The unit for the spin-echo length. The default is Angstroms.
+    * Wavelength_unit - The wavelength unit. The default is Angstroms^-2 cm^-1.
+    * BEGIN_DATA -  A flag immediately before the data header.
 *   Following the header are up to 8 space-delimited columns of experimental variables of which the first 4 columns are required. For example:
 
 ```
