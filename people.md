@@ -13,7 +13,7 @@ G. Alina, Z. Attala, J. Bakker, R. Bourne, W. Bouwman, I. Breßler, P. Butler, I
 ### Community contributors and external collaborators:
 The SasView collaboration goes well beyond the contributions listed above. In particular we wish to thank the following people from the scattering community and beyond for their time in providing feedback and ideas and being advocates for the collaboration.
 
-A. Anuchitanukul, P. Corona, G. Fragneto, P. Juhas, M. Knudsen, B. Maranville, A. Markvardsen  M. McKerns, T. Narayanan, D. Parsons, R. Pellicelli, T. Perring, L. Porcar, L. Pozzo, M. Rakitin, A. Rennie, T. Holm Rod, J. Taylor, L. Udby, K. Weigandt
+A. Anuchitanukul, P. Corona, G. Fragneto, P. Juhas, M. Knudsen, B. Maranville, A. Markvardsen,  M. McKerns, T. Narayanan, D. Parsons, R. Pellicelli, T. Perring, L. Porcar, L. Pozzo, M. Rakitin, A. Rennie, T. Holm Rod, J. Taylor, L. Udby, K. Weigandt
 
 Last, but by no means least, we thank all those colleagues and SasView users that help further the collaboration by assisting us with beta testing, by reporting bugs and other idiosyncrasies of the program, and by suggesting improvements and new features.
 
