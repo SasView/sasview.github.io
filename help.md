@@ -5,7 +5,7 @@ title: Help
 
 ### How to get help
 
-Much is documented in the help documentation which is available in-program or online (see below). In particular, it contains descriptions of each model, the equations used and appropriate references, along with information on the optimisers, polydispersity functions, orientational aspects, and so on. The documentation should always be the first place to go with questions. The information bar at the bottom of the SasView window sometiumes has useful information, as does the Log Explorer in SasView v5.
+Much is documented in the help documentation which is available in-program or online (see below). In particular, it contains descriptions of each model, the equations used and appropriate references, along with information on the optimisers, polydispersity functions, orientational aspects, and so on. The documentation should always be the first place to go with questions. The information bar at the bottom of the SasView window sometiumes has useful information, as does the Log Explorer in SasView version 5.
 
 Other places to look for help are:
 
