@@ -5,15 +5,26 @@ title: Help
 
 ### How to get help
 
-Much is documented in the help documentation. In particular, descriptions of each model, the equations used and appropriate references. This should always be the first place to go with questions. Also note that the bottom information bar on SasView often has useful information. Other places to look are:
+Much is documented in the help documentation which is available in-program or online (see below). In particular, it contains descriptions of each model, the equations used and appropriate references, along with information on the optimisers, polydispersity functions, orientational aspects, and so on. The documentation should always be the first place to go with questions. The information bar at the bottom of the SasView window sometiumes has useful information, as does the Log Explorer in SasView v5.
 
-*   [Links to our tutorials](/documentation) (in PDF format) and [instructional videos](https://www.youtube.com/channel/UCxvD3ysXJ05l6MgY7YKjEFQ) (on YouTube)
-*   [The full user documentation](/docs/user/user.html) including model documentation. Also available as a [PDF download](/downloads/SasViewDocumentation_4.2.2.pdf) for version 4.2.2
-*   You may contact us at: [help@sasview.org](mailto:help@sasview.org) to report bugs (in which case please also attach a SasView log file, see below) or for help using the software
-*   Or try the [users Forum Archives](http://lists.sasview.org/pipermail/users) or email the forum at [users@sasview.org](mailto:users@sasview.org)
+Other places to look for help are:
+
+*   [The full user documentation](/docs/user/user.html) including model documentation. This is available as a [PDF download](/downloads/SasViewDocumentation_4.2.2.pdf) for version 4.2.2
+*   Contact us at: [help@sasview.org](mailto:help@sasview.org) to report bugs (in which case please also attach a SasView log file, see below) or for help in using the software
+*   Message us on [Slack](https://sasview.slack.com/)
+*   Try the [users Forum Archives](http://lists.sasview.org/pipermail/users) or even email the forum at [users@sasview.org](mailto:users@sasview.org)
 *   Check our [release notes](http://www.sasview.org/docs/user/RELEASE.html) for Known Issues
 *   Visit our [issues list](https://github.com/SasView/sasview/issues?q=is%3Aissue) to view reported bugs, things being worked on or possible future ehancements
-*   For the adventurous, many new features and bug fixes are available in the [latest builds](http://builds.sasview.org) & may have what you are looking for
+*   For the adventurous, many new features and bug fixes are available in the [latest builds](http://builds.sasview.org) and may have what you are looking for
+
+### Learning to use SasView
+
+The help documentation also includes guidance on using the many different features of SasView. But in addition we have:
+
+*   [Working with SasView](https://www.sasview.org/docs/user/working.html) documentation
+*   [Written tutorials](/documentation) (in PDF format)
+*   [Instructional videos](https://www.youtube.com/channel/UCxvD3ysXJ05l6MgY7YKjEFQ) (on YouTube)
+*   Self-paced [online course](https://pan-learning.org/) (in Moodle)
 
 ### Where to find the SasView log file
 
