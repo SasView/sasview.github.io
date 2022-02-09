@@ -50,7 +50,7 @@ If you are having problems,
     <!--*   [Old DANSE repositories](http://danse.us/admin/repolist)-->
 - [Old Project Wiki](http://trac.sasview.org/wiki/)
 
-For developer questions please contact the developers at: [developers@sasview.org](mailto:developers@sasview.org)
+For developer questions please contact the developers at: [developers@sasview.org](mailto:developers@sasview.org) or visit the [archives](http://lists.sasview.org/cgi-bin/mailman/private/developers/) (note: a developer login is required to access archives)
 <!-- or visit the [archives](https://sourceforge.net/p/sasview/mailman/sasview-users/) (note: a developer login is required to access archives)-->
 
   
