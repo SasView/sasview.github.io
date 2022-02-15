@@ -92,20 +92,20 @@ subtitle: Here are the answers to some common questions about SasView
 | Platform | Version | Operating System |
 | --- | --- | --- |
 | Windows | | |
-| | SasView 2.x             | 32-bit only (x86) |
-| | SasView 3.x             | 32-bit (x86) & 64-bit (x64) |
-| | SasView 4.0.x           | 32-bit (x86) & 64-bit (x64) |
-| | SasView 4.1.x           | 32-bit (x86) & 64-bit (x64) |
-| | SasView 4.2.x           | 64-bit (x64) only |
 | | SasView 5.0.x and later | 64-bit only (x64) |
+| | SasView 4.2.x           | 64-bit (x64) only |
+| | SasView 4.1.x           | 32-bit (x86) & 64-bit (x64) |
+| | SasView 4.0.x           | 32-bit (x86) & 64-bit (x64) |
+| | SasView 3.x             | 32-bit (x86) & 64-bit (x64) |
+| | SasView 2.x             | 32-bit only (x86) |
 | Mac OS | | |
-| | SasView 3.x and earlier | 32-bit OSX (10.6, Snowleopard) |
-| | SasView 4.x             | 64-bit OSX (10.9, Mavericks or later) |
-| | SasView 5.0.0           | 64-bit OSX (10.9, Mavericks or later) |
-| | SasView 5.0.1           | 64-bit OSX |
-| | SasView 5.0.2           | 64-bit OSX |
-| | SasView 5.0.3           | 64-bit OSX (10.13, High Sierra or later) |
 | | SasView 5.0.4 and later | 64-bit OSX (10.15, Catalina or later; but will install on 10.13 by clearing the extended attributes on the package: xattr -cr /Applications/SasView5.app)
+| | SasView 5.0.3           | 64-bit OSX (10.13, High Sierra or later) |
+| | SasView 5.0.2           | 64-bit OSX |
+| | SasView 5.0.1           | 64-bit OSX |
+| | SasView 5.0.0           | 64-bit OSX (10.9, Mavericks or later) |
+| | SasView 4.x             | 64-bit OSX (10.9, Mavericks or later) |
+| | SasView 3.x and earlier | 32-bit OSX (10.6, Snowleopard) |
 | Linux | | |
 | | SasView 5.0.0           | 64-bit Ubuntu (14.10 or later) |
 
