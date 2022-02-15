@@ -6,9 +6,9 @@ subtitle: Here are the answers to some common questions about SasView
 
 [What is SasView?](#what-is-sasview)
 
-[What platforms does SasView run on?](#what-platforms-does-sasview-run-on)
-
 [Is there a SasView Manual?](#is-there-a-sasview-manual)
+
+[What platforms does SasView run on?](#what-platforms-does-sasview-run-on)
 
 [Do I need to install Python or C or any compilers before I install SasView?](#do-i-need-to-install-python-or-c-or-any-compilers-before-i-install-sasview)
 
@@ -82,34 +82,46 @@ subtitle: Here are the answers to some common questions about SasView
 *   It fits analytic functions describing different types of material microstructure to experimental data in order to determine the shape, size and degree of ordering.
 *   SasView also includes tools for calculating scattering length densities, slit sizes, resolution, fringe thicknesses/d-spacings, the (Porod) invariant ('total scattering'), distance distribution functions, and correlation functions.
 
-### What platforms does SasView run on?
-
-*   Windows
-    *   SasView 2.x: 32-bit.
-    *   SasView 3.x, 4.0.x and 4.1.x: 32-bit & 64-bit.
-    *   SasView 4.2.x and later: 64-bit.
-*   Mac OS
-    *   SasView 3.x and earlier: 32-bit OSX (10.6, Snowleopard).
-    *   SasView 4.x and later: 64-bit OSX (10.9, Mavericks or later).
-    *   SasView 5.0.3: 64-bit OSX (10.13, High Sierra or later).
-	*   SasView 5.0.4 and later: 64-bit OSX (10.15, Catalina or later; but will install on 10.13 by clearing the extended attributes on the package: xattr -cr /Applications/SasView5.app)
-*   Linux
-    *   We do not currently support a Linux distribution.
-    *   SasView is being built under Ubuntu on the development servers but is mostly aspirational at present due to limited developer resources. In fact the eggs produced do not currently appear to be usable. We hope to eventually be able to distribute on Linux and welcome anyone interested in helping with that project to join us.
-    *   In the meantime you are welcome to try building SasView from source available on the release pages: [https://github.com/SasView/sasview/releases](https://github.com/SasView/sasview/releases) and executing 'python run.py'. Please note, you will also need to download our 'sasmodels' repository from [https://github.com/SasView/sasmodels](https://github.com/SasView/sasmodels) before you try this. Some people have reported success with this approach.
-    *   There is a third-party project developing SasView on [Debian](https://github.com/SasView/sasview/wiki/DevNotes_Projects_Debian)
-
 ### Is there a SasView Manual?
 
 *   If you really want to chop down a tree then you can print a [PDF download](/downloads/SasViewDocumentation_4.2.2.pdf) of the full documentation package for version 4.2.2.
 *   Otherwise we would recommend that you just visit our extensive [online documentation](/documentation)! This is the same documentation shipped with each release of SasView.
+
+### What platforms does SasView run on?
+
+| Platform | Version | Operating System |
+| --- | --- | --- |
+| Windows | | |
+| | SasView 2.x             | 32-bit only (x86) |
+| | SasView 3.x             | 32-bit (x86) & 64-bit (x64) |
+| | SasView 4.0.x           | 32-bit (x86) & 64-bit (x64) |
+| | SasView 4.1.x           | 32-bit (x86) & 64-bit (x64) |
+| | SasView 4.2.x           | 64-bit (x64) only |
+| | SasView 5.0.x and later | 64-bit only (x64) |
+| Mac OS | | |
+| | SasView 3.x and earlier | 32-bit OSX (10.6, Snowleopard) |
+| | SasView 4.x             | 64-bit OSX (10.9, Mavericks or later) |
+| | SasView 5.0.0           | 64-bit OSX (10.9, Mavericks or later) |
+| | SasView 5.0.1           | 64-bit OSX |
+| | SasView 5.0.2           | 64-bit OSX |
+| | SasView 5.0.3           | 64-bit OSX (10.13, High Sierra or later) |
+| | SasView 5.0.4           | 64-bit OSX (10.15, Catalina or later; but will install on 10.13 by clearing the extended attributes on the package: xattr -cr /Applications/SasView5.app)
+| | SasView 5.0.5 and later | 64-bit OSX (10.15, Catalina or later; but will install on 10.13 by clearing the extended attributes on the package: xattr -cr /Applications/SasView5.app)
+| Linux | | |
+| | SasView 5.0.0           | 64-bit Ubuntu (14.10 or later) |
+
+*   We do not currently _support_ a Linux distribution, but:
+    *   SasView is being built under Ubuntu on our development servers, however this is mostly aspirational at present due to limited developer resources. We hope to eventually be able to distribute on Linux and welcome anyone interested in helping with that project to join us.
+    *   In the meantime you are welcome to try building SasView from the source available on the release pages: [https://github.com/SasView/sasview/releases](https://github.com/SasView/sasview/releases) and executing 'python run.py'. Please note, you will also need to download our 'sasmodels' repository from [https://github.com/SasView/sasmodels](https://github.com/SasView/sasmodels) before you try this. Some people have reported success with this approach.
+    *   There is a third-party project developing SasView on [Debian](https://github.com/SasView/sasview/wiki/DevNotes_Projects_Debian)
+    *   The STFC [IDAaaS](https://isis.analysis.stfc.ac.uk/) cloud computing service runs SasView 4.2.2 and the latest SasView 5 on CentOS.
 
 ### Do I need to install Python or C or any compilers before I install SasView?
 
 *   If you intend to use SasView on a Windows computer, then No: Our packaged installer ships with everything you need to run SasView.
 *   If you intend to use SasView on a Mac OS computer, you do not need to install Python but you _do_ need to pre-install the Xcode command line tools as SasView makes use of the C compiler in them. If Xcode is not installed the SasView console or log file may contain messages about 'xcrun: error' or 'missing xcrun at:'.
     *  _You should not need to install the full Xcode package_, just a subset of it; try the command: __xcode-select -install__.
-    *  If this command does not subsequently allow you to use SasView, or, if you require the full Xcode package for other purposes, you can get Xcode from the Apple AppStore. However, be aware that attempting to install the latest version of Xcode may require you to upgrade your version of MacOS. If you do not want to do that you will need to install a version of Xcode that is compatible with your current version of MacOS. [This site](https://xcodereleases.com/) may be useful in this respect.
+    *  If this command does not subsequently allow you to use SasView, or, if you require the full Xcode package for other purposes, you can get Xcode from the Apple AppStore. However, **be aware that attempting to install the latest version of Xcode may require you to upgrade your version of MacOS**. If you do not want to do that you will need to install a version of Xcode that is compatible with your current version of MacOS. [This site](https://xcodereleases.com/) may be useful in this respect.
 
 ### What do xcrun errors mean?
 *   You will get these errors if you are trying to use SasView on a Mac and do not have the Xcode command line tools installed. See the preceding answer.
