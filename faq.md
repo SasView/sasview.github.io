@@ -105,8 +105,7 @@ subtitle: Here are the answers to some common questions about SasView
 | | SasView 5.0.1           | 64-bit OSX |
 | | SasView 5.0.2           | 64-bit OSX |
 | | SasView 5.0.3           | 64-bit OSX (10.13, High Sierra or later) |
-| | SasView 5.0.4           | 64-bit OSX (10.15, Catalina or later; but will install on 10.13 by clearing the extended attributes on the package: xattr -cr /Applications/SasView5.app)
-| | SasView 5.0.5 and later | 64-bit OSX (10.15, Catalina or later; but will install on 10.13 by clearing the extended attributes on the package: xattr -cr /Applications/SasView5.app)
+| | SasView 5.0.4 and later | 64-bit OSX (10.15, Catalina or later; but will install on 10.13 by clearing the extended attributes on the package: xattr -cr /Applications/SasView5.app)
 | Linux | | |
 | | SasView 5.0.0           | 64-bit Ubuntu (14.10 or later) |
 
