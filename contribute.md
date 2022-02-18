@@ -1,6 +1,6 @@
 ---
 layout: page
-title: Get Involved
+title: Get Involved!
 ---
 
 ### Ask not what your community can do for you, ask what you can do for your community!
@@ -35,8 +35,8 @@ We need contributors that can...
 *   Work on GitHub Actions;
 *   Deploy and improve automated testing;
 *   Review the code contributions of others;
-*   Develop code using OpenCL, Numba and JiT;
 *   Develop code in Python3/C++ and PyQt/Matplotlib;
+*   Develop code using OpenCL, Numba and JiT;
 *   Develop code on Windows, MacOS and Ubuntu;
 
 ...and no doubt several other things besides!
@@ -54,7 +54,7 @@ Naturally, there have to be _some_ rules to make sure everyone gets along! But w
 
 *   You must not break or destroy the work of others, and should you inadvertently do so you must accept that the onus is on you to rectify the problem with all possible haste.
 
-*   'He who pays the piper calls the tune'... to a large extent. If you want to implement some amazing new functionality in SasView and you have the skills or resources at you disposal to do so, that is great. All we ask is that you talk things through with the wider Development Team beforehand. After all, we might have considered - but rejected - the idea once before! And if not, we will certainly have insights into the best way for you to proceed!
+*   'He who pays the piper calls the tune'... to a large extent. If you want to implement some amazing new functionality in SasView and you have the skills or resources at your disposal to do so, that is great. All we ask is that you talk things through with the wider Development Team beforehand. After all, we might have considered - but rejected - the idea once before! And if not, we will certainly have insights into the best way for you to proceed!
 
 *   Lastly, it is everyones responsibility to help tackle the open issues on GitHub.
 
