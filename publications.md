@@ -817,6 +817,6 @@ information is incorrect or out of date, please inform <a href="mailto:jkrzywon@
 
 ---
 
-0. [Coupling Lipid Nanoparticle Structure and Automated Single Particle Composition Analysis to Design Phospholipase Responsive Nanocarriers](https://doi.org/10.1002/adma.202200839) Barriga, H.M.G., Pence, I.J., Holme, M.N., Doutch, J.J., Penders, J., Nele, V., Thomas, M.R., Carroni, M., and Stevens, M.M., Advanced Materials n/a, 2200839 (n.d.)
+0. [Coupling Lipid Nanoparticle Structure and Automated Single‐Particle Composition Analysis to Design Phospholipase‐Responsive Nanocarriers](https://doi.org/10.1002/adma.202200839) Barriga, H.M.G., Pence, I.J., Holme, M.N., Doutch, J.J., Penders, J., Nele, V., Thomas, M.R., Carroni, M., and Stevens, M.M., Advanced Materials n/a, 2200839 (n.d.)
 
 
