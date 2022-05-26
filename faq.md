@@ -337,12 +337,13 @@ subtitle: Here are the answers to some common questions about SasView
 
 ### Why does Check for Updates not work?
 
-*   Check for Updates compares the version (not build) number of your copy of SasView with that in the code repository. If SasView cannot access the remote server the message _'Cannot connect to the application server'_ is displayed in the status bar.
-*   Prior to version 3.1.1., the most common reason for Check for Updates failing was that your internet connection used a proxy server and your operating system had not been fully configured to use that proxy server. It is entirely possible to be able to use a web browser to surf the internet but find that SasView cannot read the current version number from the code repository! We believe this is fixed in 3.1.1. How you remedy this if you have a lower version (and don't want to update) depends on your operating system:
+*   Check for Updates compares the version (not build) number of your copy of SasView with that in the code repository. If SasView cannot access the remote server to perfom this check then the message _'Cannot connect to the application server'_ may be displayed in the status bar _or_ the SasView log file will contain lines implicating a file called proxy.pyc (see [Why will SasView no longer start? ('cannot execute script sasview')](#why-will-sasview-no-longer-start) below).
+*   Unhelpfully, it is entirely possible to be able to use a web browser to surf the internet but find that SasView cannot read the current version number from the code repository!
+*   The most common reason for Check for Updates failing is that your internet connection uses a proxy server and your computer is either not configured to use that proxy server _or_ that an exception for the SasView server needs to be added to the local policies on the proxy server. The latter case is more likely to be necessary in corporate/secure environments. Please contact your local IT Helpesk.
 
-#### Windows 7:
+*   How you configure your computer to use a proxy server will depend on your operating system. The following worked in Windows 7:
 
-*   Warning! The following procedure involves changing system settings. If you are not confident about doing so, consult your local IT Helpdesk.
+    **Warning! The following procedure involves changing system settings. If you are not confident about doing so, consult your local IT Helpdesk.**
 *   If you are not sure if your internet connect uses a proxy server, click on the Start button, select 'Network and Internet' and then 'Internet Options'. Now click the 'Connections' tab and then the button 'LAN settings'.
 
     1.  Click on the Start button. In the 'search programs and files' box type 'regedit' and press {return}.
@@ -429,10 +430,11 @@ subtitle: Here are the answers to some common questions about SasView
 
 ### Why will SasView no longer start?
 
-*   There appear to be some situations where SasView fails to start with the message 'cannot execute script sasview'. One or more of the following conditions is usually present:
-     *   SasView was installed on a Windows 10 machine
-     *   A new or fresh install of SasView 5.x has been performed
-     *   The machine already had an existing installation of an earlier version of SasView (typically SasView 4.x)
+*   There appear to be some situations where SasView fails to start. Either a message 'cannot execute script sasview' appears, or the 'splash screen' appears but nothing further happens. One or more of the following conditions is usually present:
+     *   SasView was installed on a Windows 10 machine.
+     *   A new or fresh install of SasView 5.x has been performed.
+     *   The machine already had an existing installation of an earlier version of SasView (typically SasView 4.x).
+     *   Your external internet connection is routed through a proxy server with particularly restrictive policies.
 
 *   It is perfectly fine to install multiple versions of SasView on the same machine as long as they are installed to separate folders. From SasView 5.0.3 this happens automatically during installation, but earlier versions of SasView will need a unique installation folder name to be specified (eg, C:\SasView-v422).
 
@@ -440,11 +442,12 @@ subtitle: Here are the answers to some common questions about SasView
     *   (On Windows):  C:\Users\\username\\.sasview and C:\Users\\username\\.sasmodels
     *   (on MacOS)  :  ~.sasview\ and ~.sasmodels\
 
-*   The failure to start SasView appears to have one of four causes:
+*   The failure to start SasView appears to have one of five causes:
     *   (Windows 10 and later) During the Windows setup process the default save location for the users files (ie, anything normally expected to go into C:\Users\\username\\ and any sub-folders thereof) was redirected to the users OneDrive. See [here](https://support.microsoft.com/en-us/office/files-save-to-onedrive-by-default-in-windows-10-33da0077-770c-4bda-b61e-8c8e8ca70ac7) for details. In essence, this means that Windows changes the locations of the SasView shared folders FROM C:\Users\\username\\.sasview and C:\Users\\username\\.sasmodels TO C:\Users\\username\\OneDrive\\.sasview and C:\Users\\username\\OneDrive\\.sasmodels!
     *   (Windows 10 and later with SasView 5.0.x upto 5.0.4) The installation of a wholly separate software application has created an environment variable called HOME with a location that is different to the intended SasView installation folder.
-    *   The installation process is unable to copy all of the required files to the shared folders
-    *   The new installation corrupts the contents of the shared folders
+    *   The installation process is unable to copy all of the required files to the shared folders.
+    *   The new installation corrupts the contents of the shared folders.
+    *   SasView is unable to perform an automatic check to see if the version you are using is the latest version of the program.
 
 *   Determining which of these circumstances is the cause may not be entirely straightforward but the following procedure *should* cover all eventualities:
     1.  (Windows 10 and later) Check to see if the SasView shared folders have been created in your local OneDrive folder (C:\Users\\username\\OneDrive\\). If they *have*, copy them **up** one level and delete them from the OneDrive folder. Now try running SasView.
@@ -464,3 +467,17 @@ subtitle: Here are the answers to some common questions about SasView
         **Warning! the .sasview folder may contain a sub-folder with existing plugin models (particularly if you have had other versions of SasView installed). To preserve those plugin models, make temporary copies of them before deleting the .sasview folder!**
         
     5.  If Step iv) does not work/apply, delete the shared folders .sasview and .sasmodels and then try running SasView again. If it starts it will re-create the folders.
+
+    6.  If you are using SasView on a corporate computer and/or in a corporate/secure environment, it is possible that your local IT policy routes external internet access through something called a proxy server. When SasView starts it attempts to connect to one of our servers to determine if there is a more recent version of the program. If this check cannot be performed then the program may fail to start. You may be able to verify if this is happening. Locate the SasView log file **sasview.log** (on Windows this should be in C:\Users\\username\\). Open it in a text editor and search for recent occurrences of the string 'proxy.pyc'. Any matches will look something like this (an actual example reported to the Development Team):
+        ```
+        2022-05-20 15:22:32,920 : DEBUG : sas.sasgui.guiframe.proxy (proxy.pyc:127) :: Trying Direct connection to http://www.sasview.org/latestversion.json...
+        2022-05-20 15:22:32,920 : DEBUG : sas.sasgui.guiframe.proxy (proxy.pyc:130) :: Failed!
+        2022-05-20 15:22:32,920 : DEBUG : sas.sasgui.guiframe.proxy (proxy.pyc:131) :: <urlopen error [Errno 11001] getaddrinfo failed>
+        2022-05-20 15:22:32,920 : DEBUG : sas.sasgui.guiframe.proxy (proxy.pyc:133) :: Trying to use system proxy if it exists...
+        2022-05-20 15:22:32,920 : DEBUG : sas.sasgui.guiframe.proxy (proxy.pyc:137) :: Failed!
+        2022-05-20 15:22:32,920 : DEBUG : sas.sasgui.guiframe.proxy (proxy.pyc:138) :: <urlopen error [Errno 11001] getaddrinfo failed>
+        2022-05-20 15:22:32,920 : DEBUG : sas.sasgui.guiframe.proxy (proxy.pyc:78) :: Trying pac file (http://proxy.xxxxx.xxxx.xx/proxy.pac)...
+        2022-05-20 15:22:32,920 : DEBUG : sas.sasgui.guiframe.proxy (proxy.pyc:84) :: Failled (http://proxy.xxxxx.xxxx.xx/proxy.pac)...
+        ```
+        Note that in this example the address of the organisations proxy server has been anonymised. If these messages are present in the log file you should request a proxy exception for http://www.sasview.org/latestversion.json through your local IT Helpdesk. Also see [Why does Check for Updates not work?](#why-does-check-for-updates-not-work).
+	
