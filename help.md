@@ -58,12 +58,6 @@ Whenever you run SasView it silently creates/appends debugging information to a 
 
 Check out some of the links on our [Links & Downloads](/download/) page
 
-### Licence
-
-SasView is offered under a standard 'Three Clause' BSD licence which may be found [here](https://github.com/SasView/sasview/blob/master/LICENSE.TXT).
-
-You may use and redistribute SasView for free, including for proprietary purposes, provided you accept the terms of the licence.
-
 ### Acknowledgements
 
 If you found this sofware useful to your work please dont forget to acknowledge its use in your publications as suggested below and reference this 
