@@ -37,6 +37,7 @@ Whenever you run SasView it silently creates/appends debugging information to a 
 ### How to contribute
 
 *   Contribute a fitting model to the [Model Marketplace](http://marketplace.sasview.org)
+*   Become part of our [developer community](/contribute/)!
 
 ### Things people are saying about SansView/SasView
 
