@@ -12,7 +12,7 @@ Other places to look for help are:
 *   [The full user documentation](/docs/user/user.html) including model documentation. This is available as a [PDF download](/downloads/SasViewDocumentation_4.2.2.pdf) for version 4.2.2
 *   Contact us at: [help@sasview.org](mailto:help@sasview.org) to report bugs (in which case please also attach a SasView log file, see below) or for help in using the software
 *   Message us on [Slack](https://sasview.slack.com/)
-*   Try the [users Forum Archives](http://lists.sasview.org/pipermail/users) or even email the forum at [users@sasview.org](mailto:users@sasview.org)
+*   Try the [Users Forum Archives](http://lists.sasview.org/pipermail/users) or even email the forum at [users@sasview.org](mailto:users@sasview.org). To join the Users Forum, click [here](http://lists.sasview.org/cgi-bin/mailman/listinfo/users)
 *   Check our [release notes](http://www.sasview.org/docs/user/RELEASE.html) for Known Issues
 *   Visit our [issues list](https://github.com/SasView/sasview/issues?q=is%3Aissue) to view reported bugs, things being worked on or possible future ehancements
 *   For the adventurous, many new features and bug fixes are available in the [latest builds](http://builds.sasview.org) and may have what you are looking for
