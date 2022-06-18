@@ -22,8 +22,8 @@ In addition to the staff time and support for code camps provided by the collabo
  - B. Fultz (DANSE - <a href="https://www.nsf.gov/awardsearch/showAward?AWD_ID=0412074">NSF Award #0412074</a>)
  - T. Holm Rod (SINE2020 WP10 - <a href="https://cordis.europa.eu/project/rcn/198195/factsheet/en">Horizon 2020 grant #654000</a>)
 
-### SasView Management Team:
-Paul Butler (NIST), Mathieu Doucet (ORNL), Andrew Jackson (ESS), Steve King (STFC), Wojciech Potrzebowski (ESS)
+### SasView Leadership Team:
+Wojciech Potrzebowski (ESS), Steve King (STFC), Paul Butler (NIST)
 
 
 ### Contacts
