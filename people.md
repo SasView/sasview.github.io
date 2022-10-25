@@ -30,7 +30,7 @@ Wojciech Potrzebowski (ESS), Steve King (STFC), Paul Butler (NIST)
 
 *   To report bugs or for general help using the software please email: [help@sasview.org](mailto:help@sasview.org)
 *   For general help with fitting and modeling, etc, try our asking the users forum: [users@sasview.org](mailto:users@sasview.org)
-*   To contribute plug-in models for SasView visit our model marketplace: [http://marketplace.sasview.org](http://marketplace.sasview.org)
+*   To contribute plug-in models for SasView visit our model marketplace: [https://marketplace.sasview.org](https://marketplace.sasview.org)
 *   For code questions and technical discussions contact the developers at: [developers@sasview.org](mailto:developers@sasview.org)
 *   For general information about Small Angle Scattering we recommend the [SAS portal](http://smallangle.org) developed by the [canSAS group](http://www.cansas.org).
 
