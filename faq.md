@@ -22,6 +22,8 @@ subtitle: Here are the answers to some common questions about SasView
 
 [Can I use SasView to analyse SAXS or USAXS data?](#can-i-use-sasview-to-analyse-saxs-or-usaxs-data)
 
+[Can I use SasView to analyse SE(M)SANS data?](#can-i-use-sasview-to-analyse-sesans-data)
+
 [Can SasView be used in a commercial environment?](#can-sasview-be-used-in-a-commercial-environment)
 
 [What format should my data be in?](#what-format-should-my-data-be-in)
@@ -141,6 +143,10 @@ subtitle: Here are the answers to some common questions about SasView
 ### Can I use SasView to analyse SAXS or USAXS data?
 
 *   Yes, especially if your intensity data is in absolute units (/cm).
+
+### Can I use SasView to analyse SESANS data?
+
+*   Yes. SasView can apply a [Hankel Transform](https://www.sasview.org/docs/user/qtgui/Perspectives/Fitting/sesans/sans_to_sesans.html) to a normal fitting model.
 
 ### Can SasView be used in a commercial environment?
 
