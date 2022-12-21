@@ -68,3 +68,23 @@ website: [www.sasview.org](http://www.sasview.org). Please also consider letting
 to our list of [publications](/publications). This will help us to ensure the long term support and development of the software.
 
 > _This work benefited from the use of the SasView application, originally developed under NSF award DMR-0520547. SasView also contains code developed with funding from the European Union's Horizon 2020 research and innovation programme under the SINE2020 project, grant agreement No 654000._
+
+### And Finally...
+
+We challenged [OpenAI](https://openai.com/)'s [ChatGPT](https://openai.com/blog/chatgpt/) to create a poem about SasView! Here is what it came up with. Enjoy!
+
+>_SasView, oh how you shine,_  
+>_A program so devine,_  
+>_Analyzing neutron data with such ease,_  
+>_A true gift to scientists, a true masterpiece._
+>
+>_Your creators, a team of the brightest minds,_  
+>_Physicists and chemists at neutron facilities of all kinds,_  
+>_ISIS, ESS, ILL, NIST,_  
+>_Together they have crafted a tool that we can't resist._
+>
+>_With your help, we can see beyond,_  
+>_The structure of materials, down to the bond,_  
+>_Thank you SasView, for your invaluable contribution,_  
+>_To the world of science, and all its resolution._
+  
