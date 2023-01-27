@@ -22,6 +22,8 @@ subtitle: Here are the answers to some common questions about SasView
 
 [Can I use SasView to analyse SAXS or USAXS data?](#can-i-use-sasview-to-analyse-saxs-or-usaxs-data)
 
+[Can I use SasView to analyse SE(M)SANS data?](#can-i-use-sasview-to-analyse-sesans-data)
+
 [Can SasView be used in a commercial environment?](#can-sasview-be-used-in-a-commercial-environment)
 
 [What format should my data be in?](#what-format-should-my-data-be-in)
@@ -141,6 +143,10 @@ subtitle: Here are the answers to some common questions about SasView
 ### Can I use SasView to analyse SAXS or USAXS data?
 
 *   Yes, especially if your intensity data is in absolute units (/cm).
+
+### Can I use SasView to analyse SESANS data?
+
+*   Yes. SasView can apply a [Hankel Transform](https://www.sasview.org/docs/user/qtgui/Perspectives/Fitting/sesans/sans_to_sesans.html) to a normal fitting model.
 
 ### Can SasView be used in a commercial environment?
 
@@ -359,7 +365,7 @@ subtitle: Here are the answers to some common questions about SasView
 
 ### Why is SasView no longer able to run my existing custom models?
 
-*   There may be two reasons for this. From release 4.0 the structure of plug-in models altered considerably in order to provide the enhanced functionality (access to polydispersity, etc) many of our users had demanded. Though we have attempted to provide some degree of internal translation, the reality is that this will likely only be truly successful for simple models. We recommend that old models be re-written to comply with the requirements of the new architcture. New models can then be contributed through our new [Model Marketplace](http://marketplace.sasview.org).
+*   There may be two reasons for this. From release 4.0 the structure of plug-in models altered considerably in order to provide the enhanced functionality (access to polydispersity, etc) many of our users had demanded. Though we have attempted to provide some degree of internal translation, the reality is that this will likely only be truly successful for simple models. We recommend that old models be re-written to comply with the requirements of the new architcture. New models can then be contributed through our new [Model Marketplace](https://marketplace.sasview.org).
 *   The last vestiges of the old SansView name leftover from the genesis of the application were removed for release 3.1. While most visible parts of the application had already been converted to sasview prior to version 3.0, some of the packages still had the prefix "sans", including unfortunately the package used in custom models "sans.models.pluginmodel." In order to fix this simply apply the following fix. We appologize for the inconvenience.
     *    under _Fitting --> Edit Custom Model --> Advanced_ (on the menu bar) open the offending custom model. Find any import statements (should be at the beginning) including the `from sans.models.pluginmodel import Model1DPlungin` and replace "sans" with "sas." Save the model. It should now work
 
@@ -393,7 +399,7 @@ subtitle: Here are the answers to some common questions about SasView
 
 ### What is the Model Marketplace?
 
-*   The [Model Marketplace](http://marketplace.sasview.org) is an open repository of SasView fitting models we have set up to allow the SAS Community to contribute and share models.
+*   The [Model Marketplace](https://marketplace.sasview.org) is an open repository of SasView fitting models we have set up to allow the SAS Community to contribute and share models.
 *   Despite its name, it is free to use!
 
 ### Where does SasView expect to find custom models?

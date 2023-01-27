@@ -25,7 +25,7 @@ _(Note: Version 4.2.0 was the last version to be built for 32-bit operating syst
 **Plug-in Model Marketplace:**
 
 Looking for new models, or wish to contribute a model? Visit the Marketplace. It's free!
-- [http://marketplace.sasview.org/](http://marketplace.sasview.org/)
+- [https://marketplace.sasview.org/](https://marketplace.sasview.org/)
 
 **Getting Help:**
 
