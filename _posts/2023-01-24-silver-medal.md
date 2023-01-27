@@ -1,6 +1,6 @@
 ---
 layout: post
-title: SasView Code Camp X
+title: Silver Medal for SasView
 tags: [highlight 2023-01-24]
 highlight: 2023-01-24
 ---
