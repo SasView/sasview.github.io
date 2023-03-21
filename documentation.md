@@ -37,7 +37,7 @@ Below are links to this documentation arranged by SasView version:
 *   "Subtracting a Model Calculation from Data in SasView" (PDF) for [versions 4.x](/downloads/subtracting_a_model_calculation_from_real_data_v4x.pdf) & [versions 5.x](/downloads/subtracting_a_model_calculation_from_real_data_v5.pdf)
 
 **Web-based Tutorials:**
-*   "Tutorials on Small-Angle Scattering" - use Shape2SAS and SasView. *Contributor: Andreas Larsen*
+*   "[Tutorials on Small-Angle Scattering](https://andreashlarsen.github.io/sastutorials-beta/index.html)" - using Shape2SAS & SasView. *Contributor: Andreas Larsen*
 
 **Videos:**
 *   Some short videos on using SasView are available on the [SasView YouTube Channel](https://www.youtube.com/channel/UCxvD3ysXJ05l6MgY7YKjEFQ)
