@@ -27,7 +27,7 @@ Below are links to this documentation arranged by SasView version:
 
 <a name="tutorials"></a>
 
-**Tutorials:**
+**Written Tutorials:**
 *   [Old SasView tutorial](/downloads/OldTutorial.pdf) (PDF) - dated but still useful
 *   "Getting started with SasView" (PDF) for [versions 3.x/4.x](/downloads/getting_started_with_sasview_v3x_4x.pdf) & [versions 5.x](/downloads/getting_started_with_sasview_v5.pdf)
 *   "Basic 1D Fitting in SasView" (PDF) for [versions 3.x/4.x](/downloads/basic_1d_fitting_in_sasview_v3x_4x.pdf) & [versions 5.x](/downloads/basic_1d_fitting_in_sasview_v5.pdf)
@@ -35,6 +35,9 @@ Below are links to this documentation arranged by SasView version:
 *   "P(r) Inversion Analysis in SasView" (PDF) for [versions 3.x/4.x](/downloads/pr_inversion_analysis_in_sasview_v4x.pdf) & [versions 5.x](/downloads/pr_inversion_analysis_in_sasview_v5.pdf)
 *   "Correlation Function Analysis in SasView" (PDF) for [versions 4.x](/downloads/correlation_function_analysis_in_sasview_v4x.pdf) & [versions 5.x](/downloads/correlation_function_analysis_in_sasview_v5.pdf)
 *   "Subtracting a Model Calculation from Data in SasView" (PDF) for [versions 4.x](/downloads/subtracting_a_model_calculation_from_real_data_v4x.pdf) & [versions 5.x](/downloads/subtracting_a_model_calculation_from_real_data_v5.pdf)
+
+**Web-based Tutorials:**
+*   "Tutorials on Small-Angle Scattering" - use Shape2SAS and SasView. *Contributor: Andreas Larsen*
 
 **Videos:**
 *   Some short videos on using SasView are available on the [SasView YouTube Channel](https://www.youtube.com/channel/UCxvD3ysXJ05l6MgY7YKjEFQ)
