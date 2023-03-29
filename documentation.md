@@ -18,23 +18,18 @@ Below are links to this documentation arranged by SasView version:
 *   [5.0.3](/docs/old_docs/5.0.3/index.html)
 *   [5.0.2](/docs/old_docs/5.0.2/index.html)
 *   [5.0.1](/docs/old_docs/5.0.1/index.html)
-*   [4.2.2](/docs/old_docs/4.2.2/index.html) & [(PDF)](/downloads/SasViewDocumentation_4.2.2.pdf)
-*   [4.2.1](/docs/old_docs/4.2.1/index.html) & [(PDF)](/downloads/Old_SasViewDocumentation/SasViewDocumentation_4.2.1.pdf)
-*   [4.2.0](/docs/old_docs/4.2.0/index.html) & [(PDF)](/downloads/Old_SasViewDocumentation/SasViewDocumentation_4.2.0.pdf)
-*   [4.1.2](/docs/old_docs/4.1.2/index.html) & [(PDF)](/downloads/Old_SasViewDocumentation/SasViewDocumentation_4.1.2.pdf)
-*   [3.1.2](/docs/old_docs/3.1.2/index.html)
-*   [3.0.0](/docs/old_docs/3.0.0/index.html)
+*   [for earlier versions of SasView](https://www.sasview.org/deprecated/)
 
 <a name="tutorials"></a>
 
 **Written Tutorials:**
-*   [Old SasView tutorial](/downloads/OldTutorial.pdf) (PDF) - dated but still useful
-*   "Getting started with SasView" (PDF) for [versions 3.x/4.x](/downloads/getting_started_with_sasview_v3x_4x.pdf) & [versions 5.x](/downloads/getting_started_with_sasview_v5.pdf)
-*   "Basic 1D Fitting in SasView" (PDF) for [versions 3.x/4.x](/downloads/basic_1d_fitting_in_sasview_v3x_4x.pdf) & [versions 5.x](/downloads/basic_1d_fitting_in_sasview_v5.pdf)
-*   "Simultaneous 1D Fitting in SasView" (PDF) for [versions 3.x/4.x](/downloads/simultaneous_1d_fitting_in_sasview_v3x_4x.pdf) & [versions 5.x](/downloads/simultaneous_1d_fitting_in_sasview_v5.pdf)
-*   "P(r) Inversion Analysis in SasView" (PDF) for [versions 3.x/4.x](/downloads/pr_inversion_analysis_in_sasview_v4x.pdf) & [versions 5.x](/downloads/pr_inversion_analysis_in_sasview_v5.pdf)
-*   "Correlation Function Analysis in SasView" (PDF) for [versions 4.x](/downloads/correlation_function_analysis_in_sasview_v4x.pdf) & [versions 5.x](/downloads/correlation_function_analysis_in_sasview_v5.pdf)
-*   "Subtracting a Model Calculation from Data in SasView" (PDF) for [versions 4.x](/downloads/subtracting_a_model_calculation_from_real_data_v4x.pdf) & [versions 5.x](/downloads/subtracting_a_model_calculation_from_real_data_v5.pdf)
+*   "Getting started with SasView" (PDF) for [versions 5.x](/downloads/getting_started_with_sasview_v5.pdf)
+*   "Basic 1D Fitting in SasView" (PDF) for [versions 5.x](/downloads/basic_1d_fitting_in_sasview_v5.pdf)
+*   "Simultaneous 1D Fitting in SasView" (PDF) for [versions 5.x](/downloads/simultaneous_1d_fitting_in_sasview_v5.pdf)
+*   "P(r) Inversion Analysis in SasView" (PDF) for [versions 5.x](/downloads/pr_inversion_analysis_in_sasview_v5.pdf)
+*   "Correlation Function Analysis in SasView" (PDF) for [versions 5.x](/downloads/correlation_function_analysis_in_sasview_v5.pdf)
+*   "Subtracting a Model Calculation from Data in SasView" (PDF) for [versions 5.x](/downloads/subtracting_a_model_calculation_from_real_data_v5.pdf)
+*   [for earlier versions of SasView](https://www.sasview.org/deprecated/)
 
 **Web-based Tutorials:**
 *   "[Tutorials on Small-Angle Scattering](https://andreashlarsen.github.io/sastutorials-beta/index.html)" - using Shape2SAS & SasView
