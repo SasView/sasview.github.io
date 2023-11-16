@@ -1,6 +1,6 @@
 ---
 layout: post
-title: SasView Contributor Camp 12
+title: SasView Contributor Camp XII
 tags: [codecamp, highlight 2024-01-25]
 highlight: 2024-01-25
 ---
