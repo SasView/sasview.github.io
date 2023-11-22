@@ -1,12 +1,12 @@
 ---
 layout: post
-title: SasView Contributor Camp XII
+title: SasView Contributor Camp
 tags: [codecamp, highlight 2024-01-25]
 highlight: 2024-01-25
 ---
 
-The 12th [SasView Contributor Camp](https://github.com/SasView/sasview/wiki/ContributorCampXII) (formerly known
-as Code Camp) will be held on the University of Delaware Campus in Delaware USA from January 16th
+The 1st [SasView Contributor Camp](https://github.com/SasView/sasview/wiki/ContributorCampXII) (formerly known
+as Code Camp XII) will be held on the University of Delaware Campus in Delaware USA from January 16th
 through January 22nd 2024. Come Join in the fun!
 
 All parties interested in contributing to the SasView project (writing tutorials,
