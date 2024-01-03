@@ -1,10 +1,15 @@
 ---
 layout: post
-title: Mailing List Outages
+title: Mailing Lists are back
 tags: [news]
 ---
 
 **For Information**
+
+2024-01-02 (18:30 UTC):
+
+The servers are running and the SasView mailing lists are operational again. Thank you for your patience.
+
 
 2023-12-20 11:00 UTC:
 
