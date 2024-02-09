@@ -37,6 +37,6 @@ to the University of Delaware and Norman Wagner for helping to facilitate it, an
 Local Organising Team, led by Paul Butler, that made it happen and kept everyone in coffee, 
 cookies and pizza!
 
-[Group photo](img/Contributor-Camp-12.jpg)
+[Group photo](../img/Contributor-Camp-12.jpg)
 
 More details [here](https://github.com/SasView/sasview/wiki/ContributorCampXII).
