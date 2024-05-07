@@ -34,7 +34,7 @@ Below are links to this documentation arranged by SasView version:
 *   [for earlier versions of SasView](https://www.sasview.org/deprecated/)
 
 **Web-based Tutorials:**
-*   "[Tutorials on Small-Angle Scattering](https://andreashlarsen.github.io/sastutorials-beta/index.html)" - using Shape2SAS & SasView
+*   "[Tutorials on Small-Angle Scattering](https://sastutorials.org/)" - using Shape2SAS & SasView
 *   "[Advanced SAS Training Course](https://github.com/timsnow/advanced_sas_training_course)" - using Jupyter & SasView
 
 **Videos:**
