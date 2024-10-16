@@ -26,6 +26,10 @@ Below are links to this documentation arranged by SasView version:
 <a name="tutorials"></a>
 
 **Written Tutorials:**
+*   "Basic 1D Fitting in SasView" (PDF) for [versions 6.x](/downloads/basic_1d_fitting_in_sasview_v6.pdf)
+*   "Simultaneous 1D Fitting in SasView" (PDF) for [versions 6.x](/downloads/simultaneous_1d_fitting_in_sasview_v6.pdf)
+*   "Modifying Weights in SasView" (PDF) for [versions 6.x](/downloads/modifying_weights_in_sasview_v6.pdf)
+
 *   "Getting started with SasView" (PDF) for [versions 5.x](/downloads/getting_started_with_sasview_v5.pdf)
 *   "Basic 1D Fitting in SasView" (PDF) for [versions 5.x](/downloads/basic_1d_fitting_in_sasview_v5.pdf)
 *   "Simultaneous 1D Fitting in SasView" (PDF) for [versions 5.x](/downloads/simultaneous_1d_fitting_in_sasview_v5.pdf)
