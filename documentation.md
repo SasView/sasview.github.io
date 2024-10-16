@@ -34,8 +34,8 @@ Version 6
 
 Version 5
 *   "Getting started with SasView" (PDF) for [versions 5.x](/downloads/getting_started_with_sasview_v5.pdf)
-*   "Basic 1D Fitting in SasView" (PDF) for [versions 5.x](/downloads/basic_1d_fitting_in_sasview_v5.pdf)
-*   "Simultaneous 1D Fitting in SasView" (PDF) for [versions 5.x](/downloads/simultaneous_1d_fitting_in_sasview_v5.pdf)
+*   "Basic 1D Fitting in SasView" (PDF) for [versions 5.x](/downloads/basic_1d_fitting_in_sasview_v5.pdf)  **- Updated**
+*   "Simultaneous 1D Fitting in SasView" (PDF) for [versions 5.x](/downloads/simultaneous_1d_fitting_in_sasview_v5.pdf)  **- Updated**
 *   "Creating Custom Fitting Models in SasView" (PDF) for [versions 5.x](/downloads/creating_custom_fitting_models_in_sasview_v5.pdf)
 *   "P(r) Inversion Analysis in SasView" (PDF) for [versions 5.x](/downloads/pr_inversion_analysis_in_sasview_v5.pdf)
 *   "Correlation Function Analysis in SasView" (PDF) for [versions 5.x](/downloads/correlation_function_analysis_in_sasview_v5.pdf)
