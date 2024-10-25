@@ -16,10 +16,17 @@ control of the Development Team. But for your convenience this page contains lin
 
 **Help documentation:**
 
+*   [5.0.5](/docs/old_docs/5.0.5/index.html)
+*   [5.0.4](/docs/old_docs/5.0.4/index.html)
+*   [5.0.3](/docs/old_docs/5.0.3/index.html)
+*   [5.0.2](/docs/old_docs/5.0.2/index.html)
+*   [5.0.1](/docs/old_docs/5.0.1/index.html)
+
 *   [4.2.2](/docs/old_docs/4.2.2/index.html) & [(PDF)](/downloads/SasViewDocumentation_4.2.2.pdf)
 *   [4.2.1](/docs/old_docs/4.2.1/index.html) & [(PDF)](/downloads/Old_SasViewDocumentation/SasViewDocumentation_4.2.1.pdf)
 *   [4.2.0](/docs/old_docs/4.2.0/index.html) & [(PDF)](/downloads/Old_SasViewDocumentation/SasViewDocumentation_4.2.0.pdf)
 *   [4.1.2](/docs/old_docs/4.1.2/index.html) & [(PDF)](/downloads/Old_SasViewDocumentation/SasViewDocumentation_4.1.2.pdf)
+
 *   [3.1.2](/docs/old_docs/3.1.2/index.html)
 *   [3.0.0](/docs/old_docs/3.0.0/index.html)
 
