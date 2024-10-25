@@ -15,11 +15,6 @@ Below are links to this documentation arranged by SasView version:
 
 *   [latest](/docs/index.html)
 *   [5.0.6](/docs/old_docs/5.0.6/index.html)
-*   [5.0.5](/docs/old_docs/5.0.5/index.html)
-*   [5.0.4](/docs/old_docs/5.0.4/index.html)
-*   [5.0.3](/docs/old_docs/5.0.3/index.html)
-*   [5.0.2](/docs/old_docs/5.0.2/index.html)
-*   [5.0.1](/docs/old_docs/5.0.1/index.html)
 *   [for earlier versions of SasView](https://www.sasview.org/deprecated/)
 
 <a name="tutorials"></a>
