@@ -13,8 +13,7 @@ Our help documentation has evolved considerably over the years and includes
 
 Below are links to this documentation arranged by SasView version:
 
-*   [6.0.0](/docs/index.html)
-*   [current](/docs/old_docs/5.0.6/index.html)
+*   [latest](/docs/index.html)
 *   [5.0.6](/docs/old_docs/5.0.6/index.html)
 *   [5.0.5](/docs/old_docs/5.0.5/index.html)
 *   [5.0.4](/docs/old_docs/5.0.4/index.html)
