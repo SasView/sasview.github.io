@@ -6,13 +6,11 @@ title: Old Documentation
 SasView Version 4.2.2, and all before it, were built using Python 2 which officially reached its End-of-Life on Jan 1, 2020. Before this happened we moved all 
 development of SasView to Python 3, starting with version 5.0.0.
 
-The continued use of SasView 4 is now officially deprecated and we recommend that you migrate to the latest release version of SasView 5 at your earliest convenience. 
-There is no active development of SasView 4, nor has there been since the release of SasView 5.
+The continued use of SasView 4 and SasView 5 is now officially deprecated and we recommend that you migrate to the latest release version of SasView 6 at your earliest convenience. There is no active development of SasView 4, nor has there been since the release of SasView 5, and no maintenance of SasView 5 is planned.
 
-However, MacOS users should note that in order to run SasView 5 they may need to upgrade their version of OSX. Please read our Release Notes.
+However, MacOS users should note that in order to run SasView 6 they may need to upgrade their version of OSX. Please read our Release Notes.
 
-SasView 4 will continue to run on your computer as long as your operating system will allow it, but how long this will continue for is obviously outside of the 
-control of the Development Team. But for your convenience this page contains links to our documentation for those now deprecated versions of SasView.
+SasView 4 and SasView 5 will continue to run on your computer as long as your operating system will allow it, but how long this will continue for is obviously outside of the control of the Development Team. But for your convenience this page contains links to our documentation for those now deprecated versions of SasView.
 
 **Help documentation:**
 
