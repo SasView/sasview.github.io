@@ -21,7 +21,11 @@ _(Note: Version 4.2.0 was the last version to be built for 32-bit operating syst
 
 - [All versions from v3.0](https://github.com/SasView/sasview/tags "SasView download") (click on the version number for more information)
 - To download versions of SasView before v2.2 please go to the old [SansView](http://danse.chem.utk.edu/sansview.html#downloads) website
-  
+
+**Conda-forge versions:**
+
+- [Current conda release version of SasView 5.x](https://github.com/conda-forge/sasview-feedstock)
+ 
 **Plug-in Model Marketplace:**
 
 Looking for new models, or wish to contribute a model? Visit the Marketplace. It's free!
