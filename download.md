@@ -61,8 +61,9 @@ For developer questions please contact the developers at: [developers@sasview.or
   
 
 ### Other Resources
+- Brian Pauw has produced a cool [interactive tool](https://github.com/BAMresearch/SasModelsExplorer) for visualising the models in SasView. Check it out!
 - The new [SAS Portal](http://www.smallangle.org) aims to be an access point for all information related to SAS and should be a great resource for any SAS question.
-- Some of the same great Team developing SasView are also engaged in a new project called [CCP-SAS](http://www.ccpsas.org) for atomistic structure determination from solution small-angle scattering. Check it out!
+- Some of the same great Team developing SasView are also engaged in a project called [CCP-SAS](http://www.ccpsas.org) for atomistic structure determination from solution small-angle scattering.
 - The [canSAS group](http://www.cansas.org) develops standards and data formats for SAS.
 - The [Scattering-Central](https://github.com/scattering-central) repository of (mostly) legacy SAS software
 
