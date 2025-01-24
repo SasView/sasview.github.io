@@ -9,7 +9,7 @@ We are pleased to announce a mini-symposium on **_“Magnetic SAS Data Analysis 
 
 Please note that participants must be registered for ICNS-2025 to attend.
 
-Registration for the symposium is now open at the following link: https://indico.ess.eu/event/3704/
+Registration for the symposium is now open at the following link: [https://indico.ess.eu/event/3704/](https://indico.ess.eu/event/3704/)
 
 _Scope_
 
