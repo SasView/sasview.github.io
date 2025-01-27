@@ -94,13 +94,15 @@ subtitle: Here are the answers to some common questions about SasView
 | Platform | Version | Operating System |
 | --- | --- | --- |
 | Windows | | |
-| | SasView 5.0.x and later | 64-bit only (x64) |
+| | SasView 6.0.x and later | 64-bit only (x64) |
+| | SasView 5.0.x           | 64-bit only (x64) |
 | | SasView 4.2.x           | 64-bit (x64) only |
 | | SasView 4.1.x           | 32-bit (x86) & 64-bit (x64) |
 | | SasView 4.0.x           | 32-bit (x86) & 64-bit (x64) |
 | | SasView 3.x             | 32-bit (x86) & 64-bit (x64) |
 | | SasView 2.x             | 32-bit only (x86) |
 | Mac OS | | |
+| | SasView 6.0.x and later | 64-bit OSX |
 | | SasView 5.0.4 and later | 64-bit OSX (10.15, Catalina or later; but will install on 10.13 by clearing the extended attributes on the package: xattr -cr /Applications/SasView5.app)
 | | SasView 5.0.3           | 64-bit OSX (10.13, High Sierra or later) |
 | | SasView 5.0.2           | 64-bit OSX |
@@ -108,14 +110,12 @@ subtitle: Here are the answers to some common questions about SasView
 | | SasView 5.0.0           | 64-bit OSX (10.9, Mavericks or later) |
 | | SasView 4.x             | 64-bit OSX (10.9, Mavericks or later) |
 | | SasView 3.x and earlier | 32-bit OSX (10.6, Snowleopard) |
-| Linux | | |
-| | SasView 5.0.0           | 64-bit Ubuntu (14.10 or later) |
 
 *   We do not currently _support_ a Linux distribution, but:
-    *   SasView is being built under Ubuntu on our development servers, however this is mostly aspirational at present due to limited developer resources. We hope to eventually be able to distribute on Linux and welcome anyone interested in helping with that project to join us.
-    *   In the meantime you are welcome to try building SasView from the source available on the release pages: [https://github.com/SasView/sasview/releases](https://github.com/SasView/sasview/releases) and executing 'python run.py'. Please note, you will also need to download our 'sasmodels' repository from [https://github.com/SasView/sasmodels](https://github.com/SasView/sasmodels) before you try this. Some people have reported success with this approach.
-    *   There is a third-party project developing SasView on [Debian](https://github.com/SasView/sasview/wiki/DevNotes_Projects_Debian)
-    *   The STFC [IDAaaS](https://isis.analysis.stfc.ac.uk/) cloud computing service runs SasView 4.2.2 and the latest SasView 5 on CentOS.
+    *   An 'official' Flatpak distribution of SasView can be found on [Flathub](https://flathub.org/apps/org.sasview.sasview). This has been tested on a variety of Linux distributions including Ubuntu, Fedora, and Rocky Linux.
+    *   The STFC [IDAaaS](https://isis.analysis.stfc.ac.uk/) cloud computing service runs SasView 4.2.2, 5.0.6 and the latest SasView 6 on Rocky Linux (though 4.2.2 and 5.0.6 previously also ran on IDAaaS under CentOS).
+    *   And there is also a third-party project developing SasView on [Debian](https://github.com/SasView/sasview/wiki/DevNotes_Projects_Debian)
+    *   You are welcome to try [building SasView from the source](https://github.com/SasView/sasview/wiki/DevNotes_CondaDevEnviroment) available on the release pages: [https://github.com/SasView/sasview/releases](https://github.com/SasView/sasview/releases). Please note, you will need to download our 'sasmodels' repository from [https://github.com/SasView/sasmodels](https://github.com/SasView/sasmodels) before you try this. But also note that our Wiki instructions direct you to use Conda. Anaconda changed their Terms of Service in 2020, and updated them again in 2024, and certain organisations now need to pay to use it. We are looking at other tools and will update the instructions at a later date.
 
 ### Do I need to install Python or C or any compilers before I install SasView?
 
