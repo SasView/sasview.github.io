@@ -24,6 +24,7 @@ Below are links to this documentation arranged by SasView version:
 Version 6
 *   "Basic 1D Fitting in SasView" (PDF) for [versions 6.x](/downloads/basic_1d_fitting_in_sasview_v6.pdf)
 *   "Simultaneous 1D Fitting in SasView" (PDF) for [versions 6.x](/downloads/simultaneous_1d_fitting_in_sasview_v6.pdf)
+*   "Correlation Function Analysis in SasView" (PDF) for [versions 6.x](/downloads/correlation_function_analysis_in_sasview_v6.pdf)
 *   "Modifying Weights in SasView" (PDF) for [versions 6.x](/downloads/modifying_weights_in_sasview_v6.pdf)
 
 Version 5
