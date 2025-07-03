@@ -17,6 +17,7 @@ SasView 4 and SasView 5 will continue to run on your computer as long as your op
 *   [6.0.0](/docs/old_docs/6.0.0/index.html)
 
 **Old v5.x Documentation:**
+*   [5.0.6](/docs/old_docs/5.0.6/index.html)
 *   [5.0.5](/docs/old_docs/5.0.5/index.html)
 *   [5.0.4](/docs/old_docs/5.0.4/index.html)
 *   [5.0.3](/docs/old_docs/5.0.3/index.html)
