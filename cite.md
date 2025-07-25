@@ -10,8 +10,8 @@ If you found this software useful to your work please cite and/or acknowledge it
 Each release of SasView is given a unique DOI. As new versions are released, calculation methods may change or be corrected. 
 To account for these calculation differences, please cite the version or versions you used to analyze your data.
 
-If you are not sure the version, the citation is available directly from the app under the Help menu.
-In version 6+, look for the option _Cite SasView_. In version 5, look for the option _Acknowledge_.
+If you are unsure of the version, the citation is available directly from the app under the Help menu.
+In version 6+, look for the option _Cite SasView_. In version 5 or earlier, look for the option _Acknowledge_.
 
 | Version 5                               | Version 6                               |
 |-----------------------------------------|-----------------------------------------|
