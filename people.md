@@ -8,12 +8,12 @@ Many people have contributed to this SAS analysis software over the years, and w
 ### Developers and contributors:
 In addition to the core development, contributions include documentation writing and editing, tutorial writing and editing, performing code reviews, setting up and maintaining a variety of related services such as the marketplace, and admin tasks required to keep the infrastructure of the collaboration running.
 
-G. Alina, Z. Attala, J. Bakker, P. Beaucage, R. Bourne, W. Bouwman, I. Breßler, P. Butler, I. Caddy-Jones, K. Campbell, J-H. Cho, T. Cooper-Bennun, R. Cortes Hernandez, M. Doucet, J. Doutch, C. Durniak, L. Forster, P. Gilbert, M. Gonzalez, R. Heenan, E. Hewins, D. Honecker, A. Jackson, G. Jensen, P. Kienzle, S. King, S. Kline, J. Krzywon, R. Lopes, D. Mannicke, B. Maranville, N. Martinez, R. Murphy, A. Nelson, T. Nielsen, M. Oakley, L. O'Driscoll, H. Park, P. Parker, B. Pauw, W. Potrzebowski,  S. Prescott, P. Rozyczko, X. Shan, T. Snow, A. Washington, R. Whitley, L. Wilkins, C. Wolf, A. Zheng, and J. Zhou.
+M. Adams, N. Agouzal, G. Alina, Z. Attala, M. Backman, J. Bakker, P. Beaucage, J. Berger, R. Bourne, W. Bouwman, I. Breßler, P. Butler, I. Caddy-Jones, K. Campbell, J-H. Cho, T. Cooper-Bennun, R. Cortes Hernandez, J. Crake-Merani, A. Detiste, M. Doucet, J. Doutch, D. Dresen, G. Drosos, C. Durniak, C. Farrow, R. Ferraz Leal, R. Ford, L. Forster, J. Gaudet, M. Gerina, P. Gilbert, M. Gonzalez, O. Hammond, T. Hansen, R. Heenan, S. Henson, E. Hewins, A. Hicks, D. Honecker, A. Jackson, G. Jensen, P. Juhas, J. Karliczek, P. Kienzle, S. King, S. Kline, J. Krzywon, A. Larsen, S. Lee, J. Lin, Y. Liu, R. Lopes, D. Lozano, K. Lytje, D. Mannicke, B. Maranville, N. Martinez, M. McKerns, B. Miller, K. Mothander, R. Murphy, A. Nelson, T. Nielsen, M. Oakley, L. O'Driscoll, H. Park, P. Parker, M. Patrou, P. Peterson, W. Potrzebowski,  S. Prescott, M. Rakitin, T. Richter, J. Rooks, P. Rozyczko, X. Shan, P. Sharp, T. Snow, A. Stellhorn, S, Teixeira, J. Tumarkin, A. Washington, K. Weigandt, R. Whitley, L. Wilkins, C. Wolf, A. Zhang, A. Zheng.
 
 ### Community contributors and external collaborators:
 The SasView collaboration goes well beyond the contributions listed above. In particular we wish to thank the following people from the scattering community and beyond for their time in providing feedback and ideas and being advocates for the collaboration.
 
-A. Anuchitanukul, P. Corona, G. Fragneto, P. Juhas, M. Knudsen, Y. Lui, A. Markvardsen, M. McKerns, T. Narayanan, D. Parsons, R. Pellicelli, T. Perring, P. Peterson, L. Porcar, L. Pozzo, M. Rakitin, A. Rennie, T. Holm Rod, A. Stellhorn, J. Taylor, L. Udby, and K. Weigandt
+A. Anuchitanukul, P. Corona, G. Fragneto, M. Knudsen, S. Krueger, A. Markvardsen, T. Narayanan, D. Parsons, B. Pauw, R. Pellicelli, T. Perring, L. Porcar, L. Pozzo, S. Prevost, A. Rennie, G. Roberts, T. Holm Rod, Y. Shang, J. Taylor, L. Udby, D. Zakoutna and J. Zhou.
 
 Last, but by no means least, we thank all those colleagues and SasView users that help further the collaboration by assisting us with beta testing, by reporting bugs and other idiosyncrasies of the program, and by suggesting improvements and new features.
 
@@ -23,7 +23,7 @@ In addition to the staff time and support for code camps provided by the collabo
  - T. Holm Rod (SINE2020 WP10 - <a href="https://cordis.europa.eu/project/rcn/198195/factsheet/en">Horizon 2020 grant #654000</a>)
 
 ### SasView Leadership Team:
-Wojciech Potrzebowski (ESS), Steve King (STFC), Paul Butler (NIST)
+Wojciech Potrzebowski (ESS), Jeff Krzywon (NIST), Steve King (STFC), Paul Butler (NIST)
 
 
 ### Contacts
