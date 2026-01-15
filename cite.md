@@ -17,11 +17,13 @@ In version 6+, look for the option _Cite SasView_. In version 5 or earlier, look
 |-----------------------------------------|-----------------------------------------|
 | ![]({{ site.baseurl }}/img/cite-v5.png) | ![]({{ site.baseurl }}/img/cite-v6.png) |
 
-| SasView 6 | Citation                                                        |
-|-----------|-----------------------------------------------------------------|
-| 6.1.0     | M. Doucet et al. SasView Version 6.1.0, 10.5281/zenodo.15775666 |
-| 6.0.1     | M. Doucet et al. SasView Version 6.0.1, 10.5281/zenodo.14940319 |
-| 6.0.0     | M. Doucet et al. SasView Version 6.0.0, 10.5281/zenodo.11395968 |
+| SasView 6 | Citation                                                                |
+|-----------|-------------------------------------------------------------------------|
+| 6.1.2     | J. Krzywon et al. SasView Version 6.1.2, 10.5281/zenodo.17795298        |
+| 6.1.1     | J.A. Crake-Merani et al. SasView Version 6.1.1, 10.5281/zenodo.17237394 |
+| 6.1.0     | M. Doucet et al. SasView Version 6.1.0, 10.5281/zenodo.15775666         |
+| 6.0.1     | M. Doucet et al. SasView Version 6.0.1, 10.5281/zenodo.14940319         |
+| 6.0.0     | M. Doucet et al. SasView Version 6.0.0, 10.5281/zenodo.11395968         |
 
 | SasView 5 | Citation                                                       |
 |-----------|----------------------------------------------------------------|
