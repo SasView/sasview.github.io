@@ -1,0 +1,39 @@
+on:
+  workflow_call:
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - name: "Checkout sasview.github.io Repository"
+        uses: actions/checkout@v5
+        with:
+          repository: sasview/sasview.github.io
+          ref: master
+          persist-credentials: false
+          fetch-depth: 0
+      - name: "Download archived markdown file"
+        uses: actions/download-artifact@v5
+        with:
+          run-id: ${{ github.event.workflow_run.id }}
+      - name: "Copy Markdown File Back Into Workspace"
+        run: cp -rf ./SASVIEW_publications.md ./publications.md
+      - name: "Commit And Push Any Changes to Github"
+        run: |
+          if [[ -n $(git status --porcelain) ]]; then
+            git config user.name "github-actions[bot]"
+            git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+            git checkout -b auto-update-pubs
+            git add ./publications.md
+            git commit -m "publications auto-update"
+          else
+            echo "No changes found. Skipping push."
+          fi
+      - name: Push changes
+        uses: ad-m/github-push-action@v1
+        with:
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          repository: sasview/sasview.github.io
+          branch: auto-update-pubs

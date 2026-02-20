@@ -1,0 +1,18 @@
+# Run every night at midnight
+on:
+  pull_request:
+
+jobs:
+  call-workflow-start:
+    uses: ./.github/workflows/common_start.yml
+  update-citations:
+    needs:
+      - call-workflow-start
+    runs-on: ubuntu-latest
+    steps:
+      - name: "Look For Updates to Zotero List Using Citation Finder"
+        run: python ./update_current_list.py SASVIEW ${{ secrets.ZOTERO_KEY }}
+  call-workflow-end:
+    needs:
+      - update-citations
+    uses: ./.github/workflows/common_end.yml
