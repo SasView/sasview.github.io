@@ -4,15 +4,34 @@ on:
     - cron: "0 0 * * *"
 
 jobs:
-  call-workflow-start:
-    uses: ./.github/workflows/common_start.yml
   update-citations:
-    needs:
-      - call-workflow-start
     runs-on: ubuntu-latest
     steps:
+      - name: "Checkout saspubs Repository"
+        uses: actions/checkout@v5
+        with:
+          repository: sasview/saspubs
+          ref: master
+          persist-credentials: false
+          fetch-depth: 0
+      - name: "Setup Python"
+        uses: actions/setup-python@v6
+        with:
+          python-version: '3.14'
+      - name: "Install Python dependencies"
+        run: |
+          python -m pip install --upgrade pip
+          python -m pip install wheel setuptools
+          python -m pip install -r ./requirements.txt
+      - name: "Create publications list using the Zotero API"
+        run: python ./instrument_zotero_feed.py SASVIEW
       - name: "Look For Updates to Zotero List Using Citation Finder"
         run: python ./update_current_list.py SASVIEW ${{ secrets.ZOTERO_KEY }}
+      - name: "Archive markdown file"
+        uses: actions/upload-artifact@v4
+        with:
+          name: SASVIEW_publications.md
+          path: ./static/
   call-workflow-end:
     needs:
       - update-citations
