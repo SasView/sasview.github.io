@@ -19,6 +19,7 @@ In version 6+, look for the option _Cite SasView_. In version 5 or earlier, look
 
 | SasView 6 | Citation                                                                |
 |-----------|-------------------------------------------------------------------------|
+| 6.1.3     | J. Krzywon et al. SasView Version 6.1.3, 10.5281/zenodo.18352296        |
 | 6.1.2     | J. Krzywon et al. SasView Version 6.1.2, 10.5281/zenodo.17795298        |
 | 6.1.1     | J.A. Crake-Merani et al. SasView Version 6.1.1, 10.5281/zenodo.17237394 |
 | 6.1.0     | M. Doucet et al. SasView Version 6.1.0, 10.5281/zenodo.15775666         |
