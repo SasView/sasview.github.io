@@ -3,7 +3,11 @@ layout: page
 title: Cite SasView
 ---
 
-If you found this software useful to your work please cite and/or acknowledge its use in your publications.
+If you found this software useful to your work please cite and/or [acknowledge](#acknowledging-sasview) its use in your publications.
+
+Users who utilized the SasView GUI need only cite [SasView](#citing-sasview). Users who integrated packages
+into other software or scripts should cite every package used amongst [SasView](#citing-sasview), 
+[SasModels](#citing-sasmodels), and [SasData](#citing-sasdata).
 
 ### Citing SasView
 
@@ -44,8 +48,20 @@ In version 6+, look for the option _Cite SasView_. In version 5 or earlier, look
 | 4.1.0     | M. Doucet et al. SasView Version 4.1.0, 10.5281/zenodo.438138  |
 | 4.0.0     | M. Doucet et al. SasView Version 4.0.0, 10.5281/zenodo.159083  |
 
+### Citing SasModels
+
+For releases v1.0.12 and prior, please cite:
+
+> P. Kienzle, et. al., SasModels (2016), https://github.com/SasView/sasmodels
+
+### Citing SasData
+
+For releases v0.11.0 and prior, please cite:
+
+> J. Krzywon, et. al. SasData (2022), https://github.com/SasView/sasdata
+
 ### Acknowledging SasView
 
-If you would like to acknowledge SasView, please include the following:
+If you would like to acknowledge the use of one or more sasview software packages, please include the following:
 
 > _This work benefited from the use of the SasView application, originally developed under NSF award DMR-0520547. SasView contains code developed with funding from the European Union's Horizon 2020 research and innovation programme under the SINE2020 project, grant agreement No 654000._
