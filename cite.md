@@ -5,16 +5,16 @@ title: Cite SasView
 
 If you found this software useful to your work please cite and/or [acknowledge](#acknowledging-sasview) its use in your publications.
 
-Users who utilized the SasView GUI need only cite [SasView](#citing-sasview). Users who integrated packages
-into other software or scripts should cite every package used amongst [SasView](#citing-sasview), 
+Users who utilized the GUI-driven SasView App need only cite [SasView](#citing-sasview). Users who integrated packages
+into other software or scripts are asked to cite every package used amongst [SasView](#citing-sasview), 
 [SasModels](#citing-sasmodels), and [SasData](#citing-sasdata).
+
+As new versions of each package are released, calculation methods may change or be corrected. 
+To account for these calculation differences, please cite the version or versions you used to analyze your data.
 
 ### Citing SasView
 
-Each release of SasView is given a unique DOI. As new versions are released, calculation methods may change or be corrected. 
-To account for these calculation differences, please cite the version or versions you used to analyze your data.
-
-If you are unsure of the version, the citation is available directly from the app under the Help menu.
+Each version of SasView is given a unique DOI. If you are unsure of the version, the citation is available directly from the app under the Help menu.
 In version 6+, look for the option _Cite SasView_. In version 5 or earlier, look for the option _Acknowledge_.
 
 | Version 5                               | Version 6                               |
@@ -50,18 +50,18 @@ In version 6+, look for the option _Cite SasView_. In version 5 or earlier, look
 
 ### Citing SasModels
 
-For releases v1.0.12 and prior, please cite:
+For releases v1.0.12 and prior, please cite the following, replacing _X.Y.Z_ with the version used:
 
-> P. Kienzle, et. al., SasModels (2016), https://github.com/SasView/sasmodels
+> P. Kienzle, et. al., SasModels vX.Y.Z, https://github.com/SasView/sasmodels
 
 ### Citing SasData
 
-For releases v0.11.0 and prior, please cite:
+For releases v0.11.0 and prior, please cite the following, replacing _X.Y.Z_ with the version used:
 
-> J. Krzywon, et. al. SasData (2022), https://github.com/SasView/sasdata
+> J. Krzywon, et. al. SasData vX.Y.Z, https://github.com/SasView/sasdata
 
 ### Acknowledging SasView
 
-If you would like to acknowledge the use of one or more sasview software packages, please include the following:
+If you would like to acknowledge the use of one or more SasView software packages, please include the following:
 
 > _This work benefited from the use of the SasView application, originally developed under NSF award DMR-0520547. SasView contains code developed with funding from the European Union's Horizon 2020 research and innovation programme under the SINE2020 project, grant agreement No 654000._
