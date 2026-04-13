@@ -64,4 +64,4 @@ For releases v0.11.0 and prior, please cite the following, replacing _X.Y.Z_ wit
 
 If you would like to acknowledge the use of one or more SasView software packages, please include the following:
 
-> _This work benefited from the use of the SasView application, originally developed under NSF award DMR-0520547. SasView contains code developed with funding from the European Union's Horizon 2020 research and innovation programme under the SINE2020 project, grant agreement No 654000._
+> _This work benefited from the use of the SasView project, originally developed under NSF award DMR-0520547 and containing code developed with funding from the European Union's Horizon 2020 research and innovation programme under the SINE2020 project, grant agreement No 654000._
