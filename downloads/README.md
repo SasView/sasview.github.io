@@ -1,13 +1,21 @@
 ---
-layout: page
-title: Redirecting...
+layout: null
 ---
-
-<script>window.location.replace("/download/");</script>
-<meta http-equiv="refresh" content="0; url=/download/">
-<p>This page has moved. Please <a href="/download/">click here</a> if you are not redirected automatically.</p>
-
-## For developers
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <title>Redirecting...</title>
+  <meta http-equiv="refresh" content="0; url=/download/">
+  <script>window.location.replace("/download/");</script>
+  <link rel="canonical" href="/download/">
+</head>
+<body>
+  <p>This page has moved. Please <a href="/download/">click here</a> if you are not redirected automatically.</p>
+</body>
+</html>
+<!--
+# downloads
 
 This folder is where files directly downloadable from the website live!
 
@@ -19,3 +27,4 @@ You can add/replace files in this folder to make them immediately available
 via the website, rather than having to wait for the new release cycle.
 
 But don't forget to edit download.md in the folder above if you add a file!
+-->
