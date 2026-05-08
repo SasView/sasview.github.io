@@ -36,7 +36,7 @@ Wojciech Potrzebowski (ESS), Jeff Krzywon (NIST), Steve King (STFC), Paul Butler
 
 ### Acknowledgements
 
-If you found this sofware useful to your work please dont forget to acknowledge its use in your publications as suggested below and reference this website: _http://www.sasview.org/_. Please also consider letting us know by sending us the reference to your work. This will help us to ensure the long term support and development of the software.
+If you found this software useful to your work please don't forget to acknowledge its use in your publications as suggested below and reference this website: _http://www.sasview.org/_. Please also consider letting us know by sending us the reference to your work. This will help us to ensure the long term support and development of the software.
 
-> _This work benefited from the use of the SasView application, originally developed under NSF award DMR-0520547. SasView contains code developed with funding from the European Union's Horizon 2020 research and innovation programme under the SINE2020 project, grant agreement No 654000._
+{% include acknowledgement.html %}
 
