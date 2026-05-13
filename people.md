@@ -34,9 +34,5 @@ Wojciech Potrzebowski (ESS), Jeff Krzywon (NIST), Steve King (STFC), Paul Butler
 *   For code questions and technical discussions contact the developers at: [developers@sasview.org](mailto:developers@sasview.org)
 *   For general information about Small Angle Scattering we recommend the [SAS portal](http://smallangle.org) developed by the [canSAS group](http://www.cansas.org).
 
-### Acknowledgements
-
-If you found this software useful to your work please don't forget to acknowledge its use in your publications as suggested below and reference this website: _http://www.sasview.org/_. Please also consider letting us know by sending us the reference to your work. This will help us to ensure the long term support and development of the software.
-
 {% include acknowledgement.html %}
 

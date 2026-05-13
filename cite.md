@@ -60,8 +60,4 @@ For releases v0.11.0 and prior, please cite the following, replacing _X.Y.Z_ wit
 
 > J. Krzywon, et. al. SasData vX.Y.Z, https://github.com/SasView/sasdata
 
-### Acknowledging SasView
-
-If you would like to acknowledge the use of one or more SasView software packages, please include the following:
-
 {% include acknowledgement.html %}
