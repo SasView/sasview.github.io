@@ -69,9 +69,4 @@ For developer questions please contact the developers at: [developers@sasview.or
 - The [Scattering-Central](https://github.com/scattering-central) repository of (mostly) legacy SAS software
 
   
-  
-### Acknowledging SasView
-
-If you found this software useful to your work please don't forget to acknowledge its use in your publications as suggested below and reference this website: [www.sasview.org](http://www.sasview.org). Please also consider letting us know by sending us the reference to your work. We will add it to our list of [publications](/publications). This will help us to ensure the long term support and development of the software.
-
 {% include acknowledgement.html %}
