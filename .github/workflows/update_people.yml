@@ -29,7 +29,6 @@ jobs:
           import urllib.request
           import csv
           import os
-          import re
           from collections import OrderedDict
           
           # Define the source TSV URL from the main SasView repo
@@ -123,49 +122,26 @@ jobs:
           # Format affiliations block (e.g. 1 Institution A)
           affil_str = ", ".join([f"<sup>{idx}</sup> _{affil}_" for affil, idx in affil_dict.items()])
           
-          # Combine into the final markdown
-          markdown_content = f"""## Developers and Contributors
-          {creators_str}
+          # Ensure the _includes directory exists
+          os.makedirs('_includes', exist_ok=True)
           
-          ## Community Contributors
-          {producers_str}
-          
-          ### Affiliations
-          {affil_str}
-          """
-          
-          file_path = "people.md"
-          
-          # Restored markers to prevent catastrophic regex replacement failure
-          marker_start = ""
-          marker_end = ""
-          print(markdown_content)
-          
-          # Inject the new markdown into people.md
-          if os.path.exists(file_path):
-              with open(file_path, "r", encoding="utf-8") as f:
-                  content = f.read()
-          
-              pattern = f"{marker_start}.*?{marker_end}"
-              new_section = f"{marker_start}\n{markdown_content}\n{marker_end}"
-          
-              if re.search(pattern, content, flags=re.DOTALL):
-                  updated_content = re.sub(pattern, new_section, content, flags=re.DOTALL)
-              else:
-                  updated_content = content.rstrip() + f"\n\n{new_section}\n"
-          
-              with open(file_path, "w", encoding="utf-8") as f:
-                  f.write(updated_content)
-              print(f"Updated {file_path}")
-          else:
-              with open(file_path, "w", encoding="utf-8") as f:
-                  f.write(f"# People\n\n{marker_start}\n{markdown_content}\n{marker_end}\n")
-              print(f"Created {file_path}")
-    
+          # Write out the three files
+          with open('_includes/creators.html', 'w', encoding='utf-8') as f:
+              f.write(creators_str + "\n")
+          print("Updated _includes/creators.html")
+
+          with open('_includes/producers.html', 'w', encoding='utf-8') as f:
+              f.write(producers_str + "\n")
+          print("Updated _includes/producers.html")
+
+          with open('_includes/affiliations.html', 'w', encoding='utf-8') as f:
+              f.write(affil_str + "\n")
+          print("Updated _includes/affiliations.html")
+
           EOF
 
       - name: Commit and Push Changes
         uses: stefanzweifel/git-auto-commit-action@v5
         with:
-          commit_message: "docs: automatic update of people.md from contributors.tsv"
-          file_pattern: "people.md"
+          commit_message: "docs: automatic update of people from the SasView contributors.tsv"
+          file_pattern: "_includes/*"
