@@ -8,14 +8,19 @@ Many people have contributed to this SAS analysis software over the years, and w
 ### Developers and contributors:
 In addition to the core development, contributions include documentation writing and editing, tutorial writing and editing, performing code reviews, setting up and maintaining a variety of related services such as the marketplace, and admin tasks required to keep the infrastructure of the collaboration running.
 
-M. Adams, N. Agouzal, G. Alina, Z. Attala, M. Backman, J. Bakker, P. Beaucage, J. Berger, R. Bourne, W. Bouwman, I. Breßler, P. Butler, I. Caddy-Jones, K. Campbell, R. Charles, J-H. Cho, T. Cooper-Bennun, R. Cortes Hernandez, J. Crake-Merani, A. Detiste, M. Doucet, J. Doutch, D. Dresen, G. Drosos, C. Durniak, C. Farrow, R. Ferraz Leal, R. Ford, L. Forster, J. Gaudet, M. Gerina, P. Gilbert, M. Gonzalez, O. Hammond, T. Hansen, R. Heenan, S. Henson, E. Hewins, A. Hicks, D. Honecker, A. Jackson, G. Jensen, P. Juhas, J. Karliczek, P. Kienzle, S. King, S. Kline, J. Krzywon, A. Larsen, S. Lee, J. Lin, Y. Liu, R. Lopes, D. Lozano, K. Lytje, D. Mannicke, B. Maranville, N. Martinez, M. McKerns, B. Miller, K. Mothander, R. Murphy, A. Nelson, T. Nielsen, M. Oakley, L. O'Driscoll, H. Park, P. Parker, M. Patrou, P. Peterson, W. Potrzebowski,  S. Prescott, M. Rakitin, T. Richter, J. Rooks, P. Rozyczko, X. Shan, S. Shrestha, P. Sharp, T. Snow, A. Stellhorn, S, Teixeira, J. Tumarkin, A. Washington, K. Weigandt, R. Whitley, L. Wilkins, C. Wolf, A. Zhang, A. Zheng.
+{% include creators.html %}
 
 ### Community contributors and external collaborators:
 The SasView collaboration goes well beyond the contributions listed above. In particular we wish to thank the following people from the scattering community and beyond for their time in providing feedback and ideas and being advocates for the collaboration.
 
-A. Anuchitanukul, P. Corona, G. Fragneto, M. Knudsen, S. Krueger, A. Markvardsen, T. Narayanan, D. Parsons, B. Pauw, R. Pellicelli, T. Perring, L. Porcar, L. Pozzo, S. Prevost, A. Rennie, G. Roberts, T. Holm Rod, Y. Shang, J. Taylor, L. Udby, D. Zakoutna and J. Zhou.
+{% include producers.html %}
 
 Last, but by no means least, we thank all those colleagues and SasView users that help further the collaboration by assisting us with beta testing, by reporting bugs and other idiosyncrasies of the program, and by suggesting improvements and new features.
+
+### Affiliations
+Contributions have come from the following facilities and institutions, in the order contributors appear in the above lists.
+
+{% include affiliations.html %}
 
 ### Funding
 In addition to the staff time and support for code camps provided by the collaboration partners, the following people have been instrumental in obtaining funding for development of SasView.
