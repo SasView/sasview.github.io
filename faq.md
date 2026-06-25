@@ -335,7 +335,10 @@ subtitle: Here are the answers to some common questions about SasView
 ### Why have I got several instances of the same model category (eg, 'Shape Independent' and 'Shape-Independent')?
 
 *   This is most likely because you have previously installed earlier versions of SasView and the category file needs rebuilding.
-    *   If open, close SasView. Then go to your profile folder (eg, on Windows: `C:\Users\user_name`) and open the `.sasview` folder. Delete the file `categories.json`. Then run SasView again.
+    *   If open, close SasView. Delete the file `categories.json`. Then run SasView again.
+*   Where this file is located depends on the operating system you are using the version of SasView you are running. On Windows:
+    *   SasView 3.x/4.x/5.x: go to `C:\Users\user_name\.sasview`
+    *   SasView 6.x and later: go to `C:\Users\user_name\AppData\Local\sasview\SasView` 
 
 ### Why is SasView not loading the model parameters from some of my existing .fitv (Save Fit) files?
 
