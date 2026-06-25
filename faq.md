@@ -121,8 +121,8 @@ subtitle: Here are the answers to some common questions about SasView
 
 ### Do I need to install Python or C or any compilers before I install SasView?
 
-*   If you intend to use SasView on a Windows computer, then No: Our packaged installer ships with everything you need to run SasView.
-*   If you intend to use SasView on a Mac OS computer, you do not need to install Python but you _do_ need to pre-install the Xcode command line tools as SasView makes use of the C compiler in them. If Xcode is not installed the SasView console or log file may contain messages about 'xcrun: error' or 'missing xcrun at:'.
+*   If you intend to use SasView on a Windows computer, then no: our packaged installer ships with everything you need to run SasView.
+*   If you intend to use SasView on a MacOS computer, you do not need to install Python but you _do_ need to pre-install the Xcode command line tools as SasView makes use of the C compiler in them. If Xcode is not installed the SasView console or log file may contain messages about 'xcrun: error' or 'missing xcrun at:'.
     *  _You should not need to install the full Xcode package_, just a subset of it; try the command: <code>xcode-select --install</code>.
     *  If this command does not subsequently allow you to use SasView, or, if you require the full Xcode package for other purposes, you can get Xcode from the Apple AppStore. However, **be aware that attempting to install the latest version of Xcode may require you to upgrade your version of MacOS**. If you do not want to do that you will need to install a version of Xcode that is compatible with your current version of MacOS. [This site](https://xcodereleases.com/) may be useful in this respect.
 
@@ -133,6 +133,7 @@ subtitle: Here are the answers to some common questions about SasView
 
 *   GPU support is only available in SasView 4.x and later.
 *   Click on Fitting > GPU Options. If a potential GPU is present it will be displayed. Click on the Test button to have SasView check the suitability of the device and its drivers. For more information, see the [SasView Help documentation](https://www.sasview.org/docs/user/qtgui/Perspectives/Fitting/gpu_setup.html).
+*   To successfully use a GPU device you will need appropriate drivers/runtimes for it from the vendor. These _may_ already be installed as part of the operating system.
 
 ### Can I stop SasView trying to use my GPUs?
 
