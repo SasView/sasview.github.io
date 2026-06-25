@@ -313,12 +313,14 @@ subtitle: Here are the answers to some common questions about SasView
 
 ### How do I load an image file as data?
 
-*   Use 'Tool' > 'Image Viewer' and **not** 'File' > 'Load Data File(s)' or the 'Load Data' button on the Data Explorer.
+*   Use 'Tools' > 'Image Viewer' _and not_ 'File' > 'Load Data File(s)' or the 'Load Data' button on the Data Explorer.
 *   SasView will load images in .BMP, .GIF, .JPG, .PNG and .TIF formats. The file extension is not case-sensitive.
 
 ### Where do the model parameter uncertainties come from?
 
-*   How the parameter uncertainties (commonly, but wrongly, called the parameter errors) are estimated depends on the fitting algorithm used. One estimate of uncertainty is to use the square root of the diagonal of the covariance matrix. This can give a good estimate if the uncertainty is well behaved, with no significant correlation between the parameters. The covariance matrix is calculated as part of the commonly used Levenberg-Marquardt optimizer, which is provided by the [Python SciPy library](http://docs.scipy.org/doc/scipy/reference/generated/scipy.optimize.leastsq.html)). Otherwise the covariance matrix is estimated using the numerical derivative at the best point. If you _really_ want to know more, check out this [handy tutorial](http://www.aps.anl.gov/Xray_Science_Division/Powder_Diffraction_Crystallography/3LeastSquaresIntro/3LeastSquaresIntro.pdf) by Brian Toby at APS. The DREAM optimizer uses a Monte Carlo approach which provides a more realistic estimate of the uncertainties for the case when uncertainties are not well behaved.
+*   How the parameter uncertainties (commonly, but wrongly, called the parameter errors) are estimated depends on the fitting algorithm used. One estimate of uncertainty is to use the square root of the diagonal of the covariance matrix. This can give a good estimate if the uncertainty is well behaved, with no significant correlation between the parameters. The covariance matrix is calculated as part of the commonly used Levenberg-Marquardt optimizer, which is provided by the [Python SciPy library](http://docs.scipy.org/doc/scipy/reference/generated/scipy.optimize.leastsq.html)). Otherwise the covariance matrix is estimated using the numerical derivative at the best point.
+*   If you _really_ want to know more, check out this [in-depth explanation](https://people.duke.edu/~hpgavin/SystemID/CourseNotes/linear-least-squares.pdf) by Henri Gavin at Duke University.
+*   The DREAM optimizer uses a Monte Carlo approach which provides a more realistic estimate of the uncertainties for the case when uncertainties are not well behaved.
 
 ### Why do I get different parameter uncertainties using the Simple and Complex fitting engines?
 
