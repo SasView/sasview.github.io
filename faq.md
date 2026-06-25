@@ -89,8 +89,7 @@ subtitle: Here are the answers to some common questions about SasView
 ### Is there a SasView Manual?
 
 *   We would recommend that you just visit our extensive [online documentation](/documentation)! This is the same documentation shipped with each release of SasView.
-*   But if you really want to chop down a tree then you can print a [PDF download](/downloads/SasViewDocumentation_4.2.2.pdf) of the full documentation package for version 4.2.2. However, SasView has changed *a lot* since this was issued!
-
+*   But if you really want to chop down a tree then you can print a [PDF download](/downloads/SasViewDocumentation_4.2.2.pdf) of the full documentation package for version 4.2.2. However, SasView has changed _a lot_ since this was issued!
 
 ### What platforms does SasView run on?
 
@@ -116,7 +115,7 @@ subtitle: Here are the answers to some common questions about SasView
 
 *   We do not currently _support_ a Linux distribution, but:
     *   An 'official' Flatpak distribution of SasView can be found on [Flathub](https://flathub.org/apps/org.sasview.sasview). This has been tested on a variety of Linux distributions including Ubuntu, Fedora, and Rocky Linux.
-    *   The STFC [IDAaaS](https://isis.analysis.stfc.ac.uk/) cloud computing service runs SasView 4.2.2, 5.0.6 and the latest SasView 6 on Rocky Linux (though 4.2.2 and 5.0.6 previously also ran on IDAaaS under CentOS).
+    *   The STFC [IDAaaS](https://isis.analysis.stfc.ac.uk/) cloud computing service on the Ada platform runs SasView 4.2.2, 5.0.6 and the latest SasView 6 on Rocky Linux (though 4.2.2 and 5.0.6 previously also ran on IDAaaS under CentOS).
     *   And there is also a third-party project developing SasView on [Debian](https://github.com/SasView/sasview/wiki/DevNotes_Projects_Debian)
     *   You are welcome to try [building SasView from the source](https://github.com/SasView/sasview/wiki/DevNotes_CondaDevEnviroment) available on the release pages: [https://github.com/SasView/sasview/releases](https://github.com/SasView/sasview/releases). Please note, you will need to download our 'sasmodels' repository from [https://github.com/SasView/sasmodels](https://github.com/SasView/sasmodels) before you try this. But also note that our Wiki instructions direct you to use Conda. Anaconda changed their Terms of Service in 2020, and updated them again in 2024, and certain organisations now need to pay to use it. We are looking at other tools and will update the instructions at a later date.
 
