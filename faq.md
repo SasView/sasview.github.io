@@ -342,9 +342,9 @@ subtitle: Here are the answers to some common questions about SasView
 
 ### Why is SasView not loading the model parameters from some of my existing .fitv (Save Fit) files?
 
-*   As the number of models implemented in SasView increased it became necessary to add additional categorisation. At the same time we gave the user the ability to customise the categorisation (the Modify Category button). Unfortunately this does mean that the categorisation of _some_ models will have changed between earlier versions of SasView (when it was still called SansView) and recent releases. When SasView cannot determine the model categorisation from a .fitv file it attempts to default to the first model in the first category. There are two workarounds to this issue:
-    1. Open the .fitv file in a text editor and scroll down to the section headed _Attributes_. Above the entry _formfactorcombobox_ create a new entry _categorycombobox categorycombobox="type"_, where _type_ is the category that the model was originally in (current categories are: Shape-Independent, Shapes, Structure Factor, Uncategorized, Custom Models). Make sure you enclose your new entry in angle brackets just like the existing entries!
-    2. Use the Modify Category button in the recent version of SasView to move the model you want to use to the category it used to be in.
+*   As the number of models implemented in SasView increased it became necessary to add additional categorisation. At the same time we gave the user the ability to customise the categorisation. Unfortunately this does mean that the categorisation of _some_ models will have changed between earlier versions of SasView (when it was still called SansView) and recent releases. When SasView cannot determine the model categorisation from a .fitv file it attempts to default to the first model in the first category. There are two workarounds to this issue:
+    1. Open the .fitv file in a text editor and scroll down to the section headed _Attributes_. Above the entry _formfactorcombobox_ create a new entry _categorycombobox categorycombobox="type"_, where _type_ is the category that the model was originally in. Make sure you enclose your new entry in angle brackets just like the existing entries!
+    2. Use the Modify Category button or Category Manager in the more recent version of SasView to move the model you want to use to the category it used to be in.
 
 ### Why is Save Analysis (File menu) greyed out after I fit a model?
 
@@ -356,11 +356,11 @@ subtitle: Here are the answers to some common questions about SasView
 *   Check for Updates compares the version (not build) number of your copy of SasView with that in the code repository. If SasView cannot access the remote server to perfom this check then the message _'Cannot connect to the application server'_ may be displayed in the status bar _or_ the SasView log file will contain lines implicating a file called proxy.pyc (see [Why will SasView no longer start? ('cannot execute script sasview')](#why-will-sasview-no-longer-start) below).
 *   Unhelpfully, it is entirely possible to be able to use a web browser to surf the internet but find that SasView cannot read the current version number from the code repository!
 *   The most common reason for Check for Updates failing is that your internet connection uses a proxy server and your computer is either not configured to use that proxy server _or_ that an exception for the SasView server needs to be added to the local policies on the proxy server. The latter case is more likely to be necessary in corporate/secure environments. Please contact your local IT Helpesk.
+*   If you are not sure if your internet connect uses a proxy server, click on the Start button and type 'Control Panel'. Select 'Network and Internet' and then 'Internet Options'. Now click the 'Connections' tab and then the button 'LAN settings'.
 
 *   How you configure your computer to use a proxy server will depend on your operating system. The following worked in Windows 7:
 
     **Warning! The following procedure involves changing system settings. If you are not confident about doing so, consult your local IT Helpdesk.**
-*   If you are not sure if your internet connect uses a proxy server, click on the Start button, select 'Network and Internet' and then 'Internet Options'. Now click the 'Connections' tab and then the button 'LAN settings'.
 
     1.  Click on the Start button. In the 'search programs and files' box type 'regedit' and press {return}.
     2.  In the Registry Editor, navigate to the registry key (be careful not to find find a similar key by mistake) `HKEY_CURRENT_USER\Software\Microsoft\Windows\CurrentVersion\Internet Settings`. Look for a setting named 'ProxyServer'. If it exists, ensure it both points to your proxy server and has a port number appended. If it is missing create this setting as follows:
