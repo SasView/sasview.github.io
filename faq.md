@@ -270,7 +270,7 @@ subtitle: Here are the answers to some common questions about SasView
 *   Any data files that used to load in SasView 4.x should load in SasView 5.x, but there are a small number of exceptions:
 
     *  The NeXus data loader was removed in version 5.0 as it was superseded by the integration of a loader for [NXcanSAS format](https://manual.nexusformat.org/classes/applications/NXcanSAS.html?highlight=nxcansas) files with the extension .h5.
-    *  SasView 4.x was built with Python 2, but SasView 5.x is built with Python 3. The [Python Software Foundation](https://www.python.org/psf-landing/) decided to fundamentally change the way that character strings are represented internally in Python 3 and, thereby, the assumptions that Python 3 makes about the encoding (the byte-level representation) of characters. If the character encoding of your data file does not match those assumptions it is possible that SasView will throw an error. Depending on the version of SasView you are running you may see an error such as the following in the Message Log, Console or Log File:
+    *  Also, SasView 4.x was built with Python 2, but SasView 5.x and later are built with Python 3. The [Python Software Foundation](https://www.python.org/psf-landing/) decided to fundamentally change the way that character strings are represented internally in Python 3 and, thereby, the assumptions that Python 3 makes about the encoding (the byte-level representation) of characters. If the character encoding of your data file does not match those assumptions it is possible that SasView will throw an error. Depending on the version of SasView you are running you may see an error such as the following in the Message Log, Console or Log File:
     ```
       14:26:27 - ERROR: 'utf-8' codec can't decode byte 0xc5 in position 2: invalid continuation byte
     ```
@@ -285,8 +285,8 @@ subtitle: Here are the answers to some common questions about SasView
 
 ### What is the scale parameter in models?
 
-*   If your I(Q) data is in absolute units (/cm) and on an absolute scale (ie, the I(Q) values have been calibrated against a standard) the scale parameter will be equal to the volume fraction. In all other instances the scale factor will be a number proportional to the volume fraction. Some models have both volume fraction and scale parameters. In these models the scale is just a multiplying factor (equal to 1 if the data is in absolute units on an absolute scale).
-  
+*   If your I(Q) data is in absolute units (/cm) and on an absolute scale (ie, the I(Q) values have been calibrated against a standard) the _scale_ parameter will be equal to the volume fraction. In all other instances the scale factor will be a number proportional to the volume fraction. Some models, for example, those incorporating a structure factor, have both volume fraction and scale parameters. In these models the scale is just a multiplying factor (equal to 1 if the data is in absolute units on an absolute scale).
+*   When model-fitting, do not allow volume fraction and scale parameters to optimize at the same time. 
 *   We are aware that some of the model descriptions in the Help documentation are unclear about the meaning of _scale_ and are working to improve the documentation.
 
 ### How can I put my data on an absolute intensity scale?
