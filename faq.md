@@ -88,8 +88,9 @@ subtitle: Here are the answers to some common questions about SasView
 
 ### Is there a SasView Manual?
 
-*   If you really want to chop down a tree then you can print a [PDF download](/downloads/SasViewDocumentation_4.2.2.pdf) of the full documentation package for version 4.2.2.
-*   Otherwise we would recommend that you just visit our extensive [online documentation](/documentation)! This is the same documentation shipped with each release of SasView.
+*   We would recommend that you just visit our extensive [online documentation](/documentation)! This is the same documentation shipped with each release of SasView.
+*   But if you really want to chop down a tree then you can print a [PDF download](/downloads/SasViewDocumentation_4.2.2.pdf) of the full documentation package for version 4.2.2. However, SasView has changed *a lot* since this was issued!
+
 
 ### What platforms does SasView run on?
 
