@@ -80,10 +80,10 @@ subtitle: Here are the answers to some common questions about SasView
 
 ### What is SasView?
 
-*   SasView is software for the analysis of Small-Angle Scattering (SAS) data, including Spin-Echo SANS (SESANS) data:
+*   SasView is software for the analysis of _reduced_ Small-Angle Scattering (SAS) data, including Spin-Echo SANS (SESANS) data:
     *   It fits analytic functions describing different types of material microstructure to experimental data in order to determine the shape, size and degree of ordering.
     *   It will also compute the (Porod) invariant (or 'total scattering'), distance distribution functions, size distributions and correlation functions.
-    *   It can construct real-space models from simple building blocks and generate the resulting SAS curve.
+    *   It can construct real-space models from simple building blocks and generate the resulting SAS curve, or compute the SAS curve from appropriate coordinate data (see [What format should my data be in?](#what-format-should-my-data-be-in)).
 *   SasView also includes tools for calculating scattering length densities, micromagnetic properties, slit sizes, resolution, and fringe thicknesses/d-spacings.
 
 ### Is there a SasView Manual?
@@ -158,6 +158,8 @@ subtitle: Here are the answers to some common questions about SasView
 ### What format should my data be in?
 
 *   SasView recognizes 1D data supplied in a number of specific formats, as identified by the file extensions below (which are not case-sensitive). It also incorporates a 'generic loader' which is called if all else fails. The generic loader will attempt to read data files of any extension provided the file is in ASCII ('text') format (i.e. not binary). So this includes, for example, comma-separated variable (CSV) files from a spreadsheet.
+  
+*   The specific file extensions are:
     *  .ABS (NIST format)
     *  .ASC (NIST format)
     *  .COR (CanSAS XML v1.0 and v1.1 formats only)
@@ -191,7 +193,7 @@ subtitle: Here are the answers to some common questions about SasView
 	
 #### 1D data (I(Q) vs Q)
 
-*   The ASCII ('text') files are expected to have 2, 3, or 4 columns of values, separated by whitespaces or commas or semicolons, in the order Q, I(Q), ( dI(Q), dQ(Q) ), where dI(Q) is the uncertainty on the intensity value, and dQ(Q) is the instrumental resolution in Q, assumed to have arisen from pinhole geometry. Slit-smeared data can also be handled but is more involved. See the [Data Formats](https://www.sasview.org/docs/user/qtgui/MainWindow/data_formats_help.html) help for more information.
+*   The ASCII ('text') files are expected to have 2, 3, or 4 columns of values, separated by whitespaces or commas or semicolons, in the order Q, I(Q), ( dI(Q), dQ(Q) ), where dI(Q) is the uncertainty on the intensity value, and dQ(Q) is the instrumental resolution in Q, _assumed to have arisen from pinhole geometry_. Slit-smeared data can also be handled but is more involved. See the [Data Formats](https://www.sasview.org/docs/user/qtgui/MainWindow/data_formats_help.html) help for more information.
 
 #### 2D data (I(Qx,Qy) vs Qx & Qy)
     
@@ -199,7 +201,7 @@ subtitle: Here are the answers to some common questions about SasView
 
 #### SESANS data (P(z) vs z)
 
-*   SasView currently recognises the data format used on the LARMOR instrument at the ISIS Pulsed Neutron & Muon Source and the SESANS at the RID, Technical University Delft whilst discussions take place under the auspices of CanSAS on extensions to the NXcanSAS format (see 2D data above).
+*   SasView currently recognises the data format used on the LARMOR instrument at the ISIS Pulsed Neutron & Muon Source and the SESANS at the RID, Technical University Delft whilst discussions take place under the auspices of [CanSAS](http://www.cansas.org) on extensions to the NXcanSAS format (see 2D data above).
 *   The file format starts with a list of name-value pairs which detail the general experimental parameters necessary for fitting and analyzing the data. This list should contain all the information necessary for the file to be 'portable' between users.
 *   Note that the SESANS reader in SasView checks for, and requires, a subset of the name-value pairs. Specifically:
     * "FileFormatVersion" - The version of the SESANS data format used. The current version is 1.0.
@@ -257,7 +259,7 @@ subtitle: Here are the answers to some common questions about SasView
 
 #### Q data
 
-*   SasView assumes that Q data is in units of /Angstroms. If your Q data is in units of /nm (or anything else) you will get incorrect parameters from your model fits. _However_ if your data is in [canSAS](http://www.cansas.org) format and the Q unit is specified as /nm - ie, the XML specifies Q unit="1/nm" - SasView will internally convert the Q data to Å.
+*   SasView assumes that Q data is in units of /Angstroms. If your Q data is in units of /nm (or anything else) you will get incorrect parameters from your model fits. _However_ if your data is in [CanSAS](http://www.cansas.org) format and the Q unit is specified as /nm - ie, the XML specifies Q unit="1/nm" - SasView will internally convert the Q data to Å.
 
 #### I(Q) data
 
