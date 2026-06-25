@@ -250,7 +250,7 @@ subtitle: Here are the answers to some common questions about SasView
 
 [NeXus format](https://www.nexusformat.org/)
 
-[CanSAS SASXML format](http://www.cansas.org/formats/canSAS1d/1.1/doc/) Also available as a [PDF document](http://www.cansas.org/trac/export/265/1dwg/tags/v1.0/doc/cansas-1d-1_0-manual.pdf)
+[CanSAS SASXML format](http://www.cansas.org/formats/canSAS1d/1.1/doc/)
 
 [NXcanSAS format](https://manual.nexusformat.org/classes/applications/NXcanSAS.html)
 
