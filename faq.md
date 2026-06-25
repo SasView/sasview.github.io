@@ -78,6 +78,8 @@ subtitle: Here are the answers to some common questions about SasView
 
 [Why will SasView no longer start? ('cannot execute script sasview')](#why-will-sasview-no-longer-start)
 
+[Where can I find the SasView log file?)](#where-can-i-find-the-sasview-log-file)
+
 ### What is SasView?
 
 *   SasView is software for the analysis of _reduced_ Small-Angle Scattering (SAS) data, including Spin-Echo SANS (SESANS) data:
@@ -506,3 +508,10 @@ _This only applies to SasView 4.2.2 and earlier._
         ```
         Note that in this example the address of the organisations proxy server has been anonymised. If these messages are present in the log file you should request a proxy exception for http://www.sasview.org/latestversion.json through your local IT Helpdesk. Also see [Why does Check for Updates not work?](#why-does-check-for-updates-not-work).
 	
+### Where can I find the SasView log file?
+
+*   The location of the SasView log file, _sasview.log_, depends on your operating system and the version of SasView that you are using:
+
+    *   (MacOS): `~.sasview`
+    *   (Windows, SasView 2.x/3.x/4.x/5.x): `C:\Users\user_name`
+    *   (Windows, SasView 6.x and later): `C:\Users\user_name\AppData\Local\sasview\SasView\Logs`
