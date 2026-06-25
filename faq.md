@@ -80,9 +80,11 @@ subtitle: Here are the answers to some common questions about SasView
 
 ### What is SasView?
 
-*   SasView is software for the analysis of Small-Angle Scattering (SAS) data, including Spin-Echo SANS (SESANS) data.
-*   It fits analytic functions describing different types of material microstructure to experimental data in order to determine the shape, size and degree of ordering.
-*   SasView also includes tools for calculating scattering length densities, slit sizes, resolution, fringe thicknesses/d-spacings, the (Porod) invariant ('total scattering'), distance distribution functions, and correlation functions.
+*   SasView is software for the analysis of Small-Angle Scattering (SAS) data, including Spin-Echo SANS (SESANS) data:
+    *   It fits analytic functions describing different types of material microstructure to experimental data in order to determine the shape, size and degree of ordering.
+    *   It will also compute the (Porod) invariant (or 'total scattering'), distance distribution functions, size distributions and correlation functions.
+    *   It can construct real-space models from simple building blocks and generate the resulting SAS curve.
+*   SasView also includes tools for calculating scattering length densities, micromagnetic properties, slit sizes, resolution, and fringe thicknesses/d-spacings.
 
 ### Is there a SasView Manual?
 
