@@ -84,7 +84,7 @@ subtitle: Here are the answers to some common questions about SasView
     *   It fits analytic functions describing different types of material microstructure to experimental data in order to determine the shape, size and degree of ordering.
     *   It will also compute the (Porod) invariant (or 'total scattering'), distance distribution functions, size distributions and correlation functions.
     *   It can construct real-space models from simple building blocks and generate the resulting SAS curve, or compute the SAS curve from appropriate coordinate data (see [What format should my data be in?](#what-format-should-my-data-be-in)).
-    *   It also includes tools for calculating scattering length densities, micromagnetic properties, slit sizes, resolution, and fringe thicknesses/d-spacings.
+    *   It includes tools for calculating scattering length densities, micromagnetic properties, slit sizes, resolution, and fringe thicknesses/d-spacings.
     *   And you can run Python scripts within SasView to leverage its core functionality.
 
 ### Is there a SasView Manual?
@@ -123,6 +123,7 @@ subtitle: Here are the answers to some common questions about SasView
 ### Do I need to install Python or C or any compilers before I install SasView?
 
 *   If you intend to use SasView on a Windows computer, then no: our packaged installer ships with everything you need to run SasView.
+
 *   If you intend to use SasView on a MacOS computer, you do not need to install Python but you _do_ need to pre-install the Xcode command line tools as SasView makes use of the C compiler in them. If Xcode is not installed the SasView console or log file may contain messages about 'xcrun: error' or 'missing xcrun at:'.
     *  _You should not need to install the full Xcode package_, just a subset of it; try the command: <code>xcode-select --install</code>.
     *  If this command does not subsequently allow you to use SasView, or, if you require the full Xcode package for other purposes, you can get Xcode from the Apple AppStore. However, **be aware that attempting to install the latest version of Xcode may require you to upgrade your version of MacOS**. If you do not want to do that you will need to install a version of Xcode that is compatible with your current version of MacOS. [This site](https://xcodereleases.com/) may be useful in this respect.
@@ -320,12 +321,12 @@ subtitle: Here are the answers to some common questions about SasView
 ### Where do the model parameter uncertainties come from?
 
 *   How the parameter uncertainties (commonly, but wrongly, called the parameter errors) are estimated depends on the fitting algorithm used. One estimate of uncertainty is to use the square root of the diagonal of the covariance matrix. This can give a good estimate if the uncertainty is well behaved, with no significant correlation between the parameters. The covariance matrix is calculated as part of the commonly used Levenberg-Marquardt optimizer, which is provided by the [Python SciPy library](http://docs.scipy.org/doc/scipy/reference/generated/scipy.optimize.leastsq.html)). Otherwise the covariance matrix is estimated using the numerical derivative at the best point.
-*   If you _really_ want to know more, check out this [in-depth explanation](https://people.duke.edu/~hpgavin/SystemID/CourseNotes/linear-least-squares.pdf) by Henri Gavin at Duke University.
+    *   If you _really_ want to know more, check out this [in-depth explanation](https://people.duke.edu/~hpgavin/SystemID/CourseNotes/linear-least-squares.pdf) by Henri Gavin at Duke University.
 *   The DREAM optimizer uses a Monte Carlo approach which provides a more realistic estimate of the uncertainties for the case when uncertainties are not well behaved.
 
 ### Why do I get different parameter uncertainties using the Simple and Complex fitting engines?
 
-*   _This only applies to SasView 3.0.0 and earlier._
+_This only applies to SasView 3.0.0 and earlier._
 *   To a first approximation, the two fitting engines should return similar, but not identical, parameter uncertainties. The Simple engine uses the Python SciPy library which computes the Jacobian using the _forward difference formula_ and evaluates the covariance matrix by QR decomposition. The Complex engine computes the Jacobian using the _centre point formula_ and evaluates the covariance matrix by singular value decomposition (SV). Both methods will also be affected by the accuracy of the numerical differentiation procedures and the precision of the floating point computations.
 *   (July 2014) We have discovered an inconsistency in the way that the Simple and Complex fitting engines define the reduced chi-square in SasView 3.0.0 and earlier. The consequence of this is that the Complex engine is not performing as many iterations as it should and is thus returning parameter uncertainties that are perhaps a factor 5 to 10 larger than expected.
 
@@ -337,9 +338,9 @@ subtitle: Here are the answers to some common questions about SasView
 
 *   This is most likely because you have previously installed earlier versions of SasView and the category file needs rebuilding.
     *   If open, close SasView. Delete the file `categories.json`. Then run SasView again.
-*   Where this file is located depends on the operating system you are using the version of SasView you are running. On Windows:
-    *   SasView 3.x/4.x/5.x: go to `C:\Users\user_name\.sasview`
-    *   SasView 6.x and later: go to `C:\Users\user_name\AppData\Local\sasview\SasView` 
+*   Where the category file is located depends on the operating system you are using the version of SasView you are running. On Windows:
+    *   (SasView 3.x/4.x/5.x): go to `C:\Users\user_name\.sasview`
+    *   (SasView 6.x and later): go to `C:\Users\user_name\AppData\Local\sasview\SasView` 
 
 ### Why is SasView not loading the model parameters from some of my existing .fitv (Save Fit) files?
 
@@ -349,7 +350,7 @@ subtitle: Here are the answers to some common questions about SasView
 
 ### Why is Save Analysis (File menu) greyed out after I fit a model?
 
-*   _This only applies to SasView 4.2.2 and earlier._
+_This only applies to SasView 4.2.2 and earlier._
 *   At present Save Analysis gets greyed out if you click on a graph window after fitting a model. We agree this is not very sensible behaviour and will rectify it in a future bug release. In the meantime, use the 'Save' icon in the graphical toolbar to generate .fitv files.
 
 ### Why does Check for Updates not work?
@@ -399,11 +400,13 @@ subtitle: Here are the answers to some common questions about SasView
 *   There are two ways to include an S(Q) in a model:
     *   By clicking on the S(Q) drop-down box adjacent to the P(Q) model choice in a FitPage,
     *   Using the Sum\|Multi function under Custom/Plugin Model operations or the Add\|Multiply function under Fitting, depending on the version of SasView you are running.
+
 *   However, these two methods are not equivalent.
-*   When you choose to implement S(Q) from the FitPage, the effective radius for the particle described by P(Q) is calculated automatically and the volume fraction used in S(Q) is set to be the volume fraction of the particles (ie, the 'scale' parameter). Behind the scenes, the model calculates the radius of a sphere that would have the same second virial coefficient as the chosen particles and uses that in the S(Q) calculation as the effective radius for the interaction potential. This method works well for particles with an axial ratio up to about a 3-to-1 but beyond that is not correct.
-*   When you make a Custom/Plugin model, the full set of parameters for calculating S(Q) are made available and you need to have an idea of what the effective radius and effective volume fraction for your chosen particles should be.
+    *   When you choose to implement S(Q) from the FitPage, the effective radius for the particle described by P(Q) is calculated automatically and the volume fraction used in S(Q) is set to be the volume fraction of the particles (ie, the 'scale' parameter). Behind the scenes, the model calculates the radius of a sphere that would have the same second virial coefficient as the chosen particles and uses that in the S(Q) calculation as the effective radius for the interaction potential. This method works well for particles with an axial ratio up to about a 3-to-1 but beyond that is not correct.
+    *   When you make a Custom/Plugin model, the full set of parameters for calculating S(Q) are made available and you need to have an idea of what the effective radius and effective volume fraction for your chosen particles should be.
 *   All S(Q) functions available in SasView were derived for spherical particles.
 *   Also be aware that if you create a Custom/Plugin model from two other Custom/Plugin models with S(Q) included, for example, something like P1(Q)S1(Q) + P2(Q)S2(Q), SasView will only take account of the 'self' interactions. If you _also_ need to properly account for the 'cross' interactions you will need to program a Custom/Plugin model from first principles.
+
 *   From release 5.0.3, when a S(Q) function is selected the FitPage allows you to select a _radius_effctive_mode_ and/or a _structure_factor_mode_:
     *   _radius_effective_mode_ determines whether the interaction radius value in the S(Q) should be the same as the radius in the P(Q) or not.
 	*   _structure_factor_mode_ determines whether the calculation should use the 'beta approximation' for non-sphericity or not.
@@ -436,14 +439,18 @@ subtitle: Here are the answers to some common questions about SasView
 ### Can I run Python scripts inside SasView?
 
 *  Yes, you can. Start SasView and navigate to Tools > Python Shell/Editor. Then enter (note the use of \\\ in the path to the script):
+
 ```
  exec(open('C:\\Temp\\scriptname.py').read())
 ```
+
  or, better (as it will close the file after reading it)
+
 ```
  from pathlib import Path
  exec(Path('C:\\Temp\\scriptname.py').read_text())
 ```
+
 *  Scripts executed like this will have access to all SasView libraries.
 
 ### Why will SasView no longer start?
