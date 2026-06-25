@@ -84,7 +84,8 @@ subtitle: Here are the answers to some common questions about SasView
     *   It fits analytic functions describing different types of material microstructure to experimental data in order to determine the shape, size and degree of ordering.
     *   It will also compute the (Porod) invariant (or 'total scattering'), distance distribution functions, size distributions and correlation functions.
     *   It can construct real-space models from simple building blocks and generate the resulting SAS curve, or compute the SAS curve from appropriate coordinate data (see [What format should my data be in?](#what-format-should-my-data-be-in)).
-*   SasView also includes tools for calculating scattering length densities, micromagnetic properties, slit sizes, resolution, and fringe thicknesses/d-spacings.
+    *   It also includes tools for calculating scattering length densities, micromagnetic properties, slit sizes, resolution, and fringe thicknesses/d-spacings.
+    *   And you can run Python scripts within SasView to leverage its core functionality.
 
 ### Is there a SasView Manual?
 
@@ -377,11 +378,11 @@ subtitle: Here are the answers to some common questions about SasView
 
 *   There may be two reasons for this. From release 4.0 the structure of plug-in models altered considerably in order to provide the enhanced functionality (access to polydispersity, etc) many of our users had demanded. Though we have attempted to provide some degree of internal translation, the reality is that this will likely only be truly successful for simple models. We recommend that old models be re-written to comply with the requirements of the new architcture. New models can then be contributed through our new [Model Marketplace](https://marketplace.sasview.org).
 *   The last vestiges of the old SansView name leftover from the genesis of the application were removed for release 3.1. While most visible parts of the application had already been converted to sasview prior to version 3.0, some of the packages still had the prefix "sans", including unfortunately the package used in custom models "sans.models.pluginmodel." In order to fix this simply apply the following fix. We appologize for the inconvenience.
-    *    under _Fitting --> Edit Custom Model --> Advanced_ (on the menu bar) open the offending custom model. Find any import statements (should be at the beginning) including the `from sans.models.pluginmodel import Model1DPlungin` and replace "sans" with "sas." Save the model. It should now work
+    *    under _Fitting_ --> _Edit Custom Model_ (then --> _Advanced_ (on the menu bar) in some versions) open the offending custom model. Find any import statements (which should be at the beginning of the file) including the `from sans.models.pluginmodel import Model1DPlungin` and simply replace "sans" with "sas". Save the model. It should now work.
 
 ### How can I see the separate contributions of the form factor and structure factor?
 
-#### SasView 2.x.x / SasView 3.x.x / SasView 4.0.x:
+#### SasView 2.x / SasView 3.x / SasView 4.0.x:
 
 *   Load the data and perform the fit as normal, including the structure factor. Go to the menubar and select _Edit --> Copy Params..._.
 *   Then open two new Fit Pages (_Fitting --> New Fit Page_). In one of the new Fit Pages select the form factor model you used in the first Fit Page, in the other new Fit Page select the structure factor model you used in the first Fit Page.
@@ -391,19 +392,19 @@ subtitle: Here are the answers to some common questions about SasView
 
 #### SasView 4.1 and later:
 
-*   Once a fit has been performed P(Q), and S(Q) if included in the fit, will appear under Theories in the Data Explorer panel.
+*   Once a fit has been performed P(Q), and S(Q) if included in the fit, will appear under Theories/Theory in the Data Explorer panel.
 
 ### How can I include a structure factor in a model?
 
 *   There are two ways to include an S(Q) in a model:
-    *   By clicking on the S(Q) drop-down box adjacent to the P(Q) model choice in a FitPage
-    *   Using the Sum\|Multi function under Custom/Plugin Model operations.
+    *   By clicking on the S(Q) drop-down box adjacent to the P(Q) model choice in a FitPage,
+    *   Using the Sum\|Multi function under Custom/Plugin Model operations or the Add\|Multiply function under Fitting, depending on the version of SasView you are running.
 *   However, these two methods are not equivalent.
 *   When you choose to implement S(Q) from the FitPage, the effective radius for the particle described by P(Q) is calculated automatically and the volume fraction used in S(Q) is set to be the volume fraction of the particles (ie, the 'scale' parameter). Behind the scenes, the model calculates the radius of a sphere that would have the same second virial coefficient as the chosen particles and uses that in the S(Q) calculation as the effective radius for the interaction potential. This method works well for particles with an axial ratio up to about a 3-to-1 but beyond that is not correct.
 *   When you make a Custom/Plugin model, the full set of parameters for calculating S(Q) are made available and you need to have an idea of what the effective radius and effective volume fraction for your chosen particles should be.
 *   All S(Q) functions available in SasView were derived for spherical particles.
 *   Also be aware that if you create a Custom/Plugin model from two other Custom/Plugin models with S(Q) included, for example, something like P1(Q)S1(Q) + P2(Q)S2(Q), SasView will only take account of the 'self' interactions. If you _also_ need to properly account for the 'cross' interactions you will need to program a Custom/Plugin model from first principles.
-*   From release 5.0.3, when a S(Q) function is selected the FitPage allows you to select a _radius_effctive_mode_ and/or a _structure_factor_mode_.
+*   From release 5.0.3, when a S(Q) function is selected the FitPage allows you to select a _radius_effctive_mode_ and/or a _structure_factor_mode_:
     *   _radius_effective_mode_ determines whether the interaction radius value in the S(Q) should be the same as the radius in the P(Q) or not.
 	*   _structure_factor_mode_ determines whether the calculation should use the 'beta approximation' for non-sphericity or not.
 
@@ -416,20 +417,21 @@ subtitle: Here are the answers to some common questions about SasView
 
 *   Custom (or plugin) models should be placed in the SasView plugin folder:
 
-    *   C:\Users\\username\\.sasview\plugin_models (Windows)
-    *   ~.sasview\plugin_models (Mac)
+    *   (MacOS): `~.sasview\plugin_models`
+    *   (Windows, SasView 2.x/3.x/4.x/5.x): `C:\Users\user_name\.sasview\plugin_models`
+    *   (Windows, SasView 6.x and later): `C:\Users\user_name\AppData\Local\sasview\SasView\plugin_models`
     
 *   The next time SasView is started all model files in this folder will be compiled. Alternatively, on-the-fly compilation is possible by selecting:
 
-    * Fitting > Plugin Model Operations > Load Plugin Models (in SasView 3.x/4.x)
-    * Fitting > Manage Custom Models > Add  file... (In SasView 5.x)
+    * (SasView 3.x/4.x): _Fitting_ --> _Plugin Model Operations_ --> _Load Plugin Models_
+    * (SasView 5.x and later): _Fitting_ --> _Manage Custom Models_ --> _Add file..._ 
 
-*   If the required custom model does not appear in the drop-down list of Plugin Models in the FitPage then compilation is likely to have failed. Check the Console (in SasView 3.x/4.x) or Log Explorer (in SasView 5.x) or sasview.log file (all versions) for clues to the reason why.
+*   If the required custom model does not appear in the drop-down list of Plugin Models in the FitPage then compilation is likely to have failed. Check the Console (in SasView 3.x/4.x) or Log Explorer (in SasView 5.x and later) or sasview.log file (all versions) for clues to the reason why.
 
 ### Can I use complex numbers in my models?
 
 *   Yes, you can. Please download and unzip this [C++ header file](https://github.com/SasView/sasview.github.io/blob/master/downloads/cl_complex.zip) to your plugin model folder and add it to your source list before your .c file.
-*   OpenCL 3.0 will allow the direct use of complex numbers, but it is not yet widely supported by GPU devices.
+*   Note: OpenCL 3.0 will allow the direct use of complex numbers, but it is not yet widely supported by GPU devices.
 
 ### Can I run Python scripts inside SasView?
 
