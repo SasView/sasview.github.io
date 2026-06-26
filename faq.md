@@ -256,7 +256,7 @@ subtitle: Here are the answers to some common questions about SasView
 
 [NIST 1D/2D formats](https://github.com/sansigormacros/ncnrsansigormacros/wiki)
 
-[COLETTE (or 'RKH') 1D/2D formats](https://www.isis.stfc.ac.uk/Pages/colette-ascii-file-format-descriptions.pdf)
+[COLETTE (or 'RKH') 1D/2D formats](downloads/colette-ascii-file-format-descriptions.pdf)
 
 [BSL/OTOKO format](http://www.diamond.ac.uk/Beamlines/Soft-Condensed-Matter/small-angle/SAXS-Software/CCP13/BSL.html)
 
