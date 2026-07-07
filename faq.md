@@ -80,6 +80,8 @@ subtitle: Here are the answers to some common questions about SasView
 
 [Where can I find the SasView log file?](#where-can-i-find-the-sasview-log-file)
 
+[Why do Help pages look strange on my Mac?](#why-do-help-pages-look-strange-on-my-mac)
+
 ### What is SasView?
 
 *   SasView is software for the analysis of _reduced_ Small-Angle Scattering (SAS) data, including Spin-Echo SANS (SESANS) data:
@@ -517,3 +519,24 @@ _This only applies to SasView 4.2.2 and earlier._
     *   (MacOS): `~.sasview`
     *   (Windows, SasView 2.x/3.x/4.x/5.x): `C:\Users\user_name`
     *   (Windows, SasView 6.x and later): `C:\Users\user_name\AppData\Local\sasview\SasView\Logs`
+
+### Why do Help pages look strange on my Mac?
+
+_This likely only applies to SasView 6.2.x and later running on a Mac._
+
+*   From SasView 6.2.0 onwards, regardless of platform, when you ask to view Help documents from within SasView they will be rendered using the system default web browser (previously a 'built-in' viewer was used but this had dependency issues).
+*   On Macs the default browser is usually Safari. Unfortunately, enhanced security settings in Safari may block the style sheets needed to properly render the web pages so that they appear like this:
+
+<img width="1815" height="1119" alt="image" src="https://github.com/user-attachments/assets/9e23b538-b593-4536-8068-8a72befdae5e" />
+
+rather than like this:
+
+<img width="707" height="608" alt="image" src="https://github.com/user-attachments/assets/31f1f234-5ec6-44ef-9365-5e997f9162f6" />
+
+There are three workarounds for this problem, in order of decreasing complexity:
+
+1.  In your Safari browser, go to 'Preferences', then 'Advanced', and select the option to enable the local style sheet.
+
+2.  Install an alternative web browser (eg, _Firefox, Chrome,_ etc) and make this your default web browser.
+
+3.  Before you run the .dmg to install SasView, first move it to your 'Applications' folder.
