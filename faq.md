@@ -527,7 +527,7 @@ _This likely only applies to SasView 6.2.x and later running on a Mac._
 *   From SasView 6.2.0 onwards, regardless of platform, when you ask to view Help documents from within SasView they will be rendered using the system default web browser (previously a 'built-in' viewer was used but this had dependency issues).
 *   On Macs the default browser is usually Safari. Unfortunately, enhanced security settings in Safari may block the style sheets needed to properly render the web pages so that they appear like this:
 
-<img width="1815" height="1119" alt="image" src="https://github.com/user-attachments/assets/9e23b538-b593-4536-8068-8a72befdae5e" />
+<img width="1815" height="1119" alt="image" src="https://github.com/user-attachments/assets/e296a96f-6870-425e-907b-29bb97e7b78e" />
 
 rather than like this:
 
@@ -535,7 +535,7 @@ rather than like this:
 
 There are three workarounds for this problem, in order of decreasing complexity:
 
-1.  In your Safari browser, go to 'Preferences', then 'Advanced', and select the option to enable the local style sheet.
+1.  In your Safari browser, go to 'Preferences', then 'Developer', and under the section 'Security' tick the box to _Disable local file restrictions_. Note: it may first be necessary to enable the 'Developer' option in the menu bar.
 
 2.  Install an alternative web browser (eg, _Firefox, Chrome,_ etc) and make this your default web browser.
 
