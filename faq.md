@@ -527,7 +527,7 @@ _This likely only applies to SasView 6.2.x and later running on a Mac._
 *   From SasView 6.2.0 onwards, regardless of platform, when you ask to view Help documents from within SasView they will be rendered using the system default web browser (previously a 'built-in' viewer was used but this had dependency issues).
 *   On Macs the default browser is usually Safari. Unfortunately, enhanced security settings in Safari may block the style sheets needed to properly render the web pages so that they appear like this:
 
-<img width="1815" height="1119" alt="image" src="https://github.com/user-attachments/assets/e296a96f-6870-425e-907b-29bb97e7b78e" />
+<img width="1114" height="910" alt="image" src="https://github.com/user-attachments/assets/1b37b219-27db-4091-9c69-a110ec545c81" />
 
 rather than like this:
 
