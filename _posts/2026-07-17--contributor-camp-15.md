@@ -20,8 +20,8 @@ verifying the math/science, or undertaking sys admin tasks, etc) is welcome, eve
 join. See the link below for the latest planning. This is an opportunity to come together to work 
 on our common issues.
 
-The camp planning page can be found at: https://github.com/SasView/sasview/wiki/ContributorCampXV
+The camp planning page can be found at: [https://github.com/SasView/sasview/wiki/ContributorCampXV](https://github.com/SasView/sasview/wiki/ContributorCampXV)
 
-Registration is at: https://workshops.ill.fr/event/586/registrations/395/
+Registration is at: [https://workshops.ill.fr/event/586/registrations/395/](https://workshops.ill.fr/event/586/registrations/395/)
 
 We look forward to seeing many of you there.
