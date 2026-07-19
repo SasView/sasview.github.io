@@ -37,7 +37,7 @@ Looking for new models, or wish to contribute a model? Visit the Marketplace. It
 If you are having problems,
 - First check our [Frequently Asked Questions](/faq)
 - Otherwise to report bugs, or for help using SasView, please contact us at: [help@sasview.org](mailto:help@sasview.org)
-- Or you can also try asking other SasView Users! Email [users@sasview.org](mailto:users@sasview.org) or visit the [Users Forum Archives](http://lists.sasview.org/pipermail/users)
+- Or you can also try asking other SasView Users! Email [users@sasview.org](mailto:users@sasview.org) or visit the [Users Forum Archives](https://lists.sasview.org/archives/list/users@sasview.org/)
 
 **Join the SasView User Forum Mailing List**
 - Want to get the inside scoop on all things SasView? Why not join our User Forum List! Sign up [here](http://lists.sasview.org/cgi-bin/mailman/listinfo/users).
