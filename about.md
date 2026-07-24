@@ -61,8 +61,4 @@ We have a rolling five year Roadmap and continue to seek more development resour
 
 Anyone interested in contributing to the development of SasView is encouraged to contact the [management team.](mailto:management@sasview.org) We have need of contributors with a broad range of skills!
 
-### Acknowledgements
-
-If you found this software useful to your work please don't forget to acknowledge its use in your publications as suggested below and reference this website: [http://www.sasview.org/](http://www.sasview.org/). Please also consider letting us know by sending us the reference to your work. This will help us to ensure the long term support and development of the software.
-
 {% include acknowledgement.html %}

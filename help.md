@@ -61,12 +61,6 @@ Whenever you run SasView it silently creates/appends debugging information to a 
 
 Check out some of the links on our [Links & Downloads](/download/) page
 
-### Acknowledgements
-
-If you found this software useful to your work please don't forget to acknowledge its use in your publications as suggested below and reference this 
-website: [www.sasview.org](http://www.sasview.org). Please also consider letting us know by sending us the reference to your work. We will add it 
-to our list of [publications](/publications). This will help us to ensure the long term support and development of the software.
-
 {% include acknowledgement.html %}
 
 ### And Finally...
