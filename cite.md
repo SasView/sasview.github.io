@@ -23,6 +23,7 @@ In version 6+, look for the option _Cite SasView_. In version 5 or earlier, look
 
 | SasView 6 | Citation                                                                |
 |-----------|-------------------------------------------------------------------------|
+| 6.2.0     | S. Shrestha et al. SasView Version 6.2.0, 10.5281/zenodo.20270235        |
 | 6.1.3     | J. Krzywon et al. SasView Version 6.1.3, 10.5281/zenodo.18352296        |
 | 6.1.2     | J. Krzywon et al. SasView Version 6.1.2, 10.5281/zenodo.17795298        |
 | 6.1.1     | J.A. Crake-Merani et al. SasView Version 6.1.1, 10.5281/zenodo.17237394 |
@@ -50,11 +51,15 @@ In version 6+, look for the option _Cite SasView_. In version 5 or earlier, look
 
 ### Citing SasModels
 
+S. Shrestha et al. Sasmodels Version 1.1.0, 10.5281/zenodo.20270238
+
 For releases v1.0.12 and prior, please cite the following, replacing _X.Y.Z_ with the version used:
 
 > P. Kienzle, et. al., SasModels vX.Y.Z, https://github.com/SasView/sasmodels
 
 ### Citing SasData
+
+S. Shrestha et al. Sasdata Version 0.12.2, 10.5281/zenodo.20270248
 
 For releases v0.11.0 and prior, please cite the following, replacing _X.Y.Z_ with the version used:
 
