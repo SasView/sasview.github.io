@@ -1,0 +1,147 @@
+name: Update People List
+
+on:
+  schedule:
+    # Runs automatically daily at midnight UTC
+    - cron: '0 0 * * *'
+  workflow_dispatch:
+    # Allows you to trigger the workflow manually from the Actions tab
+
+permissions:
+  contents: write # Necessary to allow the bot to commit and push changes
+
+jobs:
+  update-people-md:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v5
+
+      - name: Set up Python
+        uses: actions/setup-python@v6
+        with:
+          python-version: '3.14'
+
+      - name: Process TSV and Update Markdown
+        run: |
+          python3 - <<'EOF'
+          import urllib.request
+          import csv
+          import os
+          from collections import OrderedDict
+          
+          # Define the source TSV URL from the main SasView repo
+          url = "https://raw.githubusercontent.com/SasView/sasview/main/build_tools/contributors.tsv"
+          
+          try:
+              req = urllib.request.Request(url)
+              with urllib.request.urlopen(req) as response:
+                  lines = [line.decode('utf-8') for line in response.readlines()]
+          except Exception as e:
+              print(f"Error fetching TSV: {e}")
+              exit(1)
+          
+          # Parse the TSV
+          reader = csv.DictReader(lines, delimiter='\t')
+          
+          # Dynamically map headers to be case-insensitive to ensure resilience
+          headers = {name.lower().strip(): name for name in reader.fieldnames if name}
+          
+          name_col = headers.get('name', 'Name')
+          creator_col = headers.get('creator', 'Creator')
+          producer_col = headers.get('producer', 'Producer')
+          related_person_col = headers.get('relatedperson', 'RelatedPerson')
+          
+          # Fallback through possible affiliation header names
+          affil_col = headers.get('affiliation', headers.get('institution', 'Affiliation'))
+          
+          creators = []
+          producers = []
+          
+          # Categorize users by their roles
+          for row in reader:
+              raw_name = row.get(name_col, '').strip()
+              creator = row.get(creator_col, '').strip().lower()
+              producer = row.get(producer_col, '').strip().lower()
+              related_person = row.get(related_person_col, '').strip().lower()
+              affiliation = row.get(affil_col, '').strip()
+          
+              if not raw_name:
+                  continue
+
+              # Convert "Last Name, First Name" to "F. Last Name"
+              if ',' in raw_name:
+                  last_name, first_name = raw_name.split(',', 1)
+                  last_name = last_name.strip()
+                  first_name = first_name.strip()
+                  
+                  if first_name:
+                      formatted_name = f"{first_name[0].upper()}. {last_name}"
+                  else:
+                      formatted_name = last_name
+              else:
+                  formatted_name = raw_name
+          
+              # Store raw_name as a sort_key so it still alphabetizes by Last Name
+              entry = {'name': formatted_name, 'sort_key': raw_name, 'affiliation': affiliation}
+              
+              if 'x' in creator:
+                  creators.append(entry)
+              elif 'x' in producer or 'x' in related_person:
+                  producers.append(entry)
+          
+          # Sort alphabetically by the original Last Name format
+          creators.sort(key=lambda x: x['sort_key'].lower())
+          producers.sort(key=lambda x: x['sort_key'].lower())
+          
+          affil_dict = OrderedDict()
+          
+          # Helper function to generate publication-style citation numbers
+          def format_section(people):
+              formatted_names = []
+              for p in people:
+                  # Assuming multiple affiliations might be separated by semicolons
+                  affiliations = [a.strip() for a in p['affiliation'].split(';') if a.strip()]
+                  superscripts = []
+                  for a in affiliations:
+                      if a not in affil_dict:
+                          affil_dict[a] = len(affil_dict) + 1
+                      superscripts.append(str(affil_dict[a]))
+          
+                  if superscripts:
+                      formatted_names.append(f"{p['name']}<sup>{','.join(superscripts)}</sup>")
+                  else:
+                      formatted_names.append(p['name'])
+              return ", ".join(formatted_names)
+          
+          
+          creators_str = format_section(creators)
+          producers_str = format_section(producers)
+          
+          # Format affiliations block (e.g. 1 Institution A)
+          affil_str = ", ".join([f"<sup>{idx}</sup> _{affil}_" for affil, idx in affil_dict.items()])
+          
+          # Ensure the _includes directory exists
+          os.makedirs('_includes', exist_ok=True)
+          
+          # Write out the three files
+          with open('_includes/creators.html', 'w', encoding='utf-8') as f:
+              f.write(creators_str + "\n")
+          print("Updated _includes/creators.html")
+
+          with open('_includes/producers.html', 'w', encoding='utf-8') as f:
+              f.write(producers_str + "\n")
+          print("Updated _includes/producers.html")
+
+          with open('_includes/affiliations.html', 'w', encoding='utf-8') as f:
+              f.write(affil_str + "\n")
+          print("Updated _includes/affiliations.html")
+
+          EOF
+
+      - name: Commit and Push Changes
+        uses: stefanzweifel/git-auto-commit-action@v5
+        with:
+          commit_message: "docs: automatic update of people from the SasView contributors.tsv"
+          file_pattern: "_includes/*"
